@@ -311,6 +311,14 @@ public:
     HD_API
     virtual void Sync(HdSyncRequestVector* request);
 
+    // #nv begin #scene delegate rework
+    /// Opportunity for the delegate to add additional dirty bit after sync is done.
+    /// This allows scene delegate derived from other scene delegate perform necessary modification to sync request,
+    /// without affecting performance of render index.
+    HD_API
+    virtual void ProcessPostSyncPropertyChanges(HdSyncRequestVector* request);
+    // #nv end
+
     /// Opportunity for the delegate to clean itself up after
     /// performing parrellel work during sync phase
     HD_API

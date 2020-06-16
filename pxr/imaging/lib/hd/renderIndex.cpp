@@ -1318,6 +1318,53 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
                                    std::placeholders::_2));
     }
 
+    // #nv edit begin
+    // find scene delegate and add to syncMap
+    HdSceneDelegate* currentDelegate = nullptr;
+    HdSyncRequestVector postSyncRequestVector;
+
+    // we read current scene delegate from the rprim map (assuming we have only one scene delegate)
+    // TODO - support multiple delegates by maintaining scene delegate set in render index
+    _RprimMap::const_iterator it = _rprimMap.begin(); 
+    if (it != _rprimMap.end()) {
+        const _RprimInfo& rprimInfo = it->second;
+        currentDelegate = rprimInfo.sceneDelegate;
+    }
+
+    {
+        HF_TRACE_FUNCTION_SCOPE("Delegate ProcessPostSyncPropertyChanges");
+
+        // ask delegate to populate postSyncPropertyChanges
+        if (currentDelegate)
+            currentDelegate->ProcessPostSyncPropertyChanges(&postSyncRequestVector);
+    }
+
+    {
+        // TODO - the rprim search in every update cycle is probably unnecessary 
+        //        if we already know structure does not change as in the case of fast update.
+        //        In this case, we can probably cache out syncRequestVector instead of recreating this every frame.
+        HF_TRACE_FUNCTION_SCOPE("Process SyncRequestVector");
+        _RprimSyncRequestVector& currrentRequestVector = syncMap[currentDelegate];
+        // find rprim and add to syncrequestvector
+        if (postSyncRequestVector.IDs.size() == postSyncRequestVector.dirtyBits.size())
+        {
+            size_t numRequests = postSyncRequestVector.dirtyBits.size();
+            for (size_t i = 0; i < numRequests; i++)
+            {
+                const auto& id = postSyncRequestVector.IDs[i];
+                auto iter = _rprimMap.find(id);
+                if (iter == _rprimMap.end())
+                    continue;  // TODO - add error message
+
+                const _RprimInfo& rprimInfo = iter->second;
+                size_t reprMask = 1 << 0; // FIXME - this is a hack, we need to read proper reprMask.
+                currrentRequestVector.PushBack(rprimInfo.rprim, reprMask,
+                        postSyncRequestVector.dirtyBits[i]);
+            }
+        }
+    }
+    // #nv edit end
+
     // Collect results and synchronize.
     WorkArenaDispatcher dispatcher;
     TF_FOR_ALL(dlgIt, syncMap) {

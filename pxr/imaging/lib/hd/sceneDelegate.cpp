@@ -58,6 +58,12 @@ HdSceneDelegate::Sync(HdSyncRequestVector* request)
 }
 
 void
+HdSceneDelegate::ProcessPostSyncPropertyChanges(HdSyncRequestVector* request)
+{
+
+}
+
+void
 HdSceneDelegate::PostSyncCleanup()
 {
 }
