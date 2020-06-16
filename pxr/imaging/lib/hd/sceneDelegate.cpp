@@ -57,10 +57,10 @@ HdSceneDelegate::Sync(HdSyncRequestVector* request)
 
 }
 
-void
+bool
 HdSceneDelegate::ProcessPostSyncPropertyChanges(HdSyncRequestVector* request)
 {
-
+    return false;
 }
 
 void

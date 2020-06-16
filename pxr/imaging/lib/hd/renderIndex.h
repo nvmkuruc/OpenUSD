@@ -486,6 +486,10 @@ private:
 
     // Remove default constructor
     HdRenderIndex() = delete;
+
+    /// #nv edit begin
+    std::vector<_RprimInfo> _postSyncRprimInfoCache;
+    /// #nv edit end
 };
 
 template <typename T>
