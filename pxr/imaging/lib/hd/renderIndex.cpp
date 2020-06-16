@@ -759,6 +759,16 @@ namespace {
             request.dirtyBits.push_back(dirtyBits);
         }
 
+        /// #nv edit begin
+        void Reserve(size_t newSize)
+        {
+            rprims.reserve(newSize);
+            reprsMasks.reserve(newSize);
+            request.IDs.reserve(newSize);
+            request.dirtyBits.reserve(newSize);
+        }
+        /// #nv edit end
+
         std::vector<HdRprim *> rprims;
         std::vector<size_t> reprsMasks;
 
@@ -1331,35 +1341,50 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
         currentDelegate = rprimInfo.sceneDelegate;
     }
 
+    bool canUseRprimInfoCache = false;
     {
         HF_TRACE_FUNCTION_SCOPE("Delegate ProcessPostSyncPropertyChanges");
 
         // ask delegate to populate postSyncPropertyChanges
         if (currentDelegate)
-            currentDelegate->ProcessPostSyncPropertyChanges(&postSyncRequestVector);
+            canUseRprimInfoCache = currentDelegate->ProcessPostSyncPropertyChanges(&postSyncRequestVector);
     }
 
     {
-        // TODO - the rprim search in every update cycle is probably unnecessary 
-        //        if we already know structure does not change as in the case of fast update.
-        //        In this case, we can probably cache out syncRequestVector instead of recreating this every frame.
         HF_TRACE_FUNCTION_SCOPE("Process SyncRequestVector");
-        _RprimSyncRequestVector& currrentRequestVector = syncMap[currentDelegate];
+        _RprimSyncRequestVector& currentRequestVector = syncMap[currentDelegate];
+
         // find rprim and add to syncrequestvector
         if (postSyncRequestVector.IDs.size() == postSyncRequestVector.dirtyBits.size())
         {
             size_t numRequests = postSyncRequestVector.dirtyBits.size();
-            for (size_t i = 0; i < numRequests; i++)
-            {
-                const auto& id = postSyncRequestVector.IDs[i];
-                auto iter = _rprimMap.find(id);
-                if (iter == _rprimMap.end())
-                    continue;  // TODO - add error message
 
-                const _RprimInfo& rprimInfo = iter->second;
-                size_t reprMask = 1 << 0; // FIXME - this is a hack, we need to read proper reprMask.
-                currrentRequestVector.PushBack(rprimInfo.rprim, reprMask,
+            if (_postSyncRprimInfoCache.size() != numRequests 
+                || !canUseRprimInfoCache)
+            {
+                _postSyncRprimInfoCache.clear();
+
+                for (size_t i = 0; i < numRequests; i++)
+                {
+                    const auto& id = postSyncRequestVector.IDs[i];
+                    auto iter = _rprimMap.find(id);
+                    if (iter == _rprimMap.end())
+                        continue;  // TODO - add error handling, or this can crash
+                    _postSyncRprimInfoCache.push_back(iter->second);
+                }
+            }
+
+            if (numRequests > 0)
+            {
+                currentRequestVector.Reserve(currentRequestVector.rprims.size() + numRequests);
+
+                for (size_t i = 0; i < numRequests; i++)
+                {
+                    const _RprimInfo& rprimInfo = _postSyncRprimInfoCache[i];
+                    size_t reprMask = 1 << 0; // FIXME - this is a hack, we need to read proper reprMask.
+                    currentRequestVector.PushBack(rprimInfo.rprim, reprMask,
                         postSyncRequestVector.dirtyBits[i]);
+                }
             }
         }
     }
