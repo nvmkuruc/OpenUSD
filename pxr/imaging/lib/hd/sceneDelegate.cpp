@@ -57,11 +57,19 @@ HdSceneDelegate::Sync(HdSyncRequestVector* request)
 
 }
 
+// #nv begin #scene delegate rework
+void
+HdSceneDelegate::UpdatePostSyncRequestVector(HdSyncRequestVector* request)
+{    
+}
+
 bool
-HdSceneDelegate::ProcessPostSyncPropertyChanges(HdSyncRequestVector* request)
+HdSceneDelegate::NeedsPostSyncUpdate() const
 {
     return false;
 }
+
+// #nv end #scene delegate rework
 
 void
 HdSceneDelegate::PostSyncCleanup()

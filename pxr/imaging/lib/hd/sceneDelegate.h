@@ -316,7 +316,13 @@ public:
     /// This allows scene delegate derived from other scene delegate perform necessary modification to sync request,
     /// without affecting performance of render index.
     HD_API
-    virtual bool ProcessPostSyncPropertyChanges(HdSyncRequestVector* request);
+    virtual void UpdatePostSyncRequestVector(HdSyncRequestVector* request);
+
+    /// Returns whether update from this scene delegate is property changes only
+    /// This will help render index to cache and reuse some intermediate sync maps
+    HD_API
+    virtual bool NeedsPostSyncUpdate() const;
+
     // #nv end
 
     /// Opportunity for the delegate to clean itself up after
