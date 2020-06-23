@@ -370,6 +370,17 @@ public:
     HD_API
     HdResourceRegistrySharedPtr GetResourceRegistry() const;
 
+    // #nv begin
+    // ---------------------------------------------------------------------- //
+    /// \name Post Sync Delegates
+    // ---------------------------------------------------------------------- //
+    // Add scene delegate into the render index
+    // When multiple scene delegate affects the same rprim,
+    // the composition order is determined by order the scene delegates were added in this function
+    HD_API
+    void AppendSceneDelegate(HdSceneDelegate* sceneDelegate);
+    // #nv end
+
 private:
     // The render index constructor is private so we can check
     // renderDelegate before construction: see HdRenderIndex::New(...).
@@ -488,7 +499,32 @@ private:
     HdRenderIndex() = delete;
 
     /// #nv edit begin
-    std::vector<_RprimInfo> _postSyncRprimInfoCache;
+public:
+
+    /// this can be cast to HdSyncRequestVector
+    struct _PostSyncRequestVector
+    {
+        SdfPathVector IDs;
+        std::vector<HdDirtyBits> dirtyBits;
+    };
+
+    /// this can be cast to _RprimSyncRequestVector 
+    struct _RprimPostSyncRequestVector
+    {
+        // do not change order here
+        std::vector<HdRprim*> rprims;
+        std::vector<size_t> reprsMasks;
+        _PostSyncRequestVector r;
+    };
+
+private:
+    typedef std::vector<HdSceneDelegate*> _SceneDelegateVector;
+    _SceneDelegateVector _sceneDelegates;
+
+    typedef TfHashMap<HdSceneDelegate*,
+        _RprimPostSyncRequestVector, TfHash> _RprimPostSyncRequestMap;
+    _RprimPostSyncRequestMap _postSyncMap;
+
     /// #nv edit end
 };
 

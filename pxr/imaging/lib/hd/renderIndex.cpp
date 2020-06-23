@@ -1044,8 +1044,48 @@ namespace {
                 ++primIdx;
             }
         }
+    }   
+
+    static void
+    _DoSyncRprims(HdSceneDelegate* sceneDelegate, 
+        WorkArenaDispatcher& dispatcher, 
+        _SyncRPrims& workerState,
+        _RprimSyncRequestVector& r)
+    {
+        if (!TfDebug::IsEnabled(HD_DISABLE_MULTITHREADED_RPRIM_SYNC) &&
+            sceneDelegate->IsEnabled(HdOptionTokens->parallelRprimSync)) {
+            TRACE_SCOPE("Parallel Rprim Sync");
+            // In the lambda below, we capture workerState by value and 
+            // incur a copy in the std::bind because the lambda execution 
+            // may be delayed (until we call Wait), resulting in
+            // workerState going out of scope.
+            dispatcher.Run([&r, workerState]() {
+                WorkParallelForN(r.rprims.size(),
+                    std::bind(&_SyncRPrims::Sync, workerState,
+                        std::placeholders::_1,
+                        std::placeholders::_2));
+            });
+        }
+        else {
+            TRACE_SCOPE("Serial Rprim Sync");
+            // Single-threaded version: Call worker directly
+            workerState.Sync(0, r.rprims.size());
+        }
     }
 };
+
+//#nv begin
+void HdRenderIndex::AppendSceneDelegate(HdSceneDelegate* sceneDelegate)
+{
+    _sceneDelegates.push_back(sceneDelegate);
+    
+    auto itr = _postSyncMap.find(sceneDelegate);
+    // if this is first time we use this scene delegate, add the sync map entry
+    if (_postSyncMap.end() == itr)
+        _postSyncMap[sceneDelegate] = _RprimPostSyncRequestVector();
+
+}
+//#nv end
 
 void
 HdRenderIndex::Sync(HdDirtyListSharedPtr const &dirtyList,
@@ -1207,6 +1247,14 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
     }
 
     _RprimSyncRequestMap syncMap;
+
+    //#nv begin
+    for (auto& sd : _sceneDelegates)
+    {
+        auto curvec = &syncMap[sd];
+    }
+    //#nv end
+
     bool resetVaryingState = false;
     {
         HF_TRACE_FUNCTION_SCOPE("Build Sync Map: Rprims");
@@ -1243,6 +1291,8 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
             if (curdel != rprimInfo.sceneDelegate) {
                 curdel = rprimInfo.sceneDelegate;
                 curvec = &syncMap[curdel];
+
+
             }
 
             curvec->PushBack(rprimInfo.rprim,
@@ -1329,95 +1379,79 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
     }
 
     // #nv edit begin
-    // find scene delegate and add to syncMap
-    HdSceneDelegate* currentDelegate = nullptr;
-    HdSyncRequestVector postSyncRequestVector;
 
-    // we read current scene delegate from the rprim map (assuming we have only one scene delegate)
-    // TODO - support multiple delegates by maintaining scene delegate set in render index
-    _RprimMap::const_iterator it = _rprimMap.begin(); 
-    if (it != _rprimMap.end()) {
-        const _RprimInfo& rprimInfo = it->second;
-        currentDelegate = rprimInfo.sceneDelegate;
-    }
+    // for each scene delegate, check if they need to update post sync requests
+    TF_FOR_ALL(dlgIt, _postSyncMap) {
+        HdSceneDelegate* sceneDelegate = dlgIt->first;
+        bool needsResync = sceneDelegate->NeedsPostSyncUpdate();
+        if (!needsResync)
+            continue;
 
-    bool canUseRprimInfoCache = false;
-    {
-        HF_TRACE_FUNCTION_SCOPE("Delegate ProcessPostSyncPropertyChanges");
-
-        // ask delegate to populate postSyncPropertyChanges
-        if (currentDelegate)
-            canUseRprimInfoCache = currentDelegate->ProcessPostSyncPropertyChanges(&postSyncRequestVector);
-    }
-
-    {
-        HF_TRACE_FUNCTION_SCOPE("Process SyncRequestVector");
-        _RprimSyncRequestVector& currentRequestVector = syncMap[currentDelegate];
-
-        // find rprim and add to syncrequestvector
-        if (postSyncRequestVector.IDs.size() == postSyncRequestVector.dirtyBits.size())
+        HdSyncRequestVector postSyncRequestVector;
         {
-            size_t numRequests = postSyncRequestVector.dirtyBits.size();
 
-            if (_postSyncRprimInfoCache.size() != numRequests 
-                || !canUseRprimInfoCache)
-            {
-                _postSyncRprimInfoCache.clear();
+            HF_TRACE_FUNCTION_SCOPE("Delegate UpdatePostSyncRequestVector");
 
-                for (size_t i = 0; i < numRequests; i++)
-                {
-                    const auto& id = postSyncRequestVector.IDs[i];
-                    auto iter = _rprimMap.find(id);
-                    if (iter == _rprimMap.end())
-                        continue;  // TODO - add error handling, or this can crash
-                    _postSyncRprimInfoCache.push_back(iter->second);
-                }
+            // ask delegate to populate postSyncPropertyChanges
+            sceneDelegate->UpdatePostSyncRequestVector(&postSyncRequestVector);
+            if (!TF_VERIFY(postSyncRequestVector.IDs.size() == postSyncRequestVector.dirtyBits.size())) {
+                TF_CODING_ERROR("Number of IDs and dirtyBits does not match");
+                continue;
             }
+        }
 
-            if (numRequests > 0)
+        size_t numPostSyncRequests = postSyncRequestVector.dirtyBits.size();
+
+        {
+            HF_TRACE_FUNCTION_SCOPE("Process SyncRequestVector");
+            _RprimPostSyncRequestVector& rprimPostSyncRequestVector = dlgIt->second;
+            HdSyncRequestVector& r = reinterpret_cast<HdSyncRequestVector&>(rprimPostSyncRequestVector.r);
+
+            r.IDs.clear();
+            r.dirtyBits.clear();
+            rprimPostSyncRequestVector.rprims.clear();
+            rprimPostSyncRequestVector.reprsMasks.clear();
+
+            // merge current sync requests
+            for (size_t i = 0; i < numPostSyncRequests; i++)
             {
-                currentRequestVector.Reserve(currentRequestVector.rprims.size() + numRequests);
+                const auto& id = postSyncRequestVector.IDs[i];
+                const auto dirtyBits = postSyncRequestVector.dirtyBits[i];
 
-                for (size_t i = 0; i < numRequests; i++)
+                // add new entry to the combined request vector
+                auto iter = _rprimMap.find(id);
+                if (iter != _rprimMap.end())
                 {
-                    const _RprimInfo& rprimInfo = _postSyncRprimInfoCache[i];
                     size_t reprMask = 1 << 0; // FIXME - this is a hack, we need to read proper reprMask.
-                    currentRequestVector.PushBack(rprimInfo.rprim, reprMask,
-                        postSyncRequestVector.dirtyBits[i]);
+                    r.IDs.push_back(id);
+                    r.dirtyBits.push_back(dirtyBits);
+                    rprimPostSyncRequestVector.rprims.push_back(iter->second.rprim);
+                    rprimPostSyncRequestVector.reprsMasks.push_back(reprMask);
                 }
             }
         }
     }
     // #nv edit end
 
-    // Collect results and synchronize.
+    // sync dynamic (slow) syncMap for rprim Sync
     WorkArenaDispatcher dispatcher;
     TF_FOR_ALL(dlgIt, syncMap) {
         HdSceneDelegate* sceneDelegate = dlgIt->first;
+
         _RprimSyncRequestVector& r = dlgIt->second;
+        _SyncRPrims workerState(sceneDelegate, r, reprs, _tracker, renderParam);
 
-        {
-            _SyncRPrims workerState(sceneDelegate, r, reprs, _tracker, renderParam);
+        _DoSyncRprims(sceneDelegate, dispatcher, workerState, r);
+    }
+    dispatcher.Wait();
 
-            if (!TfDebug::IsEnabled(HD_DISABLE_MULTITHREADED_RPRIM_SYNC) &&
-                  sceneDelegate->IsEnabled(HdOptionTokens->parallelRprimSync)) {
-                TRACE_SCOPE("Parallel Rprim Sync");
-                // In the lambda below, we capture workerState by value and 
-                // incur a copy in the std::bind because the lambda execution 
-                // may be delayed (until we call Wait), resulting in
-                // workerState going out of scope.
-                dispatcher.Run([&r, workerState]() {
-                    WorkParallelForN(r.rprims.size(),
-                        std::bind(&_SyncRPrims::Sync, workerState,
-                                  std::placeholders::_1,
-                                  std::placeholders::_2));
-                });
-            } else {
-                TRACE_SCOPE("Serial Rprim Sync");
-                // Single-threaded version: Call worker directly
-                workerState.Sync(0, r.rprims.size());
-            }
-        }
+    // sync fixed (fast) postSyncMap for rprim Sync
+    TF_FOR_ALL(dlgIt, _postSyncMap) {
+        HdSceneDelegate* sceneDelegate = dlgIt->first;
+        _RprimSyncRequestVector& r = reinterpret_cast<_RprimSyncRequestVector&>(dlgIt->second);
+        _SyncRPrims workerState(sceneDelegate, r, reprs, _tracker, renderParam);
+
+        _DoSyncRprims(sceneDelegate, dispatcher, workerState, r);
     }
     dispatcher.Wait();
 
