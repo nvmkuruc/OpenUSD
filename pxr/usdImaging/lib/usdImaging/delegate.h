@@ -163,6 +163,9 @@ public:
 
     /// Applies any scene edits which have been queued up by notices from USD.
     USDIMAGING_API
+    // #nv begin 
+    virtual 
+    // nv end
     void ApplyPendingUpdates();
 
     // #nv begin #fast-updates
@@ -642,6 +645,12 @@ protected:
     // ---------------------------------------------------------------------- //
     void _OnUsdObjectsChanged(UsdNotice::ObjectsChanged const&,
                               UsdStageWeakPtr const& sender);
+
+    // #nv begin
+    USDIMAGING_API 
+    virtual void _HandleUsdObjectsChanged(UsdNotice::ObjectsChanged const&,
+        UsdStageWeakPtr const& sender);
+    // nv end
 
     // The lightest-weight update, it does fine-grained invalidation of
     // individual properties at the given path (prim or property).
