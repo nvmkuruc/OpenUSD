@@ -1197,7 +1197,7 @@ UsdImagingDelegate::ApplyPendingUpdates()
             }
         }
     }
-
+     
     // If any changes called Repopulate() on the indexProxy, we need to
     // repopulate them before any updates. If the list is empty, _Populate is a
     // no-op.
@@ -1205,8 +1205,18 @@ UsdImagingDelegate::ApplyPendingUpdates()
     _ExecuteWorkForVariabilityUpdate(&worker);
 }
 
-void 
+// #nv begin
+void
 UsdImagingDelegate::_OnUsdObjectsChanged(
+    UsdNotice::ObjectsChanged const& notice,
+    UsdStageWeakPtr const& sender)
+{
+   _HandleUsdObjectsChanged(notice, sender);
+}  
+// nv end
+
+void 
+UsdImagingDelegate::_HandleUsdObjectsChanged(
     UsdNotice::ObjectsChanged const& notice,
     UsdStageWeakPtr const& sender)
 {
