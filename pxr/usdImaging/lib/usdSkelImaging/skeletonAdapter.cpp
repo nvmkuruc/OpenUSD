@@ -332,6 +332,12 @@ UsdSkelImagingSkeletonAdapter::TrackVariability(
         return;
     }
 
+    //+NV_CHANGE
+    if (_IsSkelAnimPrimPath(cachePath)) {
+        return;
+    }
+    //-NV_CHANGE
+
     TF_CODING_ERROR("UsdSkelImagingSkeletonAdapter::TrackVariability : Received"
                     " unknown prim %s ", cachePath.GetText());
 }
@@ -377,6 +383,11 @@ UsdSkelImagingSkeletonAdapter::UpdateForTime(
                     time,
                     requestedBits,
                     instancerContext);
+    }
+
+    //+NV_CHANGE : skelAnim Prim has no Sprim or Rprim to update.
+    if (_IsSkelAnimPrimPath(cachePath)) {
+        return;
     }
 
     TF_CODING_ERROR("UsdSkelImagingSkeletonAdapter::UpdateForTime : Received"
@@ -635,6 +646,7 @@ UsdSkelImagingSkeletonAdapter::MarkDirty(const UsdPrim& prim,
                 for (auto const& skin : skelSkinMap)
                 {
                     SdfPath const& skelPath = skin.first;
+                    index->MarkRprimDirty(skelPath, HdChangeTracker::DirtyPoints);
                     const _SkelData* skelData = _GetSkelData(skelPath);
                     if (skelData != nullptr)
                     {
