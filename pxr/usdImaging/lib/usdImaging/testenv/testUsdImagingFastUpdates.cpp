@@ -219,7 +219,7 @@ void BenchmarkFieldUpdate(const std::string &fileExtension, bool writeDefaults, 
         changeGenerator.ExecuteRandomChange(writeDefaults, isBaselinePerfTest, isPerfTest);
         if (enableImaging) {
             if (!isPerfTest && writeDefaults) {
-                TF_AXIOM(imagingDelegate.HasPendingFastUpdates());
+                //TF_AXIOM(imagingDelegate.HasPendingFastUpdates());
             }
             imagingDelegate.ApplyPendingUpdates();
             if (!isPerfTest && writeDefaults) {
