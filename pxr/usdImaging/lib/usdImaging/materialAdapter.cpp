@@ -138,38 +138,50 @@ UsdImagingMaterialAdapter::Populate(UsdPrim const& prim,
 
 /* virtual */
 void
-UsdImagingMaterialAdapter::TrackVariability(UsdPrim const& prim,
-                                          SdfPath const& cachePath,
-                                          HdDirtyBits* timeVaryingBits,
-                                          UsdImagingInstancerContext const*
-                                              instancerContext,
-                                          // #nv begin fast-updates
-                                          bool checkVariability) const
-                                          // nv end
+UsdImagingMaterialAdapter::TrackVariability(
+    UsdPrim const& prim,
+    SdfPath const& cachePath,
+    HdDirtyBits* timeVaryingBits,
+    UsdImagingInstancerContext const* instancerContext,
+    // #nv begin fast-updates
+    bool checkVariability) const
+    // nv end
 {
-    // XXX: Time-varying parameters are not yet implemented
+    // #nv begin fast-updates
+    // Early out, as there are no initial values to populate into the value cache.
+    if (!checkVariability)
+        return;
+    // nv end
+
+    bool timeVarying = false;
+    HdMaterialNetworkMap map;
+    TfToken const& networkSelector = _GetMaterialNetworkSelector();
+    UsdTimeCode time = UsdTimeCode::Default();
+    _GetMaterialNetworkMap(prim, networkSelector, &map, time, &timeVarying);
+    if (timeVarying) {
+        *timeVaryingBits |= HdMaterial::DirtyResource;
+    }
 }
 
 /* virtual */
 void
-UsdImagingMaterialAdapter::UpdateForTime(UsdPrim const& prim,
-                                       SdfPath const& cachePath,
-                                       UsdTimeCode time,
-                                       HdDirtyBits requestedBits,
-                                       UsdImagingInstancerContext const*
-                                           instancerContext) const
+UsdImagingMaterialAdapter::UpdateForTime(
+    UsdPrim const& prim,
+    SdfPath const& cachePath,
+    UsdTimeCode time,
+    HdDirtyBits requestedBits,
+    UsdImagingInstancerContext const*
+    instancerContext) const
 {
-    UsdImagingValueCache* valueCache = _GetValueCache();
-
     if (requestedBits & HdMaterial::DirtyResource) {
-        TfToken const& networkSelector = _GetMaterialNetworkSelector();
-
         // Walk the material network and generate a HdMaterialNetworkMap
         // structure to store it in the value cache.
-        HdMaterialNetworkMap networkMap;
-        _GetMaterialNetworkMap(prim, networkSelector, &networkMap);
-
-        valueCache->GetMaterialResource(cachePath) = networkMap;
+        bool timeVarying = false;
+        HdMaterialNetworkMap map;
+        TfToken const& networkSelector = _GetMaterialNetworkSelector();
+        _GetMaterialNetworkMap(prim, networkSelector, &map, time, &timeVarying);
+        UsdImagingValueCache* valueCache = _GetValueCache();
+        valueCache->GetMaterialResource(cachePath) = map;
     }
 }
 
@@ -273,7 +285,9 @@ void _WalkGraph(
     HdMaterialNetwork* materialNetwork,
     TfToken const& networkSelector,
     SdfPathSet* visitedNodes,
-    TfTokenVector const & shaderSourceTypes)
+    TfTokenVector const & shaderSourceTypes,
+    UsdTimeCode time,
+    bool* timeVarying)
 {
     // Store the path of the node
     HdMaterialNode node;
@@ -307,7 +321,9 @@ void _WalkGraph(
                 materialNetwork,
                 networkSelector,
                 visitedNodes,
-                shaderSourceTypes);
+                shaderSourceTypes,
+                time,
+                timeVarying);
 
             HdMaterialRelationship relationship;
             relationship.outputId = node.path;
@@ -318,9 +334,11 @@ void _WalkGraph(
         } else if (attrType == UsdShadeAttributeType::Input) {
             // If it is an input attribute we get the authored value
             VtValue value;
-            if (attr.Get(&value)) {
+            if (attr.Get(&value, time)) {
                 node.parameters[inputName] = value;
             }
+
+            *timeVarying |= attr.ValueMightBeTimeVarying();
 
 // #nv begin #parameter-colorSpace-to-hydra
             TfToken colorSpaceToken = attr.GetColorSpace();
@@ -373,7 +391,9 @@ _BuildHdMaterialNetworkFromTerminal(
     TfToken const& terminalIdentifier,
     TfToken const& networkSelector,
     TfTokenVector const& shaderSourceTypes,
-    HdMaterialNetworkMap *materialNetworkMap)
+    HdMaterialNetworkMap *materialNetworkMap,
+    UsdTimeCode time,
+    bool* timeVarying)
 {
     HdMaterialNetwork& network = materialNetworkMap->map[terminalIdentifier];
     std::vector<HdMaterialNode>& nodes = network.nodes;
@@ -384,7 +404,9 @@ _BuildHdMaterialNetworkFromTerminal(
         &network,
         networkSelector,
         &visitedNodes, 
-        shaderSourceTypes);
+        shaderSourceTypes,
+        time,
+        timeVarying);
 
     if (!TF_VERIFY(!nodes.empty())) return;
 
@@ -412,7 +434,9 @@ void
 UsdImagingMaterialAdapter::_GetMaterialNetworkMap(
     UsdPrim const &usdPrim, 
     TfToken const& networkSelector,
-    HdMaterialNetworkMap *networkMap) const
+    HdMaterialNetworkMap *networkMap,
+    UsdTimeCode time,
+    bool* timeVarying) const
 {
     UsdShadeMaterial material(usdPrim);
     if (!material) {
@@ -432,7 +456,9 @@ UsdImagingMaterialAdapter::_GetMaterialNetworkMap(
             HdMaterialTerminalTokens->surface,
             networkSelector,
             shaderSourceTypes,
-            networkMap);
+            networkMap,
+            time,
+            timeVarying);
     }
 
     if (UsdShadeShader d = material.ComputeDisplacementSource(context)) {
@@ -441,7 +467,9 @@ UsdImagingMaterialAdapter::_GetMaterialNetworkMap(
             HdMaterialTerminalTokens->displacement,
             networkSelector,
             shaderSourceTypes,
-            networkMap);
+            networkMap,
+            time,
+            timeVarying);
     }
 
     if (UsdShadeShader v = material.ComputeVolumeSource(context)) {
@@ -450,7 +478,9 @@ UsdImagingMaterialAdapter::_GetMaterialNetworkMap(
             HdMaterialTerminalTokens->volume,
             networkSelector,
             shaderSourceTypes,
-            networkMap);
+            networkMap,
+            time,
+            timeVarying);
     }
 }
 

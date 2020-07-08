@@ -113,7 +113,9 @@ protected:
 private:
     void _GetMaterialNetworkMap(UsdPrim const &prim, 
                                 TfToken const& materialNetworkSelector,
-                                HdMaterialNetworkMap *materialNetworkMap) const;
+                                HdMaterialNetworkMap *materialNetworkMap,
+                                UsdTimeCode time,
+                                bool* timeVarying) const;
 };
 
 
