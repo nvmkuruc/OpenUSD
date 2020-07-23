@@ -224,13 +224,17 @@ def GetPythonInfo():
         pythonLibPath = os.path.join(pythonBaseDir, "lib",
                                      _GetPythonLibraryFilename())
     else:
-        pythonIncludeDir = sysconfig.get_config_var("INCLUDEPY")
+        pythonIncludeDir = sysconfig.get_paths()['include']
+        if not os.path.exists(pythonIncludeDir):
+            pythonIncludeDir = sysconfig.get_config_var("INCLUDEPY")
         if Windows():
             pythonBaseDir = sysconfig.get_config_var("base")
             pythonLibPath = os.path.join(pythonBaseDir, "libs",
                                          _GetPythonLibraryFilename())
         elif Linux():
-            pythonLibDir = sysconfig.get_config_var("LIBDIR")
+            pythonLibDir = os.path.join(sysconfig.get_paths()["platstdlib"], "..")
+            if not os.path.exists(pythonLibDir):
+                pythonLibDir = sysconfig.get_config_var("LIBDIR")
             pythonMultiarchSubdir = sysconfig.get_config_var("multiarchsubdir")
             if pythonMultiarchSubdir:
                 pythonLibDir = pythonLibDir + pythonMultiarchSubdir
@@ -1282,7 +1286,7 @@ HDF5 = Dependency("HDF5", InstallHDF5, "include/hdf5.h")
 ############################################################
 # Alembic
 
-ALEMBIC_URL = "https://github.com/alembic/alembic/archive/1.7.10.zip"
+ALEMBIC_URL = "https://github.com/alembic/alembic/archive/1.7.14.zip"
 
 def InstallAlembic(context, force, buildArgs):
     with CurrentWorkingDirectory(DownloadURL(ALEMBIC_URL, context, force)):
@@ -1482,8 +1486,8 @@ def InstallUSD(context, force, buildArgs):
 
                 # CMAKE_PREFIX_PATH isn't sufficient for the FindHDF5 module 
                 # to find the HDF5 we've built, so provide an extra hint.
-                extraArgs.append('-DHDF5_ROOT="{instDir}"'
-                                 .format(instDir=context.instDir))
+                #extraArgs.append('-DHDF5_ROOT="{instDir}"'
+                #                 .format(instDir=context.instDir))
             else:
                 extraArgs.append('-DPXR_ENABLE_HDF5_SUPPORT=OFF')
         else:
@@ -1842,7 +1846,6 @@ class InstallContext:
         # - usdview
         self.buildUsdview = (self.buildUsdImaging and 
                              self.buildPython and 
-                             sys.version[0] == '2' and
                              args.build_usdview)
 
         # - Imaging plugins
@@ -1901,12 +1904,21 @@ if extraPythonPaths:
 
 # Determine list of dependencies that are required based on options
 # user has selected.
-requiredDependencies = [ZLIB, BOOST, TBB]
+requiredDependencies = []
+
+# nv begin #deps-locations
+# TODO: support --zlib-location, --boost-location, --tbb-location
+if context.buildMonolithic:
+    requiredDependencies = [ZLIB, BOOST, TBB]
+# nv end
 
 if context.buildAlembic:
+    # nv begin #deps-locations
+    # TODO: support --hdf5-location, --alembic-location
     if context.enableHDF5:
-        requiredDependencies += [HDF5]
-    requiredDependencies += [OPENEXR, ALEMBIC]
+        pass #requiredDependencies += [HDF5]
+    #requiredDependencies += [ALEMBIC]
+    # nv end
 
 if context.buildDraco:
     requiredDependencies += [DRACO]
@@ -1918,7 +1930,10 @@ if context.buildImaging:
     if context.enablePtex:
         requiredDependencies += [PTEX]
 
-    requiredDependencies += [GLEW, OPENSUBDIV]
+    # nv begin #deps-locations
+    # TODO: support --glew-location (not needed after v21.02), --opensubdiv-location
+    #requiredDependencies += [GLEW, OPENSUBDIV]
+    # nv end
 
     if context.enableOpenVDB:
         requiredDependencies += [BLOSC, BOOST, OPENEXR, OPENVDB, TBB]
@@ -1940,7 +1955,10 @@ if context.buildUsdview:
 # loads an older version of zlib than the one we'd build and link
 # our libraries against.
 if Linux():
-    requiredDependencies.remove(ZLIB)
+    # nv begin #deps-locations
+    # TODO: support --zlib-location
+    pass #requiredDependencies.remove(ZLIB)
+    # nv end
 
 # Error out if user is building monolithic library on windows with draco plugin
 # enabled. This currently results in missing symbols.
