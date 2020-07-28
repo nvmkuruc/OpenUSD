@@ -469,6 +469,11 @@ UsdStage::UsdStage(const SdfLayerRefPtr& rootLayer,
     , _initialLoadSet(load)
     , _populationMask(mask)
     , _isClosingStage(false)
+    // nv begin
+    , _getValueFn(nullptr)
+    , _getValueFnUserData(nullptr)
+    , _getValueFnEnabled(false)
+    // nv end
 {
     if (!TF_VERIFY(_rootLayer))
         return;
@@ -6725,6 +6730,21 @@ struct Usd_AttrGetUntypedValueHelper {
     }
 };
 
+// #nv begin
+void
+UsdStage::SetGetValueCallback(_GetValueCallbackFn fn, void* userData)
+{
+    _getValueFn = fn;
+    _getValueFnUserData = userData;
+}
+
+void
+UsdStage::SetGetValueCallbackEnabled(bool enabled)
+{
+    _getValueFnEnabled = enabled;
+}
+// #nv end
+
 bool
 UsdStage::_GetValue(UsdTimeCode time, const UsdAttribute &attr,
                     VtValue* result) const
@@ -6736,6 +6756,14 @@ UsdStage::_GetValue(UsdTimeCode time, const UsdAttribute &attr,
     {
         return stage._GetValueImpl(time, attr, interpolator, value);
     };
+
+    // #nv begin
+    if (_getValueFn && _getValueFnEnabled)
+    {
+        if ((*_getValueFn)(time, attr.GetPath(), nullptr, result, _getValueFnUserData))
+            return true; // value already authored at the strongest layer
+    }
+    // #nv end
 
     return Usd_AttrGetUntypedValueHelper::GetValue(
         *this, time, attr, result, getValueImpl);
@@ -6753,6 +6781,14 @@ UsdStage::_GetValue(UsdTimeCode time, const UsdAttribute &attr,
     {
         return stage._GetValueImpl(time, attr, interpolator, value);
     };
+
+    // #nv begin
+    if (_getValueFn && _getValueFnEnabled)
+    {
+        if ((*_getValueFn)(time, attr.GetPath(), (void*)result, nullptr, _getValueFnUserData))
+            return true; // value already authored at the strongest layer
+    }
+    // #nv end
 
     return Usd_AttrGetValueHelper<T>::GetValue(
         *this, time, attr, result, getValueImpl);
@@ -7384,6 +7420,14 @@ UsdStage::_GetValueFromResolveInfo(const UsdResolveInfo &info,
             info, time, attr, interpolator, value);
     };
 
+    // #nv begin
+    if (_getValueFn && _getValueFnEnabled)
+    {
+        if ((*_getValueFn)(time, attr.GetPath(), nullptr, result, _getValueFnUserData))
+            return true; // value already authored at the strongest layer
+    }
+    // #nv end
+
     return Usd_AttrGetUntypedValueHelper::GetValue(
         *this, time, attr, result, getValueImpl);
 }
@@ -7402,6 +7446,14 @@ UsdStage::_GetValueFromResolveInfo(const UsdResolveInfo &info,
         return stage._GetValueFromResolveInfoImpl(
             info, time, attr, interpolator, value);
     };
+
+    // #nv begin
+    if (_getValueFn && _getValueFnEnabled)
+    {
+        if ((*_getValueFn)(time, attr.GetPath(), result, nullptr, _getValueFnUserData))
+            return true; // value already authored at the strongest layer
+    }
+    // #nv end
 
     return Usd_AttrGetValueHelper<T>::GetValue(
         *this, time, attr, result, getValueImpl);
