@@ -308,8 +308,14 @@ UsdImagingDelegate::_AdapterLookup(TfToken const& adapterKey)
         if (adapter->IsSupported(&indexProxy)) {
             adapter->SetDelegate(this);
         } else {
-            TF_WARN("Selected hydra renderer doesn't support prim type '%s'",
+            // #nv begin #kit-cameras
+            // Kit is non-compliant wrto cameras for now.
+            static const TfToken camToken("Camera");
+            if (adapterKey != camToken) {
+                TF_WARN("Selected hydra renderer doesn't support prim type '%s'",
                     adapterKey.GetText());
+            }
+            // nv end
             adapter.reset();
         }
     }
