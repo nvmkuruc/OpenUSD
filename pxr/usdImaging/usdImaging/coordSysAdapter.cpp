@@ -92,6 +92,11 @@ UsdImagingCoordSysAdapter::TrackVariability(UsdPrim const& prim,
                                         bool checkVariability) const
                                         // nv end
 {
+    // Discover time-varying transform on the target prim.
+    _IsTransformVarying(prim,
+        HdChangeTracker::DirtyTransform,
+        UsdImagingTokens->usdVaryingXform,
+        timeVaryingBits);
 }
 
 void 
@@ -125,9 +130,10 @@ UsdImagingCoordSysAdapter::ProcessPropertyChange(UsdPrim const& prim,
                                       SdfPath const& cachePath, 
                                       TfToken const& propertyName)
 {
-    // TODO: We could potentially detect xform-specific edits here
-    // and only 
-    return HdChangeTracker::AllDirty;
+    if (UsdGeomXformable::IsTransformationAffectedByAttrNamed(propertyName)) {
+        return HdChangeTracker::DirtyTransform;
+    }
+    return HdChangeTracker::Clean;
 }
 
 void

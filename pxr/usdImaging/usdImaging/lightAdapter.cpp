@@ -74,24 +74,23 @@ UsdImagingLightAdapter::TrackVariability(UsdPrim const& prim,
 {
     // #nv begin fast-updates
     if (checkVariability) {
-    // nv end
-        // Discover time-varying transforms.
+        // nv end
+            // Discover time-varying transforms.
         _IsTransformVarying(prim,
             HdLight::DirtyBits::DirtyTransform,
             UsdImagingTokens->usdVaryingXform,
             timeVaryingBits);
 
-        // Determine if the light material network is time varying.
-        if (UsdImaging_IsHdMaterialNetworkTimeVarying(prim)) {
-            *timeVaryingBits |= HdLight::DirtyBits::DirtyResource;
-        }
-
-        // If any of the light attributes is time varying
+        // If any of the light attributes is time varying 
         // we will assume all light params are time-varying.
         const std::vector<UsdAttribute> &attrs = prim.GetAttributes();
-        TF_FOR_ALL(attrIter, attrs) {
-            const UsdAttribute& attr = *attrIter;
-            if (attr.GetNumTimeSamples()>1){
+        for (UsdAttribute const& attr : attrs) {
+            // Don't double-count transform attrs.
+            if (UsdGeomXformable::IsTransformationAffectedByAttrNamed(
+                attr.GetBaseName())) {
+                continue;
+            }
+            if (attr.GetNumTimeSamples() > 1) {
                 *timeVaryingBits |= HdLight::DirtyBits::DirtyParams;
                 break;
             }
@@ -180,17 +179,11 @@ UsdImagingLightAdapter::ProcessPropertyChange(UsdPrim const& prim,
                                       SdfPath const& cachePath, 
                                       TfToken const& propertyName)
 {
-    // #nv begin #sparse-light-updates
-    static bool sparseUpdatesEnabled = TfGetEnvSetting(USDIMAGING_ENABLE_SPARSE_LIGHT_UPDATES);
-    if (sparseUpdatesEnabled) {
-        if (UsdGeomXformable::IsTransformationAffectedByAttrNamed(propertyName)) {
-            return HdLight::DirtyTransform;
-        }
-        return HdLight::AllDirty;
+    if (UsdGeomXformable::IsTransformationAffectedByAttrNamed(propertyName)) {
+        return HdLight::DirtyBits::DirtyTransform;
     }
-    // nv end
-
-    return HdChangeTracker::AllDirty;
+    // "DirtyParam" is the catch-all bit for light params.
+    return HdLight::DirtyBits::DirtyParams;
 }
 
 void

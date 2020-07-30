@@ -109,20 +109,17 @@ UsdImagingCameraAdapter::TrackVariability(UsdPrim const& prim,
     if (checkVariability) {
     // nv end
         // Properties that affect the projection matrix.
-        // IMPORTANT: Calling _IsVarying will clear the specified bit if the given
-        // attribute is _not_ varying.  Since we have multiple attributes that might
-        // result in the bit being set, we need to be careful not to reset it.
-        // Translation: only check _IsVarying for a given cause IFF the bit wasn't
-        // already set by a previous invocation.
+        // To get a small speed boost, if an attribute sets a dirty bit we skip
+        // all subsequent checks for that dirty bit.
         _IsVarying(prim,
-            cam.GetHorizontalApertureAttr().GetBaseName(),
+            UsdGeomTokens->horizontalAperture,
             HdCamera::DirtyProjMatrix,
             HdCameraTokens->projectionMatrix,
             timeVaryingBits,
             false);
         if ((*timeVaryingBits & HdCamera::DirtyProjMatrix) == 0) {
             _IsVarying(prim,
-                cam.GetVerticalApertureAttr().GetBaseName(),
+                UsdGeomTokens->verticalAperture,
                 HdCamera::DirtyProjMatrix,
                 HdCameraTokens->projectionMatrix,
                 timeVaryingBits,
@@ -130,7 +127,7 @@ UsdImagingCameraAdapter::TrackVariability(UsdPrim const& prim,
         }
         if ((*timeVaryingBits & HdCamera::DirtyProjMatrix) == 0) {
             _IsVarying(prim,
-                cam.GetHorizontalApertureOffsetAttr().GetBaseName(),
+                UsdGeomTokens->horizontalApertureOffset,
                 HdCamera::DirtyProjMatrix,
                 HdCameraTokens->projectionMatrix,
                 timeVaryingBits,
@@ -138,7 +135,7 @@ UsdImagingCameraAdapter::TrackVariability(UsdPrim const& prim,
         }
         if ((*timeVaryingBits & HdCamera::DirtyProjMatrix) == 0) {
             _IsVarying(prim,
-                cam.GetVerticalApertureOffsetAttr().GetBaseName(),
+                UsdGeomTokens->verticalApertureOffset,
                 HdCamera::DirtyProjMatrix,
                 HdCameraTokens->projectionMatrix,
                 timeVaryingBits,
@@ -146,7 +143,7 @@ UsdImagingCameraAdapter::TrackVariability(UsdPrim const& prim,
         }
         if ((*timeVaryingBits & HdCamera::DirtyProjMatrix) == 0) {
             _IsVarying(prim,
-                cam.GetClippingRangeAttr().GetBaseName(),
+                UsdGeomTokens->clippingRange,
                 HdCamera::DirtyProjMatrix,
                 HdCameraTokens->projectionMatrix,
                 timeVaryingBits,
@@ -154,7 +151,7 @@ UsdImagingCameraAdapter::TrackVariability(UsdPrim const& prim,
         }
         if ((*timeVaryingBits & HdCamera::DirtyProjMatrix) == 0) {
             _IsVarying(prim,
-                cam.GetFocalLengthAttr().GetBaseName(),
+                UsdGeomTokens->focalLength,
                 HdCamera::DirtyProjMatrix,
                 HdCameraTokens->projectionMatrix,
                 timeVaryingBits,
@@ -162,7 +159,7 @@ UsdImagingCameraAdapter::TrackVariability(UsdPrim const& prim,
         }
 
         _IsVarying(prim,
-            cam.GetClippingPlanesAttr().GetBaseName(),
+            UsdGeomTokens->clippingPlanes,
             HdCamera::DirtyClipPlanes,
             HdCameraTokens->clipPlanes,
             timeVaryingBits,
@@ -173,37 +170,60 @@ UsdImagingCameraAdapter::TrackVariability(UsdPrim const& prim,
         // variability of the remaining params.
         if (*timeVaryingBits & HdCamera::DirtyProjMatrix) {
             *timeVaryingBits |= HdCamera::DirtyParams;
-        }
-        else {
+        } else {
             _IsVarying(prim,
-                cam.GetFStopAttr().GetBaseName(),
+                UsdGeomTokens->fStop,
                 HdCamera::DirtyParams,
                 HdCameraTokens->fStop,
                 timeVaryingBits,
                 false);
             if ((*timeVaryingBits & HdCamera::DirtyParams) == 0) {
                 _IsVarying(prim,
-                    cam.GetFocusDistanceAttr().GetBaseName(),
+                    UsdGeomTokens->focusDistance,
                     HdCamera::DirtyParams,
                     HdCameraTokens->focusDistance,
                     timeVaryingBits,
                     false);
             }
-            if ((*timeVaryingBits & HdCamera::DirtyParams) == 0) {
+            if ((*timeVaryingBits & HdCamera::DirtyProjMatrix) == 0) {
                 _IsVarying(prim,
-                    cam.GetShutterOpenAttr().GetBaseName(),
+                    UsdGeomTokens->shutterOpen,
                     HdCamera::DirtyParams,
                     HdCameraTokens->shutterOpen,
                     timeVaryingBits,
                     false);
             }
-            if ((*timeVaryingBits & HdCamera::DirtyParams) == 0) {
+            if ((*timeVaryingBits & HdCamera::DirtyProjMatrix) == 0) {
                 _IsVarying(prim,
-                    cam.GetShutterCloseAttr().GetBaseName(),
+                    UsdGeomTokens->shutterClose,
                     HdCamera::DirtyParams,
-                    HdCameraTokens->shutterClose,
+                    HdCameraTokens->fStop,
                     timeVaryingBits,
                     false);
+                if ((*timeVaryingBits & HdCamera::DirtyParams) == 0) {
+                    _IsVarying(prim,
+                        cam.GetFocusDistanceAttr().GetBaseName(),
+                        HdCamera::DirtyParams,
+                        HdCameraTokens->focusDistance,
+                        timeVaryingBits,
+                        false);
+                }
+                if ((*timeVaryingBits & HdCamera::DirtyParams) == 0) {
+                    _IsVarying(prim,
+                        cam.GetShutterOpenAttr().GetBaseName(),
+                        HdCamera::DirtyParams,
+                        HdCameraTokens->shutterOpen,
+                        timeVaryingBits,
+                        false);
+                }
+                if ((*timeVaryingBits & HdCamera::DirtyParams) == 0) {
+                    _IsVarying(prim,
+                        cam.GetShutterCloseAttr().GetBaseName(),
+                        HdCamera::DirtyParams,
+                        HdCameraTokens->shutterClose,
+                        timeVaryingBits,
+                        false);
+                }
             }
         }
     }
@@ -344,11 +364,33 @@ UsdImagingCameraAdapter::ProcessPropertyChange(UsdPrim const& prim,
     if (disabled) {
         // Kit is not yet using Hydra cameras, which overinvalidate Camera gizmos.
         return HdCamera::Clean;
-    } else {
-        // Could be smarter, but there isn't much compute to save here.
-        return HdChangeTracker::AllDirty;
     }
     // nv end
+
+    if (UsdGeomXformable::IsTransformationAffectedByAttrNamed(propertyName))
+        return HdCamera::DirtyViewMatrix;
+
+    else if (propertyName == UsdGeomTokens->horizontalAperture ||
+             propertyName == UsdGeomTokens->verticalAperture ||
+             propertyName == UsdGeomTokens->horizontalApertureOffset ||
+             propertyName == UsdGeomTokens->verticalApertureOffset ||
+             propertyName == UsdGeomTokens->clippingRange ||
+             propertyName == UsdGeomTokens->focalLength) {
+        return HdCamera::DirtyProjMatrix |
+               HdCamera::DirtyParams;
+    }
+
+    else if (propertyName == UsdGeomTokens->clippingPlanes)
+        return HdCamera::DirtyClipPlanes;
+
+    else if (propertyName == UsdGeomTokens->fStop ||
+             propertyName == UsdGeomTokens->focusDistance ||
+             propertyName == UsdGeomTokens->shutterOpen ||
+             propertyName == UsdGeomTokens->shutterClose)
+        return HdCamera::DirtyParams;
+
+    // XXX: There's no catch-all dirty bit for weird camera params.
+    return HdChangeTracker::AllDirty;
 }
 
 void
