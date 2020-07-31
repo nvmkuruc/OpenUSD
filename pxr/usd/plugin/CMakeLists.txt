@@ -9,5 +9,7 @@ if (${PXR_BUILD_MATERIALX_PLUGIN})
 endif()
 add_subdirectory(sdrOsl)
 
-# Disabled until usdMdl works with mdl_sdk 2019.327300.1956.rel
-add_subdirectory(usdMdl)
+# TODO: Get usdMdl working with minimal builds (no-python, no-imaging, monolithic)
+if (${PXR_BUILD_IMAGING})
+    add_subdirectory(usdMdl)
+endif()
