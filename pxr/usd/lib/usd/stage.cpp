@@ -6743,6 +6743,24 @@ UsdStage::SetGetValueCallbackEnabled(bool enabled)
 {
     _getValueFnEnabled = enabled;
 }
+
+void 
+UsdStage::SendFastUpdateNotice(const SdfPathVector& changedPaths)
+{
+    std::vector<SdfFastUpdateList::FastUpdate> fastUpdates;
+
+    for (auto p : changedPaths)
+    {
+        VtValue data;
+        _AddToChangedPaths(&fastUpdates, p, data);
+    }
+
+    UsdNotice::ObjectsChanged::_PathsToChangesMap resyncChanges, infoChanges;
+
+    UsdStageWeakPtr self(this);
+    UsdNotice::ObjectsChanged(self, &resyncChanges, &infoChanges, &fastUpdates).Send(self);
+}
+
 // #nv end
 
 bool

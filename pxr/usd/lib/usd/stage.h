@@ -2073,6 +2073,9 @@ public:
 
     USD_API
     void SetGetValueCallbackEnabled(bool enabled);
+
+    USD_API
+    void SendFastUpdateNotice(const SdfPathVector& changedPath);
     // nv end
 private:
 
