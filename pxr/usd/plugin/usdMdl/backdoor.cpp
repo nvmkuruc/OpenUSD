@@ -3,10 +3,10 @@
  *****************************************************************************/
 #include "pxr/pxr.h"
 
-#include "pxr/usd/usdMdl/backdoor.h"
-#include "pxr/usd/usdMdl/distiller.h"
-#include "pxr/usd/usdMdl/usdToMdl.h"
-#include "pxr/usd/usdMdl/utils.h"
+#include "pxr/usd/plugin/usdMdl/backdoor.h"
+#include "pxr/usd/plugin/usdMdl/distiller.h"
+#include "pxr/usd/plugin/usdMdl/usdToMdl.h"
+#include "pxr/usd/plugin/usdMdl/utils.h"
 #include "pxr/usd/usd/stage.h"
 #include "pxr/base/tf/diagnostic.h"
 #include "pxr/base/tf/fileUtils.h"

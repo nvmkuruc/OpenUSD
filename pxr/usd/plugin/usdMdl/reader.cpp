@@ -17,9 +17,9 @@
 #include "pxr/usd/usdGeom/primvarsAPI.h"
 #include "pxr/usd/usdGeom/xform.h"
 #include "pxr/usd/usdGeom/sphere.h"
-#include "pxr/usd/usdMdl/reader.h"
-#include "pxr/usd/usdMdl/neuray.h"
-#include "pxr/usd/usdMdl/utils.h"
+#include "pxr/usd/plugin/usdMdl/reader.h"
+#include "pxr/usd/plugin/usdMdl/neuray.h"
+#include "pxr/usd/plugin/usdMdl/utils.h"
 #include "pxr/usd/usdShade/material.h"
 #include "pxr/usd/usdShade/materialBindingAPI.h"
 #include "pxr/usd/usdShade/nodeGraph.h"
@@ -30,6 +30,7 @@
 #include "pxr/usd/usdShade/material.h"
 #include "pxr/usd/usdUI/nodeGraphNodeAPI.h"
 #include "pxr/usd/usdUtils/flattenLayerStack.h"
+#include "pxr/usd/plugin/usdMdl/mdlToUsd.h"
 #include <algorithm>
 #include <stack>
 #include <mi/mdl_sdk.h>
@@ -56,15 +57,44 @@ public:
     mi::base::Handle<mi::neuraylib::IMdl_compiler> m_mdl_compiler;
     mi::base::Handle<mi::neuraylib::IMdl_factory> m_mdl_factory;
     std::set<std::string> m_traversed_modules;
+    static const std::string g_mdl_dictionary_name;// "mdl"
+    static const std::string g_annotations_dictionary_name;// "annotations"
 
 private:
+    // Set Custom data
+    void setCustomData(const UsdObject & object, const std::map<std::string, VtValue> & customdata) const
+    {
+        if (!customdata.empty())
+        {
+            VtDictionary dict(object.GetCustomData());
+            for (const auto & anno : customdata)
+            {
+                dict[anno.first] = anno.second;
+            }
+            VtDictionary annotations;
+            annotations[g_annotations_dictionary_name] = dict;
+            VtDictionary mdl;
+            mdl[g_mdl_dictionary_name] = annotations;
+            object.SetCustomData(mdl);
+
+            // Special case of the "::anno::hidden()" annotation
+            std::map<std::string, VtValue>::const_iterator it(customdata.find("::anno::hidden()"));
+            if (it != customdata.end() && it->second.CanCast<bool>())
+            {
+                // If the annotation is found, is a boolean and is true, set the hidden metadata
+                object.SetHidden(VtValue(it->second).Cast<bool>() == true);
+            }
+        }
+    }
+
     // Utility function to process expression list
     template <class USDPRIM>
     void processExpressionList(
         USDPRIM * usdShaderOrMaterial,
         mi::neuraylib::ITransaction* transaction,
         mi::neuraylib::IMdl_factory* mdl_factory,
-        const mi::neuraylib::IExpression_list * expressionList,
+        const mi::neuraylib::IExpression_list * expressionList, // parameters
+        const mi::neuraylib::IAnnotation_list * parm_annotations,  // parameters annotations
         mi::Size parmCount)
     {
         MdlToUsd converter;
@@ -108,6 +138,17 @@ private:
             SdfValueTypeName typeName(SdfSchema::GetInstance().FindType(typeOut.GetString()));
             UsdShadeInput shadeInput(usdShaderOrMaterial->CreateInput(TfToken(name), typeName));
 
+            // Name of annotation, string value for annotation
+            std::map<std::string, std::string> metadata;
+            MdlToUsd::extractAnnotations(parmName, parm_annotations, metadata);
+            for (const auto & anno : metadata)
+            {
+                shadeInput.SetSdrMetadataByKey(TfToken(anno.first), anno.second);
+            }
+            std::map<std::string, VtValue> customdata;
+            MdlToUsd::extractAnnotations(parmName, parm_annotations, customdata);
+            setCustomData(shadeInput.GetAttr(), customdata);
+            
             // Add metadata to enum values
             if(extra.m_valueType == MdlToUsd::ExtraInfo::VTT_ENUM)
             {
@@ -119,6 +160,14 @@ private:
                 {
                     shadeInput.SetSdrMetadataByKey(TfToken("description"), extra.m_enumValueDescription);
                 }
+                shadeInput.SetSdrMetadataByKey(TfToken("options"), extra.m_enumValueOptions);
+            }
+            // Non-square matrices are stored as vectors.
+            // Float and Int square matrices stoed as double matrices.
+            // Need to store the type of the original matrix to be able to reconstruct it.
+            if (extra.m_valueType == MdlToUsd::ExtraInfo::VTT_TYPE_INFO)
+            {
+                shadeInput.GetAttr().SetCustomDataByKey(TfToken(MdlToUsd::KEY_MDL_TYPE_INFO), VtValue(extra.m_mdlType));
             }
 
             // We need to avoid connecting incompatible expressions and inputs.
@@ -282,7 +331,24 @@ public:
                 mi::base::Handle<const mi::neuraylib::IExpression_list> defaults(function_definition->get_defaults());
                 mi::Size count(function_definition->get_parameter_count());
 
-                processExpressionList(&newShader, m_transaction.get(), m_mdl_factory.get(), defaults.get(), count);
+                mi::base::Handle<const mi::neuraylib::IAnnotation_list> parm_annotations(function_definition->get_parameter_annotations());
+
+                processExpressionList(&newShader, m_transaction.get(), m_mdl_factory.get(), defaults.get(), parm_annotations.get(), count);
+
+                // Annotations
+                mi::base::Handle<const mi::neuraylib::IAnnotation_block> annotations(function_definition->get_annotations());
+                if (annotations)
+                {
+                    std::map<std::string, std::string> metadata;
+                    MdlToUsd::extractAnnotations(annotations.get(), metadata);
+                    for (auto & anno : metadata)
+                    {
+                        newShader.SetSdrMetadataByKey(TfToken(anno.first), anno.second);
+                    }
+                    std::map<std::string, VtValue> customdata;
+                    MdlToUsd::extractAnnotations(annotations.get(), customdata);
+                    setCustomData(newShader.GetPrim(), customdata);
+                }
             }
             return newShader;
         }
@@ -345,6 +411,9 @@ public:
         return SdfPath();
     }
 };
+
+const std::string Context::g_mdl_dictionary_name("mdl");
+const std::string Context::g_annotations_dictionary_name("annotations");
 
 bool Context::BeginModule(mi::neuraylib::Module & module)
 {
@@ -632,8 +701,15 @@ void CreateStandardAttributes(UsdShadeShader & shader, const std::string & modul
 
     // Source Asset subIdentifier, e.g.:
     //   uniform token info:mdl:sourceAsset:subIdentifier = "materialWithEnum"
+    if (PXR_VERSION >= 2002)
+    {
+        shader.SetSourceAssetSubIdentifier(TfToken(MDLShortName), TfToken("mdl"));
+    }
+    else
+    {
     UsdShadeInput matName(shader.GetPrim().CreateAttribute(TfToken("info:mdl:sourceAsset:subIdentifier"), SdfValueTypeNames->Token, false/*custom*/, SdfVariabilityUniform));
     matName.Set(TfToken(MDLShortName));
+}
 }
 
 UsdShadeMaterial Context::BeginMaterialDefinition(mi::neuraylib::Material & mdlMaterial)
@@ -672,7 +748,9 @@ UsdShadeMaterial Context::BeginMaterialDefinition(mi::neuraylib::Material & mdlM
 
                     m_usdMaterialStack.push(newMaterial);
 
-                    processExpressionList(&newMaterial, m_transaction.get(), m_mdl_factory.get(), defaults.get(), count);
+                    mi::base::Handle<const mi::neuraylib::IAnnotation_list> parm_annotations(material_definition->get_parameter_annotations());
+
+                    processExpressionList(&newMaterial, m_transaction.get(), m_mdl_factory.get(), defaults.get(), parm_annotations.get(), count);
 
                     m_usdMaterialStack.pop();
 
@@ -692,6 +770,18 @@ UsdShadeMaterial Context::BeginMaterialDefinition(mi::neuraylib::Material & mdlM
                     displacementOutput.ConnectToSource(shaderOutput);
                     UsdShadeOutput volumeOutput(newMaterial.CreateOutput(TfToken("mdl:volume"), SdfValueTypeNames->Token));
                     volumeOutput.ConnectToSource(shaderOutput);
+
+                    // Annotations
+                    mi::base::Handle<const mi::neuraylib::IAnnotation_block> annotations(material_definition->get_annotations());
+                    std::map<std::string, std::string> metadata;
+                    MdlToUsd::extractAnnotations(annotations.get(), metadata);
+                    for (auto & anno : metadata)
+                    {
+                        surfaceShader.SetSdrMetadataByKey(TfToken(anno.first), anno.second);
+                    }
+                    std::map<std::string, VtValue> customdata;
+                    MdlToUsd::extractAnnotations(annotations.get(), customdata);
+                    setCustomData(surfaceShader.GetPrim(), customdata);
                 }
             }
         }
@@ -744,7 +834,16 @@ UsdShadeMaterial Context::BeginMaterialInstance(mi::neuraylib::NamedElement& mat
 
             m_usdMaterialStack.push(newMaterial);
 
-            processExpressionList(&newMaterial, m_transaction.get(), m_mdl_factory.get(), defaults.get(), count);
+            mi::base::Handle<const mi::neuraylib::IMaterial_definition> material_definition(m_transaction->access<mi::neuraylib::IMaterial_definition>(mdlName));
+            mi::base::Handle<const mi::neuraylib::IAnnotation_list> parm_annotations;
+            mi::base::Handle<const mi::neuraylib::IAnnotation_block> annotations;
+            if (material_definition)
+            {
+                parm_annotations = mi::base::Handle<const mi::neuraylib::IAnnotation_list>(material_definition->get_parameter_annotations());
+                annotations = mi::base::Handle<const mi::neuraylib::IAnnotation_block>(material_definition->get_annotations());
+            }
+            const mi::neuraylib::IAnnotation_list * parm_anno = parm_annotations ? parm_annotations.get() : NULL;
+            processExpressionList(&newMaterial, m_transaction.get(), m_mdl_factory.get(), defaults.get(), parm_anno, count);
 
             m_usdMaterialStack.pop();
 
@@ -764,6 +863,20 @@ UsdShadeMaterial Context::BeginMaterialInstance(mi::neuraylib::NamedElement& mat
             displacementOutput.ConnectToSource(shaderOutput);
             UsdShadeOutput volumeOutput(newMaterial.CreateOutput(TfToken("mdl:volume"), SdfValueTypeNames->Token));
             volumeOutput.ConnectToSource(shaderOutput);
+
+            // Annotations
+            if (annotations)
+            {
+                std::map<std::string, std::string> metadata;
+                MdlToUsd::extractAnnotations(annotations.get(), metadata);
+                for (auto & anno : metadata)
+                {
+                    surfaceShader.SetSdrMetadataByKey(TfToken(anno.first), anno.second);
+                }
+                std::map<std::string, VtValue> customdata;
+                MdlToUsd::extractAnnotations(annotations.get(), customdata);
+                setCustomData(surfaceShader.GetPrim(), customdata);
+            }
 
             return newMaterial;
         }
@@ -830,7 +943,31 @@ UsdShadeShader Context::BeginFunctionCall(mi::neuraylib::NamedElement& fCall)
 
             m_usdShaderStack.push(newShader);
 
-            processExpressionList(&newShader, m_transaction.get(), m_mdl_factory.get(), defaults.get(), count);
+            mi::base::Handle<const mi::neuraylib::IAnnotation_list> parm_annotations;
+            if (function_definition)
+            {
+                parm_annotations = mi::base::Handle<const mi::neuraylib::IAnnotation_list>(function_definition->get_parameter_annotations());
+            }
+            const mi::neuraylib::IAnnotation_list * parm_annotations_ptr = parm_annotations ? parm_annotations.get() : NULL;
+            processExpressionList(&newShader, m_transaction.get(), m_mdl_factory.get(), defaults.get(), parm_annotations_ptr, count);
+
+            if (function_definition)
+            {
+                // Annotations
+                mi::base::Handle<const mi::neuraylib::IAnnotation_block> annotations(function_definition->get_annotations());
+                if (annotations)
+                {
+                    std::map<std::string, std::string> metadata;
+                    MdlToUsd::extractAnnotations(annotations.get(), metadata);
+                    for (auto & anno : metadata)
+                    {
+                        newShader.SetSdrMetadataByKey(TfToken(anno.first), anno.second);
+                    }
+                    std::map<std::string, VtValue> customdata;
+                    MdlToUsd::extractAnnotations(annotations.get(), customdata);
+                    setCustomData(newShader.GetPrim(), customdata);
+                }
+            }
 
             m_usdShaderStack.pop();
         }

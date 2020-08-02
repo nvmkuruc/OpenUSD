@@ -2,7 +2,7 @@
  * Copyright 2019 NVIDIA Corporation. All rights reserved.
  *****************************************************************************/
 #include "pxr/pxr.h"
-#include "pxr/usd/usdMdl/distiller.h"
+#include "pxr/usd/plugin/usdMdl/distiller.h"
 #include <mi/neuraylib/imdl_compiler.h>
 #include <iostream>
 

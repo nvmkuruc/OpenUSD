@@ -1,8 +1,8 @@
 /******************************************************************************
  * Copyright 2019 NVIDIA Corporation. All rights reserved.
  *****************************************************************************/
-#include "pxr/usd/usdMdl/neuray.h"
-#include "pxr/usd/usdMdl/utils.h"
+#include "pxr/usd/plugin/usdMdl/neuray.h"
+#include "pxr/usd/plugin/usdMdl/utils.h"
 #include "pxr/base/tf/stringUtils.h"
 #include "pxr/base/tf/getenv.h"
 #include "pxr/base/arch/fileSystem.h"
@@ -42,6 +42,15 @@ using std::left;
 using std::endl;
 using std::istringstream;
 using std::set;
+
+// printf() format specifier for arguments of type LPTSTR (Windows only).
+#ifdef MI_PLATFORM_WINDOWS
+#ifdef UNICODE
+#define FMT_LPTSTR "%ls"
+#else // UNICODE
+#define FMT_LPTSTR "%s"
+#endif // UNICODE
+#endif // MI_PLATFORM_WINDOWS
 
 bool UsdMdl::SetNeuray(mi::neuraylib::INeuray * neuray)
 {
@@ -115,12 +124,137 @@ void mi::neuraylib::Mdl::Configuration(mi::neuraylib::INeuray* neuray, ILogger* 
 int mi::neuraylib::Mdl::g_verbosity(5);
 std::once_flag mi::neuraylib::Mdl::g_onceFlagLoad;
 
+Neuray_factory::Neuray_factory(mi::base::ILogger* logger, const char* filename)
+    : m_result_code(RESULT_SUCCESS),
+    m_filename(0),
+    m_dso_handle(0),
+    m_neuray(0)
+{
+    if (!filename)
+#ifdef MI_MDL_SDK_H
+        filename = "libmdl_sdk_usd" MI_BASE_DLL_FILE_EXT;
+#else
+        filename = "libneuray" MI_BASE_DLL_FILE_EXT;
+#endif
+    m_filename = filename;
+#ifdef MI_PLATFORM_WINDOWS
+    void* handle = LoadLibraryA((LPSTR)filename);
+    if (!handle)
+    {
+        m_result_code = RESULT_LOAD_FAILURE;
+        DWORD error_code = GetLastError();
+        LPTSTR buffer = 0;
+        //TODO                    LPTSTR message = TEXT("unknown failure");
+        LPTSTR message = nullptr;
+        if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER
+            | FORMAT_MESSAGE_FROM_SYSTEM
+            | FORMAT_MESSAGE_IGNORE_INSERTS, 0, error_code,
+            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&buffer, 0, 0))
+            message = buffer;
+        if (logger)
+        {
+            logger->printf(mi::base::MESSAGE_SEVERITY_FATAL, "MAIN",
+                "Failed to load library (%u): " FMT_LPTSTR,
+                error_code, message);
+        }
+        else
+        {
+            std::cerr << "Fatal: Failed to load library " << FMT_LPTSTR << " " << error_code << " " << message << std::endl;
+        }
+        if (buffer)
+            LocalFree(buffer);
+        return;
+    }
+    void* symbol = GetProcAddress((HMODULE)handle, "mi_factory");
+    if (!symbol) {
+        m_result_code = RESULT_SYMBOL_LOOKUP_FAILURE;
+        DWORD error_code = GetLastError();
+        LPTSTR buffer = 0;
+        //TODO                    LPTSTR message = TEXT("unknown failure");
+        LPTSTR message = nullptr;
+        if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER
+            | FORMAT_MESSAGE_FROM_SYSTEM
+            | FORMAT_MESSAGE_IGNORE_INSERTS, 0, error_code,
+            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&buffer, 0, 0))
+            message = buffer;
+        if (logger)
+        {
+            logger->printf(mi::base::MESSAGE_SEVERITY_FATAL, "MAIN",
+                "GetProcAddress error (%u): " FMT_LPTSTR, error_code, message);
+        }
+        else
+        {
+            std::cerr << "Fatal: GetProcAddress error " << FMT_LPTSTR << " " << error_code << " " << message << std::endl;
+        }
+        if (buffer)
+        {
+            LocalFree(buffer);
+        }
+        return;
+    }
+#else // MI_PLATFORM_WINDOWS
+#ifdef MI_PLATFORM_MACOSX
+    void* handle = dlopen(filename, RTLD_LAZY);
+#else // MI_PLATFORM_MACOSX
+    void* handle = dlopen(filename, RTLD_LAZY | RTLD_DEEPBIND);
+#endif // MI_PLATFORM_MACOSX
+    if (!handle) {
+        m_result_code = RESULT_LOAD_FAILURE;
+        if (logger)
+            logger->message(mi::base::MESSAGE_SEVERITY_FATAL, "MAIN", dlerror());
+        return;
+    }
+    void* symbol = dlsym(handle, "mi_factory");
+    if (!symbol) {
+        m_result_code = RESULT_SYMBOL_LOOKUP_FAILURE;
+        if (logger)
+            logger->message(mi::base::MESSAGE_SEVERITY_FATAL, "MAIN", dlerror());
+        return;
+    }
+#endif // MI_PLATFORM_WINDOWS
+    m_dso_handle = handle;
+
+    m_neuray = mi::neuraylib::mi_factory<mi::neuraylib::INeuray>(symbol);
+    if (!m_neuray) {
+        mi::base::Handle<mi::neuraylib::IVersion> version(
+            mi::neuraylib::mi_factory<mi::neuraylib::IVersion>(symbol));
+        if (!version) {
+            m_result_code = RESULT_INCOMPATIBLE_LIBRARY;
+            if (logger)
+            {
+                logger->message(mi::base::MESSAGE_SEVERITY_FATAL, "MAIN",
+                    "Incompatible SDK shared library. Could not retrieve INeuray "
+                    "nor IVersion interface.");
+            }
+            else
+            {
+                std::cerr << "Fatal: Incompatible SDK shared library. Could not retrieve INeuray nor IVersion interface." << std::endl;
+            }
+        }
+        else {
+            m_result_code = RESULT_VERSION_MISMATCH;
+            if (logger)
+                logger->printf(mi::base::MESSAGE_SEVERITY_FATAL, "MAIN",
+                    "SDK shared library version mismatch: Header version "
+                    "%s does not match library version %s.",
+                    MI_NEURAYLIB_PRODUCT_VERSION_STRING,
+                    version->get_product_version());
+            else
+                std::cerr << "Fatal: SDK shared library version mismatch: Header version " <<
+                MI_NEURAYLIB_PRODUCT_VERSION_STRING <<
+                " does not match library version " <<
+                version->get_product_version() << std::endl;
+        }
+    }
+}
+
 void mi::neuraylib::Mdl::Initialize()
 {
     if (!m_factory)
     {
         m_factory = new mi::neuraylib::Neuray_factory();
-        if (m_factory->get_result_code() == Neuray_factory::RESULT_SUCCESS)
+        Neuray_factory::Result result_code(m_factory->get_result_code());
+        if (result_code == Neuray_factory::RESULT_SUCCESS)
         {
             m_logger = new Logger(g_verbosity);
 
@@ -128,6 +262,17 @@ void mi::neuraylib::Mdl::Initialize()
             Configuration(m_factory->get(), m_logger.get());
             // Start the MDL SDK
             m_factory->get()->start();
+        }
+        else
+        {
+            std::map<Neuray_factory::Result, std::string> error_messages = 
+            { 
+                { Neuray_factory::RESULT_LOAD_FAILURE, "MDL SDK shared library failed to load."}
+                ,{ Neuray_factory::RESULT_SYMBOL_LOOKUP_FAILURE, "MDL SDK shared library does not contain the expected mi_factory symbol." }
+                ,{ Neuray_factory::RESULT_VERSION_MISMATCH, "MDL SDK version mismatch." }
+                ,{ Neuray_factory::RESULT_INCOMPATIBLE_LIBRARY, "MDL SDK incompatible library." }
+            };
+            std::cerr << error_messages[result_code] << std::endl;
         }
     }
 }
@@ -506,8 +651,8 @@ mi::neuraylib::Logger::~Logger()
 
 void mi::neuraylib::Logger::message(
     mi::base::Message_severity level,
-    const char* mc,
-    const mi::base::Message_details& md,
+    const char* module_category,
+    const mi::base::Message_details&,
     const char* message)
 {
     if (int(level) < m_level)

@@ -2,10 +2,10 @@
  * Copyright 2019 NVIDIA Corporation. All rights reserved.
  *****************************************************************************/
 #include "pxr/pxr.h"
-#include "pxr/usd/usdMdl/fileFormat.h"
-#include "pxr/usd/usdMdl/neuray.h"
-#include "pxr/usd/usdMdl/reader.h"
-#include "pxr/usd/usdMdl/utils.h"
+#include "pxr/usd/plugin/usdMdl/fileFormat.h"
+#include "pxr/usd/plugin/usdMdl/neuray.h"
+#include "pxr/usd/plugin/usdMdl/reader.h"
+#include "pxr/usd/plugin/usdMdl/utils.h"
 #include "pxr/usd/usd/stage.h"
 #include "pxr/usd/usd/usdaFileFormat.h"
 #include "pxr/base/tf/pathUtils.h"

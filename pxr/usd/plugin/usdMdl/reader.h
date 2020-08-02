@@ -3,7 +3,7 @@
  *****************************************************************************/
 #pragma once
 #include "pxr/pxr.h"
-#include "pxr/usd/usdMdl/api.h"
+#include "pxr/usd/plugin/usdMdl/api.h"
 #include "pxr/usd/sdf/path.h"
 #include "pxr/base/tf/declarePtrs.h"
 #include <string>

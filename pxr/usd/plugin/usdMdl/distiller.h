@@ -2,7 +2,7 @@
  * Copyright 2019 NVIDIA Corporation. All rights reserved.
  *****************************************************************************/
 #pragma once
-#include "pxr/usd/usdMdl/neuray.h"
+#include "pxr/usd/plugin/usdMdl/neuray.h"
 #include <map>
 #include <string>
 #include "pxr/usd/sdf/types.h"

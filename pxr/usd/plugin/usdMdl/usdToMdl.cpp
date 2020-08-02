@@ -2,9 +2,10 @@
  * Copyright 2019 NVIDIA Corporation. All rights reserved.
  *****************************************************************************/
 #include "pxr/pxr.h"
-#include "pxr/usd/usdMdl/usdToMdl.h"
-#include "pxr/usd/usdMdl/utils.h"
-#include "pxr/usd/usdMdl/neuray.h"
+#include "pxr/usd/plugin/usdMdl/usdToMdl.h"
+#include "pxr/usd/plugin/usdMdl/utils.h"
+#include "pxr/usd/plugin/usdMdl/neuray.h"
+#include <stack>
 
 using std::string;
 using mi::neuraylib::Mdl;
@@ -432,8 +433,7 @@ public:
             InputType value;
             if (input.Get(&value))
             {
-                InputType dummy;
-                SetSize(dummy.dimension);
+                SetSize(InputType().dimension);
 
                 return ConvertAtomic(input, expression, transaction, factory, valueFactory, expressionFactory);
             }
@@ -499,8 +499,7 @@ protected:
         , mi::neuraylib::IExpression_factory * expressionFactory
     )
     {
-        InputType dummy;
-        int vectorElementSize = dummy.dimension;
+        int vectorElementSize = InputType().dimension;
         VtArray<InputType> value;
         if (input.Get(&value))
         {

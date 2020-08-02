@@ -1,0 +1,28 @@
+#usda 1.0
+(
+    """ This file contains UsdMdlAPI schemata for code generation using usdGenSchema. """
+    subLayers = [
+        @usd/schema.usda@
+    ]
+) 
+
+over "GLOBAL" (
+    customData = {
+        string libraryName       = "usdMdlAPI"
+        string libraryPath       = "."
+        string libraryPrefix     = "UsdMdlAPI"
+    }
+) {
+}
+
+class "MdlAPI" (
+    inherits = </APISchemaBase>
+)
+{
+    asset info:mdl:sourceAsset (
+        doc = "Asset value denoting MDL module"
+    )
+    token info:mdl:sourceAsset:subIdentifier (
+        doc = "Asset value denoting MDL material fully qualified name"
+    )
+}

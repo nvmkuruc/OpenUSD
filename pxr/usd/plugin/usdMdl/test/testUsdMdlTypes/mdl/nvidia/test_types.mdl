@@ -6,7 +6,7 @@
 THE MDL MATERIALS ARE PROVIDED PURSUANT TO AN END USER LICENSE AGREEMENT, WHICH WAS ACCEPTED IN ORDER TO GAIN ACCESS TO THIS FILE. IN PARTICULAR, THE MDL MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL NVIDIA CORPORATION BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, INCLUDING ANY GENERAL, SPECIAL,  INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF THE USE OR INABILITY TO USE THE MDL MATERIALS OR FROM OTHER DEALINGS IN THE MDL MATERIALS
 */
 
-mdl 1.2;
+mdl 1.5;
 //    anno::version_number(0,1,10,0),
 
 import df::*;
@@ -1383,7 +1383,8 @@ material diffuse(
 	
 	// Test function call
 	texture_return file_tex = file_texture(texture: texture_2d("./dummy.jpg")),
-	float3 perlin_parm = perlin_noise_bump_texture(dummy_float_function()),
+	
+	// float3 perlin_parm = perlin_noise_bump_texture(dummy_float_function()), // CRASH - WHY?
 	
 	// Test structure
 	example_struct test_struct = example_struct(1,1.0),
@@ -1420,3 +1421,315 @@ material diffuse(
     )
 );
 
+//export
+material materialWithTextureInput(
+  base::texture_return textureInput = base::file_texture( texture : texture_2d("dummy.jpg") )
+) =  material(surface: material_surface
+(
+        scattering : df::diffuse_reflection_bsdf
+		(
+			tint: textureInput.tint
+		)
+)
+);
+
+//export
+material materialWithAnnotations(
+	int int_parm = 0.0
+    [[
+		anno::hard_range(-3,4),
+		anno::soft_range(-3,4)
+    ]],
+	uniform int2 int2_parm = int2(0,1)
+	[[
+        anno::hard_range(int2(0),int2(1)),
+        anno::soft_range(int2(0),int2(1))
+    ]],
+	uniform int3 int3_parm = int3(0,1,2)
+	[[
+        anno::hard_range(int3(0),int3(3)),
+        anno::soft_range(int3(0),int3(3))
+    ]],
+	uniform int4 int4_parm = int4(0,1,2,3)
+	[[
+        anno::hard_range(int4(0),int4(3)),
+        anno::soft_range(int4(0),int4(3))
+    ]],
+	float float_parm = 0.0
+    [[
+        anno::display_name("float_parm display name"),
+        anno::in_group("float_parm group", "float_parm Subgroup", "float_parm Subsubgroup"),
+        anno::hard_range(-10,20),
+        anno::soft_range(-3,10),
+        anno::description("Description for the float_parm values"),
+		anno::key_words(string[]("generic","dielectric","plastic","wood","stone")),
+		anno::hidden(),
+		anno::unused(),
+		anno::author("Author"),
+		anno::contributor("Contributor"),
+		anno::copyright_notice("Copyright notice"),
+		anno::created(2019, 12, 6, "created string notes"),
+		anno::modified(2019, 12, 6, "modified string notes"),		
+		anno::deprecated("Deprecated string"),
+		anno::origin("string name"),
+		anno::ui_order(1),
+		anno::usage("string hint"),
+		anno::version(6,0,1,"Prerelease notes"),
+		anno::enable_if("1==1"),
+		anno::dependency("string modulename",1,2,3,"string prerelease")
+    ]],
+	uniform float2 float2_parm = float2(78,79)
+	[[
+        anno::in_group("float2_parm group", "float2_parm Subgroup"),
+        anno::hard_range(float2(-10,-11),float2(100,101)),
+        anno::soft_range(float2(-10,-11),float2(100,101))
+    ]],
+	uniform float3 float3_parm = float3(0,1,2)
+	[[
+        anno::in_group("float3_parm group"),
+        anno::hard_range(float3(0),float3(3)),
+        anno::soft_range(float3(0),float3(3))
+    ]],
+	uniform float4 float4_parm = float4(0,1,2,3)
+	[[
+        anno::hard_range(float4(0),float4(3)),
+        anno::soft_range(float4(0),float4(3))
+    ]],
+	uniform double double_parm = double(3.14)
+	[[
+        anno::hard_range(0,10),
+        anno::soft_range(0,10)
+    ]],
+	uniform double2 double2_parm = double2(78,79)
+	[[
+        anno::hard_range(double2(-10,-11),double2(100,101)),
+        anno::soft_range(double2(-10,-11),double2(100,101))
+    ]],
+	uniform double3 double3_parm = double3(0,1,2)
+	[[
+        anno::hard_range(double3(0),double3(3)),
+        anno::soft_range(double3(0),double3(3))
+    ]],
+	uniform double4 double4_parm = double4(0,1,2,3)
+	[[
+        anno::hard_range(double4(0),double4(3)),
+        anno::soft_range(double4(0),double4(3))
+    ]],
+	color color_parm = color(0.4)
+    [[
+		anno::soft_range(color(0.01), color(.9)),
+		anno::hard_range(color(0.01), color(.9)),
+		anno::deprecated(),
+		anno::unused("Unused string")
+	]]
+)
+[[
+	anno::thumbnail("dummy.jpg"),
+    anno::display_name("Material display name"),
+    anno::description("A basic material"),
+    anno::author("NVIDIA Corporation"),
+    anno::copyright_notice(COPYRIGHT),
+	anno::version(6,0,1,"Prerelease notes"),
+    type_of_material(simple_material),
+    typical_object_size(1.0),
+	anno::key_words(string[]("generic"))
+]] 
+=  material(surface: material_surface
+(
+        scattering : df::diffuse_reflection_bsdf
+		(
+		)
+)
+);
+
+// User defined annotations
+export annotation test_annotation_standard(bool p1 = bool(true), int p2 = int(1), float p3 = float(1), double p4 = double(1));
+export annotation test_annotation_standard2(bool2 p1 = bool2(true), int2 p2 = int2(1), float2 p3 = float2(1), double2 p4 = double2(1));
+export annotation test_annotation_standard3(bool3 p1 = bool3(true), int3 p2 = int3(1), float3 p3 = float3(1), double3 p4 = double3(1));
+export annotation test_annotation_standard4(bool4 p1 = bool4(true), int4 p2 = int4(1), float4 p3 = float4(1), double4 p4 = double4(1));
+export annotation test_annotation_color(color col);
+export annotation test_annotation_string(string s = string("test string"));
+// float2x2jfloat2x3jfloat2x4jfloat3x2jfloat3x3jfloat3x4jfloat4x2jfloat4x3jfloat4x4
+export annotation test_annotation_matrix(float2x2 p1 = float2x2(1), float2x3 p2 = float2x3(2), float2x4 p3 = float2x4(3), float3x2 p5 = float3x2(5),
+  float3x3 p6 = float3x3(1,2,3,4,5,6,7,8,9), float3x4 p7 = float3x4(7), float4x2 p8 = float4x2(8), float4x3 p9 = float4x3(9), float4x4 p10 = float4x4(10));
+
+// Forbidden
+// export annotation test_annotation_other(bsdf b = bsdf());
+// export annotation test_annotation_other(edf b = edf());
+// export annotation test_annotation_other(light_profile b = light_profile());
+// export annotation test_annotation_other(bsdf_measurement b = bsdf_measurement());
+// export annotation test_annotation_other(texture_2d b = texture_2d());
+
+//export
+material simpleMaterialWithUserDefinedAnnotations(
+    uniform double3 double3_parm = double3(0,1,2)
+    [[
+		test_annotation_matrix(),
+		test_annotation_string(),
+		test_annotation_color(color(.1)),
+		test_annotation_standard(),
+		test_annotation_standard2(),
+		test_annotation_standard3(),
+		test_annotation_standard4(),
+        anno::hard_range(double3(0),double3(3)),
+        anno::soft_range(double3(0),double3(3))
+    ]]
+)
+[[
+    type_of_material(simple_material),
+    typical_object_size(1.0)
+]] 
+=  material(surface: material_surface
+(
+        scattering : df::diffuse_reflection_bsdf
+		(
+		)
+)
+);
+
+//export
+material materialWithVectorParm(
+	int int_parm = 0.0,
+	uniform int2 int2_parm = int2(0,1)
+)
+=  material(surface: material_surface
+(
+        scattering : df::diffuse_reflection_bsdf
+		(
+		)
+)
+);
+
+export annotation test_annotation_empty_expression();
+
+//export
+material materialWithAnnotationWithoutExpressions(
+	int int_parm = 0.0
+    [[
+        anno::unused(),
+        anno::deprecated(),
+        anno::hidden(),
+        test_annotation_empty_expression()
+    ]]
+)
+    [[
+        anno::unused(),
+        anno::noinline(), // for material and functions only
+        anno::deprecated(),
+        anno::hidden(),
+        test_annotation_empty_expression()
+    ]]
+=  material(surface: material_surface
+(
+        scattering : df::diffuse_reflection_bsdf
+		(
+		)
+)
+);
+
+//export
+material material_MDL_420(
+	// float3x2 is an array of size 3, each element is a float2
+      float3x2 test_float3x2 = float3x2( 1, 2, 3, 4, 5, 6 )
+	  [[anno::display_name("test_float3x2")]]
+	, float3x4 test_float3x4 = float3x4( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 )
+	, float2x3 test_float2x3 = float2x3(1)
+	, float2x4 test_float2x4 = float2x4(1)
+	, float4x2 test_float4x2 = float4x2(1)
+	, float4x3 test_float4x3 = float4x3(1)
+	, float3x3 test_float3x3 = float3x3( 1, 2, 3, 4, 5, 6, 7, 8, 9 )
+	, float2[3] float2_array_of_vectors = float2[](float2(1.0,2.0),float2(3.0,4.0),float2(5.0,6.0))
+	, double2x3 test_double2x3 = double2x3( 1, 2, 3, 4, 5, 6 )
+	, double2x4 test_double2x4 = double2x4(1)
+	, double3x2 test_double3x2 = double3x2(1)
+	, double3x4 test_double3x4 = double3x4(1)
+	, double4x2 test_double4x2 = double4x2(1)
+	, double4x3 test_double4x3 = double4x3(1)
+)
+=  material(surface: material_surface
+(
+        scattering : df::diffuse_reflection_bsdf
+		(
+		)
+)
+);
+
+// Arrays of matrices
+//export
+material material_MDL_423(
+
+	// Array of matrix: square
+	  double2x2[3] test_double2x2 = double2x2[](1,1,1)
+	, double3x3[2] test_double3x3 = double3x3[](1,1)
+	, double4x4[1] test_double4x4 = double4x4[](1)
+	, float2x2[3] test_float2x2 = float2x2[](1,1,1)
+	, float3x3[2] test_float3x3 = float3x3[](1,1)
+	, float4x4[1] test_float4x4 = float4x4[](1)
+	
+	// Array of matrix: non-square
+	, double2x3[1] test_double2x3 = double2x3[](1)
+	, double2x4[1] test_double2x4 = double2x4[](1)
+	, double3x2[1] test_double3x2 = double3x2[](1)
+	, double3x4[1] test_double3x4 = double3x4[](1)
+	, double4x2[1] test_double4x2 = double4x2[](1)
+	, double4x3[1] test_double4x3 = double4x3[](1)
+	, float2x3[1] test_float2x3 = float2x3[](1)
+	, float2x4[1] test_float2x4 = float2x4[](1)
+	, float3x2[1] test_float3x2 = float3x2[](1)
+	, float3x4[1] test_float3x4 = float3x4[](1)
+	, float4x2[1] test_float4x2 = float4x2[](1)
+	, float4x3[1] test_float4x3 = float4x3[](float4x3(1.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,1.0,0.0,0.5,0.0))
+	
+	// size deferred array
+	, float[<n>] test_size_deferred = float[2](1, 2)
+	
+	// Array of enum
+	, material_type[4] test_enum_array = material_type[4](simple_material,complex_material,combiner_material,modifier_material)
+	, material_type test_enum = combiner_material
+
+	// Array of struct
+	, example_struct test_struct = example_struct(1,1.0)
+	
+	// Arrays not supported in MDL
+	// , light_profile[1] test_light_profile = light_profile[1](light_profile())
+	// , bsdf_measurement[1] test_bsdf_measurement = bsdf_measurement[1](bsdf_measurement())
+	// , bsdf[1] test_bsdf = bsdf[1](bsdf())
+	// , edf[1] test_edf = edf[1](edf())
+	// , vdf[1] test_vdf = vdf[1](vdf())
+	// , uniform texture_2d[2] test_texture_array = texture_2d[](texture_2d("./dummy.jpg", ::tex::gamma_default),texture_2d("./dummy.jpg", ::tex::gamma_default))
+)
+=  material(surface: material_surface
+(
+        scattering : df::diffuse_reflection_bsdf
+		(
+		)
+)
+);
+
+// MDL-421 Add MDL light_profile support for USD SDK
+//export
+material material_MDL_421(
+	uniform light_profile test_light_profile = light_profile("./test.ies")
+	, uniform light_profile test_light_profile_2 = light_profile(light_profile("./test.ies"))
+	, uniform light_profile test_light_profile_3 = light_profile(test_light_profile_2)
+)
+=  material(surface: material_surface
+(
+        scattering : df::diffuse_reflection_bsdf
+		(
+		)
+)
+);
+
+// MDL-422 Add MDL BSDF measurement support for USD SDK
+export
+material material_MDL_422(
+	uniform bsdf_measurement test_bsdf_measurement = bsdf_measurement("./test.mbsdf")
+)
+=  material(surface: material_surface
+(
+        scattering : df::diffuse_reflection_bsdf
+		(
+		)
+)
+);

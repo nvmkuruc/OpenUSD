@@ -102,6 +102,9 @@ Python support in USD refers to:
 Support for Python can optionally be disabled by specifying the cmake flag
 ```PXR_ENABLE_PYTHON_SUPPORT=FALSE```.
 
+Support for Python 3 can be enabled by specifying the cmake flag
+```PXR_USE_PYTHON_3=ON```.
+
 ##### OpenGL and GLEW
 
 Support for OpenGL can optionally be disabled by specifying the cmake flag
@@ -109,7 +112,14 @@ Support for OpenGL can optionally be disabled by specifying the cmake flag
 that depend on GL, including:
 - usdview
 - Hydra GL imaging
-- Maya and Katana app plugins
+
+##### Metal
+
+To build USD with Metal enabled requires macOS Mojave (10.14) or newer.
+Support for Metal can optionally be disabled by specifying the cmake flag
+```PXR_ENABLE_METAL_SUPPORT=FALSE```.  This will skip components and libraries
+that depend on Metal, including:
+- Hydra imaging
 
 ##### OSL (OpenShadingLanguage)
 
@@ -210,10 +220,16 @@ More documentation is available [here](http://openusd.org/docs/RenderMan-USD-Ima
 
 ## Third Party Plugins
 
-USD provides several plugins for integration with third-party software packages,
-including Maya, Katana, Houdini, and Alembic. There is additional documentation on each plugin
+USD provides several plugins for integration with third-party software packages. 
+There is additional documentation on each plugin
 [here](http://openusd.org/docs/USD-3rd-Party-Plugins.html).
 These plugins are not built by default and must be enabled via the instructions below.
+
+The USD Maya plugins can be found in the Autodesk-supported repo available
+[here](https://github.com/Autodesk/maya-usd).
+
+The USD Katana plugins can be found in the Foundry-supported repo available
+[here](https://github.com/TheFoundryVisionmongers/KatanaUsdPlugins).
 
 ##### Alembic Plugin
 
@@ -238,52 +254,6 @@ support requires the following dependencies:
 | HDF5_LOCATION      | The location of [HDF5](https://www.hdfgroup.org/HDF5/) |
 
 For further information see the documentation on the Alembic plugin [here](http://openusd.org/docs/Alembic-USD-Plugin.html).
-
-##### Maya Plugin
-
-Enable the Maya plugin in the build by specifying the cmake flag 
-```PXR_BUILD_MAYA_PLUGIN=TRUE``` when invoking cmake. 
-
-The additional dependencies that must be supplied when invoking cmake are:
-
-| Dependency Name   | Description                                                                                     |
-| ----------------- | -----------------------------------                                                             |
-| MAYA_LOCATION     | The root path to a Maya SDK install |
-| MAYA_tbb_LIBRARY  | The location of TBB, this should be the same as TBB_tbb_LIBRARY provided to the core USD build  |
-
-See [3rd Party Library and Application Versions](VERSIONS.md) for version information.
-
-For further information see the documentation on the Maya plugin [here](http://openusd.org/docs/Maya-USD-Plugins.html).
-
-##### Katana Plugin
-
-Enable the Katana plugin in the build by specifying the cmake flag 
-```PXR_BUILD_KATANA_PLUGIN=TRUE``` when invoking cmake. 
-
-The additional dependencies that must be supplied when invoking cmake are:
-
-| Dependency Name       | Description                           |
-| --------------        | -----------------------------------   |
-| KATANA_API_LOCATION   | The root path to a Katana SDK install.|
-
-See [3rd Party Library and Application Versions](VERSIONS.md) for version information.
-
-For further information see our additional documentation on the Katana plugins [here](http://openusd.org/docs/Katana-USD-Plugins.html).
-
-##### Houdini Plugin
-
-Enable the Houdini plugin in the build by specifying the cmake flag 
-```PXR_BUILD_HOUDINI_PLUGIN=TRUE``` when invoking cmake. 
-
-The additional dependencies that must be supplied when invoking cmake are:
-
-| Dependency Name       | Description                            |
-| --------------        | -----------------------------------    |
-| HOUDINI_ROOT          | The root path to a Houdini SDK install.|
-
-See [3rd Party Library and Application Versions](VERSIONS.md) for version information.
-
-For further information see our additional documentation on the Houdini plugins [here](http://openusd.org/docs/Houdini-USD-Plugins.html).
 
 ##### MaterialX Plugin
 
@@ -382,7 +352,7 @@ pxr/pxr.h, which facilitates using namespaces:
 ##### ASCII Parser Editing/Validation
 
 There is an ASCII parser for the USD file format, which can be found in
-[sdf](pxr/usd/lib/sdf/). Most users will not have a need to edit the parser, but
+[sdf](pxr/usd/sdf). Most users will not have a need to edit the parser, but
 for the adventurous ones, there are a couple additional requirements.
 
 If you choose to edit the ASCII parsers, make sure

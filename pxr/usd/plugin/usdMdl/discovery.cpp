@@ -12,7 +12,7 @@
 #include <algorithm>
 #include <cctype>
 
-#include "pxr/usd/usdMdl/neuray.h"
+#include "pxr/usd/plugin/usdMdl/neuray.h"
 
 using mi::neuraylib::Mdl;
 

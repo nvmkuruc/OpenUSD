@@ -4,7 +4,7 @@
 #pragma once
 #include <mi/mdl_sdk.h>
 #include <pxr/usd/usdShade/material.h>
-#include <pxr/usd/usdMdl/api.h>
+#include <pxr/usd/plugin/usdMdl/api.h>
 #include <string>
 
 PXR_NAMESPACE_OPEN_SCOPE

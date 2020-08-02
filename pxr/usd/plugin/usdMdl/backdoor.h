@@ -5,7 +5,7 @@
  
 #include "pxr/pxr.h"
 #include "pxr/base/tf/declarePtrs.h"
-#include "pxr/usd/usdMdl/api.h"
+#include "pxr/usd/plugin/usdMdl/api.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 

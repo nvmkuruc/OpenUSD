@@ -22,6 +22,9 @@
 # KIND, either express or implied. See the Apache License for the specific
 # language governing permissions and limitations under the Apache License.
 #
+
+from __future__ import print_function
+
 import os, sys
 
 import platform
@@ -95,7 +98,7 @@ def _generateTemporaryFile(usdcatCmd, usdFileName, readOnly, prefix):
     os.system(usdcatCmd + ' ' + usdFileName + '> ' + usdaFileName)
 
     if readOnly:
-        os.chmod(usdaFileName, 444)
+        os.chmod(usdaFileName, 0o444)
      
     # Thrown if failed to open temp file Could be caused by 
     # failure to read USD file
@@ -220,6 +223,8 @@ def main():
                      ". Your edits can be found in %s. " \
                      %(usdFileName, usdaFileName))
 
+    if readOnly:
+        os.chmod(usdaFileName, 0o644)
     os.remove(usdaFileName)
 
 if __name__ == "__main__":

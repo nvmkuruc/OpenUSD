@@ -12,8 +12,9 @@
 #include "pxr/base/tf/pathUtils.h"
 #include "pxr/base/tf/staticTokens.h"
 #include "pxr/base/tf/stringUtils.h"
-#include "pxr/usd/usdMdl/neuray.h"
-#include "pxr/usd/usdMdl/utils.h"
+#include "pxr/usd/plugin/usdMdl/neuray.h"
+#include "pxr/usd/plugin/usdMdl/utils.h"
+#include "pxr/usd/plugin/usdMdl/mdlToUsd.h"
 #include <mi/neuraylib/imdl_compiler.h>
 #include <iostream>
 
@@ -58,7 +59,7 @@ private:
     mi::base::Handle<mi::neuraylib::IMdl_compiler> m_mdl_compiler;
     mi::base::Handle<mi::neuraylib::IMdl_factory> m_mdl_factory;
 private:
-    bool ConvertParm(const IType * type, const IExpression * defaultValue, TfToken & typeOut, VtValue & defaultValueOut)
+    bool ConvertParm(const IType * type, const IExpression * defaultValue, TfToken & typeOut, VtValue & defaultValueOut, MdlToUsd::ExtraInfo & extra)
     {
         MdlToUsd converter;
         typeOut = converter.ConvertType(type);
@@ -68,7 +69,6 @@ private:
         }
         if (defaultValue)
         {
-            MdlToUsd::ExtraInfo extra;
             defaultValueOut = converter.GetValue(type, defaultValue, typeOut, extra);
         }
         return true;
@@ -79,6 +79,7 @@ private:
         mi::Size count = scene_element->get_parameter_count();
         mi::base::Handle<const mi::neuraylib::IType_list> types(scene_element->get_parameter_types());
         mi::base::Handle<const mi::neuraylib::IExpression_list> defaults(scene_element->get_defaults());
+        mi::base::Handle<const mi::neuraylib::IAnnotation_list> parm_annotations(scene_element->get_parameter_annotations());
 
         mi::base::Handle<const IFunction_definition> function(scene_element->template get_interface<IFunction_definition>());
         if (function)
@@ -101,7 +102,9 @@ private:
 
             TfToken type;
             VtValue defaultValue;
-            if (!ConvertParm(parm_type.get(), defaultexp.get(), type, defaultValue))
+
+            MdlToUsd::ExtraInfo extra;
+            if (!ConvertParm(parm_type.get(), defaultexp.get(), type, defaultValue, extra))
             {
                 mi::neuraylib::Mdl::LogError("[ShaderBuilder] Failed to convert " + std::string(scene_element->get_mdl_name()) + " " + parm_name);
                 continue;
@@ -113,6 +116,53 @@ private:
             NdrTokenMap hints;
             NdrOptionVec options;
 
+            // Add metadata to enum values
+            if (extra.m_valueType == MdlToUsd::ExtraInfo::VTT_ENUM)
+            {
+                //// From Pixar doc about Metadata RenderType : https://graphics.pixar.com/usd/docs/api/class_usd_shade_input.html#afeeb2fbd92c5600adc6e8ae9eeda5772
+                metadata[TfToken("renderType")] = extra.m_enumSymbol;
+                metadata[TfToken("__SDR__enum_value")] = extra.m_enumValueName;
+                if (!extra.m_enumValueDescription.empty())
+                {
+                    metadata[TfToken("description")] = extra.m_enumValueDescription;
+                }
+
+                // Parse options string which contains all valid enum values (e.g. "color_layer_blend:0|color_layer_add:1|color_layer_multiply:2|...")
+                std::string enumValuePair;
+                std::stringstream input_stringstream(extra.m_enumValueOptions);
+                while (std::getline(input_stringstream, enumValuePair, '|'))
+                {
+                    std::stringstream input2_stringstream(enumValuePair);
+                    std::string enumDisplayName;
+                    std::string enumValue;
+                    if (std::getline(input2_stringstream, enumDisplayName, ':'))
+                    {
+                        if (std::getline(input2_stringstream, enumValue, ':'))
+                        {
+			  options.emplace_back(NdrOption(std::make_pair(TfToken(enumDisplayName), TfToken(enumValue))));
+                        }
+                    }
+                }
+            }
+            if (extra.m_valueType == MdlToUsd::ExtraInfo::VTT_TYPE_INFO)
+            {
+                std::string key(MdlToUsd::KEY_MDL_TYPE_INFO);
+                key += ":string";
+                metadata[TfToken(key.c_str())] = extra.m_mdlType;
+            }
+
+            // Name of annotation, string value for annotation
+            std::map<std::string, std::string> parm_metadata;
+            MdlToUsd::extractAnnotations(parm_name, parm_annotations.get(), parm_metadata);
+            for (auto & anno : parm_metadata)
+            {
+                metadata[TfToken(anno.first)] = anno.second;
+            }
+
+            std::map<std::string, VtValue> customdata;
+            MdlToUsd::extractAnnotations(parm_name, parm_annotations.get(), customdata);
+            storeAnnotations(customdata, metadata);
+
             // Add the property.
             properties.push_back(
                 SdrShaderPropertyUniquePtr(
@@ -120,7 +170,7 @@ private:
                                             type,
                                             defaultValue,
                                             isOutput,
-                                            0,
+                                            defaultValue.IsArrayValued() ? defaultValue.GetArraySize() : 0,
                                             metadata,
                                             hints,
                                             options)));
@@ -128,6 +178,62 @@ private:
         return true;
     }
     
+    // Store annotations as metadata
+    void storeAnnotations(const std::map<std::string, VtValue> & customdata, NdrTokenMap & metadata) const
+    {
+        class VtValueTypeToUsdTypeMap : public std::map<std::string, std::string>
+        {
+        public:
+            VtValueTypeToUsdTypeMap(const std::map<std::string, std::string> & init)
+                :std::map<std::string, std::string>(init)
+            {}
+            std::string convert(const std::string & type) const
+            {
+                VtValueTypeToUsdTypeMap::const_iterator it = find(type);
+                if (it != end())
+                {
+                    return it->second;
+                }
+                return type;
+            }
+        };
+
+        static VtValueTypeToUsdTypeMap typeMap({
+             { "GfVec2i", "int2" }
+            ,{ "GfVec3i", "int3" }
+            ,{ "GfVec4i", "int4" }
+            ,{ "GfVec2f", "float2" }
+            ,{ "GfVec3f", "float3" }
+            ,{ "GfVec4f", "float4" }
+            ,{ "GfVec2d", "double2" }
+            ,{ "GfVec3d", "double3" }
+            ,{ "GfVec4d", "double4" }
+            ,{ "GfMatrix2d", "matrix2d" }
+            ,{ "GfMatrix3d", "matrix3d" }
+            ,{ "GfMatrix4d", "matrix4d" }
+        });
+
+        if (!customdata.empty())
+        {
+            //VtDictionary dict(object.GetCustomData());
+            for (const auto & anno : customdata)
+            {
+                // Encode value as string
+                std::stringstream strValue;
+                strValue << anno.second;
+
+                // Store type
+                std::string type(typeMap.convert(anno.second.GetTypeName()));
+
+                // Key = mdl:annotations:type + [annotation name]
+                std::string key("mdl:annotations:" + type + anno.first);
+
+                //dict[anno.first] = anno.second;
+                metadata[TfToken(key)] = strValue.str();
+            }
+        }
+    }
+
 public:
     ShaderBuilder(const NdrNodeDiscoveryResult& discoveryResult)
         : m_discoveryResult(discoveryResult)
@@ -164,12 +270,15 @@ public:
         NdrPropertyUniquePtrVec properties;
 
         std::string id(m_MDLElementQualifiedName);
+        std::map<std::string, std::string> metadata;
         id = MdlUtils::GetDBName(id);
         {
             mi::base::Handle<const IMaterial_definition> material(m_transaction->access<IMaterial_definition>(id.c_str()));
+            mi::base::Handle<const mi::neuraylib::IAnnotation_block> annotations;
             if (material)
             {
                 bool rtn(traverseFunctionOrMaterial<IMaterial_definition>(material.get(), properties));
+                annotations = mi::base::Handle<const mi::neuraylib::IAnnotation_block>(material->get_annotations());
             }
             else
             {
@@ -177,6 +286,7 @@ public:
                 if (function)
                 {
                     bool rtn(traverseFunctionOrMaterial<IFunction_definition>(function.get(), properties));
+                    annotations = mi::base::Handle<const mi::neuraylib::IAnnotation_block>(function->get_annotations());
                 }
                 else
                 {
@@ -188,6 +298,21 @@ public:
                 }
             }
 
+            if (annotations)
+            {
+                MdlToUsd::extractAnnotations(annotations.get(), metadata);
+            }
+
+            NdrTokenMap shader_metadata(std::move(m_discoveryResult.metadata));
+            for (auto & anno : metadata)
+            {
+                shader_metadata[TfToken(anno.first)] = anno.second;
+            }
+
+            std::map<std::string, VtValue> customdata;
+            MdlToUsd::extractAnnotations(annotations.get(), customdata);
+            storeAnnotations(customdata, shader_metadata);
+
             TfToken context; // ???
 
             rtn = NdrNodeUniquePtr(
@@ -198,8 +323,9 @@ public:
                                   context,
                                   m_discoveryResult.sourceType,
                                   m_discoveryResult.uri,
+                                  m_discoveryResult.resolvedUri,
                                   std::move(properties),
-                                  std::move(m_discoveryResult.metadata)));
+                                  shader_metadata));
         }
         m_transaction->commit();
 
