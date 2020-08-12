@@ -2172,8 +2172,15 @@ UsdSkelImagingSkeletonAdapter::_UpdateSkinnedPrimForTime(
     // primvar. Also suppressing normals: normals will instead be computed
     // post-skinning, as if they were unauthored (since GPU normal skinning
     // is not yet supported).
-    requestedBits &= ~(HdChangeTracker::DirtyPoints|
-                       HdChangeTracker::DirtyNormals);
+    // #nv begin #gpu-skinning
+    if (_UseNVGPUSkinningComputations()) {
+        // Don't surpress normals for NV GPU skinning.
+        requestedBits &= ~HdChangeTracker::DirtyPoints;
+    } else {
+        requestedBits &= ~(HdChangeTracker::DirtyPoints |
+            HdChangeTracker::DirtyNormals);
+    }
+    // nv end
 
     // Since The SkeletonAdapter hijacks skinned prims (see SkelRootAdapter),
     // make sure to delegate to the actual adapter registered for the prim.
