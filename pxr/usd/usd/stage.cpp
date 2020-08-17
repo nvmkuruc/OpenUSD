@@ -222,6 +222,15 @@ TF_MAKE_STATIC_DATA(PcpVariantFallbackMap, _usdGlobalVariantFallbackMap)
 }
 static tbb::spin_rw_mutex _usdGlobalVariantFallbackMapMutex;
 
+// #nv begin #disable-interp-notice
+TF_DEFINE_ENV_SETTING(USDSTAGE_DISABLE_INTERP_NOTICE, 0,
+    "Disable notification when setting interpolation type on the stage.");
+static bool _IsDisabledInterpNotice() {
+    static bool _v = TfGetEnvSetting(USDSTAGE_DISABLE_INTERP_NOTICE) == 1;
+    return _v;
+}
+// nv end
+
 PcpVariantFallbackMap
 UsdStage::GetGlobalVariantFallbacks()
 {
@@ -8802,6 +8811,11 @@ UsdStage::SetInterpolationType(UsdInterpolationType interpolationType)
 {
     if (_interpolationType != interpolationType) {
         _interpolationType = interpolationType;
+
+        // #nv begin #disable-interp-notice
+        if (_IsDisabledInterpNotice())
+            return;
+        // nv end
 
         // Notify, as interpolated attributes values have likely changed.
         UsdStageWeakPtr self(this);

@@ -471,7 +471,11 @@ public:
             TfTokenVector const &changedInfoFields = *(_tasks[i].changedInfoFields);
             UsdImagingIndexProxy *proxy = _tasks[i].proxy;
             bool checkVariability = _tasks[i].checkVariability;
+
             _HdPrimInfo *primInfo = delegate->_GetHdPrimInfo(affectedCachePath);
+
+            TF_DEBUG(USDIMAGING_CHANGES).Msg("  - affected prim: <%s>\n",
+                affectedCachePath.GetText());
 
             // Due to the ResyncPrim condition when AllDirty is returned below, we
             // may or may not find an associated primInfo for every prim in
@@ -506,6 +510,7 @@ public:
                     // Do nothing
                 } else if (dirtyBits != HdChangeTracker::AllDirty) {
                     // Update Variability
+                    delegate->_timeVaryingPrimCacheValid = false;
                     adapter->TrackVariability(primInfo->usdPrim, affectedCachePath,
                         &primInfo->timeVaryingBits,
                         // #nv begin fast-updates
