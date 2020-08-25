@@ -101,6 +101,11 @@ public:
     /// See UsdSkel_SkeletonQuery::HasRestPose()
     bool HasRestPose ();
 
+    //+NV_CHANGE FRZHANG
+    /// See UsdSkel_SkeletonQuery::RefreshSkelDefinition()
+    void Refresh(const TfToken& propertyName);
+    //-NV_CHANGE FRZHANG
+
 private:
     UsdSkel_SkelDefinition();
 
