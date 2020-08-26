@@ -173,6 +173,14 @@ UsdImagingPrimAdapter::GetPrimResyncRootPath(SdfPath const& primPath)
 }
 //-NV_CHANGE FRZHANG 
 
+//+NV_CHANGE BRONG
+/*virtual*/
+void
+UsdImagingPrimAdapter::RefreshAnimQuery(const SdfPath& primPath)
+{
+}
+//-NV_CHANGE BRONG 
+
 /*virtual*/
 void
 UsdImagingPrimAdapter::MarkRefineLevelDirty(UsdPrim const& prim,

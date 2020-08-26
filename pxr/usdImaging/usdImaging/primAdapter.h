@@ -183,6 +183,10 @@ public:
     virtual SdfPath GetPrimResyncRootPath(SdfPath const& primPath);
     //-NV_CHANGE FRZHANG
 
+    //+NV_CHANGE BRONG
+    USDIMAGING_API
+    virtual void RefreshAnimQuery(const SdfPath& primPath);
+    //-NV_CHANGE BRONG
 
     virtual void MarkDirty(UsdPrim const& prim,
                            SdfPath const& cachePath,

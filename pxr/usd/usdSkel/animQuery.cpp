@@ -43,6 +43,14 @@ UsdSkelAnimQuery::GetPrim() const
     return _impl ? _impl->GetPrim() : UsdPrim();
 }
 
+//+NV_CHANGE BRONG
+void UsdSkelAnimQuery::Refresh()
+{
+    if (TF_VERIFY(_impl))
+        _impl->Refresh();
+}
+//-NV_CHANGE BRONG
+
 
 template <typename Matrix4>
 bool

@@ -1005,6 +1005,33 @@ UsdSkelImagingSkeletonAdapter::RegisterSkelBinding(
     _skelBindingMap[binding.GetSkeleton().GetPath()] = binding;
 }
 
+//+NV_CHANGE BRONG
+void UsdSkelImagingSkeletonAdapter::RefreshAnimQuery(const SdfPath& primPath)
+{
+    if (!TF_VERIFY(_UseNVGPUSkinningComputations()))
+        return;
+
+    const auto &skelIt = _skelAnimMap.find(primPath);
+    if (!TF_VERIFY(skelIt != _skelAnimMap.end()))
+        return;
+
+    _SkelSkinMap const& skelSkinMap = skelIt->second;
+
+    for (auto const& skin : skelSkinMap) {
+        SdfPath const& skelPath = skin.first;
+        _SkelData* skelData = _GetSkelData(skelPath);
+
+        if (skelData) {
+            // This animation is queried
+            if (skelData->skelQuery.GetAnimQuery().GetPrim().GetPath() == primPath) {
+                TF_DEBUG(USDIMAGING_CHANGES).Msg("[RefreshAnimQuery] for <%s> \n",skelPath.GetText());
+                skelData->skelQuery.RefreshAnimQuery();
+            }
+        }
+    }
+}
+//-NV_CHANGE BRONG
+
 // ---------------------------------------------------------------------- //
 /// Change Processing API (protected)
 // ---------------------------------------------------------------------- //

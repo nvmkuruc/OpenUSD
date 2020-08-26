@@ -108,6 +108,11 @@ public:
     virtual SdfPath GetPrimResyncRootPath(SdfPath const& primPath) override;
     //-NV_CHANGE FRZHANG
 
+    //+NV_CHANGE BRONG
+    USDSKELIMAGING_API
+    virtual void RefreshAnimQuery(const SdfPath& primPath) override;
+    //-NV_CHANGE BRONG
+
     USDSKELIMAGING_API
     void ProcessPrimResync(SdfPath const& primPath,
                            UsdImagingIndexProxy* index) override;

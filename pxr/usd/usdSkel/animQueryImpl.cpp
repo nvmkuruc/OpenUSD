@@ -52,6 +52,10 @@ public:
 
     virtual ~UsdSkel_SkelAnimationQueryImpl() {}
 
+    //+NV_CHANGE BRONG
+    virtual void Refresh() override;
+    //-NV_CHANGE BRONG
+
     virtual UsdPrim GetPrim() const override { return _anim.GetPrim(); }
     
     bool ComputeJointLocalTransforms(VtMatrix4dArray* xforms,
@@ -113,6 +117,16 @@ UsdSkel_SkelAnimationQueryImpl::UsdSkel_SkelAnimationQueryImpl(
         anim.GetBlendShapesAttr().Get(&_blendShapeOrder);
     }
 }
+
+//+NV_CHANGE BRONG
+void UsdSkel_SkelAnimationQueryImpl::Refresh()
+{
+    _translations = UsdAttributeQuery(_anim.GetTranslationsAttr());
+    _rotations = UsdAttributeQuery(_anim.GetRotationsAttr());
+    _scales = UsdAttributeQuery(_anim.GetScalesAttr());
+
+}
+//-NV_CHANGE BRONG
 
 
 template <typename Matrix4>

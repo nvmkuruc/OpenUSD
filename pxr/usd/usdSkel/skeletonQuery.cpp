@@ -432,6 +432,12 @@ UsdSkelSkeletonQuery::GetAnimQuery() const
     return _animQuery;
 }
 
+//+NV_CHANGE BRONG
+void UsdSkelSkeletonQuery::RefreshAnimQuery()
+{
+    _animQuery.Refresh();
+}
+//-NV_CHANGE BRONG
 
 const UsdSkelTopology&
 UsdSkelSkeletonQuery::GetTopology() const

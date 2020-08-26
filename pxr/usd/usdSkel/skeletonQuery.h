@@ -121,6 +121,11 @@ public:
     USDSKEL_API
     const UsdSkelAnimQuery& GetAnimQuery() const;
     
+    //+NV_CHANGE BRONG
+    USDSKEL_API
+    void RefreshAnimQuery();
+    //-NV_CHANGE BRONG
+
     /// Returns the topology of the bound skeleton instance, if any.
     USDSKEL_API
     const UsdSkelTopology& GetTopology() const;

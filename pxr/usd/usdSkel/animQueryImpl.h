@@ -60,6 +60,10 @@ public:
 
     virtual ~UsdSkel_AnimQueryImpl() {}
 
+    //+NV_CHANGE BRONG
+    virtual void Refresh() = 0;
+    //-NV_CHANGE BRONG
+
     virtual UsdPrim GetPrim() const = 0;
 
     virtual bool ComputeJointLocalTransforms(VtMatrix4dArray* xforms,

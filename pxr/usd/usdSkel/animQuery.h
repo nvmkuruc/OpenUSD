@@ -82,6 +82,11 @@ public:
         return hash_value(query.GetPrim());
     }
 
+    //+NV_CHANGE BRONG
+    USDSKEL_API
+    void Refresh();
+    //-NV_CHANGE BRONG
+
     /// Return the primitive this anim query reads from.
     USDSKEL_API
     UsdPrim GetPrim() const;

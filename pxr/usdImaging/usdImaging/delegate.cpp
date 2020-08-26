@@ -61,6 +61,11 @@
 #include "pxr/usd/usdLux/light.h"
 #include "pxr/usd/usdLux/lightFilter.h"
 
+//+NV_CHANGE BRONG
+#include "pxr/usd/usdSkel/animation.h"
+#include "pxr/usd/usdSkel/tokens.h"
+//-NV_CHANGE BRONG
+
 #include "pxr/base/work/loops.h"
 
 #include "pxr/base/tf/envSetting.h"
@@ -86,6 +91,10 @@ TF_DEFINE_PRIVATE_TOKENS(
     (DomeLight)
     (lightFilterType)
     (textureMemory)
+
+    //+NV_CHANGE BRONG
+    (Skeleton)
+    //-NV_CHANGE BRONG
 );
 
 // This environment variable matches a set of similar ones in
@@ -1520,6 +1529,20 @@ UsdImagingDelegate::_RefreshUsdObject(SdfPath const& usdPath,
             _ResyncUsdPrim(usdPrimPath, proxy, true);
             return;
         }
+
+        //+NV_CHANGE BRONG
+        if (UseNVGPUSkinningComputations() && usdPrim.IsA<UsdSkelAnimation>() &&
+            (attrName == UsdSkelTokens->scales ||
+                attrName == UsdSkelTokens->rotations ||
+                attrName == UsdSkelTokens->translations)) {
+                // _AdapterLookup(usdPrim from usdPrimPath) is empty. So currently try to get the adapter of type Skeleton.
+                UsdImagingPrimAdapterSharedPtr adapter = _AdapterLookup(_tokens->Skeleton);
+
+                // Defacto UsdSkelImagingSkeletonAdapter::RefreshAnimQuery()
+                adapter->RefreshAnimQuery(usdPrimPath);
+        }
+        //-NV_CHANGE BRONG
+
 
         // If we're sync'ing a non-inherited property on a parent prim, we 
         // should fall through this function without updating anything. 
