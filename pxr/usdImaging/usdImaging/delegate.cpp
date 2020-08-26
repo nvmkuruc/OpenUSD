@@ -1531,7 +1531,7 @@ UsdImagingDelegate::_RefreshUsdObject(SdfPath const& usdPath,
         }
 
         //+NV_CHANGE BRONG
-        if (UseNVGPUSkinningComputations() && usdPrim.IsA<UsdSkelAnimation>() &&
+        if (UseNVGPUSkinningComputations() && usdPrim && usdPrim.IsA<UsdSkelAnimation>() &&
             (attrName == UsdSkelTokens->scales ||
                 attrName == UsdSkelTokens->rotations ||
                 attrName == UsdSkelTokens->translations)) {
