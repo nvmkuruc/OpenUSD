@@ -1153,6 +1153,11 @@ UsdImagingDelegate::ApplyPendingUpdates()
 
         for (SdfPath const& usdPath: usdPathsToResync) {
             if (usdPath.IsPropertyPath()) {
+
+                //+NV_CHANGE BRONG
+                _ResyncUsdAttrQuery(usdPath);
+                //-NV_CHANGE BRONG
+
                 _RefreshUsdObject(usdPath, TfTokenVector(), &indexProxy);
             } else if (usdPath.IsTargetPath()) {
                 // TargetPaths are their own path type, when they change, resync
@@ -1491,6 +1496,28 @@ UsdImagingDelegate::_ResyncUsdPrim(SdfPath const& usdPath,
     }
 }
 
+//+NV_CHANGE BRONG
+void
+UsdImagingDelegate::_ResyncUsdAttrQuery(SdfPath const& usdPath)
+{
+    if (UseNVGPUSkinningComputations()) {
+        SdfPath const& usdPrimPath = usdPath.GetPrimPath();
+        TfToken const& attrName = usdPath.GetNameToken();
+        UsdPrim usdPrim = _stage->GetPrimAtPath(usdPrimPath);
+        if (usdPrim && usdPrim.IsA<UsdSkelAnimation>() &&
+            (attrName == UsdSkelTokens->scales ||
+                attrName == UsdSkelTokens->rotations ||
+                attrName == UsdSkelTokens->translations)) {
+            // _AdapterLookup(usdPrim from usdPrimPath) is empty. So currently try to get the adapter of type Skeleton.
+            UsdImagingPrimAdapterSharedPtr adapter = _AdapterLookup(_tokens->Skeleton);
+
+            // Defacto UsdSkelImagingSkeletonAdapter::RefreshAnimQuery()
+            adapter->RefreshAnimQuery(usdPrimPath);
+        }
+    }
+}
+//-NV_CHANGE BRONG
+
 void 
 UsdImagingDelegate::_RefreshUsdObject(SdfPath const& usdPath, 
                                       TfTokenVector const& changedInfoFields,
@@ -1529,20 +1556,6 @@ UsdImagingDelegate::_RefreshUsdObject(SdfPath const& usdPath,
             _ResyncUsdPrim(usdPrimPath, proxy, true);
             return;
         }
-
-        //+NV_CHANGE BRONG
-        if (UseNVGPUSkinningComputations() && usdPrim && usdPrim.IsA<UsdSkelAnimation>() &&
-            (attrName == UsdSkelTokens->scales ||
-                attrName == UsdSkelTokens->rotations ||
-                attrName == UsdSkelTokens->translations)) {
-                // _AdapterLookup(usdPrim from usdPrimPath) is empty. So currently try to get the adapter of type Skeleton.
-                UsdImagingPrimAdapterSharedPtr adapter = _AdapterLookup(_tokens->Skeleton);
-
-                // Defacto UsdSkelImagingSkeletonAdapter::RefreshAnimQuery()
-                adapter->RefreshAnimQuery(usdPrimPath);
-        }
-        //-NV_CHANGE BRONG
-
 
         // If we're sync'ing a non-inherited property on a parent prim, we 
         // should fall through this function without updating anything. 

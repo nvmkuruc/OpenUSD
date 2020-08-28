@@ -617,6 +617,10 @@ protected:
         bool checkVariability = true);
     // nv end
 
+    //+NV_CHANGE BRONG
+    void _ResyncUsdAttrQuery(SdfPath const& usdPath);
+    //-NV_CHANGE BRONG
+
     // Heavy-weight invalidation of an entire prim subtree. All cached data is
     // reconstructed for all prims below \p rootPath.
     //
