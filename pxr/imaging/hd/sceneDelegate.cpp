@@ -57,7 +57,7 @@ HdSceneDelegate::Sync(HdSyncRequestVector* request)
 
 }
 
-// #nv begin #scene delegate rework
+// #nv begin #omni hydra
 void
 HdSceneDelegate::UpdatePostSyncRequestVector(HdSyncRequestVector* request)
 {    
@@ -69,7 +69,13 @@ HdSceneDelegate::NeedsPostSyncUpdate() const
     return false;
 }
 
-// #nv end #scene delegate rework
+HdDirtyBits
+HdSceneDelegate::GetInstancerDirtyBits(const SdfPath& instancerId)
+{
+    return HdChangeTracker::Clean;
+}
+
+// #nv end #omni hydra
 
 void
 HdSceneDelegate::PostSyncCleanup()

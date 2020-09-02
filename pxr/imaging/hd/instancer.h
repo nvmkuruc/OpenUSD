@@ -28,6 +28,7 @@
 #include "pxr/imaging/hd/api.h"
 #include "pxr/imaging/hd/version.h"
 #include "pxr/usd/sdf/path.h"
+#include "pxr/imaging/hd/types.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -138,6 +139,13 @@ public:
 
     HD_API
     TfTokenVector const & GetBuiltinPrimvarNames() const;
+
+    // # nv begin
+    // allow instancers to be synchronized independetly from rprims
+    HD_API
+    virtual void Sync(HdSceneDelegate *delegate,
+                      HdDirtyBits     *dirtyBits) {}
+    // # nv end    
 
 private:
     HdSceneDelegate* _delegate;

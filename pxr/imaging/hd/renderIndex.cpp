@@ -1550,7 +1550,7 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
         size_t numPostSyncRequests = postSyncRequestVector.dirtyBits.size();
 
         {
-            HF_TRACE_FUNCTION_SCOPE("Process SyncRequestVector");
+            HF_TRACE_FUNCTION_SCOPE("Process postSyncRequestVector");
             _RprimPostSyncRequestVector& rprimPostSyncRequestVector = dlgIt->second;
             HdSyncRequestVector& r = reinterpret_cast<HdSyncRequestVector&>(rprimPostSyncRequestVector.r);
 
@@ -1578,12 +1578,24 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
             }
         }
     }
+
     // #nv edit end
 
     // sync dynamic (slow) syncMap for rprim Sync
     WorkArenaDispatcher dispatcher;
     TF_FOR_ALL(dlgIt, syncMap) {
         HdSceneDelegate* sceneDelegate = dlgIt->first;
+
+        // #nv edit begin
+        // sync primvars for instancers
+        for (auto iter : _instancerMap)
+        {
+            const SdfPath& instanceId = iter.first;
+            HdInstancer* instancer = iter.second;
+            HdDirtyBits dirtyBits = _tracker.GetInstancerDirtyBits(instanceId);
+            instancer->Sync(sceneDelegate, &dirtyBits);
+        }
+         // #nv edit end
 
         _RprimSyncRequestVector& r = dlgIt->second;
         _SyncRPrims workerState(sceneDelegate, r, reprs, _tracker, renderParam);
@@ -1592,9 +1604,21 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
     }
     dispatcher.Wait();
 
-    // sync fixed (fast) postSyncMap for rprim Sync
+    // sync rprim for postSync delegates
     TF_FOR_ALL(dlgIt, _postSyncMap) {
         HdSceneDelegate* sceneDelegate = dlgIt->first;
+
+        // #nv edit begin
+        // sync primvars for instancers
+        for (auto iter : _instancerMap)
+        {
+            const SdfPath& instanceId = iter.first;
+            HdInstancer* instancer = iter.second;
+            HdDirtyBits dirtyBits = sceneDelegate->GetInstancerDirtyBits(instanceId);
+            instancer->Sync(sceneDelegate, &dirtyBits);
+        }
+         // #nv edit end
+
         _RprimSyncRequestVector& r = reinterpret_cast<_RprimSyncRequestVector&>(dlgIt->second);
         _SyncRPrims workerState(sceneDelegate, r, reprs, _tracker, renderParam);
 

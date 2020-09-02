@@ -325,6 +325,9 @@ public:
     HD_API
     virtual bool NeedsPostSyncUpdate() const;
 
+    HD_API
+    virtual HdDirtyBits GetInstancerDirtyBits(const SdfPath& instancerId);
+
     // #nv end
 
     /// Opportunity for the delegate to clean itself up after
