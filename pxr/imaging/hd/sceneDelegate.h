@@ -328,6 +328,10 @@ public:
     HD_API
     virtual HdDirtyBits GetInstancerDirtyBits(const SdfPath& instancerId);
 
+    // Temporary placeholder to land omni.hydra v1. We aim to formulate a more generic mechanism for this.
+    HD_API
+    virtual void GetSemantics(SdfPath const& id, bool isInstance, std::string& type, std::string& data);
+
     // #nv end
 
     /// Opportunity for the delegate to clean itself up after

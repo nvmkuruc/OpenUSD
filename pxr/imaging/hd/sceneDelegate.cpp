@@ -75,6 +75,11 @@ HdSceneDelegate::GetInstancerDirtyBits(const SdfPath& instancerId)
     return HdChangeTracker::Clean;
 }
 
+void
+HdSceneDelegate::GetSemantics(SdfPath const& id, bool isInstance, std::string& type, std::string& data)
+{
+}
+
 // #nv end #omni hydra
 
 void
