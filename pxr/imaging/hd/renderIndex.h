@@ -552,13 +552,19 @@ public:
         _PostSyncRequestVector r;
     };
 
+    struct PostSyncRequestVector
+    {
+        _RprimPostSyncRequestVector rprimRequestVector;
+        _SprimIndex::PostSyncRequestVector sprimRequestVector;
+    };
+
 private:
     typedef std::vector<HdSceneDelegate*> _SceneDelegateVector;
     _SceneDelegateVector _sceneDelegates;
 
     typedef TfHashMap<HdSceneDelegate*,
-        _RprimPostSyncRequestVector, TfHash> _RprimPostSyncRequestMap;
-    _RprimPostSyncRequestMap _postSyncMap;
+        PostSyncRequestVector, TfHash> _PostSyncRequestMap;
+    _PostSyncRequestMap _postSyncMap;
 
     // nv end
 };

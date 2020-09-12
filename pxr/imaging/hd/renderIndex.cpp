@@ -1095,7 +1095,8 @@ namespace {
                         std::placeholders::_2));
             });
         }
-        else {
+        else 
+        {
             TRACE_SCOPE("Serial Rprim Sync");
             // Single-threaded version: Call worker directly
             workerState.Sync(0, r.rprims.size());
@@ -1107,12 +1108,11 @@ namespace {
 void HdRenderIndex::AppendSceneDelegate(HdSceneDelegate* sceneDelegate)
 {
     _sceneDelegates.push_back(sceneDelegate);
-    
-    auto itr = _postSyncMap.find(sceneDelegate);
-    // if this is first time we use this scene delegate, add the sync map entry
-    if (_postSyncMap.end() == itr)
-        _postSyncMap[sceneDelegate] = _RprimPostSyncRequestVector();
 
+    // add sync request vector for this scene delegate
+    auto& r = _postSyncMap[sceneDelegate];
+    r.rprimRequestVector = _RprimPostSyncRequestVector();
+    r.sprimRequestVector = _SprimIndex::PostSyncRequestVector();
 }
 //#nv end
 
@@ -1536,7 +1536,6 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
 
         HdSyncRequestVector postSyncRequestVector;
         {
-
             HF_TRACE_FUNCTION_SCOPE("Delegate UpdatePostSyncRequestVector");
 
             // ask delegate to populate postSyncPropertyChanges
@@ -1548,16 +1547,19 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
         }
 
         size_t numPostSyncRequests = postSyncRequestVector.dirtyBits.size();
-
         {
             HF_TRACE_FUNCTION_SCOPE("Process postSyncRequestVector");
-            _RprimPostSyncRequestVector& rprimPostSyncRequestVector = dlgIt->second;
-            HdSyncRequestVector& r = reinterpret_cast<HdSyncRequestVector&>(rprimPostSyncRequestVector.r);
+            _RprimPostSyncRequestVector& rprimRequestVector = dlgIt->second.rprimRequestVector;
+            HdSyncRequestVector& r = reinterpret_cast<HdSyncRequestVector&>(rprimRequestVector.r);
 
             r.IDs.clear();
             r.dirtyBits.clear();
-            rprimPostSyncRequestVector.rprims.clear();
-            rprimPostSyncRequestVector.reprsMasks.clear();
+            rprimRequestVector.rprims.clear();
+            rprimRequestVector.reprsMasks.clear();
+
+            _SprimIndex::PostSyncRequestVector& sprimRequestVector = dlgIt->second.sprimRequestVector;
+            sprimRequestVector.prims.clear();
+            sprimRequestVector.dirtyBits.clear();
 
             // merge current sync requests
             for (size_t i = 0; i < numPostSyncRequests; i++)
@@ -1572,18 +1574,26 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
                     size_t reprMask = 1 << 0; // FIXME - this is a hack, we need to read proper reprMask.
                     r.IDs.push_back(id);
                     r.dirtyBits.push_back(dirtyBits);
-                    rprimPostSyncRequestVector.rprims.push_back(iter->second.rprim);
-                    rprimPostSyncRequestVector.reprsMasks.push_back(reprMask);
+                    rprimRequestVector.rprims.push_back(iter->second.rprim);
+                    rprimRequestVector.reprsMasks.push_back(reprMask);
+                }
+                else
+                {
+                    auto sprim = _sprimIndex.GetPrim(id);
+                    if (sprim)
+                    {
+                        sprimRequestVector.prims.push_back(sprim);
+                        sprimRequestVector.dirtyBits.push_back(dirtyBits);
+                    }
                 }
             }
         }
     }
 
-    // sync instancers for regular syncMap
+    // sync instancers for regular syncMap (uses change tracker)
     TF_FOR_ALL(dlgIt, syncMap) {
         HdSceneDelegate* sceneDelegate = dlgIt->first;
 
-        // #nv edit begin
         // sync primvars for instancers
         for (auto iter : _instancerMap)
         {
@@ -1594,7 +1604,7 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
         }
     }
 
-     // sync instancers for postSync delegates
+    // sync instancers for postSync delegates (uses direct query into scene delegate)
     TF_FOR_ALL(dlgIt, _postSyncMap) {
         HdSceneDelegate* sceneDelegate = dlgIt->first;
 
@@ -1607,7 +1617,6 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
             instancer->Sync(sceneDelegate, &dirtyBits);
         }
     }
-    // #nv edit end
 
     // sync dynamic (slow) syncMap for rprim Sync
     WorkArenaDispatcher dispatcher;
@@ -1621,6 +1630,13 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
     }
     dispatcher.Wait();
 
+    // sync sprims for post sync requests (lights, etc.)
+    TF_FOR_ALL(dlgIt, _postSyncMap) {
+        HdSceneDelegate* sceneDelegate = dlgIt->first;
+        _SprimIndex::PostSyncRequestVector& sprimRequestVector = dlgIt->second.sprimRequestVector;
+        _sprimIndex.SyncPrims(sceneDelegate, sprimRequestVector, renderParam);
+    }
+
     // sync rprim for postSync delegates
     TF_FOR_ALL(dlgIt, _postSyncMap) {
         HdSceneDelegate* sceneDelegate = dlgIt->first;
@@ -1631,6 +1647,8 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
         _DoSyncRprims(sceneDelegate, dispatcher, workerState, r);
     }
     dispatcher.Wait();
+
+    // #nv edit end
 
     {
         HF_TRACE_FUNCTION_SCOPE("Clean Up");
