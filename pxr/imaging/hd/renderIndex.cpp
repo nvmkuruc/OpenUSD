@@ -1105,10 +1105,8 @@ namespace {
 };
 
 //#nv begin
-void HdRenderIndex::AppendSceneDelegate(HdSceneDelegate* sceneDelegate)
-{
-    _sceneDelegates.push_back(sceneDelegate);
-
+void HdRenderIndex::AddPostSyncDelegate(HdSceneDelegate* sceneDelegate)
+{    
     // add sync request vector for this scene delegate
     auto& r = _postSyncMap[sceneDelegate];
     r.rprimRequestVector = _RprimPostSyncRequestVector();
@@ -1395,13 +1393,6 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
 
     _RprimSyncRequestMap syncMap;
 
-    //#nv begin
-    for (auto& sd : _sceneDelegates)
-    {
-        auto curvec = &syncMap[sd];
-    }
-    //#nv end
-
     bool resetVaryingState = false;
     {
         HF_TRACE_FUNCTION_SCOPE("Build Sync Map: Rprims");
@@ -1526,6 +1517,12 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
     }
 
     // #nv edit begin
+
+    // sync each post scene delegate
+    TF_FOR_ALL(dlgIt, _postSyncMap) {
+        HdSceneDelegate* sceneDelegate = dlgIt->first;
+        sceneDelegate->Sync(nullptr); // this step does not require sync request vector
+    }
 
     // for each scene delegate, check if they need to update post sync requests
     TF_FOR_ALL(dlgIt, _postSyncMap) {
@@ -1658,6 +1655,14 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
             HdSceneDelegate *delegate = dlgIt->first;
             delegate->PostSyncCleanup();
         }
+
+        // #nv edit begin
+        TF_FOR_ALL(dlgIt, _postSyncMap) {
+            HdSceneDelegate *delegate = dlgIt->first;
+            delegate->PostSyncCleanup();
+        }
+        // #nv edit end
+
         const HdSceneDelegatePtrVector& sprimDelegates =
             _sprimIndex.GetSceneDelegatesForDirtyPrims();
         for (HdSceneDelegate* delegate : sprimDelegates) {

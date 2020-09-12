@@ -387,11 +387,11 @@ public:
     // ---------------------------------------------------------------------- //
     /// \name Post Sync Delegates
     // ---------------------------------------------------------------------- //
-    // Add scene delegate into the render index
+    // Set this scene delegate as postsync scene delegate 
     // When multiple scene delegate affects the same rprim,
     // the composition order is determined by order the scene delegates were added in this function
     HD_API
-    void AppendSceneDelegate(HdSceneDelegate* sceneDelegate);
+    void AddPostSyncDelegate(HdSceneDelegate* sceneDelegate);
     // #nv end
 
 private:
