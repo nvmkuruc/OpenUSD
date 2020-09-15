@@ -80,6 +80,11 @@ HdSceneDelegate::GetSemantics(SdfPath const& id, bool isInstance, std::string& t
 {
 }
 
+void
+HdSceneDelegate::GetSemantics(SdfPath const& id, std::string& type, std::string& data, int32_t instanceIndex)
+{
+}
+
 // #nv end #omni hydra
 
 void

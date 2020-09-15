@@ -331,6 +331,8 @@ public:
     // Temporary placeholder to land omni.hydra v1. We aim to formulate a more generic mechanism for this.
     HD_API
     virtual void GetSemantics(SdfPath const& id, bool isInstance, std::string& type, std::string& data);
+    HD_API
+    virtual void GetSemantics(SdfPath const& id, std::string& type, std::string& data, int32_t instanceIndex = -1);
 
     // #nv end
 
