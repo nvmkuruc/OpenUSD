@@ -628,11 +628,13 @@ protected:
     // Repopulate() on those prims individually. If repopulateFromRoot is
     // true, Repopulate() will be called on \p rootPath instead. This is slower,
     // but handles changes in tree topology.
-    void _ResyncUsdPrim(SdfPath const& usdRootPath, UsdImagingIndexProxy* proxy,
+    // #nv begin
+    USDIMAGING_API 
+    virtual void _ResyncUsdPrim(SdfPath const& usdRootPath, UsdImagingIndexProxy* proxy,
                         bool repopulateFromRoot = false,
-                        // #nv begin #parallel-xform-children
-                        bool fromThread = false);
-                        // nv end
+                        bool fromThread = false // #nv begin #parallel-xform-children                    
+        );
+    // nv end
 
     // ---------------------------------------------------------------------- //
     // Usd Data-Access Helper Methods
