@@ -84,7 +84,7 @@ public:
 
     //+NV_CHANGE BRONG
     USDSKEL_API
-    void Refresh();
+    void Refresh(const TfToken& propertyName);
     //-NV_CHANGE BRONG
 
     /// Return the primitive this anim query reads from.

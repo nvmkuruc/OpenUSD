@@ -53,7 +53,7 @@ public:
     virtual ~UsdSkel_SkelAnimationQueryImpl() {}
 
     //+NV_CHANGE BRONG
-    virtual void Refresh() override;
+    virtual void Refresh(const TfToken& propertyName) override;
     //-NV_CHANGE BRONG
 
     virtual UsdPrim GetPrim() const override { return _anim.GetPrim(); }
@@ -119,15 +119,22 @@ UsdSkel_SkelAnimationQueryImpl::UsdSkel_SkelAnimationQueryImpl(
 }
 
 //+NV_CHANGE BRONG
-void UsdSkel_SkelAnimationQueryImpl::Refresh()
+void UsdSkel_SkelAnimationQueryImpl::Refresh(const TfToken& propertyName)
 {
-    _translations = UsdAttributeQuery(_anim.GetTranslationsAttr());
-    _rotations = UsdAttributeQuery(_anim.GetRotationsAttr());
-    _scales = UsdAttributeQuery(_anim.GetScalesAttr());
-
+    if (propertyName == UsdSkelTokens->scales) {
+        _scales = UsdAttributeQuery(_anim.GetScalesAttr());
+    }
+    else if (propertyName == UsdSkelTokens->rotations) {
+        _rotations = UsdAttributeQuery(_anim.GetRotationsAttr());
+    }
+    else if (propertyName == UsdSkelTokens->translations) {
+        _translations = UsdAttributeQuery(_anim.GetTranslationsAttr());
+    }
+    else if (propertyName == UsdSkelTokens->blendShapeWeights) {
+        _blendShapeWeights = UsdAttributeQuery(_anim.GetBlendShapeWeightsAttr());
+    }
 }
 //-NV_CHANGE BRONG
-
 
 template <typename Matrix4>
 bool

@@ -433,9 +433,9 @@ UsdSkelSkeletonQuery::GetAnimQuery() const
 }
 
 //+NV_CHANGE BRONG
-void UsdSkelSkeletonQuery::RefreshAnimQuery()
+void UsdSkelSkeletonQuery::RefreshAnimQuery(const TfToken& propertyName)
 {
-    _animQuery.Refresh();
+    _animQuery.Refresh(propertyName);
 }
 //-NV_CHANGE BRONG
 

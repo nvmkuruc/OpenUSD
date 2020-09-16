@@ -44,10 +44,10 @@ UsdSkelAnimQuery::GetPrim() const
 }
 
 //+NV_CHANGE BRONG
-void UsdSkelAnimQuery::Refresh()
+void UsdSkelAnimQuery::Refresh(const TfToken& propertyName)
 {
     if (TF_VERIFY(_impl))
-        _impl->Refresh();
+        _impl->Refresh(propertyName);
 }
 //-NV_CHANGE BRONG
 
