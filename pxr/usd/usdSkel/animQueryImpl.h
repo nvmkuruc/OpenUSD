@@ -61,7 +61,7 @@ public:
     virtual ~UsdSkel_AnimQueryImpl() {}
 
     //+NV_CHANGE BRONG
-    virtual void Refresh() = 0;
+    virtual void Refresh(const TfToken& propertyName) = 0;
     //-NV_CHANGE BRONG
 
     virtual UsdPrim GetPrim() const = 0;

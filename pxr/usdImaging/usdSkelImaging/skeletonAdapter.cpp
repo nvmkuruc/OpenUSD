@@ -477,6 +477,8 @@ UsdSkelImagingSkeletonAdapter::ProcessPropertyChange(
         if (propertyName == UsdSkelTokens->translations
             || propertyName == UsdSkelTokens->rotations
             || propertyName == UsdSkelTokens->scales
+            || propertyName == UsdSkelTokens->blendShapeWeights
+            || propertyName == UsdSkelTokens->joints
             )
         {
             return HdChangeTracker::NV_DirtySkelAnimXform;
@@ -1006,7 +1008,7 @@ UsdSkelImagingSkeletonAdapter::RegisterSkelBinding(
 }
 
 //+NV_CHANGE BRONG
-void UsdSkelImagingSkeletonAdapter::RefreshAnimQuery(const SdfPath& primPath)
+void UsdSkelImagingSkeletonAdapter::RefreshAnimQuery(const SdfPath& primPath, const TfToken& propertyName, UsdImagingIndexProxy* proxy)
 {
     if (!TF_VERIFY(_UseNVGPUSkinningComputations()))
         return;
@@ -1024,8 +1026,21 @@ void UsdSkelImagingSkeletonAdapter::RefreshAnimQuery(const SdfPath& primPath)
         if (skelData) {
             // This animation is queried
             if (skelData->skelQuery.GetAnimQuery().GetPrim().GetPath() == primPath) {
-                TF_DEBUG(USDIMAGING_CHANGES).Msg("[RefreshAnimQuery] for <%s> \n",skelPath.GetText());
-                skelData->skelQuery.RefreshAnimQuery();
+                if (propertyName == UsdSkelTokens->scales ||
+                    propertyName == UsdSkelTokens->rotations ||
+                    propertyName == UsdSkelTokens->translations ||
+                    propertyName == UsdSkelTokens->blendShapeWeights) {
+                    TF_DEBUG(USDIMAGING_CHANGES).Msg("[RefreshAnimQuery] <%s> SRTb \n", skelPath.GetText());
+                    skelData->skelQuery.RefreshAnimQuery(propertyName);
+                }
+                else if (propertyName == UsdSkelTokens->joints) {
+                    TF_DEBUG(USDIMAGING_CHANGES).Msg("[RefreshAnimQuery] <%s> joints \n", skelPath.GetText());
+                    // according to FRZHANG, joints change in Animation should trigger Skeleton refresh because there is cache in Skeleton wrt Animation joints.
+                    ProcessPrimResync(skelPath, proxy);
+                }
+                else {
+                    TF_DEBUG(USDIMAGING_CHANGES).Msg("[RefreshAnimQuery] <%s> with unexpected properties<%s> \n", skelPath.GetText(), propertyName.GetText());
+                }
             }
         }
     }

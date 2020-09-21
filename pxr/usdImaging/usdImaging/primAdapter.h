@@ -185,7 +185,7 @@ public:
 
     //+NV_CHANGE BRONG
     USDIMAGING_API
-    virtual void RefreshAnimQuery(const SdfPath& primPath);
+    virtual void RefreshAnimQuery(const SdfPath& primPath, const TfToken& propertyName, UsdImagingIndexProxy* proxy);
     //-NV_CHANGE BRONG
 
     virtual void MarkDirty(UsdPrim const& prim,

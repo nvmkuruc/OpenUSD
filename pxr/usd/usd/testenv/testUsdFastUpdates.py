@@ -33,6 +33,7 @@ class TestUsdFastUpdates(unittest.TestCase):
 
     def OnObjectsChangedFastUpdates(self, notice, sender):
         self.OnObjectsChanged(notice, sender)
+        # OM-8790
         #self.objectsChangedInvoked = True
         #fastUpdates = notice.GetFastUpdates()
         #self.assertEquals(len(fastUpdates), 1)
@@ -71,6 +72,7 @@ class TestUsdFastUpdates(unittest.TestCase):
         assert not self.objectsChangedInvoked
         with Sdf.ChangeBlock(True):
             sphere.GetAttribute("radius").Set(6.0)
+        # OM-8790
         #assert self.layersChangedInvoked
         #assert self.objectsChangedInvoked
 

@@ -110,7 +110,7 @@ public:
 
     //+NV_CHANGE BRONG
     USDSKELIMAGING_API
-    virtual void RefreshAnimQuery(const SdfPath& primPath) override;
+    virtual void RefreshAnimQuery(const SdfPath& primPath, const TfToken& propertyName, UsdImagingIndexProxy* proxy) override;
     //-NV_CHANGE BRONG
 
     USDSKELIMAGING_API

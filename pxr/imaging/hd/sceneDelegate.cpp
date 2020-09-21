@@ -76,11 +76,6 @@ HdSceneDelegate::GetInstancerDirtyBits(const SdfPath& instancerId)
 }
 
 void
-HdSceneDelegate::GetSemantics(SdfPath const& id, bool isInstance, std::string& type, std::string& data)
-{
-}
-
-void
 HdSceneDelegate::GetSemantics(SdfPath const& id, std::string& type, std::string& data, int32_t instanceIndex)
 {
 }

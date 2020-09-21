@@ -176,7 +176,7 @@ UsdImagingPrimAdapter::GetPrimResyncRootPath(SdfPath const& primPath)
 //+NV_CHANGE BRONG
 /*virtual*/
 void
-UsdImagingPrimAdapter::RefreshAnimQuery(const SdfPath& primPath)
+UsdImagingPrimAdapter::RefreshAnimQuery(const SdfPath& primPath, const TfToken& propertyName, UsdImagingIndexProxy* proxy)
 {
 }
 //-NV_CHANGE BRONG 

@@ -123,7 +123,7 @@ public:
     
     //+NV_CHANGE BRONG
     USDSKEL_API
-    void RefreshAnimQuery();
+    void RefreshAnimQuery(const TfToken& propertyName);
     //-NV_CHANGE BRONG
 
     /// Returns the topology of the bound skeleton instance, if any.

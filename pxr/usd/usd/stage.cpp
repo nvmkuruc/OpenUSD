@@ -3860,7 +3860,7 @@ UsdStage::_HandleLayersDidChange(
 
         // Early out for only processing fast updates.
         TF_DEBUG(USD_CHANGES).Msg("\nProcessing fast updates\n");
-        TRACE_FUNCTION_SCOPE("Processing fast updates");
+        TRACE_SCOPE("Processing fast updates");
 
         UsdStageWeakPtr self(this);
 
@@ -3869,7 +3869,7 @@ UsdStage::_HandleLayersDidChange(
             if (!fastUpdates.begin()->second.hasCompositionDependents) {
                 // If the fast updates have no composition dependents, we can send the
                 // unmodified change contents straight to the notice.
-                TRACE_FUNCTION_SCOPE("fastUpdate UsdNotice::ObjectChanged - no composition");
+                TRACE_SCOPE("fastUpdate UsdNotice::ObjectChanged - no composition");
                 //UsdNotice::ObjectsChanged(
                 //    self, &recomposeChanges, &otherInfoChanges, &fastUpdates.begin()->second.fastUpdates).Send(self);
             } else {
@@ -3919,7 +3919,7 @@ UsdStage::_HandleLayersDidChange(
                 };
 
                 remapChangesToMasters(&remappedFastUpdates);
-                TRACE_FUNCTION_SCOPE("fastUpdate UsdNotice::ObjectChanged - recomposition");
+                TRACE_SCOPE("fastUpdate UsdNotice::ObjectChanged - recomposition");
                 UsdNotice::ObjectsChanged(
                     self, &recomposeChanges, &otherInfoChanges, &remappedFastUpdates).Send(self);
             }
@@ -4171,7 +4171,7 @@ UsdStage::_HandleLayersDidChange(
 
     // Notify about changed objects.
     {
-        TRACE_FUNCTION_SCOPE("UsdNotice::ObjectChanged Normal");
+        TRACE_SCOPE("UsdNotice::ObjectChanged (no fast updates)");
         UsdNotice::ObjectsChanged(
             self, &recomposeChanges, &otherInfoChanges).Send(self);
     }

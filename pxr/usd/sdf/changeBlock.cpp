@@ -39,8 +39,9 @@ TF_DEFINE_ENV_SETTING(SDF_CHANGEBLOCK_IMPLICIT_FAST_UPDATES, false,
 
 SdfChangeBlock::SdfChangeBlock(bool fastUpdates)
 {
-    // #nv begin, disable fast update now
+    // #nv begin #omni-hydra
     fastUpdates = false;
+    // nv end
 
     Sdf_ChangeManager::Get().OpenChangeBlock(fastUpdates);
 }
