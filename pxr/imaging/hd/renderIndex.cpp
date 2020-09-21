@@ -788,7 +788,7 @@ namespace {
             request.dirtyBits.push_back(dirtyBits);
         }
 
-        /// #nv edit begin
+        // #nv begin omni-hydra
         void Reserve(size_t newSize)
         {
             rprims.reserve(newSize);
@@ -796,7 +796,7 @@ namespace {
             request.IDs.reserve(newSize);
             request.dirtyBits.reserve(newSize);
         }
-        /// #nv edit end
+       ///#nv end
 
         std::vector<HdRprim *> rprims;
         std::vector<size_t> reprsMasks;
@@ -868,7 +868,10 @@ namespace {
         _ReprList const &_reprs;
         HdChangeTracker &_tracker;
         HdRenderParam *_renderParam;
+
+        // #nv begin #omni-hydra
         bool _useDefaultRepr;
+        // nv end
 
     public:
         _SyncRPrims( HdSceneDelegate *sceneDelegate,
@@ -876,13 +879,17 @@ namespace {
                      _ReprList const &reprs,
                      HdChangeTracker &tracker,
                      HdRenderParam *renderParam,
+                     // #nv begin omni-hydra
                      bool useDefaultRepr = false)
+                     // nv end
          : _sceneDelegate(sceneDelegate)
          , _r(r)
          , _reprs(reprs)
          , _tracker(tracker)
          , _renderParam(renderParam)
+        // nv begin #omni-hydra
          , _useDefaultRepr(useDefaultRepr)
+        // nv end
         {
         }
 
@@ -895,18 +902,16 @@ namespace {
 
                 HdDirtyBits dirtyBits = _r.request.dirtyBits[i];
 
-                // #nv begin
+                // #nv begin #omni-hydra
                 if (_useDefaultRepr)
                 {
                     // Note - we only use refined repr for post sync for now
-                    static TfToken const& reprToken = TfToken("refined");
-
                     rprim.Sync(_sceneDelegate,
                                _renderParam,
                                &dirtyBits,
-                                reprToken);
+                               HdReprTokens->refined);
                 }
-                // #nv end
+                // nv end
                 else
                 {
                     for (const _ReprSpec& spec : _reprs) {
@@ -1094,6 +1099,7 @@ namespace {
         }
     }   
 
+    // #nv begin #omni-hydra
     static void
     _DoSyncRprims(HdSceneDelegate* sceneDelegate, 
         WorkArenaDispatcher& dispatcher, 
@@ -1123,7 +1129,6 @@ namespace {
     }
 };
 
-//#nv begin
 void HdRenderIndex::AddPostSyncDelegate(HdSceneDelegate* sceneDelegate)
 {    
     // add sync request vector for this scene delegate
@@ -1131,7 +1136,7 @@ void HdRenderIndex::AddPostSyncDelegate(HdSceneDelegate* sceneDelegate)
     r.rprimRequestVector = _RprimPostSyncRequestVector();
     r.sprimRequestVector = _SprimIndex::PostSyncRequestVector();
 }
-//#nv end
+// nv end
 
 void
 HdRenderIndex::EnqueuePrimsToSync(
@@ -1411,7 +1416,6 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
     }
 
     _RprimSyncRequestMap syncMap;
-
     bool resetVaryingState = false;
     {
         HF_TRACE_FUNCTION_SCOPE("Build Sync Map: Rprims");
@@ -1448,8 +1452,6 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
             if (curdel != rprimInfo.sceneDelegate) {
                 curdel = rprimInfo.sceneDelegate;
                 curvec = &syncMap[curdel];
-
-
             }
 
             curvec->PushBack(rprimInfo.rprim,
@@ -1535,7 +1537,7 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
                                    std::placeholders::_2));
     }
 
-    // #nv edit begin
+    // #nv begin omni-hydra
 
     // sync each post scene delegate
     TF_FOR_ALL(dlgIt, _postSyncMap) {
@@ -1664,7 +1666,7 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
     }
     dispatcher.Wait();
 
-    // #nv edit end
+    // nv end
 
     {
         HF_TRACE_FUNCTION_SCOPE("Clean Up");
@@ -1675,12 +1677,12 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
             delegate->PostSyncCleanup();
         }
 
-        // #nv edit begin
+        // #nv begin #omni-hydra
         TF_FOR_ALL(dlgIt, _postSyncMap) {
             HdSceneDelegate *delegate = dlgIt->first;
             delegate->PostSyncCleanup();
         }
-        // #nv edit end
+        // nv end
 
         const HdSceneDelegatePtrVector& sprimDelegates =
             _sprimIndex.GetSceneDelegatesForDirtyPrims();

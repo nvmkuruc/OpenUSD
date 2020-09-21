@@ -393,7 +393,7 @@ Hd_PrimTypeIndex<PrimType>::SyncPrims(HdChangeTracker  &tracker,
     }
 }
 
-// #nv begin
+// #nv begin omni-hydra
 template <class PrimType>
 void
 Hd_PrimTypeIndex<PrimType>::SyncPrims(HdSceneDelegate* sceneDelegate,
@@ -427,7 +427,7 @@ Hd_PrimTypeIndex<PrimType>::GetPrim(const SdfPath &primId) const
 
     return nullptr;
 }
-// #nv end
+// nv end
 
 template <class PrimType>
 const HdSceneDelegatePtrVector&

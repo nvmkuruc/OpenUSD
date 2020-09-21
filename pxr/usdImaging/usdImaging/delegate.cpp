@@ -1209,7 +1209,7 @@ UsdImagingDelegate::ApplyPendingUpdates()
     _ExecuteWorkForVariabilityUpdate(&worker);
 }
 
-// #nv begin
+// #nv begin #omni-hydra
 void
 UsdImagingDelegate::_OnUsdObjectsChanged(
     UsdNotice::ObjectsChanged const& notice,
@@ -1217,12 +1217,12 @@ UsdImagingDelegate::_OnUsdObjectsChanged(
 {
    _HandleUsdObjectsChanged(notice, sender);
 }  
-// nv end
 
 void 
 UsdImagingDelegate::_HandleUsdObjectsChanged(
     UsdNotice::ObjectsChanged const& notice,
     UsdStageWeakPtr const& sender)
+// nv end
 {
     if (!sender || !TF_VERIFY(sender == _stage))
         return;

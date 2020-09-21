@@ -383,7 +383,7 @@ public:
     HD_API
     HdResourceRegistrySharedPtr GetResourceRegistry() const;
 
-    // #nv begin
+    // #nv begin omni-hydra
     // ---------------------------------------------------------------------- //
     /// \name Post Sync Delegates
     // ---------------------------------------------------------------------- //
@@ -392,7 +392,7 @@ public:
     // the composition order is determined by order the scene delegates were added in this function
     HD_API
     void AddPostSyncDelegate(HdSceneDelegate* sceneDelegate);
-    // #nv end
+    // nv end
 
 private:
     // The render index constructor is private so we can check
