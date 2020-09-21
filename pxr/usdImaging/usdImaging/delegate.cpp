@@ -961,10 +961,18 @@ UsdImagingDelegate::SetTime(UsdTimeCode time)
     if (_timeVaryingPrimCacheValid) {
         for (SdfPath const& path : _timeVaryingPrimCache) {
             _HdPrimInfo &primInfo = _hdPrimInfoMap[path];
-            primInfo.adapter->MarkDirty(primInfo.usdPrim,
-                                        path,
-                                        primInfo.timeVaryingBits,
-                                        &indexProxy);
+            
+            // #nv begin
+            HdDirtyBits timeVaryingBitMask = _GetTimeVaryingBitMask(path);
+            HdDirtyBits timeVaryingBits = primInfo.timeVaryingBits & ~timeVaryingBitMask;
+
+            if (timeVaryingBits != HdChangeTracker::Clean) {
+                primInfo.adapter->MarkDirty(primInfo.usdPrim,
+                                            path,
+                                            timeVaryingBits,
+                                            &indexProxy);
+            // nv end
+            }
         }
     } else {
         _timeVaryingPrimCache.clear();
@@ -972,13 +980,18 @@ UsdImagingDelegate::SetTime(UsdTimeCode time)
             const SdfPath &cachePath    = pair.first;
             const _HdPrimInfo &primInfo = pair.second;
 
-            if (primInfo.timeVaryingBits != HdChangeTracker::Clean) {
+            // #nv begin
+            HdDirtyBits timeVaryingBitMask = _GetTimeVaryingBitMask(cachePath);
+            HdDirtyBits timeVaryingBits = primInfo.timeVaryingBits & ~timeVaryingBitMask;
+
+            if (timeVaryingBits != HdChangeTracker::Clean) {
                 _timeVaryingPrimCache.push_back(cachePath);
                 primInfo.adapter->MarkDirty(primInfo.usdPrim,
                                             cachePath,
-                                            primInfo.timeVaryingBits,
+                                            timeVaryingBits,
                                             &indexProxy);
             }
+            // nv end
         }
         _timeVaryingPrimCacheValid = true;
     }
@@ -1217,6 +1230,13 @@ UsdImagingDelegate::_OnUsdObjectsChanged(
 {
    _HandleUsdObjectsChanged(notice, sender);
 }  
+
+HdDirtyBits
+UsdImagingDelegate::_GetTimeVaryingBitMask(SdfPath const&)
+{
+    return HdChangeTracker::Clean;
+}
+
 // nv end
 
 void 

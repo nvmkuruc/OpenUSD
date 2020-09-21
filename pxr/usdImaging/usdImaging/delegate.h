@@ -599,9 +599,15 @@ protected:
                               UsdStageWeakPtr const& sender);
 
     // #nv begin
+    // called by _OnUsdObjectsChanged, to be overriden by derived classes
     USDIMAGING_API 
     virtual void _HandleUsdObjectsChanged(UsdNotice::ObjectsChanged const&,
         UsdStageWeakPtr const& sender);
+
+    // bit mask provided by derived class to exclude properties from being dirtied
+    // by usd imaging's variability tracking
+    USDIMAGING_API
+    virtual HdDirtyBits _GetTimeVaryingBitMask(SdfPath const& path); 
     // nv end
 
     // The lightest-weight update, it does fine-grained invalidation of
