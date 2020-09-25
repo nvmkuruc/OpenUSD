@@ -3086,15 +3086,13 @@ UsdImagingDelegate::GetMaterialResource(SdfPath const &materialId)
         return vtMatResource;
     }
 
-    if (!TF_VERIFY(materialId != SdfPath())) {
-        return vtMatResource;
-    }
-
     SdfPath cachePath = ConvertIndexPathToCachePath(materialId);
-    _UpdateSingleValue(cachePath, HdMaterial::DirtyResource);
-    bool result = _valueCache.FindMaterialResource(cachePath, &vtMatResource);
+    _HdPrimInfo *primInfo = _GetHdPrimInfo(cachePath);
 
-    TF_VERIFY(result, "Material network not found: %s", cachePath.GetText());
+    if (TF_VERIFY(primInfo)) {
+        vtMatResource = primInfo->adapter->GetMaterialResource(
+            primInfo->usdPrim, cachePath, _time);
+    }
 
     return vtMatResource;
 }

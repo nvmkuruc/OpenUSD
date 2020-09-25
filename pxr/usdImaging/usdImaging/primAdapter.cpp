@@ -1237,6 +1237,15 @@ UsdImagingPrimAdapter::GetPerPrototypeIndices(UsdPrim const& prim,
 }
 
 /*virtual*/
+VtValue
+UsdImagingPrimAdapter::GetMaterialResource(UsdPrim const& prim,
+    SdfPath const& cachePath,
+    UsdTimeCode time) const
+{
+    return VtValue();
+}
+
+/*virtual*/
 GfMatrix4d
 UsdImagingPrimAdapter::GetRelativeInstancerTransform(
     SdfPath const &instancerPath,

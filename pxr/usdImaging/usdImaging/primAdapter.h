@@ -439,6 +439,11 @@ public:
     VtArray<VtIntArray> GetPerPrototypeIndices(UsdPrim const& prim,
                                                UsdTimeCode time) const;
 
+    USDIMAGING_API
+    virtual VtValue GetMaterialResource(UsdPrim const& prim,
+        SdfPath const& cachePath,
+        UsdTimeCode time) const;
+
     // ---------------------------------------------------------------------- //
     /// \name Render Index Compatibility
     // ---------------------------------------------------------------------- //

@@ -201,10 +201,6 @@ public:
             static TfToken attr("materialId");
             return Key(path, attr);
         }
-        static Key MaterialResource(SdfPath const& path) {
-            static TfToken attr("materialResource");
-            return Key(path, attr);
-        }
         static Key ExtComputationSceneInputNames(SdfPath const& path) {
             static TfToken attr("extComputationSceneInputNames");
             return Key(path, attr);
@@ -390,7 +386,6 @@ public:
 		_Erase<GfMatrix4d>(Key::SkelLocalToWorld(path));
 		//-NV_CHANGE FRZHANG
         _Erase<VtValue>(Key::MaterialId(path));
-        _Erase<VtValue>(Key::MaterialResource(path));
 
         // PERFORMANCE: We're copying the primvar vector here, but we could
         // access the map directly, if we need to for performance reasons.
@@ -535,9 +530,6 @@ public:
     SdfPath& GetMaterialId(SdfPath const& path) const {
         return _Get<SdfPath>(Key::MaterialId(path));
     }
-    VtValue& GetMaterialResource(SdfPath const& path) const {
-        return _Get<VtValue>(Key::MaterialResource(path));
-    }
     TfTokenVector& GetExtComputationSceneInputNames(SdfPath const& path) const {
         return _Get<TfTokenVector>(Key::ExtComputationSceneInputNames(path));
     }
@@ -659,9 +651,6 @@ public:
     bool FindMaterialId(SdfPath const& path, SdfPath* value) const {
         return _Find(Key::MaterialId(path), value);
     }
-    bool FindMaterialResource(SdfPath const& path, VtValue* value) const {
-        return _Find(Key::MaterialResource(path), value);
-    }
     bool FindExtComputationSceneInputNames(SdfPath const& path,
                                            TfTokenVector* value) const {
         return _Find(Key::ExtComputationSceneInputNames(path), value);
@@ -782,9 +771,6 @@ public:
     bool ExtractMaterialId(SdfPath const& path, SdfPath* value) {
         return _Extract(Key::MaterialId(path), value);
     }
-    bool ExtractMaterialResource(SdfPath const& path, VtValue* value) {
-        return _Extract(Key::MaterialResource(path), value);
-    }
     bool ExtractPrimvar(SdfPath const& path, TfToken const& name, VtValue* value) {
         return _Extract(Key(path, name), value);
     }
@@ -884,7 +870,7 @@ private:
     typedef _TypedCache<SdfPath> _SdfPathCache;
     mutable _SdfPathCache _sdfPathCache;
 
-    // primvars, topology, materialResources, extCompInputs
+    // primvars, topology, extCompInputs
     typedef _TypedCache<VtValue> _ValueCache;
     mutable _ValueCache _valueCache;
 
