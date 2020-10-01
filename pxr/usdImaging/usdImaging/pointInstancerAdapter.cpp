@@ -885,9 +885,14 @@ UsdImagingPointInstancerAdapter::ProcessPropertyChange(UsdPrim const& prim,
             /*inherited=*/false);
     }
 
+    // #nv begin #clean-property-invalidation
+    return GetDelegate()->ProcessNonAdapterBasedPropertyChange(prim, cachePath, propertyName);
+
     // XXX: Treat transform & visibility changes as re-sync, until we untangle
     // instancer vs proto data.
-    return HdChangeTracker::AllDirty;
+    //return HdChangeTracker::AllDirty;
+
+    // nv end
 }
 
 void
