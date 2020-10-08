@@ -99,9 +99,18 @@ _GetJointOrder(const UsdSkelSkinningQuery& self)
     VtTokenArray jointOrder;
     if (self.GetJointOrder(&jointOrder))
         return object(jointOrder);
-    return object();
+    return {};
 }
 
+
+object
+_GetBlendShapeOrder(const UsdSkelSkinningQuery& self)
+{
+    VtTokenArray blendShapeOrder;
+    if (self.GetBlendShapeOrder(&blendShapeOrder))
+        return object(blendShapeOrder);
+    return {};
+}
 
 template <typename Matrix4>
 bool
@@ -188,6 +197,8 @@ void wrapUsdSkelSkinningQuery()
              return_value_policy<return_by_value>())
 
         .def("GetJointOrder", &_GetJointOrder)
+
+        .def("GetBlendShapeOrder", &_GetBlendShapeOrder)
 
         .def("GetTimeSamples", &_GetTimeSamples)
 

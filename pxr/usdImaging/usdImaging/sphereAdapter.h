@@ -60,6 +60,11 @@ public:
     USDIMAGING_API
     bool IsSupported(UsdImagingIndexProxy const* index) const override;
 
+    USDIMAGING_API
+    HdDirtyBits ProcessPropertyChange(UsdPrim const& prim,
+                                      SdfPath const& cachePath,
+                                      TfToken const& propertyName);
+
     // ---------------------------------------------------------------------- //
     /// \name Parallel Setup and Resolve
     // ---------------------------------------------------------------------- //
@@ -77,15 +82,14 @@ public:
         // nv end
             const override;
 
-    /// Thread Safe.
+    // ---------------------------------------------------------------------- //
+    /// \name Data access
+    // ---------------------------------------------------------------------- //
+
     USDIMAGING_API
-    void UpdateForTime(
-        UsdPrim const& prim,
-        SdfPath const& cachePath, 
-        UsdTimeCode time,
-        HdDirtyBits requestedBits,
-        UsdImagingInstancerContext const* instancerContext = nullptr) 
-            const override;
+    VtValue GetTopology(UsdPrim const& prim,
+                        SdfPath const& cachePath,
+                        UsdTimeCode time) const override;
 
 // ---------------------------------------------------------------------- //
 /// \name Change Processing
@@ -103,13 +107,14 @@ public:
     USDIMAGING_API
     VtValue GetPoints(
         UsdPrim const& prim,
-        SdfPath const& cachePath,
         UsdTimeCode time) const override;
 
+    // Used by the legacyEngine.
     USDIMAGING_API
     static VtValue GetMeshPoints(UsdPrim const& prim, 
                                  UsdTimeCode time);
 
+    // Used by the legacyEngine.
     USDIMAGING_API
     static VtValue GetMeshTopology();
 };

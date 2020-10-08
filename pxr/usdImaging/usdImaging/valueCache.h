@@ -37,7 +37,6 @@
 #include "pxr/base/vt/value.h"
 
 #include "pxr/base/gf/matrix4d.h"
-#include "pxr/base/gf/range3d.h"
 #include "pxr/base/gf/vec4f.h"
 #include "pxr/base/tf/token.h"
 
@@ -46,13 +45,12 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-
-
 /// \class UsdImagingValueCache
 ///
 /// A heterogeneous value container without type erasure.
 ///
-class UsdImagingValueCache {
+class UsdImagingValueCache 
+{
 public:
     UsdImagingValueCache(const UsdImagingValueCache&) = delete;
     UsdImagingValueCache& operator=(const UsdImagingValueCache&) = delete;
@@ -85,46 +83,15 @@ public:
         };
 
     private:
-        static Key Color(SdfPath const& path) {
-            static TfToken attr("displayColor");
-            return Key(path, attr);
-        }
-        static Key Opacity(SdfPath const& path) {
-            static TfToken attr("displayOpacity");
-            return Key(path, attr);
-        }
-        static Key DoubleSided(SdfPath const& path) {
-            static TfToken attr("doubleSided");
-            return Key(path, attr);
-        }
-        static Key CullStyle(SdfPath const& path) {
-            static TfToken attr("cullStyle");
-            return Key(path, attr);
-        }
-        static Key Extent(SdfPath const& path) {
-            static TfToken attr("extent");
-            return Key(path, attr);
-        }
-        static Key InstancerTransform(SdfPath const& path) {
-            static TfToken attr("instancerTransform");
-            return Key(path, attr);
-        }
         static Key InstanceIndices(SdfPath const& path) {
             static TfToken attr("instanceIndices");
-            return Key(path, attr);
-        }
-        static Key Points(SdfPath const& path) {
-            static TfToken attr("points");
-            return Key(path, attr);
-        }
-        static Key Purpose(SdfPath const& path) {
-            static TfToken attr("purpose");
             return Key(path, attr);
         }
         static Key Primvars(SdfPath const& path) {
             static TfToken attr("primvars");
             return Key(path, attr);
         }
+<<<<<<< HEAD
         static Key Topology(SdfPath const& path) {
             static TfToken attr("topology");
             return Key(path, attr);
@@ -229,6 +196,8 @@ public:
             static TfToken attr("CameraParamNames");
             return Key(path, attr);
         }
+=======
+>>>>>>> v20.11-rc1
     };
 
     UsdImagingValueCache()
@@ -362,12 +331,8 @@ public:
 
     /// Clear all data associated with a specific path.
     void Clear(SdfPath const& path) {
-        _Erase<VtValue>(Key::Color(path));
-        _Erase<VtValue>(Key::Opacity(path));
-        _Erase<bool>(Key::DoubleSided(path));
-        _Erase<HdCullStyle>(Key::CullStyle(path));
-        _Erase<GfRange3d>(Key::Extent(path));
         _Erase<VtValue>(Key::InstanceIndices(path));
+<<<<<<< HEAD
         _Erase<TfToken>(Key::Purpose(path));
         _Erase<VtValue>(Key::Topology(path));
         _Erase<GfMatrix4d>(Key::Transform(path));
@@ -391,6 +356,8 @@ public:
 		//-NV_CHANGE FRZHANG
         _Erase<VtValue>(Key::MaterialId(path));
         _Erase<VtValue>(Key::MaterialResource(path));
+=======
+>>>>>>> v20.11-rc1
 
         // PERFORMANCE: We're copying the primvar vector here, but we could
         // access the map directly, if we need to for performance reasons.
@@ -401,81 +368,15 @@ public:
             }
             _Erase<HdPrimvarDescriptorVector>(Key::Primvars(path));
         }
-
-        {
-            // ExtComputation related state
-            TfTokenVector sceneInputNames;
-            if (FindExtComputationSceneInputNames(path, &sceneInputNames)) {
-                // Add computation "config" params to the list of inputs
-                sceneInputNames.emplace_back(HdTokens->dispatchCount);
-                sceneInputNames.emplace_back(HdTokens->elementCount);
-                for (TfToken const& input : sceneInputNames) {
-                    _Erase<VtValue>(Key(path, input));
-                }
-
-                _Erase<TfTokenVector>(Key::ExtComputationSceneInputNames(path));
-            }
-            
-            // Computed inputs are tied to the computation that computes them.
-            // We don't walk the dependency chain to clear them.
-            _Erase<HdExtComputationInputDescriptorVector>(
-                Key::ExtComputationInputs(path));
-
-            HdExtComputationOutputDescriptorVector outputDescs;
-            if (FindExtComputationOutputs(path, &outputDescs)) {
-                for (auto const& desc : outputDescs) {
-                    _Erase<VtValue>(Key(path, desc.name));
-                }
-                _Erase<HdExtComputationOutputDescriptorVector>(
-                    Key::ExtComputationOutputs(path));
-            }
-
-            _Erase<HdExtComputationPrimvarDescriptorVector>(
-                Key::ExtComputationPrimvars(path));
-            _Erase<std::string>(Key::ExtComputationKernel(path));
-        }
-
-        // Camera state
-        TfTokenVector CameraParamNames;
-        if (FindCameraParamNames(path, &CameraParamNames)) {
-            for (const TfToken& paramName : CameraParamNames) {
-                _Erase<VtValue>(Key(path, paramName));
-            }
-
-            _Erase<TfTokenVector>(Key::CameraParamNames(path));
-        }
     }
 
-    VtValue& GetColor(SdfPath const& path) const {
-        return _Get<VtValue>(Key::Color(path));
-    }
-    VtValue& GetOpacity(SdfPath const& path) const {
-        return _Get<VtValue>(Key::Opacity(path));
-    }
-    bool& GetDoubleSided(SdfPath const& path) const {
-        return _Get<bool>(Key::DoubleSided(path));
-    }
-    HdCullStyle& GetCullStyle(SdfPath const& path) const {
-        return _Get<HdCullStyle>(Key::CullStyle(path));
-    }
-    GfRange3d& GetExtent(SdfPath const& path) const {
-        return _Get<GfRange3d>(Key::Extent(path));
-    }
-    GfMatrix4d& GetInstancerTransform(SdfPath const& path) const {
-        return _Get<GfMatrix4d>(Key::InstancerTransform(path));
-    }
     VtValue& GetInstanceIndices(SdfPath const& path) const {
         return _Get<VtValue>(Key::InstanceIndices(path));
-    }
-    VtValue& GetPoints(SdfPath const& path) const {
-        return _Get<VtValue>(Key::Points(path));
-    }
-    TfToken& GetPurpose(SdfPath const& path) const {
-        return _Get<TfToken>(Key::Purpose(path));
     }
     HdPrimvarDescriptorVector& GetPrimvars(SdfPath const& path) const {
         return _Get<HdPrimvarDescriptorVector>(Key::Primvars(path));
     }
+<<<<<<< HEAD
     VtValue& GetTopology(SdfPath const& path) const {
         return _Get<VtValue>(Key::Topology(path));
     }
@@ -569,40 +470,16 @@ public:
     TfTokenVector& GetCameraParamNames(SdfPath const& path) const {
         return _Get<TfTokenVector>(Key::CameraParamNames(path));
     }
+=======
+>>>>>>> v20.11-rc1
 
-    bool FindPrimvar(SdfPath const& path, TfToken const& name, VtValue* value) const {
-        return _Find(Key(path, name), value);
-    }
-    bool FindColor(SdfPath const& path, VtValue* value) const {
-        return _Find(Key::Color(path), value);
-    }
-    bool FindOpacity(SdfPath const& path, VtValue* value) const {
-        return _Find(Key::Opacity(path), value);
-    }
-    bool FindDoubleSided(SdfPath const& path, bool* value) const {
-        return _Find(Key::DoubleSided(path), value);
-    }
-    bool FindCullStyle(SdfPath const& path, HdCullStyle* value) const {
-        return _Find(Key::CullStyle(path), value);
-    }
-    bool FindExtent(SdfPath const& path, GfRange3d* value) const {
-        return _Find(Key::Extent(path), value);
-    }
-    bool FindInstancerTransform(SdfPath const& path, GfMatrix4d* value) const {
-        return _Find(Key::InstancerTransform(path), value);
-    }
     bool FindInstanceIndices(SdfPath const& path, VtValue* value) const {
         return _Find(Key::InstanceIndices(path), value);
-    }
-    bool FindPoints(SdfPath const& path, VtValue* value) const {
-        return _Find(Key::Points(path), value);
-    }
-    bool FindPurpose(SdfPath const& path, TfToken* value) const {
-        return _Find(Key::Purpose(path), value);
     }
     bool FindPrimvars(SdfPath const& path, HdPrimvarDescriptorVector* value) const {
         return _Find(Key::Primvars(path), value);
     }
+<<<<<<< HEAD
     bool FindTopology(SdfPath const& path, VtValue* value) const {
         return _Find(Key::Topology(path), value);
     }
@@ -695,37 +572,16 @@ public:
     bool FindCameraParamNames(SdfPath const& path, TfTokenVector* value) const {
         return _Find(Key::CameraParamNames(path), value);
     }
+=======
+>>>>>>> v20.11-rc1
 
-    bool ExtractColor(SdfPath const& path, VtValue* value) {
-        return _Extract(Key::Color(path), value);
-    }
-    bool ExtractOpacity(SdfPath const& path, VtValue* value) {
-        return _Extract(Key::Opacity(path), value);
-    }
-    bool ExtractDoubleSided(SdfPath const& path, bool* value) {
-        return _Extract(Key::DoubleSided(path), value);
-    }
-    bool ExtractCullStyle(SdfPath const& path, HdCullStyle* value) {
-        return _Extract(Key::CullStyle(path), value);
-    }
-    bool ExtractExtent(SdfPath const& path, GfRange3d* value) {
-        return _Extract(Key::Extent(path), value);
-    }
-    bool ExtractInstancerTransform(SdfPath const& path, GfMatrix4d* value) {
-        return _Extract(Key::InstancerTransform(path), value);
-    }
     bool ExtractInstanceIndices(SdfPath const& path, VtValue* value) {
         return _Extract(Key::InstanceIndices(path), value);
-    }
-    bool ExtractPoints(SdfPath const& path, VtValue* value) {
-        return _Extract(Key::Points(path), value);
-    }
-    bool ExtractPurpose(SdfPath const& path, TfToken* value) {
-        return _Extract(Key::Purpose(path), value);
     }
     bool ExtractPrimvars(SdfPath const& path, HdPrimvarDescriptorVector* value) {
         return _Extract(Key::Primvars(path), value);
     }
+<<<<<<< HEAD
     bool ExtractTopology(SdfPath const& path, VtValue* value) {
         return _Extract(Key::Topology(path), value);
     }
@@ -820,10 +676,13 @@ public:
     }
     // Skip adding ExtractCameraParamNames as we don't expose scene delegate
     // functionality to query all available parameters on a camera.
+=======
+>>>>>>> v20.11-rc1
 
     /// Remove any items from the cache that are marked for defered deletion.
     void GarbageCollect()
     {
+<<<<<<< HEAD
         _GarbageCollect(_boolCache);
 		//+NV_CHANGE FRZHANG
 		_GarbageCollect(_intCache);
@@ -834,19 +693,16 @@ public:
         _GarbageCollect(_cullStyleCache);
         _GarbageCollect(_matrixCache);
         _GarbageCollect(_vec4Cache);
+=======
+>>>>>>> v20.11-rc1
         _GarbageCollect(_valueCache);
         _GarbageCollect(_pviCache);
-        _GarbageCollect(_sdfPathCache);
-        // XXX: shader type caches, shader API will be deprecated soon
-        _GarbageCollect(_stringCache);
-        _GarbageCollect(_extComputationInputsCache);
-        _GarbageCollect(_extComputationOutputsCache);
-        _GarbageCollect(_extComputationPrimvarsCache);
     }
 
 private:
     bool _locked;
 
+<<<<<<< HEAD
     // visible, doubleSided
     typedef _TypedCache<bool> _BoolCache;
     mutable _BoolCache _boolCache;
@@ -885,12 +741,15 @@ private:
     mutable _SdfPathCache _sdfPathCache;
 
     // primvars, topology, materialResources, extCompInputs
+=======
+>>>>>>> v20.11-rc1
     typedef _TypedCache<VtValue> _ValueCache;
     mutable _ValueCache _valueCache;
 
     typedef _TypedCache<HdPrimvarDescriptorVector> _PviCache;
     mutable _PviCache _pviCache;
 
+<<<<<<< HEAD
     typedef _TypedCache<std::string> _StringCache;
     mutable _StringCache _stringCache;
 
@@ -932,26 +791,13 @@ private:
     void _GetCache(_Vec4Cache **cache) const {
         *cache = &_vec4Cache;
     }
+=======
+>>>>>>> v20.11-rc1
     void _GetCache(_ValueCache **cache) const {
         *cache = &_valueCache;
     }
     void _GetCache(_PviCache **cache) const {
         *cache = &_pviCache;
-    }
-    void _GetCache(_SdfPathCache **cache) const {
-        *cache = &_sdfPathCache;
-    }
-    void _GetCache(_StringCache **cache) const {
-        *cache = &_stringCache;
-    }
-    void _GetCache(_ExtComputationInputsCache **cache) const {
-        *cache = &_extComputationInputsCache;
-    }
-    void _GetCache(_ExtComputationOutputsCache **cache) const {
-        *cache = &_extComputationOutputsCache;
-    }
-    void _GetCache(_ExtComputationPrimvarsCache **cache) const {
-        *cache = &_extComputationPrimvarsCache;
     }
 };
 

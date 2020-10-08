@@ -247,15 +247,10 @@ UsdImagingMeshAdapter::UpdateForTime(UsdPrim const& prim,
     BaseAdapter::UpdateForTime(
         prim, cachePath, time, requestedBits, instancerContext);
 
-    UsdImagingValueCache* valueCache = _GetValueCache();
-    HdPrimvarDescriptorVector& primvars = valueCache->GetPrimvars(cachePath);
-
-    if (requestedBits & HdChangeTracker::DirtyTopology) {
-        VtValue& topology = valueCache->GetTopology(cachePath);
-        _GetMeshTopology(prim, &topology, time);
-    }
-
     if (requestedBits & HdChangeTracker::DirtyNormals) {
+        UsdImagingValueCache* valueCache = _GetValueCache();
+        HdPrimvarDescriptorVector& primvars = valueCache->GetPrimvars(cachePath);
+
         TfToken schemeToken;
         _GetPtr(prim, UsdGeomTokens->subdivisionScheme, time, &schemeToken);
         // Only populate normals for polygonal meshes.
@@ -268,8 +263,9 @@ UsdImagingMeshAdapter::UpdateForTime(UsdPrim const& prim,
                 // If it's not found locally, see if it's inherited
                 pv = _GetInheritedPrimvar(prim, HdTokens->normals);
             }
+
             if (pv) {
-                _ComputeAndMergePrimvar(prim, cachePath, pv, time, valueCache);
+                _ComputeAndMergePrimvar(prim, pv, time, &primvars);
             } else {
                 UsdGeomMesh mesh(prim);
                 VtVec3fArray normals;
@@ -278,7 +274,6 @@ UsdImagingMeshAdapter::UpdateForTime(UsdPrim const& prim,
                         UsdGeomTokens->normals,
                         _UsdToHdInterpolation(mesh.GetNormalsInterpolation()),
                         HdPrimvarRoleTokens->normal);
-                    valueCache->GetNormals(cachePath) = VtValue(normals);
                 } else {
                     _RemovePrimvar(&primvars, UsdGeomTokens->normals);
                 }
@@ -302,18 +297,48 @@ UsdImagingMeshAdapter::ProcessPropertyChange(UsdPrim const& prim,
     // nv end
 
     // Check for UsdGeomSubset changes.
-    // XXX: We can't check right now whether this was called on behalf of a
-    // geom subset, since the "prim" field is mangled by instance adapters. We
-    // hope no meshes define these attributes (probably safe), but we should
-    // add the geom subset type check when that becomes possible.
+    // XXX: Verify that this is being called on a GeomSubset prim?
     if (propertyName == UsdGeomTokens->elementType ||
         propertyName == UsdGeomTokens->indices) {
         return HdChangeTracker::DirtyTopology;
     }
 
-    // TODO: support sparse topology and subdiv tag changes
-    // (Note that a change in subdivision scheme means we need to re-track
-    // the variability of the normals...)
+    if (propertyName == UsdGeomTokens->subdivisionScheme) {
+        // (Note that a change in subdivision scheme means we need to re-track
+        // the variability of the normals...)
+        return HdChangeTracker::DirtyTopology | HdChangeTracker::DirtyNormals;
+    }
+
+    if (propertyName == UsdGeomTokens->faceVertexCounts ||
+        propertyName == UsdGeomTokens->faceVertexIndices ||
+        propertyName == UsdGeomTokens->holeIndices ||
+        propertyName == UsdGeomTokens->orientation) {
+        return HdChangeTracker::DirtyTopology;
+    }
+
+    if (propertyName == UsdGeomTokens->interpolateBoundary ||
+        propertyName == UsdGeomTokens->faceVaryingLinearInterpolation ||
+        propertyName == UsdGeomTokens->triangleSubdivisionRule ||
+        propertyName == UsdGeomTokens->creaseIndices ||
+        propertyName == UsdGeomTokens->creaseLengths ||
+        propertyName == UsdGeomTokens->creaseSharpnesses ||
+        propertyName == UsdGeomTokens->cornerIndices ||
+        propertyName == UsdGeomTokens->cornerSharpnesses) {
+        // XXX UsdGeomTokens->creaseMethod, when we add support for that.
+        return HdChangeTracker::DirtySubdivTags;
+    }
+
+    if (propertyName == UsdGeomTokens->normals) {
+        UsdGeomPointBased pb(prim);
+        return UsdImagingPrimAdapter::_ProcessNonPrefixedPrimvarPropertyChange(
+            prim, cachePath, propertyName, HdTokens->normals,
+            _UsdToHdInterpolation(pb.GetNormalsInterpolation()),
+            HdChangeTracker::DirtyNormals);
+    }
+    if (propertyName == UsdImagingTokens->primvarsNormals) {
+        return UsdImagingPrimAdapter::_ProcessPrefixedPrimvarPropertyChange(
+                prim, cachePath, propertyName, HdChangeTracker::DirtyNormals);
+    }
 
     // Handle attributes that are treated as "built-in" primvars.
     if (propertyName == UsdGeomTokens->normals) {
@@ -333,17 +358,15 @@ UsdImagingMeshAdapter::ProcessPropertyChange(UsdPrim const& prim,
     return BaseAdapter::ProcessPropertyChange(prim, cachePath, propertyName);
 }
 
-// -------------------------------------------------------------------------- //
-// Private IO Helpers
-// -------------------------------------------------------------------------- //
-
-void
-UsdImagingMeshAdapter::_GetMeshTopology(UsdPrim const& prim,
-                                        VtValue* topo,
-                                        UsdTimeCode time) const
+/*virtual*/ 
+VtValue
+UsdImagingMeshAdapter::GetTopology(UsdPrim const& prim,
+                                   SdfPath const& cachePath,
+                                   UsdTimeCode time) const
 {
-    HD_TRACE_FUNCTION();
+    TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
+
     TfToken schemeToken;
     _GetPtr(prim, UsdGeomTokens->subdivisionScheme, time, &schemeToken);
 
@@ -378,7 +401,7 @@ UsdImagingMeshAdapter::_GetMeshTopology(UsdPrim const& prim,
         }
     }
 
-    topo->Swap(meshTopo);
+    return VtValue(meshTopo);
 }
 
 PxOsdSubdivTags
@@ -391,8 +414,9 @@ UsdImagingMeshAdapter::GetSubdivTags(UsdPrim const& prim,
 
     PxOsdSubdivTags tags;
 
-    if(!prim.IsA<UsdGeomMesh>())
+    if(!prim.IsA<UsdGeomMesh>()) {
         return tags;
+    }
 
     TfToken interpolationRule =
         _Get<TfToken>(prim, UsdGeomTokens->interpolateBoundary, time);
@@ -443,6 +467,7 @@ UsdImagingMeshAdapter::GetSubdivTags(UsdPrim const& prim,
     return tags;
 }
 
+<<<<<<< HEAD
 // #nv begin #gpu-skinning
 // +NV_CHANGE FRZHANG : Skel Animation Update API
 void
@@ -483,6 +508,51 @@ UsdImagingMeshAdapter::UpdateSkelAnim(UsdPrim const& prim, SdfPath const& cacheP
     valueCache->GetSkelLocalToWorld(cachePath) = skelLocalToWorld;
 }
 //-NV_CHANGE FRZHANG
+=======
+/*virtual*/
+VtValue
+UsdImagingMeshAdapter::Get(UsdPrim const& prim,
+                           SdfPath const& cachePath,
+                           TfToken const &key,
+                           UsdTimeCode time) const
+{
+    TRACE_FUNCTION();
+    HF_MALLOC_TAG_FUNCTION();
+>>>>>>> v20.11-rc1
+
+    if (key == HdTokens->normals) {
+        TfToken schemeToken;
+        _GetPtr(prim, UsdGeomTokens->subdivisionScheme, time, &schemeToken);
+
+        // Only populate normals for polygonal meshes.
+        if (schemeToken == PxOsdOpenSubdivTokens->none) {
+            // First check for "primvars:normals"
+            UsdGeomPrimvarsAPI primvarsApi(prim);
+            UsdGeomPrimvar pv = primvarsApi.GetPrimvar(
+                    UsdImagingTokens->primvarsNormals);
+            if (!pv) {
+                // If it's not found locally, see if it's inherited
+                pv = _GetInheritedPrimvar(prim, HdTokens->normals);
+            }
+
+            VtValue value;
+
+            if (pv && pv.ComputeFlattened(&value, time)) {
+                return value;
+            } 
+
+            // If there's no "primvars:normals",
+            // fall back to UsdGeomMesh's "normals" attribute. 
+            UsdGeomMesh mesh(prim);
+            VtVec3fArray normals;
+            if (mesh && mesh.GetNormalsAttr().Get(&normals, time)) {
+                value = normals;
+                return value;
+            }
+        }
+    }
+
+    return BaseAdapter::Get(prim, cachePath, key, time);
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE
-

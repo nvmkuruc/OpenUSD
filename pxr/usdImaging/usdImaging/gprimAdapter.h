@@ -45,16 +45,17 @@ class UsdGeomGprim;
 /// Gprim data support, such as visibility, doubleSided, extent, displayColor,
 /// displayOpacity, purpose, and transform.
 ///
-class UsdImagingGprimAdapter : public UsdImagingPrimAdapter {
+class UsdImagingGprimAdapter : public UsdImagingPrimAdapter
+{
 public:
-    typedef UsdImagingPrimAdapter BaseAdapter;
+    using BaseAdapter = UsdImagingPrimAdapter;
 
     UsdImagingGprimAdapter()
         : UsdImagingPrimAdapter()
     {}
 
     USDIMAGING_API
-    virtual ~UsdImagingGprimAdapter();
+    ~UsdImagingGprimAdapter() override;
 
     // ---------------------------------------------------------------------- //
     /// \name Parallel Setup and Resolve
@@ -62,6 +63,7 @@ public:
 
     /// Thread Safe.
     USDIMAGING_API
+<<<<<<< HEAD
     virtual void TrackVariability(UsdPrim const& prim,
                                   SdfPath const& cachePath,
                                   HdDirtyBits* timeVaryingBits,
@@ -72,15 +74,22 @@ public:
                                   // only populates the value cache with initial values.
                                   bool checkVariability = true) const override;
                                   // nv end
+=======
+    void TrackVariability(UsdPrim const& prim,
+                          SdfPath const& cachePath,
+                          HdDirtyBits* timeVaryingBits,
+                          UsdImagingInstancerContext const* 
+                              instancerContext = nullptr) const override;
+>>>>>>> v20.11-rc1
 
     /// Thread Safe.
     USDIMAGING_API
-    virtual void UpdateForTime(UsdPrim const& prim,
-                               SdfPath const& cachePath, 
-                               UsdTimeCode time,
-                               HdDirtyBits requestedBits,
-                               UsdImagingInstancerContext const* 
-                                   instancerContext = NULL) const override;
+    void UpdateForTime(UsdPrim const& prim,
+                       SdfPath const& cachePath, 
+                       UsdTimeCode time,
+                       HdDirtyBits requestedBits,
+                       UsdImagingInstancerContext const* 
+                           instancerContext = nullptr) const override;
 
     // ---------------------------------------------------------------------- //
     /// \name Change Processing 
@@ -139,7 +148,6 @@ public:
     /// a prim. This is useful for implicit primitives.
     USDIMAGING_API
     virtual VtValue GetPoints(UsdPrim const& prim,
-                              SdfPath const& cachePath,
                               UsdTimeCode time) const;
 
     /// Returns color and Usd interpolation token for a given
@@ -175,6 +183,31 @@ public:
     static SdfPath _ResolveCachePath(SdfPath const& usdPath,
             UsdImagingInstancerContext const* instancerContext);
 
+    /// Reads the extent from the given prim. If the extent is not authored,
+    /// an empty GfRange3d is returned, the extent will not be computed.
+    USDIMAGING_API
+    GfRange3d GetExtent(UsdPrim const& prim, 
+                        SdfPath const& cachePath, 
+                        UsdTimeCode time) const override;
+
+    /// Reads double-sided from the given prim. If not authored, returns false
+    USDIMAGING_API
+    bool GetDoubleSided(UsdPrim const& prim, 
+                        SdfPath const& cachePath, 
+                        UsdTimeCode time) const override;
+
+    USDIMAGING_API
+    SdfPath GetMaterialId(UsdPrim const& prim, 
+                          SdfPath const& cachePath, 
+                          UsdTimeCode time) const override;
+    /// Gets the value of the parameter named key for the given prim (which
+    /// has the given cache path) and given time.
+    USDIMAGING_API
+    VtValue Get(UsdPrim const& prim,
+                SdfPath const& cachePath,
+                TfToken const& key,
+                UsdTimeCode time) const override;
+
 protected:
 
     USDIMAGING_API
@@ -191,14 +224,6 @@ protected:
     UsdGeomPrimvar _GetInheritedPrimvar(UsdPrim const& prim,
                                         TfToken const& primvarName) const;
 
-private:
-
-    /// Reads the extent from the given prim. If the extent is not authored,
-    /// an empty GfRange3d is returned, the extent will not be computed.
-    GfRange3d _GetExtent(UsdPrim const& prim, UsdTimeCode time) const;
-
-    /// Returns the doubleSided state for a given prim.
-    bool _GetDoubleSided(UsdPrim const& prim) const;
 };
 
 

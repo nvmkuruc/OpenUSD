@@ -148,6 +148,10 @@ UsdSkelImagingSkeletonAdapter::Populate(
     if(!TF_VERIFY(prim.IsA<UsdSkelSkeleton>())) {
         return SdfPath();
     }
+    if(instancerContext != nullptr) {
+        // TODO: support UsdSkel with instancing
+        return SdfPath();
+    }
 
     SdfPath const& skelPath = prim.GetPath();
     // Populate may be called via Resync processing for skinned prims, in which
@@ -165,6 +169,7 @@ UsdSkelImagingSkeletonAdapter::Populate(
         // the skeleton prim on its behalf.
         SdfPath instancer = instancerContext ?
             instancerContext->instancerCachePath : SdfPath();
+<<<<<<< HEAD
         //+NV_CHANGE FRZHANG
         if (_ShouldGenerateJointMesh())
         {
@@ -176,6 +181,10 @@ UsdSkelImagingSkeletonAdapter::Populate(
             index->InsertRprim(HdPrimTypeTokens->mesh, prim.GetPath(),
                 instancer, prim, shared_from_this());
         }
+=======
+        index->InsertRprim(HdPrimTypeTokens->mesh, prim.GetPath(),
+                           instancer, prim, shared_from_this());
+>>>>>>> v20.11-rc1
     }
 
     // Insert a computation for each skinned prim targeted by this
@@ -215,7 +224,8 @@ UsdSkelImagingSkeletonAdapter::Populate(
                                     skinnedPrim.GetPath(), instancerContext);
 
             _skinnedPrimDataCache[skinnedPrimPath] =
-                _SkinnedPrimData(skelData->skelQuery, query, skelRootPath);
+                _SkinnedPrimData(skelPath, skelData->skelQuery,
+                                 query, skelRootPath);
 
             //+NV_CHANGE FRZHANG : skip adding Sprim for the hydra skinning computation.
             affectedSkinnedPrimPath.insert(skinnedPrimPath);
@@ -355,6 +365,26 @@ UsdSkelImagingSkeletonAdapter::UpdateForTime(
     HdDirtyBits requestedBits,
     const UsdImagingInstancerContext* instancerContext) const
 {
+
+    // UpdateForTime will be called on behalf of the hydra computations since
+    // the skeleton adapter is registered against them. However any value that
+    // needs to be pulled from the computation prims can happen via the
+    // respective prim adapter methods that are invoked when the scene delegate
+    // getters for the ExtComputation are called.
+
+    // Note that UpdateForTime will still get called for the hydra computations
+    // since this adapter is registered for them. However, we don't do anything
+    // for them here and instead handle all pulls from the computation prims
+    // directly in various GetExtComputation* calls on the adapter (called 
+    // from the scene delegate).
+    if (_IsSkinningComputationPath(cachePath)) {
+        return;
+    }
+
+    if (_IsSkinningInputAggregatorComputationPath(cachePath)) {
+        return;
+    }
+
     if (_IsCallbackForSkeleton(prim)) {
         return _UpdateBoneMeshForTime(  prim,
                                         cachePath,
@@ -371,6 +401,7 @@ UsdSkelImagingSkeletonAdapter::UpdateForTime(
                                             instancerContext);
     }
 
+<<<<<<< HEAD
     if (_IsSkinningComputationPath(cachePath)) {
         return _UpdateSkinningComputationForTime(   
                     prim,
@@ -394,6 +425,8 @@ UsdSkelImagingSkeletonAdapter::UpdateForTime(
         return;
     }
 
+=======
+>>>>>>> v20.11-rc1
     TF_CODING_ERROR("UsdSkelImagingSkeletonAdapter::UpdateForTime : Received"
                     " unknown prim %s ", cachePath.GetText());
 }
@@ -830,7 +863,6 @@ UsdSkelImagingSkeletonAdapter::MarkMaterialDirty(const UsdPrim& prim,
     // Nothing to do otherwise.
 }
 
-
 PxOsdSubdivTags
 UsdSkelImagingSkeletonAdapter::GetSubdivTags(UsdPrim const& usdPrim,
                                              SdfPath const& cachePath,
@@ -841,6 +873,124 @@ UsdSkelImagingSkeletonAdapter::GetSubdivTags(UsdPrim const& usdPrim,
         return adapter->GetSubdivTags(usdPrim, cachePath, time);
     }
     return UsdImagingPrimAdapter::GetSubdivTags(usdPrim, cachePath, time);
+}
+
+/*virtual*/ 
+VtValue
+UsdSkelImagingSkeletonAdapter::GetTopology(UsdPrim const& prim,
+                                           SdfPath const& cachePath,
+                                           UsdTimeCode time) const
+{
+    TRACE_FUNCTION();
+    HF_MALLOC_TAG_FUNCTION();
+
+    if (_IsCallbackForSkeleton(prim)) {
+        // The bone mesh uses the fallback material.
+        _SkelData* skelData = _GetSkelData(cachePath);
+        if (!TF_VERIFY(skelData)) {
+            return VtValue();
+        }
+        return VtValue(skelData->ComputeTopologyAndRestState());
+
+    } else if ( _IsSkinnedPrimPath(cachePath)) {
+        // Since The SkeletonAdapter hijacks callbacks for the skinned prim,
+        // make sure to delegate to the actual adapter registered for the prim.
+        UsdImagingPrimAdapterSharedPtr adapter = _GetPrimAdapter(prim);
+        return adapter->GetTopology(prim, cachePath, time);
+    }
+    return VtValue();
+}
+
+/*virtual*/
+GfRange3d
+UsdSkelImagingSkeletonAdapter::GetExtent(UsdPrim const& prim,
+                                         SdfPath const& cachePath,
+                                         UsdTimeCode time) const
+{
+    TRACE_FUNCTION();
+    HF_MALLOC_TAG_FUNCTION();
+
+    UsdGeomBoundable boundable(prim);
+    VtVec3fArray extent;
+    if (boundable.GetExtentAttr().Get(&extent, time) && extent.size() == 2) {
+        // Note:
+        // Usd stores extent as 2 float vecs. We do an implicit 
+        // conversion to doubles
+        return GfRange3d(extent[0], extent[1]);
+    } else {
+        // Return empty range if no value was found.
+        return GfRange3d();
+    }
+}
+
+/*virtual*/
+VtValue
+UsdSkelImagingSkeletonAdapter::Get(UsdPrim const& prim,
+                                   SdfPath const& cachePath,
+                                   TfToken const& key,
+                                   UsdTimeCode time) const
+{
+    TRACE_FUNCTION();
+    HF_MALLOC_TAG_FUNCTION();
+
+    if (_IsCallbackForSkeleton(prim)) {
+        _SkelData* skelData = _GetSkelData(cachePath);
+        if (!TF_VERIFY(skelData)) {
+            return VtValue();
+        }
+
+        if (key == HdTokens->displayColor) {
+            GfVec3f color = _GetSkeletonDisplayColor(prim, time);
+            return VtValue(color);
+
+        } else if (key == HdTokens->displayOpacity) {
+            float opacity = _GetSkeletonDisplayOpacity(prim, time);
+            return VtValue(opacity);
+
+        } else if (key == HdTokens->points) {
+            skelData->ComputeTopologyAndRestState();
+            return VtValue(skelData->ComputePoints(time));
+        } 
+    }
+
+    if (_IsSkinnedPrimPath(cachePath)) {
+        UsdPrim const& skinnedPrim = prim;
+        SdfPath const& skinnedPrimPath = cachePath;
+
+        // Since The SkeletonAdapter hijacks skinned prims (see SkelRootAdapter)
+        // make sure to delegate to the actual adapter registered for the prim.
+        UsdImagingPrimAdapterSharedPtr adapter = _GetPrimAdapter(skinnedPrim);
+        return adapter->Get(skinnedPrim, skinnedPrimPath, key, time);
+    }
+
+    return BaseAdapter::Get(prim, cachePath, key, time);
+}
+
+/*virtual*/
+bool
+UsdSkelImagingSkeletonAdapter::GetDoubleSided(UsdPrim const& prim, 
+                                              SdfPath const& cachePath, 
+                                              UsdTimeCode time) const
+{
+    if (_IsCallbackForSkeleton(prim)) {
+        return true;
+    } else {
+        return BaseAdapter::GetDoubleSided(prim, cachePath, time);
+    }
+}
+
+/*virtual*/
+SdfPath
+UsdSkelImagingSkeletonAdapter::GetMaterialId(UsdPrim const& prim, 
+                                             SdfPath const& cachePath, 
+                                            UsdTimeCode time) const
+{
+    if (_IsCallbackForSkeleton(prim)) {
+        // skeleton has no material
+        return SdfPath();
+    } else {
+        return BaseAdapter::GetMaterialId(prim, cachePath, time);
+    }
 }
 
 
@@ -887,10 +1037,11 @@ _ApplyPackedBlendShapes(const TfSpan<const GfVec4f>& offsets,
 // ---------------------------------------------------------------------- //
 void
 UsdSkelImagingSkeletonAdapter::InvokeComputation(
-    SdfPath const& computationPath,
+    SdfPath const& cachePath,
     HdExtComputationContext* context)
 {
     HD_TRACE_FUNCTION();
+    SdfPath const &computationPath = cachePath;
 
     VtValue restPoints
         = context->GetInputValue(_tokens->restPoints);
@@ -1116,27 +1267,6 @@ UsdSkelImagingSkeletonAdapter::_IsCallbackForSkeleton(const UsdPrim& prim) const
     return prim.IsA<UsdSkelSkeleton>();
 }
 
-
-GfRange3d
-UsdSkelImagingSkeletonAdapter::_GetExtent(const UsdPrim& prim,
-                                          UsdTimeCode time) const
-{
-    HD_TRACE_FUNCTION();
-    HF_MALLOC_TAG_FUNCTION();
-    UsdGeomBoundable boundable(prim);
-    VtVec3fArray extent;
-    if (boundable.GetExtentAttr().Get(&extent, time)) {
-        // Note:
-        // Usd stores extent as 2 float vecs. We do an implicit 
-        // conversion to doubles
-        return GfRange3d(extent[0], extent[1]);
-    } else {
-        // Return empty range if no value was found.
-        return GfRange3d();
-    }
-}
-
-
 GfVec3f
 UsdSkelImagingSkeletonAdapter::_GetSkeletonDisplayColor(
         const UsdPrim& prim,
@@ -1188,7 +1318,6 @@ UsdSkelImagingSkeletonAdapter::_GetSkeletonDisplayOpacity(
     return 1.0f;
 }
 
-
 void
 UsdSkelImagingSkeletonAdapter::_TrackBoneMeshVariability(
     const UsdPrim& prim,
@@ -1200,8 +1329,6 @@ UsdSkelImagingSkeletonAdapter::_TrackBoneMeshVariability(
     if (!TF_VERIFY(skelData)) {
         return;
     }
-
-    UsdImagingValueCache* valueCache = _GetValueCache();
 
     if (!_IsVarying(prim,
                     UsdGeomTokens->primvarsDisplayColor,
@@ -1250,61 +1377,44 @@ UsdSkelImagingSkeletonAdapter::_TrackBoneMeshVariability(
                UsdImagingTokens->usdVaryingVisibility,
                timeVaryingBits,
                true);
-
-    TfToken purpose = skelData->ComputePurpose();
-    // Empty purpose means there is no opinion. Fall back to default.
-    if (purpose.IsEmpty()) {
-        purpose = UsdGeomTokens->default_;
-    }
-    valueCache->GetPurpose(cachePath) = purpose;
 }
 
 
-void
-UsdSkelImagingSkeletonAdapter::_UpdateBoneMeshForTime(
-    const UsdPrim& prim,
-    const SdfPath& cachePath,
-    UsdTimeCode time,
-    HdDirtyBits requestedBits,
-    const UsdImagingInstancerContext* instancerContext) const
+TfToken
+UsdSkelImagingSkeletonAdapter::GetPurpose(
+    UsdPrim const& prim,
+    SdfPath const& cachePath,
+    TfToken const& instanceInheritablePurpose) const
 {
-    _SkelData* skelData = _GetSkelData(cachePath);
-    if (!TF_VERIFY(skelData)) {
-        return;
+    TRACE_FUNCTION();
+
+    TfToken purpose;
+
+    if (_IsCallbackForSkeleton(prim)) {
+
+        const _SkelData* skelData = _GetSkelData(cachePath);
+        if (TF_VERIFY(skelData)) {
+            purpose = skelData->ComputePurpose();
+        }
+
+        // Empty purpose means there is no opinion. Fall back to default.
+        if (purpose.IsEmpty()) {
+            if (instanceInheritablePurpose.IsEmpty()) {
+                purpose = UsdGeomTokens->default_;
+            } else {
+                purpose = instanceInheritablePurpose;
+            }
+        }
+
+    } else {
+        purpose = BaseAdapter::GetPurpose(prim, cachePath, 
+                                          instanceInheritablePurpose);
     }
 
-    TF_DEBUG(USDIMAGING_CHANGES).Msg("[UpdateForTime] Skeleton path: <%s>\n",
-                                     prim.GetPath().GetText());
-    TF_DEBUG(USDIMAGING_CHANGES).Msg("[UpdateForTime] Cache path: <%s>\n",
-                                     cachePath.GetText());
+    return purpose;
+}
 
-    // Act as the mesh adapter for the non-existent bone mesh, and populate
-    // the value cache with the necessary info.
-    UsdImagingValueCache* valueCache = _GetValueCache();
-
-    if (requestedBits & HdChangeTracker::DirtyTopology) {
-        valueCache->GetTopology(cachePath) =
-            skelData->ComputeTopologyAndRestState();
-    }
-
-    if (requestedBits & HdChangeTracker::DirtyPoints) {
-        valueCache->GetPoints(cachePath) = skelData->ComputePoints(time);
-    }
-
-    if (requestedBits & HdChangeTracker::DirtyTransform) {
-        valueCache->GetTransform(cachePath) = GetTransform(prim, time);
-    }
-
-    if (requestedBits & HdChangeTracker::DirtyExtent) {
-        valueCache->GetExtent(cachePath) = _GetExtent(prim, time);
-    }
-
-    if (requestedBits & HdChangeTracker::DirtyVisibility) {
-        valueCache->GetVisible(cachePath) = GetVisible(prim, time);
-    }
-    
-    if (requestedBits & HdChangeTracker::DirtyPrimvar) {
-
+<<<<<<< HEAD
         // Expose points as a primvar.
         _MergePrimvar(&valueCache->GetPrimvars(cachePath),
                       HdTokens->points,
@@ -1321,69 +1431,71 @@ UsdSkelImagingSkeletonAdapter::_UpdateBoneMeshForTime(
             //_GetSkeletonDisplayOpacity(prim, time);
             VtFloatArray(1,_GetSkeletonDisplayOpacity(prim, time));
             //-NV_CHANGE FRZHANG
-
-        _MergePrimvar(&valueCache->GetPrimvars(cachePath),
-                      HdTokens->displayColor,
-                      HdInterpolationConstant,
-                      HdPrimvarRoleTokens->color);
-        _MergePrimvar(&valueCache->GetPrimvars(cachePath),
-                      HdTokens->displayOpacity,
-                      HdInterpolationConstant);
-    }
-
-    if (requestedBits & HdChangeTracker::DirtyDoubleSided) {
-        valueCache->GetDoubleSided(cachePath) = true;
-    }
-
-    if (requestedBits & HdChangeTracker::DirtyMaterialId) {
-        // The bone mesh does not need a material.
-        valueCache->GetMaterialId(cachePath) = SdfPath();
-    }
-}
-
-
-// ---------------------------------------------------------------------- //
-/// Common utitily methods for skinning computations & skinned prims
-// ---------------------------------------------------------------------- //
-bool
-UsdSkelImagingSkeletonAdapter::_IsAffectedByTimeVaryingSkelAnim(
-    const SdfPath& skinnedPrimPath) const
+=======
+const TfTokenVector &
+UsdSkelImagingSkeletonAdapter::GetExtComputationSceneInputNames(
+    SdfPath const& cachePath) const
 {
-    const _SkinnedPrimData* skinnedPrimData =
-        _GetSkinnedPrimData(skinnedPrimPath);
-    if (!TF_VERIFY(skinnedPrimData)) {
-        return false;
+>>>>>>> v20.11-rc1
+
+    if (_IsSkinningComputationPath(cachePath)) {
+
+        if (_IsEnabledAggregatorComputation()) {
+
+            // Scene inputs
+            static TfTokenVector sceneInputNames({
+                    // From the skinned prim
+                        _tokens->primWorldToLocal,
+                    // From the skeleton
+                        _tokens->blendShapeWeights,
+                        _tokens->skinningXforms,
+                        _tokens->skelLocalToWorld,
+            });
+            return sceneInputNames;
+
+        } else {
+
+            // Scene inputs
+            static TfTokenVector sceneInputNames({
+                // From the skinned prim
+                    _tokens->restPoints,
+                    _tokens->geomBindXform,
+                    _tokens->influences,
+                    _tokens->numInfluencesPerComponent,
+                    _tokens->hasConstantInfluences,
+                    _tokens->primWorldToLocal,
+                    _tokens->blendShapeOffsets,
+                    _tokens->blendShapeOffsetRanges,
+                    _tokens->numBlendShapeOffsetRanges,
+
+                // From the skeleton
+                    _tokens->blendShapeWeights,
+                    _tokens->skinningXforms,
+                    _tokens->skelLocalToWorld
+            });
+            return sceneInputNames;
+        }
     }
 
-    const _SkelData* skelData = _GetSkelData(skinnedPrimData->skelPath);
-    if (!TF_VERIFY(skelData)) {
-        return false;
-    }
+    if (_IsSkinningInputAggregatorComputationPath(cachePath)) {
 
-    // Discover time-varying joint transforms.
-    if (const UsdSkelAnimQuery& animQuery =
-        skelData->skelQuery.GetAnimQuery()) {
+        // ExtComputation inputs
+        static TfTokenVector inputNames({
+            // Data authored on the skinned prim as primvars.
+                _tokens->restPoints,
+                _tokens->geomBindXform,
+                _tokens->influences,
+                _tokens->numInfluencesPerComponent,
+                _tokens->hasConstantInfluences,
+                _tokens->blendShapeOffsets,
+                _tokens->blendShapeOffsetRanges,
+                _tokens->numBlendShapeOffsetRanges
+        });
+        return inputNames;
 
-        return (skinnedPrimData->hasJointInfluences &&
-                animQuery.JointTransformsMightBeTimeVarying()) ||
-               (skinnedPrimData->blendShapeQuery &&
-                animQuery.BlendShapeWeightsMightBeTimeVarying());
-    }
-    return false;
-}
+    }  
 
-void
-UsdSkelImagingSkeletonAdapter::_RemoveSkinnedPrimAndComputations(
-    const SdfPath& cachePath,
-    UsdImagingIndexProxy* index)
-{
-    TF_DEBUG(USDIMAGING_CHANGES).Msg(
-                "[SkeletonAdapter::_RemovePrim] Remove skinned prim %s and its "
-                "computations.\n", cachePath.GetText());
-    
-    // Remove skinned prim.
-    index->RemoveRprim(cachePath);
-
+<<<<<<< HEAD
     // Remove the computations it participates in.
     SdfPath compPath = _GetSkinningComputationPath(cachePath);
     index->RemoveSprim(HdPrimTypeTokens->extComputation, compPath);
@@ -1413,90 +1525,131 @@ UsdSkelImagingSkeletonAdapter::_RemoveSkinnedPrimAndComputations(
     // Clear cache entry.
     _skinnedPrimDataCache.erase(cachePath);
 }
+=======
+    return BaseAdapter::GetExtComputationSceneInputNames(cachePath);;
+>>>>>>> v20.11-rc1
 
-// ---------------------------------------------------------------------- //
-/// Handlers for the skinning computations
-// ---------------------------------------------------------------------- //
-SdfPath
-UsdSkelImagingSkeletonAdapter::_GetSkinningComputationPath(
-    const SdfPath& skinnedPrimPath) const
-{
-    return skinnedPrimPath.AppendChild(_tokens->skinningComputation);
 }
 
-
-SdfPath
-UsdSkelImagingSkeletonAdapter::_GetSkinningInputAggregatorComputationPath(
-    const SdfPath& skinnedPrimPath) const
+HdExtComputationInputDescriptorVector
+UsdSkelImagingSkeletonAdapter::GetExtComputationInputs(
+    UsdPrim const& prim,
+    SdfPath const& cachePath,
+    const UsdImagingInstancerContext *instancerContext) const
 {
-    return skinnedPrimPath.AppendChild(_tokens->skinningInputAggregatorComputation);
+    if (_IsSkinningComputationPath(cachePath)) {
+
+        if (_IsEnabledAggregatorComputation()) {
+
+            // Computation inputs
+            static TfTokenVector compInputNames({
+                    _tokens->restPoints,
+                    _tokens->geomBindXform,
+                    _tokens->influences,
+                    _tokens->numInfluencesPerComponent,
+                    _tokens->hasConstantInfluences,
+                    _tokens->blendShapeOffsets,
+                    _tokens->blendShapeOffsetRanges,
+                    _tokens->numBlendShapeOffsetRanges
+            });
+
+            SdfPath skinnedPrimPath =
+                UsdImagingGprimAdapter::_ResolveCachePath(
+                            prim.GetPath(), instancerContext);
+            SdfPath renderIndexAggrCompId = _ConvertCachePathToIndexPath(
+                _GetSkinningInputAggregatorComputationPath(skinnedPrimPath));
+            
+            HdExtComputationInputDescriptorVector compInputDescs;
+            for (auto const& input : compInputNames) {
+                compInputDescs.emplace_back(
+                    HdExtComputationInputDescriptor(input,
+                        renderIndexAggrCompId, input));
+            }
+
+            return compInputDescs;
+
+        } else {
+
+            // No computation inputs
+            return HdExtComputationInputDescriptorVector();
+
+        }
+    }
+
+    if (_IsSkinningInputAggregatorComputationPath(cachePath)) {
+        // No computation inputs
+        return HdExtComputationInputDescriptorVector();
+    }
+
+    return BaseAdapter::GetExtComputationInputs(prim, cachePath, 
+            instancerContext);
 }
 
-
-bool
-UsdSkelImagingSkeletonAdapter::_IsSkinningComputationPath(
-    const SdfPath& cachePath) const
-{
-    return cachePath.GetName() == _tokens->skinningComputation;
-}
-
-
-bool
-UsdSkelImagingSkeletonAdapter::_IsSkinningInputAggregatorComputationPath(
-    const SdfPath& cachePath) const
-{
-    return cachePath.GetName() == _tokens->skinningInputAggregatorComputation;
-}
-
-
-void
-UsdSkelImagingSkeletonAdapter::_TrackSkinningComputationVariability(
-    const UsdPrim& skinnedPrim,
-    const SdfPath& computationPath,
-    HdDirtyBits* timeVaryingBits,
+HdExtComputationOutputDescriptorVector
+UsdSkelImagingSkeletonAdapter::GetExtComputationOutputs(
+    UsdPrim const& prim,
+    SdfPath const& cachePath,
     const UsdImagingInstancerContext* instancerContext) const
 {
-    // XXX: We don't receive the "cachePath" for the skinned prim, and so
-    // the method below won't work when using multiple UsdImagingDelgate's.
-    SdfPath skinnedPrimCachePath = UsdImagingGprimAdapter::_ResolveCachePath(
-            skinnedPrim.GetPath(), instancerContext);
+    if (_IsSkinningComputationPath(cachePath)) {
     
-    if (_IsAffectedByTimeVaryingSkelAnim(skinnedPrimCachePath)) {
-        (*timeVaryingBits) |= HdExtComputation::DirtySceneInput;
-        HD_PERF_COUNTER_INCR(UsdImagingTokens->usdVaryingPrimvar);
+        HdTupleType pointsType;
+        pointsType.type = HdTypeFloatVec3;
+        pointsType.count = 1;
+        
+        HdExtComputationOutputDescriptorVector outputsEntry;
+        outputsEntry.emplace_back(_tokens->skinnedPoints, pointsType);
+
+        return outputsEntry;
     }
 
-    // XXX: Issue warnings for computation inputs that we don't expect to be 
-    // time varying.
+    return BaseAdapter::GetExtComputationOutputs(prim, cachePath, 
+            instancerContext);
 }
 
-
-VtVec3fArray
-UsdSkelImagingSkeletonAdapter::_GetSkinnedPrimPoints(
-    const UsdPrim& skinnedPrim,
-    const SdfPath& skinnedPrimCachePath,
-    UsdTimeCode time) const
+HdExtComputationPrimvarDescriptorVector
+UsdSkelImagingSkeletonAdapter::GetExtComputationPrimvars(
+    UsdPrim const& prim,
+    SdfPath const& cachePath,
+    HdInterpolation interpolation,
+    const UsdImagingInstancerContext* instancerContext) const
 {
-    // Since only UsdGeomBased-type prims can be targeted by a skeleton,
-    // we expect the skinned prim adapter to derive from GprimAdapter.
-    UsdImagingPrimAdapterSharedPtr adapter = _GetPrimAdapter(skinnedPrim);
-    auto gprimAdapter =
-        std::dynamic_pointer_cast<UsdImagingGprimAdapter> (adapter);
-    if (!TF_VERIFY(gprimAdapter)) {
-        return VtVec3fArray();
-    }
 
-    VtValue points = 
-        gprimAdapter->GetPoints(skinnedPrim, skinnedPrimCachePath, time);
-    if (!TF_VERIFY(points.IsHolding<VtVec3fArray>())) {
-        return VtVec3fArray();
+    if (_IsSkinnedPrimPath(cachePath)) {
+
+        // We only support 'points' which is vertex interpolation
+        if (interpolation != HdInterpolationVertex) {
+            return HdExtComputationPrimvarDescriptorVector();
+        }
+
+        // Note: We don't specify the # of points, since the prim already knows
+        // how many to expect for a given topology.
+        // The count field below indicates that we have one vec3f per point.
+        HdTupleType pointsType;
+        pointsType.type = HdTypeFloatVec3;
+        pointsType.count = 1;
+
+        const SdfPath skinnedPrimPath =
+            UsdImagingGprimAdapter::_ResolveCachePath(
+                                        prim.GetPath(), instancerContext);
+
+        HdExtComputationPrimvarDescriptorVector compPrimvars;
+        compPrimvars.emplace_back(
+                        HdTokens->points,
+                        HdInterpolationVertex,
+                        HdPrimvarRoleTokens->point,
+                        _ConvertCachePathToIndexPath(
+                            _GetSkinningComputationPath(skinnedPrimPath)),
+                        _tokens->skinnedPoints,
+                        pointsType);
+
+        return compPrimvars;
     }
-    return points.UncheckedGet<VtVec3fArray>();
+    return BaseAdapter::GetExtComputationPrimvars(prim, cachePath, 
+              interpolation, instancerContext);
 }
-
 
 namespace {
-
 
 bool
 _GetInfluences(const UsdSkelSkinningQuery& skinningQuery,
@@ -1642,15 +1795,15 @@ _ComputeSubShapeWeights(const UsdSkelSkeletonQuery& skelQuery,
 
 } // namespace
 
-
-void
-UsdSkelImagingSkeletonAdapter::_UpdateSkinningComputationForTime(
-    const UsdPrim& skinnedPrim,
-    const SdfPath& computationPath,
+VtValue 
+UsdSkelImagingSkeletonAdapter::_GetExtComputationInputForSkinningComputation(
+    UsdPrim const& prim,
+    SdfPath const& cachePath,
+    TfToken const& name,
     UsdTimeCode time,
-    HdDirtyBits requestedBits,
     const UsdImagingInstancerContext* instancerContext) const
 {
+<<<<<<< HEAD
     TF_DEBUG(USDIMAGING_CHANGES).Msg(
         "[_UpdateSkinningComputationForTime] "
          "skinnedPrim path: <%s> , computation path: <%s>\n",
@@ -1662,143 +1815,71 @@ UsdSkelImagingSkeletonAdapter::_UpdateSkinningComputationForTime(
     //-NV_CHANGE FRZHANG
 
     UsdImagingValueCache* valueCache = _GetValueCache();
+=======
+    TRACE_FUNCTION();
+>>>>>>> v20.11-rc1
 
     // XXX: We don't receive the "cachePath" for the skinned prim, and so
-    // the method below won't work when using multiple UsdImagingDelgate's.
-    SdfPath skinnedPrimCachePath = UsdImagingGprimAdapter::_ResolveCachePath(
-            skinnedPrim.GetPath(), instancerContext);
+    // the method below won't work when using multiple UsdImagingDelgate'.
+    SdfPath skinnedPrimCachePath = 
+        UsdImagingGprimAdapter::_ResolveCachePath(prim.GetPath(), 
+                                                  instancerContext);
+
+    // XXX: The only time varying input here is the skinning xforms.
+    // However, we don't have fine-grained tracking to tell which
+    // scene input is "dirty". Hence, fetch all these values and update
+    // the value cache.
+    // Note: With CPU computations, this is necessary. We don't use
+    //       persistent buffer sources to cache the inputs.
+    //       With GPU computations, we can use an "input aggregation"
+    //       computations to remove the non-varying inputs into its own
+    //       computation.
     
-    // For dispatchCount, elementCount and outputDesc, we need to know the 
-    // number of points on the skinned prim. Pull only when required.
-    VtVec3fArray restPoints;
-    size_t numPoints = 0;
-    if (requestedBits & 
-            (HdExtComputation::DirtyDispatchCount |
-             HdExtComputation::DirtyElementCount |
-             HdExtComputation::DirtySceneInput)) {
-        restPoints =
-            _GetSkinnedPrimPoints(skinnedPrim, skinnedPrimCachePath, time);
-        numPoints = restPoints.size();
-    }
-    
-    if (requestedBits & HdExtComputation::DirtyDispatchCount) {
-        valueCache->GetExtComputationInput(
-            computationPath,HdTokens->dispatchCount) = VtValue(numPoints);
+
+    // dispatchCount, elementCount, restPoints, geomBindXform
+    if (name == HdTokens->dispatchCount ||
+        name == HdTokens->elementCount) {
+
+        // For dispatchCount, elementCount, we need to know 
+        // the number of points on the skinned prim. Pull only when 
+        // required.
+        VtVec3fArray restPoints = _GetSkinnedPrimPoints(prim, 
+                                        skinnedPrimCachePath, time);
+        size_t numPoints = restPoints.size();
+        return VtValue(numPoints);
     }
 
-    if (requestedBits & HdExtComputation::DirtyElementCount) {
-        valueCache->GetExtComputationInput(
-            computationPath, HdTokens->elementCount) = VtValue(numPoints);
-    }
+    if (!_IsEnabledAggregatorComputation()) {
 
-    if (requestedBits & HdExtComputation::DirtyInputDesc) {
-        if (_IsEnabledAggregatorComputation()) {
-
-            // Scene inputs
-            TfTokenVector sceneInputNames({
-                // From the skinned prim
-                    _tokens->primWorldToLocal,
-                // From the skeleton
-                    _tokens->blendShapeWeights,
-                    _tokens->skinningXforms,
-                    _tokens->skelLocalToWorld,
-            });
-            valueCache->GetExtComputationSceneInputNames(computationPath)
-                = sceneInputNames;
-
-            // Computation inputs
-            TfTokenVector compInputNames({
-                    _tokens->restPoints,
-                    _tokens->geomBindXform,
-                    _tokens->influences,
-                    _tokens->numInfluencesPerComponent,
-                    _tokens->hasConstantInfluences,
-                    _tokens->blendShapeOffsets,
-                    _tokens->blendShapeOffsetRanges,
-                    _tokens->numBlendShapeOffsetRanges
-            });
-            SdfPath skinnedPrimPath =
-                UsdImagingGprimAdapter::_ResolveCachePath(
-                            skinnedPrim.GetPath(), instancerContext);
-            SdfPath renderIndexAggrCompId = _ConvertCachePathToIndexPath(
-                _GetSkinningInputAggregatorComputationPath(skinnedPrimPath));
-            
-            HdExtComputationInputDescriptorVector compInputDescs;
-            for (auto const& input : compInputNames) {
-                compInputDescs.emplace_back(
-                    HdExtComputationInputDescriptor(input,
-                        renderIndexAggrCompId, input));
-            }
-            valueCache->GetExtComputationInputs(computationPath)
-                = compInputDescs;
-
-        } else {
-            // Scene inputs
-            TfTokenVector sceneInputNames({
-                // From the skinned prim
-                    _tokens->restPoints,
-                    _tokens->geomBindXform,
-                    _tokens->influences,
-                    _tokens->numInfluencesPerComponent,
-                    _tokens->hasConstantInfluences,
-                    _tokens->primWorldToLocal,
-                    _tokens->blendShapeOffsets,
-                    _tokens->blendShapeOffsetRanges,
-                    _tokens->numBlendShapeOffsetRanges,
-
-                // From the skeleton
-                    _tokens->blendShapeWeights,
-                    _tokens->skinningXforms,
-                    _tokens->skelLocalToWorld
-            });
-            valueCache->GetExtComputationSceneInputNames(computationPath) =
-                sceneInputNames;
-
-            // No computation inputs
-            valueCache->GetExtComputationInputs(computationPath)
-                = HdExtComputationInputDescriptorVector();
+        // Rest Points
+        if (name == _tokens->restPoints) {
+            VtVec3fArray restPoints = _GetSkinnedPrimPoints(prim, 
+                                            skinnedPrimCachePath, time);
+            return VtValue(restPoints);
         }
-    }
 
-    if (requestedBits & HdExtComputation::DirtySceneInput) {
-        // XXX: The only time varying input here is the skinning xforms.
-        // However, we don't have fine-grained tracking to tell which
-        // scene input is "dirty". Hence, fetch all these values and update
-        // the value cache.
-        // Note: With CPU computations, this is necessary. We don't use
-        //       persistent buffer sources to cache the inputs.
-        //       With GPU computations, we can use an "input aggregation"
-        //       computations to remove the non-varying inputs into its own
-        //       computation.
-        
-        const SdfPath skinnedPrimPath =
-            UsdImagingGprimAdapter::_ResolveCachePath(
-                skinnedPrim.GetPath(), instancerContext);
+        const _SkinnedPrimData* skinnedPrimData = 
+            _GetSkinnedPrimData(skinnedPrimCachePath);
 
-        const _SkinnedPrimData* skinnedPrimData =
-            _GetSkinnedPrimData(skinnedPrimPath);
         if (!TF_VERIFY(skinnedPrimData)) {
-            return;
+            return VtValue();
         }
 
-        // restPoints, geomBindXform
-        if (!_IsEnabledAggregatorComputation()) {
-            valueCache->GetExtComputationInput(
-                computationPath, _tokens->restPoints) = restPoints;
-
+        // GeomBindXform
+        if (name == _tokens->geomBindXform) {
             // read (optional) geomBindTransform property.
             // If unauthored, it is identity.
             const GfMatrix4d geomBindXform =
                 skinnedPrimData->skinningQuery.GetGeomBindTransform();
 
             // Skinning computations use float precision.
-            valueCache->GetExtComputationInput(
-                computationPath, _tokens->geomBindXform) =
-                    GfMatrix4f(geomBindXform);
+            return VtValue(GfMatrix4f(geomBindXform));
         }
 
-        // influences, numInfluencesPerComponent, hasConstantInfluences
-        if (!_IsEnabledAggregatorComputation()) {
+        // Influences
+        if (name == _tokens->influences || 
+            name == _tokens->numInfluencesPerComponent ||
+            name == _tokens->hasConstantInfluences) {
 
             VtVec2fArray influences;
             int numInfluencesPerComponent = 0;
@@ -1811,55 +1892,66 @@ UsdSkelImagingSkeletonAdapter::_UpdateSkinningComputationForTime(
                                &usesConstantJointPrimvar);
             }
 
-            valueCache->GetExtComputationInput(
-                computationPath, _tokens->influences) = influences;
-            valueCache->GetExtComputationInput(
-                computationPath, _tokens->numInfluencesPerComponent)
-                    = numInfluencesPerComponent;
-            valueCache->GetExtComputationInput(
-                computationPath, _tokens->hasConstantInfluences)
-                    = usesConstantJointPrimvar;
+            if (name == _tokens->influences) {
+                return VtValue(influences);
+            }
+            if (name == _tokens->numInfluencesPerComponent) {
+                return VtValue(numInfluencesPerComponent);
+            }
+            if (name == _tokens->hasConstantInfluences) {
+                return VtValue(usesConstantJointPrimvar);
+            }
         }
-            
-        // blendShapeOffsets, blendShapeOffsetRanges, numBlendShapeOffsetRanges
-        if (!_IsEnabledAggregatorComputation()) {
+
+        // BlendShapes
+        if (name == _tokens->blendShapeOffsets ||
+            name == _tokens->blendShapeOffsetRanges ||
+            name == _tokens->numBlendShapeOffsetRanges) {
+
             VtVec4fArray offsets;
             VtVec2iArray ranges;
             if (skinnedPrimData->blendShapeQuery) {
                 skinnedPrimData->blendShapeQuery->ComputePackedShapeTable(
                     &offsets, &ranges);
             }
-            valueCache->GetExtComputationInput(
-                computationPath, _tokens->blendShapeOffsets)
-                = VtValue(offsets);
-
-            valueCache->GetExtComputationInput(
-                computationPath, _tokens->blendShapeOffsetRanges)
-                = VtValue(ranges);
-            
-            // The size of the offset ranges needs to be available for GL
-            valueCache->GetExtComputationInput(
-                computationPath, _tokens->numBlendShapeOffsetRanges)
-                = VtValue(static_cast<int>(ranges.size()));
-        }
-
-        // primWorldToLocal
-        {
-            UsdGeomXformCache xformCache(time);
-            GfMatrix4d primWorldToLocal =
-                xformCache.GetLocalToWorldTransform(skinnedPrim).GetInverse();
-            valueCache->GetExtComputationInput(
-                computationPath,_tokens->primWorldToLocal)
-                    = VtValue(primWorldToLocal);
-        }
-
-        // skinningXforms, skelLocalToWorld, blendShapeWeights
-        {
-            const _SkelData* skelData = _GetSkelData(skinnedPrimData->skelPath);
-            if (!TF_VERIFY(skelData)) {
-                return;
+            if (name == _tokens->blendShapeOffsets) {
+                return VtValue(offsets);
             }
+            if (name == _tokens->blendShapeOffsetRanges) {
+                return VtValue(ranges);
+            }
+            if (name == _tokens->numBlendShapeOffsetRanges) {
+                return VtValue(static_cast<int>(ranges.size()));
+            }
+        }
+    }
 
+    // primWorldToLocal
+    if (name == _tokens->primWorldToLocal) {
+        UsdGeomXformCache xformCache(time);
+        GfMatrix4d primWorldToLocal =
+                xformCache.GetLocalToWorldTransform(prim).GetInverse();
+        return VtValue(primWorldToLocal);
+    }
+    
+    // skinningXforms, skelLocalToWorld, blendShapeWeights
+    if (name == _tokens->skinningXforms ||
+        name == _tokens->skelLocalToWorld ||
+        name == _tokens->blendShapeWeights)
+    {
+        const _SkinnedPrimData* skinnedPrimData = 
+            _GetSkinnedPrimData(skinnedPrimCachePath);
+
+        if (!TF_VERIFY(skinnedPrimData)) {
+            return VtValue();
+        }
+
+        const _SkelData* skelData = _GetSkelData(skinnedPrimData->skelPath);
+        if (!TF_VERIFY(skelData)) {
+            return VtValue();
+        }
+
+        if (name == _tokens->skinningXforms) {
             VtMatrix4fArray skinningXforms;
             if (!skinnedPrimData->hasJointInfluences ||
                 !_ComputeSkinningTransforms(skelData->skelQuery,
@@ -1867,14 +1959,15 @@ UsdSkelImagingSkeletonAdapter::_UpdateSkinningComputationForTime(
                                             time, &skinningXforms)) {
                 skinningXforms.assign(
                     skinnedPrimData->skinningQuery.GetJointMapper() ?
-                    skinnedPrimData->skinningQuery.GetJointMapper()->size() :
+                    skinnedPrimData->skinningQuery.GetJointMapper()->size():
                     skelData->skelQuery.GetTopology().size(),
                     GfMatrix4f(1));
             }
 
-            valueCache->GetExtComputationInput(
-                computationPath, _tokens->skinningXforms) = skinningXforms;
+            return VtValue(skinningXforms);
+        }
 
+        if (name == _tokens->blendShapeWeights) {
             VtFloatArray weights;
             if (!skinnedPrimData->blendShapeQuery ||
                 !_ComputeSubShapeWeights(skelData->skelQuery,
@@ -1887,189 +1980,355 @@ UsdSkelImagingSkeletonAdapter::_UpdateSkinningComputationForTime(
                         0.0f);
                 }
             }
-            valueCache->GetExtComputationInput(
-                computationPath, _tokens->blendShapeWeights) = weights;
+            return VtValue(weights);
 
+        }
+
+        if (name == _tokens->skelLocalToWorld) {
             // PERFORMANCE:
-            // Would be better if we could access the skel's transform
-            // from the value cache.
+            // Would be better if we could access a shared xformCache here?
+
             UsdGeomXformCache xformCache(time);
             UsdPrim const& skelPrim = skelData->skelQuery.GetPrim();
             GfMatrix4d skelLocalToWorld =
                 xformCache.GetLocalToWorldTransform(skelPrim);
-            valueCache->GetExtComputationInput(
-                computationPath, _tokens->skelLocalToWorld) = skelLocalToWorld;
+            return VtValue(skelLocalToWorld);
+
         }
-    }
-    
-    if (requestedBits & HdExtComputation::DirtyOutputDesc) {
-        HdTupleType pointsType;
-        pointsType.type = HdTypeFloatVec3;
-        pointsType.count = 1;
-        
-        HdExtComputationOutputDescriptorVector& outputsEntry =
-            valueCache->GetExtComputationOutputs(computationPath);
-        outputsEntry.clear();
-        outputsEntry.emplace_back(_tokens->skinnedPoints, pointsType);
     }
 
-    if (requestedBits & HdExtComputation::DirtyKernel) {
-        if (_IsEnabledCPUComputations()) {
-            valueCache->GetExtComputationKernel(computationPath) = 
-                std::string();
-        } else {
-            valueCache->GetExtComputationKernel(computationPath)
-                = _GetSkinningComputeKernel();
-        }
-    }
+    return BaseAdapter::GetExtComputationInput(prim, cachePath, name, time,
+            instancerContext);
 }
 
+VtValue 
+UsdSkelImagingSkeletonAdapter::_GetExtComputationInputForInputAggregator(
+    UsdPrim const& prim,
+    SdfPath const& cachePath,
+    TfToken const& name,
+    UsdTimeCode time,
+    const UsdImagingInstancerContext* instancerContext) const
+{
+    // DispatchCount, ElementCount aren't relevant for an input aggregator
+    // computation. 
+    if (name == HdTokens->dispatchCount || name == HdTokens->elementCount) {
+        return VtValue(size_t(0));
+    }
+
+    // XXX: We don't receive the "cachePath" for the skinned prim, and so
+    // the method below won't work when using multiple UsdImagingDelegate's.
+    SdfPath skinnedPrimCachePath = 
+        UsdImagingGprimAdapter::_ResolveCachePath(
+            prim.GetPath(), instancerContext);
+
+    const _SkinnedPrimData* skinnedPrimData =
+            _GetSkinnedPrimData(skinnedPrimCachePath);
+    if (!TF_VERIFY(skinnedPrimData)) {
+        return VtValue();
+    }
+
+    // restPoints
+    if (name == _tokens->restPoints) {
+        VtVec3fArray restPoints =
+            _GetSkinnedPrimPoints(prim, skinnedPrimCachePath, time);
+        return VtValue(restPoints);
+    }
+
+    // geomBindXform
+    if (name == _tokens->geomBindXform) {
+        // read (optional) geomBindTransform property.
+        // If unauthored, it is identity.
+        const GfMatrix4d geomBindXform =
+            skinnedPrimData->skinningQuery.GetGeomBindTransform();
+
+        // Skinning computations use float precision.
+        return VtValue(GfMatrix4f(geomBindXform));
+    }
+
+    // influences, numInfluencesPerComponent, hasConstantInfluences
+    if (name == _tokens->influences ||
+        name == _tokens->numInfluencesPerComponent ||
+        name == _tokens->hasConstantInfluences) {
+
+        VtVec2fArray influences;
+        int numInfluencesPerComponent = 0;
+        bool usesConstantJointPrimvar = false;
+            
+        if (skinnedPrimData->hasJointInfluences) {
+            _GetInfluences(skinnedPrimData->skinningQuery,
+                           time, &influences,
+                           &numInfluencesPerComponent,
+                           &usesConstantJointPrimvar);
+        }
+
+        if (name == _tokens->influences) {
+            return VtValue(influences);
+        }
+        if (name == _tokens->numInfluencesPerComponent) {
+            return VtValue(numInfluencesPerComponent);
+        }
+        if (name == _tokens->hasConstantInfluences) {
+            return VtValue(usesConstantJointPrimvar);
+        }
+    }
+
+            
+    // blendShapeOffsets, blendShapeOffsetRanges, numBlendShapeOffsetRanges
+    if (name == _tokens->blendShapeOffsets ||
+        name == _tokens->blendShapeOffsetRanges ||
+        name == _tokens->numBlendShapeOffsetRanges) {
+            
+        VtVec4fArray offsets;
+        VtVec2iArray ranges;
+        if (skinnedPrimData->blendShapeQuery) {
+            skinnedPrimData->blendShapeQuery->ComputePackedShapeTable(
+                &offsets, &ranges);
+        }
+
+        if (name == _tokens->blendShapeOffsets) {
+            return VtValue(offsets);
+        }
+        if (name == _tokens->blendShapeOffsetRanges) {
+            return VtValue(ranges);
+        }
+        if (name == _tokens->numBlendShapeOffsetRanges) {
+            // The size of the offset ranges needs to be available for GL
+            return VtValue(static_cast<int>(ranges.size()));
+        }
+    }
+
+    return BaseAdapter::GetExtComputationInput(prim, cachePath, name, time,
+            instancerContext);
+}
+
+VtValue 
+UsdSkelImagingSkeletonAdapter::GetExtComputationInput(
+    UsdPrim const& prim,
+    SdfPath const& cachePath,
+    TfToken const& name,
+    UsdTimeCode time,
+    const UsdImagingInstancerContext* instancerContext) const
+{
+    TRACE_FUNCTION();
+
+    if (_IsSkinningComputationPath(cachePath)) {
+        return _GetExtComputationInputForSkinningComputation(
+                prim, cachePath, name, time, instancerContext);
+    }
+
+    if (_IsSkinningInputAggregatorComputationPath(cachePath)) {
+        return _GetExtComputationInputForInputAggregator(
+                prim, cachePath, name, time, instancerContext);
+    }
+
+    return BaseAdapter::GetExtComputationInput(prim, cachePath, name, time,
+            instancerContext);
+}
+
+std::string 
+UsdSkelImagingSkeletonAdapter::GetExtComputationKernel(
+    UsdPrim const& prim,
+    SdfPath const& cachePath,
+    const UsdImagingInstancerContext* instancerContext) const
+{
+    TRACE_FUNCTION();
+
+    if (_IsSkinningComputationPath(cachePath)) {
+        if (_IsEnabledCPUComputations()) {
+            return std::string();
+        } else {
+            return _GetSkinningComputeKernel();
+        }
+    }
+
+    if (_IsSkinningInputAggregatorComputationPath(cachePath)) {
+        return std::string();
+    }
+
+    return BaseAdapter::GetExtComputationKernel(prim, cachePath, 
+                instancerContext);
+
+}
 
 void
-UsdSkelImagingSkeletonAdapter::_UpdateSkinningInputAggregatorComputationForTime(
-    const UsdPrim& skinnedPrim,
-    const SdfPath& computationPath,
+UsdSkelImagingSkeletonAdapter::_UpdateBoneMeshForTime(
+    const UsdPrim& prim,
+    const SdfPath& cachePath,
     UsdTimeCode time,
     HdDirtyBits requestedBits,
     const UsdImagingInstancerContext* instancerContext) const
 {
-    TF_DEBUG(USDIMAGING_CHANGES).Msg(
-        "[_UpdateSkinningInputAggregatorComputationForTime] "
-        "skinnedPrim path: <%s> , computation path: <%s>\n",
-        skinnedPrim.GetPath().GetText(),
-        computationPath.GetText());
+    _SkelData* skelData = _GetSkelData(cachePath);
+    if (!TF_VERIFY(skelData)) {
+        return;
+    }
 
+<<<<<<< HEAD
     //+NV_CHANGE FRZHANG
     TF_VERIFY(!_UseNVGPUSkinningComputations());
     //-NV_CHANGE FRZHANG
 
     // Note: We expect this to run only when the skeleton prim is added/resync'd
     UsdImagingValueCache* valueCache = _GetValueCache();
+=======
+    TF_DEBUG(USDIMAGING_CHANGES).Msg("[UpdateForTime] Skeleton path: <%s>\n",
+                                     prim.GetPath().GetText());
+    TF_DEBUG(USDIMAGING_CHANGES).Msg("[UpdateForTime] Cache path: <%s>\n",
+                                     cachePath.GetText());
+>>>>>>> v20.11-rc1
 
-    // XXX: We don't receive the "cachePath" for the skinned prim, and so
-    // the method below won't work when using multiple UsdImagingDelegate's.
-    SdfPath skinnedPrimCachePath = UsdImagingGprimAdapter::_ResolveCachePath(
-            skinnedPrim.GetPath(), instancerContext);
- 
-    // DispatchCount, ElementCount aren't relevant for an input aggregator
-    // computation. However, it will be pulled on during sprim sync, so
-    // update the value cache.
-    if (requestedBits & HdExtComputation::DirtyDispatchCount) {
-        valueCache->GetExtComputationInput(
-            computationPath, HdTokens->dispatchCount) = size_t(0);
+    if (requestedBits & HdChangeTracker::DirtyPrimvar) {
+        UsdImagingValueCache* valueCache = _GetValueCache();
+
+        // Expose points as a primvar.
+        _MergePrimvar(&valueCache->GetPrimvars(cachePath),
+                      HdTokens->points,
+                      HdInterpolationVertex,
+                      HdPrimvarRoleTokens->point);
+        _MergePrimvar(&valueCache->GetPrimvars(cachePath),
+                      HdTokens->displayColor,
+                      HdInterpolationConstant,
+                      HdPrimvarRoleTokens->color);
+        _MergePrimvar(&valueCache->GetPrimvars(cachePath),
+                      HdTokens->displayOpacity,
+                      HdInterpolationConstant);
+    }
+}
+
+
+// ---------------------------------------------------------------------- //
+/// Common utitily methods for skinning computations & skinned prims
+// ---------------------------------------------------------------------- //
+bool
+UsdSkelImagingSkeletonAdapter::_IsAffectedByTimeVaryingSkelAnim(
+    const SdfPath& skinnedPrimPath) const
+{
+    const _SkinnedPrimData* skinnedPrimData =
+        _GetSkinnedPrimData(skinnedPrimPath);
+    if (!TF_VERIFY(skinnedPrimData)) {
+        return false;
     }
 
-    if (requestedBits & HdExtComputation::DirtyElementCount) {
-        valueCache->GetExtComputationInput(
-            computationPath, HdTokens->elementCount) = size_t(0);
+    const _SkelData* skelData = _GetSkelData(skinnedPrimData->skelPath);
+    if (!TF_VERIFY(skelData)) {
+        return false;
     }
 
-    if (requestedBits & HdExtComputation::DirtyInputDesc) {
-        // ExtComputation inputs
-        TfTokenVector inputNames({
-            // Data authored on the skinned prim as primvars.
-                _tokens->restPoints,
-                _tokens->geomBindXform,
-                _tokens->influences,
-                _tokens->numInfluencesPerComponent,
-                _tokens->hasConstantInfluences,
-                _tokens->blendShapeOffsets,
-                _tokens->blendShapeOffsetRanges,
-                _tokens->numBlendShapeOffsetRanges
-        });
-        valueCache->GetExtComputationSceneInputNames(computationPath)
-            = inputNames;
+    // Discover time-varying joint transforms.
+    if (const UsdSkelAnimQuery& animQuery =
+        skelData->skelQuery.GetAnimQuery()) {
 
-        valueCache->GetExtComputationInputs(computationPath)
-            = HdExtComputationInputDescriptorVector();
+        return (skinnedPrimData->hasJointInfluences &&
+                animQuery.JointTransformsMightBeTimeVarying()) ||
+               (skinnedPrimData->blendShapeQuery &&
+                animQuery.BlendShapeWeightsMightBeTimeVarying());
     }
+    return false;
+}
 
-    if (requestedBits & HdExtComputation::DirtySceneInput) {
+void
+UsdSkelImagingSkeletonAdapter::_RemoveSkinnedPrimAndComputations(
+    const SdfPath& cachePath,
+    UsdImagingIndexProxy* index)
+{
+    TF_DEBUG(USDIMAGING_CHANGES).Msg(
+                "[SkeletonAdapter::_RemovePrim] Remove skinned prim %s and its "
+                "computations.\n", cachePath.GetText());
+    
+    // Remove skinned prim.
+    index->RemoveRprim(cachePath);
 
-        const SdfPath skinnedPrimPath =
-            UsdImagingGprimAdapter::_ResolveCachePath(
-                skinnedPrim.GetPath(), instancerContext);
-
-        const _SkinnedPrimData* skinnedPrimData =
-            _GetSkinnedPrimData(skinnedPrimPath);
-        if (!TF_VERIFY(skinnedPrimData)) {
-            return;
-        }
-
-        // restPoints, geomBindXform
-        {
-            VtVec3fArray restPoints =
-                _GetSkinnedPrimPoints(skinnedPrim, skinnedPrimCachePath, time);
-            valueCache->GetExtComputationInput(
-                computationPath, _tokens->restPoints) = restPoints;
-            
-            // read (optional) geomBindTransform property.
-            // If unauthored, it is identity.
-            const GfMatrix4d geomBindXform =
-                skinnedPrimData->skinningQuery.GetGeomBindTransform();
-
-            // Skinning computations use float precision.
-            valueCache->GetExtComputationInput(
-                computationPath, _tokens->geomBindXform) =
-                GfMatrix4f(geomBindXform);
-        }
-
-        // influences, numInfluencesPerComponent, hasConstantInfluences
-        {
-            VtVec2fArray influences;
-            int numInfluencesPerComponent = 0;
-            bool usesConstantJointPrimvar = false;
-            
-            if (skinnedPrimData->hasJointInfluences) {
-                _GetInfluences(skinnedPrimData->skinningQuery,
-                               time, &influences,
-                               &numInfluencesPerComponent,
-                               &usesConstantJointPrimvar);
-            }
-
-            valueCache->GetExtComputationInput(
-                computationPath, _tokens->influences) = influences;
-            valueCache->GetExtComputationInput(
-                computationPath, _tokens->numInfluencesPerComponent)
-                    = numInfluencesPerComponent;
-            valueCache->GetExtComputationInput(
-                computationPath, _tokens->hasConstantInfluences)
-                    = usesConstantJointPrimvar;
-        }
-
-        // blendShapeOffsets, blendShapeOffsetRanges, numBlendShapeOffsetRanges
-        {
-            
-            VtVec4fArray offsets;
-            VtVec2iArray ranges;
-            if (skinnedPrimData->blendShapeQuery) {
-                skinnedPrimData->blendShapeQuery->ComputePackedShapeTable(
-                    &offsets, &ranges);
-            }
-            valueCache->GetExtComputationInput(
-                computationPath, _tokens->blendShapeOffsets)
-                = VtValue(offsets);
-
-            valueCache->GetExtComputationInput(
-                computationPath, _tokens->blendShapeOffsetRanges)
-                = VtValue(ranges);
-
-            // The size of the offset ranges needs to be available for GL
-            valueCache->GetExtComputationInput(
-                computationPath, _tokens->numBlendShapeOffsetRanges)
-                = VtValue(static_cast<int>(ranges.size()));
-        }
+    // Remove the computations it participates in.
+    SdfPath compPath = _GetSkinningComputationPath(cachePath);
+    index->RemoveSprim(HdPrimTypeTokens->extComputation, compPath);
+    
+    if (_IsEnabledAggregatorComputation()) {
+        SdfPath aggrCompPath =
+            _GetSkinningInputAggregatorComputationPath(cachePath);
+        index->RemoveSprim(HdPrimTypeTokens->extComputation, aggrCompPath);
     }
     
-    if (requestedBits & HdExtComputation::DirtyOutputDesc) {
-        valueCache->GetExtComputationOutputs(computationPath)
-            = HdExtComputationOutputDescriptorVector();
+    // Clear cache entry.
+    _skinnedPrimDataCache.erase(cachePath);
+}
+
+// ---------------------------------------------------------------------- //
+/// Handlers for the skinning computations
+// ---------------------------------------------------------------------- //
+SdfPath
+UsdSkelImagingSkeletonAdapter::_GetSkinningComputationPath(
+    const SdfPath& skinnedPrimPath) const
+{
+    return skinnedPrimPath.AppendChild(_tokens->skinningComputation);
+}
+
+
+SdfPath
+UsdSkelImagingSkeletonAdapter::_GetSkinningInputAggregatorComputationPath(
+    const SdfPath& skinnedPrimPath) const
+{
+    return skinnedPrimPath.AppendChild(_tokens->skinningInputAggregatorComputation);
+}
+
+
+bool
+UsdSkelImagingSkeletonAdapter::_IsSkinningComputationPath(
+    const SdfPath& cachePath) const
+{
+    return cachePath.GetName() == _tokens->skinningComputation;
+}
+
+
+bool
+UsdSkelImagingSkeletonAdapter::_IsSkinningInputAggregatorComputationPath(
+    const SdfPath& cachePath) const
+{
+    return cachePath.GetName() == _tokens->skinningInputAggregatorComputation;
+}
+
+
+void
+UsdSkelImagingSkeletonAdapter::_TrackSkinningComputationVariability(
+    const UsdPrim& skinnedPrim,
+    const SdfPath& computationPath,
+    HdDirtyBits* timeVaryingBits,
+    const UsdImagingInstancerContext* instancerContext) const
+{
+    // XXX: We don't receive the "cachePath" for the skinned prim, and so
+    // the method below won't work when using multiple UsdImagingDelgate's.
+    SdfPath skinnedPrimCachePath = UsdImagingGprimAdapter::_ResolveCachePath(
+            skinnedPrim.GetPath(), instancerContext);
+    
+    if (_IsAffectedByTimeVaryingSkelAnim(skinnedPrimCachePath)) {
+        (*timeVaryingBits) |= HdExtComputation::DirtySceneInput;
+        HD_PERF_COUNTER_INCR(UsdImagingTokens->usdVaryingPrimvar);
     }
 
-    if (requestedBits & HdExtComputation::DirtyKernel) {
-        valueCache->GetExtComputationKernel(computationPath)
-            = std::string();
+    // XXX: Issue warnings for computation inputs that we don't expect to be 
+    // time varying.
+}
+
+
+VtVec3fArray
+UsdSkelImagingSkeletonAdapter::_GetSkinnedPrimPoints(
+    const UsdPrim& skinnedPrim,
+    const SdfPath& skinnedPrimCachePath,
+    UsdTimeCode time) const
+{
+    // Since only UsdGeomBased-type prims can be targeted by a skeleton,
+    // we expect the skinned prim adapter to derive from GprimAdapter.
+    UsdImagingPrimAdapterSharedPtr adapter = _GetPrimAdapter(skinnedPrim);
+    auto gprimAdapter =
+        std::dynamic_pointer_cast<UsdImagingGprimAdapter> (adapter);
+    if (!TF_VERIFY(gprimAdapter)) {
+        return VtVec3fArray();
     }
+
+    VtValue points = gprimAdapter->GetPoints(skinnedPrim, time);
+    if (!TF_VERIFY(points.IsHolding<VtVec3fArray>())) {
+        return VtVec3fArray();
+    }
+    return points.UncheckedGet<VtVec3fArray>();
 }
 
 
@@ -2173,6 +2432,7 @@ UsdSkelImagingSkeletonAdapter::_UpdateSkinnedPrimForTime(
     TF_DEBUG(USDIMAGING_CHANGES).Msg
         ("[UpdateForTime] Cache path: <%s>\n", cachePath.GetText());
 
+<<<<<<< HEAD
     // Register points as a computed primvar on the skinned prim.
     if ((requestedBits & HdChangeTracker::DirtyPoints)
         //+NV_CHANGE FRZHANG
@@ -2210,6 +2470,8 @@ UsdSkelImagingSkeletonAdapter::_UpdateSkinnedPrimForTime(
         computedPrimvarsEntry = compPrimvars;
     }
 
+=======
+>>>>>>> v20.11-rc1
     // Suppress the dirtybit for points, so we don't publish 'points' as a
     // primvar. Also suppressing normals: normals will instead be computed
     // post-skinning, as if they were unauthored (since GPU normal skinning
@@ -2455,13 +2717,13 @@ UsdSkelImagingSkeletonAdapter::_GetSkinnedPrimData(
     return it != _skinnedPrimDataCache.end() ? &it->second : nullptr;
 }
 
-
 UsdSkelImagingSkeletonAdapter::_SkinnedPrimData::_SkinnedPrimData(
+    const SdfPath& skelPath,
     const UsdSkelSkeletonQuery& skelQuery,
     const UsdSkelSkinningQuery& skinningQuery,
     const SdfPath& skelRootPath)
     : skinningQuery(skinningQuery),
-      skelPath(skelQuery.GetPrim().GetPath()),
+      skelPath(skelPath),
       skelRootPath(skelRootPath),
       hasJointInfluences(skinningQuery.HasJointInfluences())
 {

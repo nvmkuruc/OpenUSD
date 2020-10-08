@@ -77,16 +77,6 @@ public:
         // nv end
             const override;
 
-    /// Thread Safe.
-    USDIMAGING_API
-    void UpdateForTime(
-        UsdPrim const& prim,
-        SdfPath const& cachePath, 
-        UsdTimeCode time,
-        HdDirtyBits requestedBits,
-        UsdImagingInstancerContext const* instancerContext = nullptr) 
-            const override;
-
     // ---------------------------------------------------------------------- //
     /// \name Change Processing
     // ---------------------------------------------------------------------- //
@@ -96,14 +86,18 @@ public:
                                       SdfPath const& cachePath,
                                       TfToken const& propertyName) override;
 
+    // ---------------------------------------------------------------------- //
+    /// \name Data access
+    // ---------------------------------------------------------------------- //
+
+    USDIMAGING_API
+    VtValue GetTopology(UsdPrim const& prim,
+                        SdfPath const& cachePath,
+                        UsdTimeCode time) const override;
+
 protected:
     USDIMAGING_API
     bool _IsBuiltinPrimvar(TfToken const& primvarName) const override;
-
-private:
-    void _GetBasisCurvesTopology(UsdPrim const& prim, 
-                                 VtValue* topoHolder, 
-                                 UsdTimeCode time) const;
 };
 
 
