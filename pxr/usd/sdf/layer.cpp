@@ -442,11 +442,6 @@ SdfLayer::_CreateNew(
 
         layer = _CreateNewWithFormat(
             fileFormat, absIdentifier, localPath, assetInfo, args);
-<<<<<<< HEAD
-    }
-    if (layer)
-    {
-=======
 
         if (!TF_VERIFY(layer)) {
             return TfNullPtr;
@@ -456,7 +451,6 @@ SdfLayer::_CreateNew(
         // invalidate them but they should still be good.
         SdfLayerHints hints = layer->_hints;
 
->>>>>>> v20.11-rc1
         // XXX 2011-08-19 Newly created layers should not be
         // saved to disk automatically.
         //

@@ -159,23 +159,6 @@ UsdImagingCubeAdapter::GetMeshTopology()
     return VtValue(HdMeshTopology(UsdImagingGetUnitCubeMeshTopology()));
 }
 
-<<<<<<< HEAD
-// #nv begin #clean-property-invalidation
-/*virtual*/
-HdDirtyBits
-UsdImagingCubeAdapter::ProcessPropertyChange(
-    UsdPrim const& prim,
-    SdfPath const& cachePath,
-    TfToken const& propertyName)
-{
-    if (propertyName == UsdGeomTokens->size)
-        return HdChangeTracker::DirtyPoints;
-
-    // Allow base class to handle change processing.
-    return BaseAdapter::ProcessPropertyChange(prim, cachePath, propertyName);
-}
-// nv end
-=======
 /*virtual*/ 
 VtValue
 UsdImagingCubeAdapter::GetTopology(UsdPrim const& prim,
@@ -187,7 +170,6 @@ UsdImagingCubeAdapter::GetTopology(UsdPrim const& prim,
 
     return GetMeshTopology();
 }
->>>>>>> v20.11-rc1
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

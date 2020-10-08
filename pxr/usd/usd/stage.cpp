@@ -3911,14 +3911,14 @@ UsdStage::_HandleLayersDidChange(
 
                 // Filter out all changes to objects beneath instances and remap
                 // them to the corresponding object in the instance's master.
-                auto remapChangesToMasters = [this](std::vector<SdfFastUpdateList::FastUpdate>* changes) {
+                auto remapChangesToProtos = [this](std::vector<SdfFastUpdateList::FastUpdate>* changes) {
                     std::vector<SdfFastUpdateList::FastUpdate> masterChanges;
                     for (auto it = changes->begin(); it != changes->end(); ) {
                         if (_IsObjectDescendantOfInstance(it->path)) {
                             const SdfPath primIndexPath =
                                 it->path.GetAbsoluteRootOrPrimPath();
                             for (const SdfPath& pathInMaster :
-                                _instanceCache->GetPrimsInMastersUsingPrimIndexPath(
+                                _instanceCache->GetPrimsInPrototypesUsingPrimIndexPath(
                                     primIndexPath)) {
                                 masterChanges.push_back(
                                     { it->path.ReplacePrefix(primIndexPath, pathInMaster),
@@ -3934,7 +3934,7 @@ UsdStage::_HandleLayersDidChange(
 
                 };
 
-                remapChangesToMasters(&remappedFastUpdates);
+                remapChangesToProtos(&remappedFastUpdates);
                 TRACE_SCOPE("fastUpdate UsdNotice::ObjectChanged - recomposition");
                 UsdNotice::ObjectsChanged(
                     self, &recomposeChanges, &otherInfoChanges, &remappedFastUpdates).Send(self);

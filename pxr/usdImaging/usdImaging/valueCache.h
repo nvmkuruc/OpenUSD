@@ -91,27 +91,6 @@ public:
             static TfToken attr("primvars");
             return Key(path, attr);
         }
-<<<<<<< HEAD
-        static Key Topology(SdfPath const& path) {
-            static TfToken attr("topology");
-            return Key(path, attr);
-        }
-        static Key Transform(SdfPath const& path) {
-            static TfToken attr("transform");
-            return Key(path, attr);
-        }
-        static Key Visible(SdfPath const& path) {
-            static TfToken attr("visible");
-            return Key(path, attr);
-        }
-        static Key Widths(SdfPath const& path) {
-            static TfToken attr("widths");
-            return Key(path, attr);
-        }
-        static Key Normals(SdfPath const& path) {
-            static TfToken attr("normals");
-            return Key(path, attr);
-        }
 		//+NV_CHANGE FRZHANG : NV GPU Skinning
 		//skinned prim keys
 		static Key RestPoints(SdfPath const& path) {
@@ -164,40 +143,6 @@ public:
 			return Key(path, attr);
 		}
 		//-NV_CHANGE FRZHANG
-        static Key MaterialId(SdfPath const& path) {
-            static TfToken attr("materialId");
-            return Key(path, attr);
-        }
-        static Key MaterialResource(SdfPath const& path) {
-            static TfToken attr("materialResource");
-            return Key(path, attr);
-        }
-        static Key ExtComputationSceneInputNames(SdfPath const& path) {
-            static TfToken attr("extComputationSceneInputNames");
-            return Key(path, attr);
-        }
-        static Key ExtComputationInputs(SdfPath const& path) {
-            static TfToken attr("extComputationInputs");
-            return Key(path, attr);
-        }
-        static Key ExtComputationOutputs(SdfPath const& path) {
-            static TfToken attr("extComputationOutputs");
-            return Key(path, attr);
-        }
-        static Key ExtComputationPrimvars(SdfPath const& path) {
-            const TfToken attr("extComputationPrimvars");
-            return Key(path, attr);
-        }
-        static Key ExtComputationKernel(SdfPath const& path) {
-            const TfToken attr("extComputationKernel");
-            return Key(path, attr);
-        }
-        static Key CameraParamNames(SdfPath const& path) {
-            static TfToken attr("CameraParamNames");
-            return Key(path, attr);
-        }
-=======
->>>>>>> v20.11-rc1
     };
 
     UsdImagingValueCache()
@@ -332,15 +277,9 @@ public:
     /// Clear all data associated with a specific path.
     void Clear(SdfPath const& path) {
         _Erase<VtValue>(Key::InstanceIndices(path));
-<<<<<<< HEAD
-        _Erase<TfToken>(Key::Purpose(path));
-        _Erase<VtValue>(Key::Topology(path));
-        _Erase<GfMatrix4d>(Key::Transform(path));
-        _Erase<bool>(Key::Visible(path));
-        _Erase<VtValue>(Key::Points(path));
-        _Erase<VtValue>(Key::Widths(path));
-        _Erase<VtValue>(Key::Normals(path));
 		//+NV_CHANGE FRZHANG : NV GPU Skinning
+        // FIXME
+#if 0
 		_Erase<VtValue>(Key::RestPoints(path));
 		_Erase<GfMatrix4d>(Key::GeomBindXform(path));
 		_Erase<VtValue>(Key::JointIndices(path));
@@ -353,11 +292,8 @@ public:
 		_Erase<GfMatrix4d>(Key::PrimWorldToLocal(path));
 		_Erase<VtValue>(Key::SkinningXforms(path));
 		_Erase<GfMatrix4d>(Key::SkelLocalToWorld(path));
+#endif
 		//-NV_CHANGE FRZHANG
-        _Erase<VtValue>(Key::MaterialId(path));
-        _Erase<VtValue>(Key::MaterialResource(path));
-=======
->>>>>>> v20.11-rc1
 
         // PERFORMANCE: We're copying the primvar vector here, but we could
         // access the map directly, if we need to for performance reasons.
@@ -376,23 +312,9 @@ public:
     HdPrimvarDescriptorVector& GetPrimvars(SdfPath const& path) const {
         return _Get<HdPrimvarDescriptorVector>(Key::Primvars(path));
     }
-<<<<<<< HEAD
-    VtValue& GetTopology(SdfPath const& path) const {
-        return _Get<VtValue>(Key::Topology(path));
-    }
-    GfMatrix4d& GetTransform(SdfPath const& path) const {
-        return _Get<GfMatrix4d>(Key::Transform(path));
-    }
-    bool& GetVisible(SdfPath const& path) const {
-        return _Get<bool>(Key::Visible(path));
-    }
-    VtValue& GetWidths(SdfPath const& path) const {
-        return _Get<VtValue>(Key::Widths(path));
-    }
-    VtValue& GetNormals(SdfPath const& path) const {
-        return _Get<VtValue>(Key::Normals(path));
-    }
 	//+NV_CHANGE FRZHANG : NV GPU Skinning
+    // FIXME
+#if 0
 	VtValue& GetRestPoints(SdfPath const& path) const {
 		return _Get<VtValue>(Key::RestPoints(path));
 	}
@@ -429,49 +351,8 @@ public:
 	GfMatrix4d& GetSkelLocalToWorld(SdfPath const& path) const {
 		return _Get<GfMatrix4d>(Key::SkelLocalToWorld(path));
 	}
+#endif
 	//-NV_CHANGE FRZHANG
-    VtValue& GetPrimvar(SdfPath const& path, TfToken const& name) const {
-        return _Get<VtValue>(Key(path, name));
-    }
-    SdfPath& GetMaterialId(SdfPath const& path) const {
-        return _Get<SdfPath>(Key::MaterialId(path));
-    }
-    VtValue& GetMaterialResource(SdfPath const& path) const {
-        return _Get<VtValue>(Key::MaterialResource(path));
-    }
-    TfTokenVector& GetExtComputationSceneInputNames(SdfPath const& path) const {
-        return _Get<TfTokenVector>(Key::ExtComputationSceneInputNames(path));
-    }
-    HdExtComputationInputDescriptorVector&
-    GetExtComputationInputs(SdfPath const& path) const {
-        return _Get<HdExtComputationInputDescriptorVector>(
-            Key::ExtComputationInputs(path));
-    }
-    HdExtComputationOutputDescriptorVector&
-    GetExtComputationOutputs(SdfPath const& path) const {
-        return _Get<HdExtComputationOutputDescriptorVector>(
-            Key::ExtComputationOutputs(path));
-    }
-    HdExtComputationPrimvarDescriptorVector&
-    GetExtComputationPrimvars(SdfPath const& path) const {
-        return _Get<HdExtComputationPrimvarDescriptorVector>(
-            Key::ExtComputationPrimvars(path));
-    }
-    VtValue& GetExtComputationInput(SdfPath const& path,
-                                    TfToken const& name) const {
-        return _Get<VtValue>(Key(path, name));
-    }
-    std::string& GetExtComputationKernel(SdfPath const& path) const {
-        return _Get<std::string>(Key::ExtComputationKernel(path));
-    }
-    VtValue& GetCameraParam(SdfPath const& path, TfToken const& name) const {
-        return _Get<VtValue>(Key(path, name));
-    }
-    TfTokenVector& GetCameraParamNames(SdfPath const& path) const {
-        return _Get<TfTokenVector>(Key::CameraParamNames(path));
-    }
-=======
->>>>>>> v20.11-rc1
 
     bool FindInstanceIndices(SdfPath const& path, VtValue* value) const {
         return _Find(Key::InstanceIndices(path), value);
@@ -479,23 +360,9 @@ public:
     bool FindPrimvars(SdfPath const& path, HdPrimvarDescriptorVector* value) const {
         return _Find(Key::Primvars(path), value);
     }
-<<<<<<< HEAD
-    bool FindTopology(SdfPath const& path, VtValue* value) const {
-        return _Find(Key::Topology(path), value);
-    }
-    bool FindTransform(SdfPath const& path, GfMatrix4d* value) const {
-        return _Find(Key::Transform(path), value);
-    }
-    bool FindVisible(SdfPath const& path, bool* value) const {
-        return _Find(Key::Visible(path), value);
-    }
-    bool FindWidths(SdfPath const& path, VtValue* value) const {
-        return _Find(Key::Widths(path), value);
-    }
-    bool FindNormals(SdfPath const& path, VtValue* value) const {
-        return _Find(Key::Normals(path), value);
-    }
 	//+NV_CHANGE FRZHANG : NV GPU Skinning
+    // FIXME
+#if 0
 	bool FindRestPoints(SdfPath const& path, VtValue* value) const {
 		return _Find(Key::RestPoints(path), value);
 	}
@@ -532,72 +399,17 @@ public:
 	bool FindSkelLocalToWorld(SdfPath const& path, GfMatrix4d* value) const {
 		return _Find(Key::SkelLocalToWorld(path), value);
 	}
+#endif
 	//-NV_CHANGE FRZHANG
-    bool FindMaterialId(SdfPath const& path, SdfPath* value) const {
-        return _Find(Key::MaterialId(path), value);
-    }
-    bool FindMaterialResource(SdfPath const& path, VtValue* value) const {
-        return _Find(Key::MaterialResource(path), value);
-    }
-    bool FindExtComputationSceneInputNames(SdfPath const& path,
-                                           TfTokenVector* value) const {
-        return _Find(Key::ExtComputationSceneInputNames(path), value);
-    }
-    bool FindExtComputationInputs(
-        SdfPath const& path,
-        HdExtComputationInputDescriptorVector* value) const {
-        return _Find(Key::ExtComputationInputs(path), value);
-    }
-    bool FindExtComputationOutputs(
-        SdfPath const& path,
-        HdExtComputationOutputDescriptorVector* value) const {
-        return _Find(Key::ExtComputationOutputs(path), value);
-    }
-    bool FindExtComputationPrimvars(
-        SdfPath const& path,
-        HdExtComputationPrimvarDescriptorVector* value) const {
-        return _Find(Key::ExtComputationPrimvars(path), value);
-    }
-    bool FindExtComputationInput(
-        SdfPath const& path, TfToken const& name, VtValue* value) const {
-        return _Find(Key(path, name), value);
-    }
-    bool FindExtComputationKernel(SdfPath const& path, std::string* value) const {
-        return _Find(Key::ExtComputationKernel(path), value);
-    }
-    bool FindCameraParam(SdfPath const& path, TfToken const& name,
-                         VtValue* value) const {
-        return _Find(Key(path, name), value);
-    }
-    bool FindCameraParamNames(SdfPath const& path, TfTokenVector* value) const {
-        return _Find(Key::CameraParamNames(path), value);
-    }
-=======
->>>>>>> v20.11-rc1
-
     bool ExtractInstanceIndices(SdfPath const& path, VtValue* value) {
         return _Extract(Key::InstanceIndices(path), value);
     }
     bool ExtractPrimvars(SdfPath const& path, HdPrimvarDescriptorVector* value) {
         return _Extract(Key::Primvars(path), value);
     }
-<<<<<<< HEAD
-    bool ExtractTopology(SdfPath const& path, VtValue* value) {
-        return _Extract(Key::Topology(path), value);
-    }
-    bool ExtractTransform(SdfPath const& path, GfMatrix4d* value) {
-        return _Extract(Key::Transform(path), value);
-    }
-    bool ExtractVisible(SdfPath const& path, bool* value) {
-        return _Extract(Key::Visible(path), value);
-    }
-    bool ExtractWidths(SdfPath const& path, VtValue* value) {
-        return _Extract(Key::Widths(path), value);
-    }
-    bool ExtractNormals(SdfPath const& path, VtValue* value) {
-        return _Extract(Key::Normals(path), value);
-    }
 	//+NV_CHANGE FRZHANG : NV GPU Skinning
+    // FIXME
+#if 0
 	bool ExtractRestPoints(SdfPath const& path, VtValue* value) {
 		return _Extract(Key::RestPoints(path), value);
 	}
@@ -634,67 +446,15 @@ public:
 	bool ExtractSkelLocalToWorld(SdfPath const& path, GfMatrix4d* value) {
 		return _Extract(Key::SkelLocalToWorld(path), value);
 	}
+#endif
 	//-NV_CHANGE FRZHANG
-    bool ExtractMaterialId(SdfPath const& path, SdfPath* value) {
-        return _Extract(Key::MaterialId(path), value);
-    }
-    bool ExtractMaterialResource(SdfPath const& path, VtValue* value) {
-        return _Extract(Key::MaterialResource(path), value);
-    }
-    bool ExtractPrimvar(SdfPath const& path, TfToken const& name, VtValue* value) {
-        return _Extract(Key(path, name), value);
-    }
-    bool ExtractExtComputationSceneInputNames(SdfPath const& path,
-                                              TfTokenVector* value) {
-        return _Extract(Key::ExtComputationSceneInputNames(path), value);
-    }
-    bool ExtractExtComputationInputs(
-        SdfPath const& path,
-        HdExtComputationInputDescriptorVector* value) {
-        return _Extract(Key::ExtComputationInputs(path), value);
-    }
-    bool ExtractExtComputationOutputs(
-        SdfPath const& path,
-        HdExtComputationOutputDescriptorVector* value) {
-        return _Extract(Key::ExtComputationOutputs(path), value);
-    }
-    bool ExtractExtComputationPrimvars(
-        SdfPath const& path,
-        HdExtComputationPrimvarDescriptorVector* value) {
-        return _Extract(Key::ExtComputationPrimvars(path), value);
-    }
-    bool ExtractExtComputationInput(SdfPath const& path, TfToken const& name,
-                                    VtValue* value) {
-        return _Extract(Key(path, name), value);
-    }
-    bool ExtractExtComputationKernel(SdfPath const& path, std::string* value) {
-        return _Extract(Key::ExtComputationKernel(path), value);
-    }
-    bool ExtractCameraParam(SdfPath const& path, TfToken const& name,
-                            VtValue* value) {
-        return _Extract(Key(path, name), value);
-    }
-    // Skip adding ExtractCameraParamNames as we don't expose scene delegate
-    // functionality to query all available parameters on a camera.
-=======
->>>>>>> v20.11-rc1
 
     /// Remove any items from the cache that are marked for defered deletion.
     void GarbageCollect()
     {
-<<<<<<< HEAD
-        _GarbageCollect(_boolCache);
 		//+NV_CHANGE FRZHANG
 		_GarbageCollect(_intCache);
 		//-NV_CHANGE FRZHANG
-        _GarbageCollect(_tokenCache);
-        _GarbageCollect(_tokenVectorCache);
-        _GarbageCollect(_rangeCache);
-        _GarbageCollect(_cullStyleCache);
-        _GarbageCollect(_matrixCache);
-        _GarbageCollect(_vec4Cache);
-=======
->>>>>>> v20.11-rc1
         _GarbageCollect(_valueCache);
         _GarbageCollect(_pviCache);
     }
@@ -702,97 +462,22 @@ public:
 private:
     bool _locked;
 
-<<<<<<< HEAD
-    // visible, doubleSided
-    typedef _TypedCache<bool> _BoolCache;
-    mutable _BoolCache _boolCache;
-
 	//+NV_CHANGE FRZHANG
 	typedef _TypedCache<int> _IntCache;
 	mutable _IntCache _intCache;
 	//-NV_CHANGE FRZHANG
 
-    // purpose
-    typedef _TypedCache<TfToken> _TokenCache;
-    mutable _TokenCache _tokenCache;
-
-    // extComputationSceneInputNames
-    typedef _TypedCache<TfTokenVector> _TokenVectorCache;
-    mutable _TokenVectorCache _tokenVectorCache;
-
-    // extent
-    typedef _TypedCache<GfRange3d> _RangeCache;
-    mutable _RangeCache _rangeCache;
-
-    // cullstyle
-    typedef _TypedCache<HdCullStyle> _CullStyleCache;
-    mutable _CullStyleCache _cullStyleCache;
-
-    // transform
-    typedef _TypedCache<GfMatrix4d> _MatrixCache;
-    mutable _MatrixCache _matrixCache;
-
-    // color (will be VtValue)
-    typedef _TypedCache<GfVec4f> _Vec4Cache;
-    mutable _Vec4Cache _vec4Cache;
-
-    // sdfPath
-    typedef _TypedCache<SdfPath> _SdfPathCache;
-    mutable _SdfPathCache _sdfPathCache;
-
-    // primvars, topology, materialResources, extCompInputs
-=======
->>>>>>> v20.11-rc1
     typedef _TypedCache<VtValue> _ValueCache;
     mutable _ValueCache _valueCache;
 
     typedef _TypedCache<HdPrimvarDescriptorVector> _PviCache;
     mutable _PviCache _pviCache;
 
-<<<<<<< HEAD
-    typedef _TypedCache<std::string> _StringCache;
-    mutable _StringCache _stringCache;
-
-    typedef _TypedCache<HdExtComputationInputDescriptorVector>
-        _ExtComputationInputsCache;
-    mutable _ExtComputationInputsCache _extComputationInputsCache;
-
-    typedef _TypedCache<HdExtComputationOutputDescriptorVector>
-        _ExtComputationOutputsCache;
-    mutable _ExtComputationOutputsCache _extComputationOutputsCache;
-
-    typedef _TypedCache<HdExtComputationPrimvarDescriptorVector>
-        _ExtComputationPrimvarsCache;
-    mutable _ExtComputationPrimvarsCache _extComputationPrimvarsCache;
-
-    void _GetCache(_BoolCache **cache) const {
-        *cache = &_boolCache;
-    }
 	//+NV_CHANGE FRZHANG
 	void _GetCache(_IntCache **cache) const {
 		*cache = &_intCache;
 	}
 	//_NV_CHANGE
-    void _GetCache(_TokenCache **cache) const {
-        *cache = &_tokenCache;
-    }
-    void _GetCache(_TokenVectorCache **cache) const {
-        *cache = &_tokenVectorCache;
-    }
-    void _GetCache(_RangeCache **cache) const {
-        *cache = &_rangeCache;
-    }
-    void _GetCache(_CullStyleCache **cache) const {
-        *cache = &_cullStyleCache;
-    }
-    void _GetCache(_MatrixCache **cache) const {
-        *cache = &_matrixCache;
-    }
-    void _GetCache(_Vec4Cache **cache) const {
-        *cache = &_vec4Cache;
-    }
-=======
->>>>>>> v20.11-rc1
     void _GetCache(_ValueCache **cache) const {
         *cache = &_valueCache;
     }

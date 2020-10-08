@@ -95,13 +95,6 @@ public:
 /// \name Change Processing
 // ---------------------------------------------------------------------- //
 
-    // #nv begin #fast-updates
-    USDIMAGING_API
-    virtual HdDirtyBits ProcessPropertyChange(UsdPrim const& prim,
-        SdfPath const& cachePath,
-        TfToken const& propertyName) override;
-    // nv end
-
     // Override the implemetation in GprimAdapter since we don't fetch the
     // points attribute for implicit primitives.
     USDIMAGING_API

@@ -357,7 +357,6 @@ private:
             HdDirtyBits requestedBits,
             const UsdImagingInstancerContext* instancerContext=nullptr) const;
 
-<<<<<<< HEAD
     //+NV_CHANGE FRZHANG
     // ---------------------------------------------------------------------- //
     /// Handlers for skelAnimation
@@ -365,7 +364,7 @@ private:
     bool _IsSkelAnimPrimPath(const SdfPath& cachePath) const;
     
     //-NV_CHANGE FRZHANG
-=======
+
     // ---------------------------------------------------------------------- //
     /// GetExtComputationInput() helpers
     // ---------------------------------------------------------------------- //
@@ -385,8 +384,6 @@ private:
             TfToken const& name,
             UsdTimeCode time,
             const UsdImagingInstancerContext* instancerContext) const;
-
->>>>>>> v20.11-rc1
 
     // ---------------------------------------------------------------------- //
     /// Populated skeleton state

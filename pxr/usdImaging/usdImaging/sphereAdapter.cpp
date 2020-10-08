@@ -78,7 +78,6 @@ UsdImagingSphereAdapter::TrackVariability(UsdPrim const& prim,
                                           // nv end
 {
     BaseAdapter::TrackVariability(
-<<<<<<< HEAD
         prim, cachePath, timeVaryingBits, instancerContext,
         // #nv begin fast-updates
         checkVariability);
@@ -90,18 +89,8 @@ UsdImagingSphereAdapter::TrackVariability(UsdPrim const& prim,
         return;
     // nv end
 
-    // WARNING: This method is executed from multiple threads, the value cache
-    // has been carefully pre-populated to avoid mutating the underlying
-    // container during update.
-    
-    // The base adapter may already be setting that points dirty bit.
-    // _IsVarying will clear it, so check it isn't already marked as
-    // varying before checking for additional set cases.
-=======
-        prim, cachePath, timeVaryingBits, instancerContext);
 
     // Check DirtyPoints before doing variability checks, to see if we can skip.
->>>>>>> v20.11-rc1
     if ((*timeVaryingBits & HdChangeTracker::DirtyPoints) == 0) {
         _IsVarying(prim, UsdGeomTokens->radius,
                       HdChangeTracker::DirtyPoints,
@@ -130,21 +119,6 @@ UsdImagingSphereAdapter::GetPoints(UsdPrim const& prim,
 {
     return GetMeshPoints(prim, time);   
 }
-
-// #nv begin #fast-updates
-/*virtual*/
-HdDirtyBits
-UsdImagingSphereAdapter::ProcessPropertyChange(UsdPrim const& prim,
-    SdfPath const& cachePath,
-    TfToken const& propertyName)
-{
-    if (propertyName == UsdGeomTokens->radius)
-        return HdChangeTracker::DirtyPoints;
-
-    // Allow base class to handle change processing.
-    return BaseAdapter::ProcessPropertyChange(prim, cachePath, propertyName);
-}
-// nv end
 
 static GfMatrix4d
 _GetImplicitGeomScaleTransform(UsdPrim const& prim, UsdTimeCode time)

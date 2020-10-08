@@ -50,15 +50,14 @@ UsdImagingLightFilterAdapter::~UsdImagingLightFilterAdapter()
 
 void 
 UsdImagingLightFilterAdapter::TrackVariability(UsdPrim const& prim,
-                                        SdfPath const& cachePath,
-                                        HdDirtyBits* timeVaryingBits,
-                                        UsdImagingInstancerContext const* 
-                                            instancerContext,
-                                        // #nv begin fast-updates
-                                        bool checkVariability) const
-                                        // nv end
+    SdfPath const& cachePath,
+    HdDirtyBits* timeVaryingBits,
+    UsdImagingInstancerContext const*
+    instancerContext,
+    // #nv begin fast-updates
+    bool checkVariability) const
+    // nv end
 {
-<<<<<<< HEAD
     if (checkVariability) {
         // Discover time-varying transforms.
         _IsTransformVarying(prim,
@@ -69,42 +68,26 @@ UsdImagingLightFilterAdapter::TrackVariability(UsdPrim const& prim,
         // If any of the light attributes is time varying 
         // we will assume all light params are time-varying.
         const std::vector<UsdAttribute> &attrs = prim.GetAttributes();
-        TF_FOR_ALL(attrIter, attrs) {
-            const UsdAttribute& attr = *attrIter;
-            if (attr.GetNumTimeSamples()>1){
+        for (UsdAttribute const& attr : attrs) {
+            // Don't double-count transform attrs.
+            if (UsdGeomXformable::IsTransformationAffectedByAttrNamed(
+                attr.GetBaseName())) {
+                continue;
+            }
+            if (attr.GetNumTimeSamples() > 1) {
                 *timeVaryingBits |= HdLight::DirtyBits::DirtyParams;
                 break;
             }
-=======
-    // Discover time-varying transforms.
-    _IsTransformVarying(prim,
-        HdLight::DirtyBits::DirtyTransform,
-        UsdImagingTokens->usdVaryingXform,
-        timeVaryingBits);
-
-    // If any of the light attributes is time varying 
-    // we will assume all light params are time-varying.
-    const std::vector<UsdAttribute> &attrs = prim.GetAttributes();
-    for (UsdAttribute const& attr : attrs) {
-        // Don't double-count transform attrs.
-        if (UsdGeomXformable::IsTransformationAffectedByAttrNamed(
-                attr.GetBaseName())) {
-            continue;
         }
-        if (attr.GetNumTimeSamples()>1){
-            *timeVaryingBits |= HdLight::DirtyBits::DirtyParams;
-            break;
->>>>>>> v20.11-rc1
-        }
-    }
 
-    UsdLuxLightFilter lightFilter(prim);
-    if (TF_VERIFY(lightFilter)) {
-        UsdImaging_CollectionCache &collectionCache = _GetCollectionCache();
-        collectionCache.UpdateCollection(
-                                lightFilter.GetFilterLinkCollectionAPI());
-        // TODO: When collections change we need to invalidate affected
-        // prims with the DirtyCollections flag.
+        UsdLuxLightFilter lightFilter(prim);
+        if (TF_VERIFY(lightFilter)) {
+            UsdImaging_CollectionCache &collectionCache = _GetCollectionCache();
+            collectionCache.UpdateCollection(
+                lightFilter.GetFilterLinkCollectionAPI());
+            // TODO: When collections change we need to invalidate affected
+            // prims with the DirtyCollections flag.
+        }
     }
 }
 

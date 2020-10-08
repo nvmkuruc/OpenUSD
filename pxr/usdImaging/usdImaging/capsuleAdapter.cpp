@@ -81,7 +81,6 @@ UsdImagingCapsuleAdapter::TrackVariability(UsdPrim const& prim,
                                           // nv end
 {
     BaseAdapter::TrackVariability(
-<<<<<<< HEAD
         prim, cachePath, timeVaryingBits, instancerContext,
         // #nv begin fast-updates
         checkVariability);
@@ -102,12 +101,9 @@ UsdImagingCapsuleAdapter::TrackVariability(UsdPrim const& prim,
     // base adapter invocation) that might result in the bit being set, we need
     // to be careful not to reset it.  Translation: only check _IsVarying for a
     // given cause IFF the bit wasn't already set by a previous invocation.
-=======
-        prim, cachePath, timeVaryingBits, instancerContext);
 
     // Check DirtyPoints before doing variability checks, in case we can skip
     // any of them...
->>>>>>> v20.11-rc1
     if ((*timeVaryingBits & HdChangeTracker::DirtyPoints) == 0) {
         _IsVarying(prim, UsdGeomTokens->height,
                    HdChangeTracker::DirtyPoints,
@@ -175,24 +171,6 @@ UsdImagingCapsuleAdapter::GetMeshTopology()
     return VtValue(HdMeshTopology(UsdImagingGetCapsuleMeshTopology()));
 }
 
-<<<<<<< HEAD
-// #nv begin #clean-property-invalidation
-/*virtual*/
-HdDirtyBits
-UsdImagingCapsuleAdapter::ProcessPropertyChange(
-    UsdPrim const& prim,
-    SdfPath const& cachePath,
-    TfToken const& propertyName)
-{
-    if ((propertyName == UsdGeomTokens->height) || (propertyName == UsdGeomTokens->radius) ||
-        (propertyName == UsdGeomTokens->axis))
-        return HdChangeTracker::DirtyPoints;
-
-    // Allow base class to handle change processing.
-    return BaseAdapter::ProcessPropertyChange(prim, cachePath, propertyName);
-}
-// nv end
-=======
 /*virtual*/ 
 VtValue
 UsdImagingCapsuleAdapter::GetTopology(UsdPrim const& prim,
@@ -203,7 +181,6 @@ UsdImagingCapsuleAdapter::GetTopology(UsdPrim const& prim,
     HF_MALLOC_TAG_FUNCTION();
     return GetMeshTopology();
 }
->>>>>>> v20.11-rc1
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

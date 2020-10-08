@@ -783,23 +783,14 @@ UsdImagingPointInstancerAdapter::ProcessPropertyChange(UsdPrim const& prim,
             /*inherited=*/false);
     }
 
-    // #nv begin #clean-property-invalidation
-    return GetDelegate()->ProcessNonAdapterBasedPropertyChange(prim, cachePath, propertyName);
-
     // XXX: Treat transform & visibility changes as re-sync, until we untangle
     // instancer vs proto data.
-<<<<<<< HEAD
-    //return HdChangeTracker::AllDirty;
-
-    // nv end
-=======
     if (propertyName == UsdGeomTokens->visibility ||
         UsdGeomXformable::IsTransformationAffectedByAttrNamed(propertyName)) {
         return HdChangeTracker::AllDirty;
     }
 
     return HdChangeTracker::Clean;
->>>>>>> v20.11-rc1
 }
 
 void

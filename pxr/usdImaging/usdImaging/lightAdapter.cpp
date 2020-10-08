@@ -51,110 +51,87 @@ bool UsdImagingLightAdapter::IsEnabledSceneLights() {
     return _v;
 }
 
-// #nv begin #sparse-light-updates
-TF_DEFINE_ENV_SETTING(USDIMAGING_ENABLE_SPARSE_LIGHT_UPDATES, 0,
-                      "Enable sparse updates to scene lights.");
-// nv end
-
 UsdImagingLightAdapter::~UsdImagingLightAdapter() 
 {
 }
 
 void 
 UsdImagingLightAdapter::TrackVariability(UsdPrim const& prim,
-                                        SdfPath const& cachePath,
-                                        HdDirtyBits* timeVaryingBits,
-                                        UsdImagingInstancerContext const* 
-<<<<<<< HEAD
-                                            instancerContext,
-                                        // #nv begin fast-updates
-                                        bool checkVariability) const
-                                        // nv end
+    SdfPath const& cachePath,
+    HdDirtyBits* timeVaryingBits,
+    UsdImagingInstancerContext const*
+    instancerContext,
+    // #nv begin fast-updates
+    bool checkVariability) const
+    // nv end
 {
     // #nv begin fast-updates
     if (checkVariability) {
-    // nv end
-        // Discover time-varying transforms.
+        // nv end
+            // Discover time-varying transforms.
         _IsTransformVarying(prim,
             HdLight::DirtyBits::DirtyTransform,
             UsdImagingTokens->usdVaryingXform,
             timeVaryingBits);
 
-        // If any of the light attributes is time varying
+        // Discover time-varying visibility.
+        _IsVarying(prim,
+            UsdGeomTokens->visibility,
+            HdLight::DirtyBits::DirtyParams,
+            UsdImagingTokens->usdVaryingVisibility,
+            timeVaryingBits,
+            true);
+
+        // If any of the light attributes is time varying 
         // we will assume all light params are time-varying.
         const std::vector<UsdAttribute> &attrs = prim.GetAttributes();
-        TF_FOR_ALL(attrIter, attrs) {
-            const UsdAttribute& attr = *attrIter;
-            if (attr.GetNumTimeSamples()>1){
+        for (UsdAttribute const& attr : attrs) {
+            // Don't double-count transform attrs.
+            if (UsdGeomXformable::IsTransformationAffectedByAttrNamed(
+                attr.GetBaseName())) {
+                continue;
+            }
+            if (attr.GetNumTimeSamples() > 1) {
                 *timeVaryingBits |= HdLight::DirtyBits::DirtyParams;
                 break;
             }
-=======
-                                        instancerContext) const
-{
-    // Discover time-varying transforms.
-    _IsTransformVarying(prim,
-        HdLight::DirtyBits::DirtyTransform,
-        UsdImagingTokens->usdVaryingXform,
-        timeVaryingBits);
-
-    // Discover time-varying visibility.
-    _IsVarying(prim,
-        UsdGeomTokens->visibility,
-        HdLight::DirtyBits::DirtyParams,
-        UsdImagingTokens->usdVaryingVisibility,
-        timeVaryingBits,
-        true);
-    
-    // If any of the light attributes is time varying 
-    // we will assume all light params are time-varying.
-    const std::vector<UsdAttribute> &attrs = prim.GetAttributes();
-    for (UsdAttribute const& attr : attrs) {
-        // Don't double-count transform attrs.
-        if (UsdGeomXformable::IsTransformationAffectedByAttrNamed(
-                attr.GetBaseName())) {
-            continue;
-        }
-        if (attr.GetNumTimeSamples()>1){
-            *timeVaryingBits |= HdLight::DirtyBits::DirtyParams;
-            break;
->>>>>>> v20.11-rc1
-        }
-    }
-
-    UsdImagingValueCache* valueCache = _GetValueCache();
-
-    UsdLuxLight light(prim);
-    if (TF_VERIFY(light)) {
-        UsdImaging_CollectionCache &collectionCache = _GetCollectionCache();
-        collectionCache.UpdateCollection(light.GetLightLinkCollectionAPI());
-        collectionCache.UpdateCollection(light.GetShadowLinkCollectionAPI());
-        // TODO: When collections change we need to invalidate affected
-        // prims with the DirtyCollections flag.
-    }
-
-    // XXX Cache primvars for lights.
-    {
-        // Establish a valueCache entry.
-        HdPrimvarDescriptorVector& vPrimvars = 
-            valueCache->GetPrimvars(cachePath);
-
-        // Compile a list of primvars to check.
-        std::vector<UsdGeomPrimvar> primvars;
-        UsdImaging_InheritedPrimvarStrategy::value_type inheritedPrimvarRecord =
-            _GetInheritedPrimvars(prim.GetParent());
-        if (inheritedPrimvarRecord) {
-            primvars = inheritedPrimvarRecord->primvars;
         }
 
-        UsdGeomPrimvarsAPI primvarsAPI(prim);
-        std::vector<UsdGeomPrimvar> local = primvarsAPI.GetPrimvarsWithValues();
-        primvars.insert(primvars.end(), local.begin(), local.end());
-        for (auto const &pv : primvars) {
-            _ComputeAndMergePrimvar(prim, pv, UsdTimeCode(), &vPrimvars);
+        UsdImagingValueCache* valueCache = _GetValueCache();
+
+        UsdLuxLight light(prim);
+        if (TF_VERIFY(light)) {
+            UsdImaging_CollectionCache &collectionCache = _GetCollectionCache();
+            collectionCache.UpdateCollection(light.GetLightLinkCollectionAPI());
+            collectionCache.UpdateCollection(light.GetShadowLinkCollectionAPI());
+            // TODO: When collections change we need to invalidate affected
+            // prims with the DirtyCollections flag.
+        }
+
+        // XXX Cache primvars for lights.
+        {
+            // Establish a valueCache entry.
+            HdPrimvarDescriptorVector& vPrimvars =
+                valueCache->GetPrimvars(cachePath);
+
+            // Compile a list of primvars to check.
+            std::vector<UsdGeomPrimvar> primvars;
+            UsdImaging_InheritedPrimvarStrategy::value_type inheritedPrimvarRecord =
+                _GetInheritedPrimvars(prim.GetParent());
+            if (inheritedPrimvarRecord) {
+                primvars = inheritedPrimvarRecord->primvars;
+            }
+
+            UsdGeomPrimvarsAPI primvarsAPI(prim);
+            std::vector<UsdGeomPrimvar> local = primvarsAPI.GetPrimvarsWithValues();
+            primvars.insert(primvars.end(), local.begin(), local.end());
+            for (auto const &pv : primvars) {
+                _ComputeAndMergePrimvar(prim, pv, UsdTimeCode(), &vPrimvars);
+            }
         }
     }
 }
+
 
 // Thread safe.
 //  * Populate dirty bits for the given \p time.
@@ -182,10 +159,11 @@ UsdImagingLightAdapter::UpdateForTime(UsdPrim const& prim,
     }
 
     if (requestedBits & HdChangeTracker::DirtyMaterialId){
+        // FIXME
         // Although the material binding cache generally holds
         // cachePaths, not usdPaths, we can use the usdPath
         // directly here since we do not instance sprims.
-        valueCache->GetMaterialId(cachePath) = materialUsdPath;
+        //valueCache->GetMaterialId(cachePath) = materialUsdPath;
 
         TF_DEBUG(USDIMAGING_SHADERS).Msg("Shader for <%s> is <%s>\n",
                 prim.GetPath().GetText(), materialUsdPath.GetText());
@@ -198,25 +176,11 @@ UsdImagingLightAdapter::ProcessPropertyChange(UsdPrim const& prim,
                                       SdfPath const& cachePath, 
                                       TfToken const& propertyName)
 {
-<<<<<<< HEAD
-    // #nv begin #sparse-light-updates
-    static bool sparseUpdatesEnabled = TfGetEnvSetting(USDIMAGING_ENABLE_SPARSE_LIGHT_UPDATES);
-    if (sparseUpdatesEnabled) {
-        if (UsdGeomXformable::IsTransformationAffectedByAttrNamed(propertyName)) {
-            return HdLight::DirtyTransform;
-        }
-        return HdLight::AllDirty;
-    }
-    // nv end
-
-    return HdChangeTracker::AllDirty;
-=======
     if (UsdGeomXformable::IsTransformationAffectedByAttrNamed(propertyName)) {
         return HdLight::DirtyBits::DirtyTransform;
     }
     // "DirtyParam" is the catch-all bit for light params.
     return HdLight::DirtyBits::DirtyParams;
->>>>>>> v20.11-rc1
 }
 
 void

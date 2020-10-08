@@ -751,21 +751,18 @@ UsdImagingGLDrawModeAdapter::TrackVariability(UsdPrim const& prim,
         return;
     }
 
-<<<<<<< HEAD
-    // WARNING: This method is executed from multiple threads, the value cache
-    // has been carefully pre-populated to avoid mutating the underlying
-    // container during update.
-
-    UsdImagingValueCache* valueCache = _GetValueCache();
-
     // #nv begin fast-updates
     if (checkVariability) {
     // nv end
-        // Discover time-varying transforms.
-        _IsTransformVarying(prim,
+        // Discover time-varying transforms. If this card is instantiated on an
+        // instance, skip since the instance adapter will handle transforms
+        // and master roots always have identity transform.
+        if (!prim.IsInstance()) {
+            _IsTransformVarying(prim,
                 HdChangeTracker::DirtyTransform,
                 UsdImagingTokens->usdVaryingXform,
                 timeVaryingBits);
+        }
 
         // Discover time-varying visibility.
         _IsVarying(prim,
@@ -775,26 +772,6 @@ UsdImagingGLDrawModeAdapter::TrackVariability(UsdPrim const& prim,
                 timeVaryingBits,
                 true);
     }
-=======
-    // Discover time-varying transforms. If this card is instantiated on an
-    // instance, skip since the instance adapter will handle transforms
-    // and master roots always have identity transform.
-    if (!prim.IsInstance()) {
-        _IsTransformVarying(prim,
-            HdChangeTracker::DirtyTransform,
-            UsdImagingTokens->usdVaryingXform,
-            timeVaryingBits);
-    }
-
-    // Discover time-varying visibility.
-    _IsVarying(prim,
-            UsdGeomTokens->visibility,
-            HdChangeTracker::DirtyVisibility,
-            UsdImagingTokens->usdVaryingVisibility,
-            timeVaryingBits,
-            true);
->>>>>>> v20.11-rc1
-
 }
 
 void

@@ -67,25 +67,17 @@ public:
 
     /// Thread Safe.
     USDIMAGING_API
-<<<<<<< HEAD
     virtual void TrackVariability(UsdPrim const& prim,
-                                  SdfPath const& cachePath,
-                                  HdDirtyBits* timeVaryingBits,
-                                  UsdImagingInstancerContext const* 
-                                      instancerContext = NULL,
-                                  // #nv begin fast-updates
-                                  // If checkVariabilty is false, this method
-                                  // only populates the value cache with initial values.
-                                  bool checkVariability = true) const override;
-                                  // nv end
-=======
-    void TrackVariability(UsdPrim const& prim,
                           SdfPath const& cachePath,
                           HdDirtyBits* timeVaryingBits,
                           UsdImagingInstancerContext const* 
-                              instancerContext = nullptr) const override;
+                              instancerContext = NULL,
+                          // #nv begin fast-updates
+                          // If checkVariabilty is false, this method
+                          // only populates the value cache with initial values.
+                          bool checkVariability = true) const override;
+                          // nv end
 
->>>>>>> v20.11-rc1
 
     /// Thread Safe.
     USDIMAGING_API

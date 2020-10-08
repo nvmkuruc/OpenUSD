@@ -204,19 +204,6 @@ UsdImagingMaterialAdapter::UpdateForTime(
     UsdImagingInstancerContext const*
     instancerContext) const
 {
-<<<<<<< HEAD
-    if (requestedBits & HdMaterial::DirtyResource) {
-        // Walk the material network and generate a HdMaterialNetworkMap
-        // structure to store it in the value cache.
-        bool timeVarying = false;
-        HdMaterialNetworkMap map;
-        TfToken const& networkSelector = _GetMaterialNetworkSelector();
-        _GetMaterialNetworkMap(prim, networkSelector, &map, time, &timeVarying);
-        UsdImagingValueCache* valueCache = _GetValueCache();
-        valueCache->GetMaterialResource(cachePath) = map;
-    }
-=======
->>>>>>> v20.11-rc1
 }
 
 /* virtual */
@@ -469,11 +456,6 @@ void _WalkGraph(
         _ExtractPrimvarsFromNode(node, materialNetwork, networkSelector);
     }
 
-<<<<<<< HEAD
-        _ExtractPrimvarsFromNode(
-            shadeNode, node, materialNetwork, networkSelector);
-    } 
-
  // #nv begin #new-MDL-schema   
     if (node.identifier.IsEmpty()) {
         _GetShaderNodeForSourceTypeFallbackNV(
@@ -481,8 +463,6 @@ void _WalkGraph(
     }  
 // #nv end
 
-=======
->>>>>>> v20.11-rc1
     materialNetwork->nodes.push_back(node);
 }
 

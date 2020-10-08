@@ -39,19 +39,11 @@ def ValidateExpectedInstances(stage, expectedInstances):
     expectedInstances is a mapping from:
         prototype prim path -> list of expected instance prim paths
     """
-<<<<<<< HEAD
-    for (masterPath, instancePaths) in list(expectedInstances.items()):
-        # Validate that all prims expected to be instances of the same master
-        # are associated with the same master prim.
-        master = stage.GetPrimAtPath(masterPath)
-        assert master, "Expected master <%s> does not exist" % masterPath
-=======
     for (prototypePath, instancePaths) in expectedInstances.items():
         # Validate that all prims expected to be instances of the same prototype
         # are associated with the same prototype prim.
         prototype = stage.GetPrimAtPath(prototypePath)
         assert prototype, "Expected prototype <%s> does not exist" % prototypePath
->>>>>>> v20.11-rc1
         for p in instancePaths:
             prim = stage.GetPrimAtPath(p)
             assert prim, "Prim <%s> does not exist" % p

@@ -188,24 +188,6 @@ UsdImagingCylinderAdapter::GetMeshTopology()
     return VtValue(HdMeshTopology(UsdImagingGetUnitCylinderMeshTopology()));
 }
 
-<<<<<<< HEAD
-// #nv begin #clean-property-invalidation
-/*virtual*/
-HdDirtyBits
-UsdImagingCylinderAdapter::ProcessPropertyChange(
-    UsdPrim const& prim,
-    SdfPath const& cachePath,
-    TfToken const& propertyName)
-{
-    if ((propertyName == UsdGeomTokens->height) || (propertyName == UsdGeomTokens->radius) ||
-        (propertyName == UsdGeomTokens->axis))
-        return HdChangeTracker::DirtyPoints;
-
-    // Allow base class to handle change processing.
-    return BaseAdapter::ProcessPropertyChange(prim, cachePath, propertyName);
-}
-// nv end
-=======
 /*virtual*/ 
 VtValue
 UsdImagingCylinderAdapter::GetTopology(UsdPrim const& prim,
@@ -216,7 +198,6 @@ UsdImagingCylinderAdapter::GetTopology(UsdPrim const& prim,
     HF_MALLOC_TAG_FUNCTION();
     return GetMeshTopology();
 }
->>>>>>> v20.11-rc1
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

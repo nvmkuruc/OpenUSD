@@ -169,7 +169,6 @@ UsdSkelImagingSkeletonAdapter::Populate(
         // the skeleton prim on its behalf.
         SdfPath instancer = instancerContext ?
             instancerContext->instancerCachePath : SdfPath();
-<<<<<<< HEAD
         //+NV_CHANGE FRZHANG
         if (_ShouldGenerateJointMesh())
         {
@@ -179,12 +178,8 @@ UsdSkelImagingSkeletonAdapter::Populate(
                // Also, since the bone mesh isn't backed by the UsdStage, we register the
                // skeleton prim on its behalf.
             index->InsertRprim(HdPrimTypeTokens->mesh, prim.GetPath(),
-                instancer, prim, shared_from_this());
+                               instancer, prim, shared_from_this());
         }
-=======
-        index->InsertRprim(HdPrimTypeTokens->mesh, prim.GetPath(),
-                           instancer, prim, shared_from_this());
->>>>>>> v20.11-rc1
     }
 
     // Insert a computation for each skinned prim targeted by this
@@ -401,32 +396,11 @@ UsdSkelImagingSkeletonAdapter::UpdateForTime(
                                             instancerContext);
     }
 
-<<<<<<< HEAD
-    if (_IsSkinningComputationPath(cachePath)) {
-        return _UpdateSkinningComputationForTime(   
-                    prim,
-                    cachePath,
-                    time,
-                    requestedBits,
-                    instancerContext);
-    }
-
-    if (_IsSkinningInputAggregatorComputationPath(cachePath)) {
-        return _UpdateSkinningInputAggregatorComputationForTime(
-                    prim,
-                    cachePath,
-                    time,
-                    requestedBits,
-                    instancerContext);
-    }
-
     //+NV_CHANGE : skelAnim Prim has no Sprim or Rprim to update.
     if (_IsSkelAnimPrimPath(cachePath)) {
         return;
     }
 
-=======
->>>>>>> v20.11-rc1
     TF_CODING_ERROR("UsdSkelImagingSkeletonAdapter::UpdateForTime : Received"
                     " unknown prim %s ", cachePath.GetText());
 }
@@ -1414,29 +1388,10 @@ UsdSkelImagingSkeletonAdapter::GetPurpose(
     return purpose;
 }
 
-<<<<<<< HEAD
-        // Expose points as a primvar.
-        _MergePrimvar(&valueCache->GetPrimvars(cachePath),
-                      HdTokens->points,
-                      HdInterpolationVertex,
-                      HdPrimvarRoleTokens->point);
-        
-        valueCache->GetColor(cachePath) =
-            //+NV_CHANGE FRZHANG : displaycolor should be Vec3fArray
-            //_GetSkeletonDisplayColor(prim, time);
-            VtVec3fArray(1,_GetSkeletonDisplayColor(prim, time));
-            //_NV_CHANGE FRZHANG
-        valueCache->GetOpacity(cachePath) =
-            //+NV_CHANGE FRZHANG : displayopacity should be VtFloatArray
-            //_GetSkeletonDisplayOpacity(prim, time);
-            VtFloatArray(1,_GetSkeletonDisplayOpacity(prim, time));
-            //-NV_CHANGE FRZHANG
-=======
 const TfTokenVector &
 UsdSkelImagingSkeletonAdapter::GetExtComputationSceneInputNames(
     SdfPath const& cachePath) const
 {
->>>>>>> v20.11-rc1
 
     if (_IsSkinningComputationPath(cachePath)) {
 
@@ -1495,7 +1450,8 @@ UsdSkelImagingSkeletonAdapter::GetExtComputationSceneInputNames(
 
     }  
 
-<<<<<<< HEAD
+// FIXME: Resolve merge conflict from v20.11-rc1
+#if 0
     // Remove the computations it participates in.
     SdfPath compPath = _GetSkinningComputationPath(cachePath);
     index->RemoveSprim(HdPrimTypeTokens->extComputation, compPath);
@@ -1525,9 +1481,8 @@ UsdSkelImagingSkeletonAdapter::GetExtComputationSceneInputNames(
     // Clear cache entry.
     _skinnedPrimDataCache.erase(cachePath);
 }
-=======
+#endif
     return BaseAdapter::GetExtComputationSceneInputNames(cachePath);;
->>>>>>> v20.11-rc1
 
 }
 
@@ -1803,21 +1758,11 @@ UsdSkelImagingSkeletonAdapter::_GetExtComputationInputForSkinningComputation(
     UsdTimeCode time,
     const UsdImagingInstancerContext* instancerContext) const
 {
-<<<<<<< HEAD
-    TF_DEBUG(USDIMAGING_CHANGES).Msg(
-        "[_UpdateSkinningComputationForTime] "
-         "skinnedPrim path: <%s> , computation path: <%s>\n",
-        skinnedPrim.GetPath().GetText(),
-        computationPath.GetText());
+    TRACE_FUNCTION();
 
     //+NV_CHANGE FRZHANG
     TF_VERIFY(!_UseNVGPUSkinningComputations());
     //-NV_CHANGE FRZHANG
-
-    UsdImagingValueCache* valueCache = _GetValueCache();
-=======
-    TRACE_FUNCTION();
->>>>>>> v20.11-rc1
 
     // XXX: We don't receive the "cachePath" for the skinned prim, and so
     // the method below won't work when using multiple UsdImagingDelgate'.
@@ -2163,19 +2108,14 @@ UsdSkelImagingSkeletonAdapter::_UpdateBoneMeshForTime(
         return;
     }
 
-<<<<<<< HEAD
     //+NV_CHANGE FRZHANG
     TF_VERIFY(!_UseNVGPUSkinningComputations());
     //-NV_CHANGE FRZHANG
 
-    // Note: We expect this to run only when the skeleton prim is added/resync'd
-    UsdImagingValueCache* valueCache = _GetValueCache();
-=======
     TF_DEBUG(USDIMAGING_CHANGES).Msg("[UpdateForTime] Skeleton path: <%s>\n",
                                      prim.GetPath().GetText());
     TF_DEBUG(USDIMAGING_CHANGES).Msg("[UpdateForTime] Cache path: <%s>\n",
                                      cachePath.GetText());
->>>>>>> v20.11-rc1
 
     if (requestedBits & HdChangeTracker::DirtyPrimvar) {
         UsdImagingValueCache* valueCache = _GetValueCache();
@@ -2432,46 +2372,6 @@ UsdSkelImagingSkeletonAdapter::_UpdateSkinnedPrimForTime(
     TF_DEBUG(USDIMAGING_CHANGES).Msg
         ("[UpdateForTime] Cache path: <%s>\n", cachePath.GetText());
 
-<<<<<<< HEAD
-    // Register points as a computed primvar on the skinned prim.
-    if ((requestedBits & HdChangeTracker::DirtyPoints)
-        //+NV_CHANGE FRZHANG
-        && !_UseNVGPUSkinningComputations()
-        //-NV_CHANGE FRZHANG
-        ) {
-        UsdImagingValueCache* valueCache = _GetValueCache();
-
-        HdExtComputationPrimvarDescriptorVector& computedPrimvarsEntry =
-            valueCache->GetExtComputationPrimvars(skinnedPrimPath);
-
-        // Note: We don't specify the # of points, since the prim already knows
-        // how many to expect for a given topology.
-        // The count field below indicates that we have one vec3f per point.
-        HdTupleType pointsType;
-        pointsType.type = HdTypeFloatVec3;
-        pointsType.count = 1;
-        
-        TF_DEBUG(USDIMAGING_COMPUTATIONS).Msg(
-                "[SkeletonAdapter::_UpdateSkinnedPrimForTime] Adding "
-                " points as a computed primvar for prim %s\n",
-                skinnedPrimPath.GetText());
-
-        HdExtComputationPrimvarDescriptorVector compPrimvars;
-        compPrimvars.emplace_back(
-                        HdTokens->points,
-                        HdInterpolationVertex,
-                        HdPrimvarRoleTokens->point,
-                        _ConvertCachePathToIndexPath(
-                            _GetSkinningComputationPath(skinnedPrimPath)),
-                        _tokens->skinnedPoints,
-                        pointsType);
-        
-        // Overwrite the entire entry (i.e., don't use emplace_back)
-        computedPrimvarsEntry = compPrimvars;
-    }
-
-=======
->>>>>>> v20.11-rc1
     // Suppress the dirtybit for points, so we don't publish 'points' as a
     // primvar. Also suppressing normals: normals will instead be computed
     // post-skinning, as if they were unauthored (since GPU normal skinning

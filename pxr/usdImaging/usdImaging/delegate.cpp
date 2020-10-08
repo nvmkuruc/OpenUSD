@@ -84,14 +84,11 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
     (lightFilterType)
-<<<<<<< HEAD
     (textureMemory)
 
     //+NV_CHANGE BRONG
     (Skeleton)
     //-NV_CHANGE BRONG
-=======
->>>>>>> v20.11-rc1
 );
 
 // This environment variable matches a set of similar ones in
@@ -103,7 +100,6 @@ static bool _IsEnabledDrawModeCache() {
     return _v;
 }
 
-<<<<<<< HEAD
 // #nv begin #clean-property-invalidation
 TF_DEFINE_ENV_SETTING(USDIMAGING_UNKNOWN_PROPERTIES_ARE_CLEAN, 0,
     "Process unknown properties as clean.");
@@ -122,8 +118,6 @@ static bool _IsEnabledNestedGprims() {
 }
 // nv end
 
-=======
->>>>>>> v20.11-rc1
 // -------------------------------------------------------------------------- //
 // Delegate Implementation.
 // -------------------------------------------------------------------------- //
@@ -2799,12 +2793,15 @@ bool UsdImagingDelegate::ShouldGenerateJointMesh()
 /*virtual*/
 bool UsdImagingDelegate::GetSkinningBindingValues(SdfPath const&id, VtValue& restPoints, GfMatrix4d& geomBindXform)
 {
+    // FIXME
+#if 0
 	SdfPath usdPath = ConvertIndexPathToCachePath(id);
 	if (_valueCache.ExtractRestPoints(usdPath, &restPoints) 
 		&& _valueCache.ExtractGeomBindXform(usdPath, &geomBindXform) )
 	{
 		return true;
 	}
+#endif
 	return HdSceneDelegate::GetSkinningBindingValues(id, restPoints, geomBindXform);
 }
 
@@ -2812,6 +2809,8 @@ bool UsdImagingDelegate::GetSkinningBindingValues(SdfPath const&id, VtValue& res
 bool
 UsdImagingDelegate::GetSkinningBlendValues(SdfPath const& id, VtValue& jointIndices, VtValue& jointWeights, int& numInfluencesPerPoint, bool& hasConstantInfluences, TfToken& skinningMethod, VtValue& skinningBlendWeights, bool& hasConstantSkinningBlendWeights)
 {
+    // FIXME
+#if 0
 	SdfPath usdPath = ConvertIndexPathToCachePath(id);
 	if (_valueCache.ExtractJointIndices(usdPath, &jointIndices) 
 		&& _valueCache.ExtractJointWeights(usdPath, &jointWeights)
@@ -2824,6 +2823,7 @@ UsdImagingDelegate::GetSkinningBlendValues(SdfPath const& id, VtValue& jointIndi
 	{
 		return true;
 	}
+#endif
 	return HdSceneDelegate::GetSkinningBlendValues(id, jointIndices, jointWeights, numInfluencesPerPoint, hasConstantInfluences, skinningMethod, skinningBlendWeights, hasConstantSkinningBlendWeights);
 }
 
@@ -2831,6 +2831,8 @@ UsdImagingDelegate::GetSkinningBlendValues(SdfPath const& id, VtValue& jointIndi
 bool
 UsdImagingDelegate::GetSkelAnimXformValues(SdfPath const& id, VtValue& skinningXform, GfMatrix4d& primWorldToLocal, GfMatrix4d& skelLocalToWorld)
 {
+    // FIXME
+#if 0
 	SdfPath usdPath = ConvertIndexPathToCachePath(id);
 	if (_valueCache.ExtractSkinningXforms(usdPath, &skinningXform)
 		&& _valueCache.ExtractPrimWorldToLocal(usdPath, &primWorldToLocal)
@@ -2839,6 +2841,7 @@ UsdImagingDelegate::GetSkelAnimXformValues(SdfPath const& id, VtValue& skinningX
 	{
 		return true;
 	}
+#endif
 	return HdSceneDelegate::GetSkelAnimXformValues(id, skinningXform, primWorldToLocal, skelLocalToWorld);
 }
 //-NV_CHANGE FRZHANG

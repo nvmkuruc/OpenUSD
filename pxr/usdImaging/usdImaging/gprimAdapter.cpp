@@ -200,25 +200,18 @@ UsdImagingGprimAdapter::_AddRprim(TfToken const& primType,
 
 void 
 UsdImagingGprimAdapter::TrackVariability(UsdPrim const& prim,
-                                         SdfPath const& cachePath,
-                                         HdDirtyBits* timeVaryingBits,
-                                         UsdImagingInstancerContext const* 
-                                             instancerContext,
-                                         // #nv begin fast-updates
-                                         bool checkVariability) const
-                                         // nv end
+    SdfPath const& cachePath,
+    HdDirtyBits* timeVaryingBits,
+    UsdImagingInstancerContext const*
+    instancerContext,
+    // #nv begin fast-updates
+    bool checkVariability) const
+    // nv end
 {
-<<<<<<< HEAD
-    // WARNING: This method is executed from multiple threads, the value cache
-    // has been carefully pre-populated to avoid mutating the underlying
-    // container during update.
-    
-    UsdImagingValueCache* valueCache = _GetValueCache();
-
     // #nv begin fast-updates
     if (checkVariability) {
-    // nv end
-        // See if any of the inherited primvars are time-dependent.
+        // nv end
+            // See if any of the inherited primvars are time-dependent.
         UsdImaging_InheritedPrimvarStrategy::value_type inheritedPrimvarRecord =
             _GetInheritedPrimvars(prim.GetParent());
         if (inheritedPrimvarRecord && inheritedPrimvarRecord->variable) {
@@ -236,73 +229,54 @@ UsdImagingGprimAdapter::TrackVariability(UsdPrim const& prim,
                     HD_PERF_COUNTER_INCR(UsdImagingTokens->usdVaryingPrimvar);
                     break;
                 }
-=======
-    // See if any of the inherited primvars are time-dependent.
-    UsdImaging_InheritedPrimvarStrategy::value_type inheritedPrimvarRecord =
-        _GetInheritedPrimvars(prim.GetParent());
-    if (inheritedPrimvarRecord && inheritedPrimvarRecord->variable) {
-        *timeVaryingBits |= HdChangeTracker::DirtyPrimvar;
-        HD_PERF_COUNTER_INCR(UsdImagingTokens->usdVaryingPrimvar);
-    }
-    if (!(*timeVaryingBits & HdChangeTracker::DirtyPrimvar)) {
-        // See if any local primvars are time-dependent.
-        UsdGeomPrimvarsAPI primvarsAPI(prim);
-        std::vector<UsdGeomPrimvar> primvars =
-            primvarsAPI.GetPrimvarsWithValues();
-        for (UsdGeomPrimvar const& pv : primvars) {
-            if (pv.ValueMightBeTimeVarying()) {
-                *timeVaryingBits |= HdChangeTracker::DirtyPrimvar;
-                HD_PERF_COUNTER_INCR(UsdImagingTokens->usdVaryingPrimvar);
-                break;
->>>>>>> v20.11-rc1
             }
+
+            // Discover time-varying extent.
+            _IsVarying(prim,
+                UsdGeomTokens->extent,
+                HdChangeTracker::DirtyExtent,
+                UsdImagingTokens->usdVaryingExtent,
+                timeVaryingBits,
+                false);
+
+            // Discover time-varying transforms.
+            _IsTransformVarying(prim,
+                HdChangeTracker::DirtyTransform,
+                UsdImagingTokens->usdVaryingXform,
+                timeVaryingBits);
+
+            // Discover time-varying visibility.
+            _IsVarying(prim,
+                UsdGeomTokens->visibility,
+                HdChangeTracker::DirtyVisibility,
+                UsdImagingTokens->usdVaryingVisibility,
+                timeVaryingBits,
+                true);
+
+            // Discover time-varying points.
+            _IsVarying(prim,
+                UsdGeomTokens->velocities,
+                HdChangeTracker::DirtyPoints,
+                UsdImagingTokens->usdVaryingPrimvar,
+                timeVaryingBits,
+                false) ||
+                _IsVarying(prim,
+                    UsdGeomTokens->accelerations,
+                    HdChangeTracker::DirtyPoints,
+                    UsdImagingTokens->usdVaryingPrimvar,
+                    timeVaryingBits,
+                    false);
+            // XXX: "points" is handled by derived classes.
+
+            // Discover time-varying double-sidedness.
+            _IsVarying(prim,
+                UsdGeomTokens->doubleSided,
+                HdChangeTracker::DirtyDoubleSided,
+                UsdImagingTokens->usdVaryingTopology,
+                timeVaryingBits,
+                false);
         }
-
-        // Discover time-varying extent.
-        _IsVarying(prim,
-                   UsdGeomTokens->extent,
-                   HdChangeTracker::DirtyExtent,
-                   UsdImagingTokens->usdVaryingExtent,
-                   timeVaryingBits,
-                   false);
-
-        // Discover time-varying transforms.
-        _IsTransformVarying(prim,
-                   HdChangeTracker::DirtyTransform,
-                   UsdImagingTokens->usdVaryingXform,
-                   timeVaryingBits);
-
-        // Discover time-varying visibility.
-        _IsVarying(prim,
-                   UsdGeomTokens->visibility,
-                   HdChangeTracker::DirtyVisibility,
-                   UsdImagingTokens->usdVaryingVisibility,
-                   timeVaryingBits,
-                   true);
     }
-
-    // Discover time-varying points.
-    _IsVarying(prim,
-               UsdGeomTokens->velocities,
-               HdChangeTracker::DirtyPoints,
-               UsdImagingTokens->usdVaryingPrimvar,
-               timeVaryingBits,
-               false) ||
-        _IsVarying(prim,
-                   UsdGeomTokens->accelerations,
-                   HdChangeTracker::DirtyPoints,
-                   UsdImagingTokens->usdVaryingPrimvar,
-                   timeVaryingBits,
-                   false);
-    // XXX: "points" is handled by derived classes.
-
-    // Discover time-varying double-sidedness.
-    _IsVarying(prim,
-               UsdGeomTokens->doubleSided,
-               HdChangeTracker::DirtyDoubleSided,
-               UsdImagingTokens->usdVaryingTopology,
-               timeVaryingBits,
-               false);
 }
 
 void
@@ -484,23 +458,6 @@ UsdImagingGprimAdapter::ProcessPropertyChange(UsdPrim const& prim,
     else if (propertyName == UsdGeomTokens->doubleSided)
         return HdChangeTracker::DirtyDoubleSided;
 
-<<<<<<< HEAD
-    else if (TfStringStartsWith(propertyName.GetString(),
-        UsdShadeTokens->materialBinding.GetString()) ||
-        TfStringStartsWith(propertyName.GetString(),
-            UsdTokens->collection.GetString())) {
-        return HdChangeTracker::DirtyMaterialId;
-    }
-
-    // #nv begin #primvar-invalidation
-    if (UsdImagingGprimAdapter_ProcessesPrimvarInvalidation()) {
-        // nv end
-
-         // Note: This doesn't handle "built-in" attributes that are treated as
-         // primvars. That responsibility falls on the child adapter.
-        if (UsdGeomPrimvar::IsPrimvarRelatedPropertyName(propertyName)) {
-            return UsdImagingPrimAdapter::_ProcessPrefixedPrimvarPropertyChange(
-=======
     else if (propertyName == UsdGeomTokens->velocities ||
              propertyName == UsdGeomTokens->accelerations)
         // XXX: "points" is handled by derived classes.
@@ -512,25 +469,24 @@ UsdImagingGprimAdapter::ProcessPropertyChange(UsdPrim const& prim,
                HdChangeTracker::DirtyPrimvar;
     }
     
-    // Note: This doesn't handle "built-in" attributes that are treated as
-    // primvars. That responsibility falls on the child adapter.
-    if (UsdGeomPrimvarsAPI::CanContainPropertyName(propertyName)) {
-        return UsdImagingPrimAdapter::_ProcessPrefixedPrimvarPropertyChange(
->>>>>>> v20.11-rc1
-                prim, cachePath, propertyName);
-            // #nv begin #primvar-invalidation
+    // #nv begin #primvar-invalidation
+    if (UsdImagingGprimAdapter_ProcessesPrimvarInvalidation()) {
+    // nv end
 
-        }
+        // Note: This doesn't handle "built-in" attributes that are treated as
+        // primvars. That responsibility falls on the child adapter.
+        if (UsdGeomPrimvarsAPI::CanContainPropertyName(propertyName)) {
+            return UsdImagingPrimAdapter::_ProcessPrefixedPrimvarPropertyChange(
+                prim, cachePath, propertyName);
+                // #nv begin #primvar-invalidation
+            }
         // nv end
     }
 
-<<<<<<< HEAD
     // #nv begin #clean-property-invalidation
-    return GetDelegate()->ProcessNonAdapterBasedPropertyChange(prim, cachePath, propertyName);
+    //return GetDelegate()->ProcessNonAdapterBasedPropertyChange(prim, cachePath, propertyName);
     // nv end
-=======
     return HdChangeTracker::Clean;
->>>>>>> v20.11-rc1
 }
 
 void

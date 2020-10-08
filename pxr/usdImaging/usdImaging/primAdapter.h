@@ -151,16 +151,12 @@ public:
                                   SdfPath const& cachePath,
                                   HdDirtyBits* timeVaryingBits,
                                   UsdImagingInstancerContext const* 
-<<<<<<< HEAD
                                       instancerContext = NULL,
                                   // #nv begin fast-updates
                                   // If checkVariabilty is false, this method
                                   // only populates the value cache with initial values.
                                   bool checkVariability = true) const = 0;
                                   // nv end
-=======
-                                      instancerContext = nullptr) const = 0;
->>>>>>> v20.11-rc1
 
     /// Populates the \p cache for the given \p prim, \p time and \p
     /// requestedBits.

@@ -105,13 +105,6 @@ public:
     // Used by the legacyEngine.
     USDIMAGING_API
     static VtValue GetMeshTopology();
-
-    // #nv begin #clean-property-invalidation
-    USDIMAGING_API
-    virtual HdDirtyBits ProcessPropertyChange(UsdPrim const& prim,
-        SdfPath const& cachePath,
-        TfToken const& propertyName) override;
-    // nv end
 };
 
 
