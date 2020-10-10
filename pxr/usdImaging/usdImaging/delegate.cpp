@@ -961,10 +961,18 @@ UsdImagingDelegate::SetTime(UsdTimeCode time)
     if (_timeVaryingPrimCacheValid) {
         for (SdfPath const& path : _timeVaryingPrimCache) {
             _HdPrimInfo &primInfo = _hdPrimInfoMap[path];
-            primInfo.adapter->MarkDirty(primInfo.usdPrim,
-                                        path,
-                                        primInfo.timeVaryingBits,
-                                        &indexProxy);
+            
+            // #nv begin
+            HdDirtyBits timeVaryingBitMask = _GetTimeVaryingBitMask(path);
+            HdDirtyBits timeVaryingBits = primInfo.timeVaryingBits & ~timeVaryingBitMask;
+
+            if (timeVaryingBits != HdChangeTracker::Clean) {
+                primInfo.adapter->MarkDirty(primInfo.usdPrim,
+                                            path,
+                                            timeVaryingBits,
+                                            &indexProxy);
+            // nv end
+            }
         }
     } else {
         _timeVaryingPrimCache.clear();
@@ -972,13 +980,18 @@ UsdImagingDelegate::SetTime(UsdTimeCode time)
             const SdfPath &cachePath    = pair.first;
             const _HdPrimInfo &primInfo = pair.second;
 
-            if (primInfo.timeVaryingBits != HdChangeTracker::Clean) {
+            // #nv begin
+            HdDirtyBits timeVaryingBitMask = _GetTimeVaryingBitMask(cachePath);
+            HdDirtyBits timeVaryingBits = primInfo.timeVaryingBits & ~timeVaryingBitMask;
+
+            if (timeVaryingBits != HdChangeTracker::Clean) {
                 _timeVaryingPrimCache.push_back(cachePath);
                 primInfo.adapter->MarkDirty(primInfo.usdPrim,
                                             cachePath,
-                                            primInfo.timeVaryingBits,
+                                            timeVaryingBits,
                                             &indexProxy);
             }
+            // nv end
         }
         _timeVaryingPrimCacheValid = true;
     }
@@ -1200,7 +1213,7 @@ UsdImagingDelegate::ApplyPendingUpdates()
             }
         }
     }
-
+     
     // If any changes called Repopulate() on the indexProxy, we need to
     // repopulate them before any updates. If the list is empty, _Populate is a
     // no-op.
@@ -1209,10 +1222,26 @@ UsdImagingDelegate::ApplyPendingUpdates()
     _ExecuteWorkForVariabilityUpdate(&worker);
 }
 
-void 
+// #nv begin #omni-hydra
+void
 UsdImagingDelegate::_OnUsdObjectsChanged(
     UsdNotice::ObjectsChanged const& notice,
     UsdStageWeakPtr const& sender)
+{
+   _HandleUsdObjectsChanged(notice, sender);
+}  
+
+HdDirtyBits
+UsdImagingDelegate::_GetTimeVaryingBitMask(SdfPath const&)
+{
+    return HdChangeTracker::Clean;
+}
+
+void 
+UsdImagingDelegate::_HandleUsdObjectsChanged(
+    UsdNotice::ObjectsChanged const& notice,
+    UsdStageWeakPtr const& sender)
+// nv end
 {
     if (!sender || !TF_VERIFY(sender == _stage))
         return;

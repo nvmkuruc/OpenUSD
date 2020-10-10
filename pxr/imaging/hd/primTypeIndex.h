@@ -156,6 +156,21 @@ public:
     ///
     void SyncPrims(HdChangeTracker &tracker,
                    HdRenderParam *renderParam);
+
+    // #nv begin #omni-hydra
+    struct PostSyncRequestVector
+    {
+        std::vector<PrimType*> prims;
+        std::vector<HdDirtyBits> dirtyBits;
+    };
+
+    void SyncPrims(HdSceneDelegate* sceneDelegate,
+                  PostSyncRequestVector& syncRequestVector,
+                  HdRenderParam *renderParam);
+
+    /// Obtains a modifiable pointer the prim with the given type and id.
+    PrimType *GetPrim(const SdfPath &primId) const;
+    // nv end
     
     /// Returns a vector of unique scene delegates corresponding to the dirty
     /// prims that were sync'd in SyncPrims.

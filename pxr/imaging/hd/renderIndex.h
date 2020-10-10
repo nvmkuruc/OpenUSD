@@ -383,6 +383,17 @@ public:
     HD_API
     HdResourceRegistrySharedPtr GetResourceRegistry() const;
 
+    // #nv begin omni-hydra
+    // ---------------------------------------------------------------------- //
+    /// \name Post Sync Delegates
+    // ---------------------------------------------------------------------- //
+    // Set this scene delegate as postsync scene delegate 
+    // When multiple scene delegate affects the same rprim,
+    // the composition order is determined by order the scene delegates were added in this function
+    HD_API
+    void AddPostSyncDelegate(HdSceneDelegate* sceneDelegate);
+    // nv end
+
 private:
     // The render index constructor is private so we can check
     // renderDelegate before construction: see HdRenderIndex::New(...).
@@ -522,6 +533,40 @@ private:
     HdRenderIndex(const HdRenderIndex &) = delete;
     HdRenderIndex &operator=(const HdRenderIndex &) = delete; 
 
+    // #nv begin #omni-hydra
+public:
+
+    /// this can be cast to HdSyncRequestVector
+    struct _PostSyncRequestVector
+    {
+        SdfPathVector IDs;
+        std::vector<HdDirtyBits> dirtyBits;
+    };
+
+    /// this can be cast to _RprimSyncRequestVector 
+    struct _RprimPostSyncRequestVector
+    {
+        // do not change order here
+        std::vector<HdRprim*> rprims;
+        std::vector<size_t> reprsMasks;
+        _PostSyncRequestVector r;
+    };
+
+    struct PostSyncRequestVector
+    {
+        _RprimPostSyncRequestVector rprimRequestVector;
+        _SprimIndex::PostSyncRequestVector sprimRequestVector;
+    };
+
+private:
+    typedef std::vector<HdSceneDelegate*> _SceneDelegateVector;
+    _SceneDelegateVector _sceneDelegates;
+
+    typedef TfHashMap<HdSceneDelegate*,
+        PostSyncRequestVector, TfHash> _PostSyncRequestMap;
+    _PostSyncRequestMap _postSyncMap;
+
+    // nv end
 };
 
 template <typename T>

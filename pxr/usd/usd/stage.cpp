@@ -3860,6 +3860,7 @@ UsdStage::_HandleLayersDidChange(
 
         // Early out for only processing fast updates.
         TF_DEBUG(USD_CHANGES).Msg("\nProcessing fast updates\n");
+        TRACE_SCOPE("Processing fast updates");
 
         UsdStageWeakPtr self(this);
 
@@ -3868,8 +3869,9 @@ UsdStage::_HandleLayersDidChange(
             if (!fastUpdates.begin()->second.hasCompositionDependents) {
                 // If the fast updates have no composition dependents, we can send the
                 // unmodified change contents straight to the notice.
-                UsdNotice::ObjectsChanged(
-                    self, &recomposeChanges, &otherInfoChanges, &fastUpdates.begin()->second.fastUpdates).Send(self);
+                TRACE_SCOPE("fastUpdate UsdNotice::ObjectChanged - no composition");
+                //UsdNotice::ObjectsChanged(
+                //    self, &recomposeChanges, &otherInfoChanges, &fastUpdates.begin()->second.fastUpdates).Send(self);
             } else {
                 // We need to perform namespace transformations for when the edited layer's
                 // namespace does not match that of the composed stage (e.g., via references
@@ -3917,6 +3919,7 @@ UsdStage::_HandleLayersDidChange(
                 };
 
                 remapChangesToMasters(&remappedFastUpdates);
+                TRACE_SCOPE("fastUpdate UsdNotice::ObjectChanged - recomposition");
                 UsdNotice::ObjectsChanged(
                     self, &recomposeChanges, &otherInfoChanges, &remappedFastUpdates).Send(self);
             }
@@ -4167,8 +4170,11 @@ UsdStage::_HandleLayersDidChange(
     UsdStageWeakPtr self(this);
 
     // Notify about changed objects.
-    UsdNotice::ObjectsChanged(
-        self, &recomposeChanges, &otherInfoChanges).Send(self);
+    {
+        TRACE_SCOPE("UsdNotice::ObjectChanged (no fast updates)");
+        UsdNotice::ObjectsChanged(
+            self, &recomposeChanges, &otherInfoChanges).Send(self);
+    }
 
     // Receivers can now refresh their caches... or just dirty them
     UsdNotice::StageContentsChanged(self).Send(self);

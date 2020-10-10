@@ -149,6 +149,9 @@ public:
 
     /// Applies any scene edits which have been queued up by notices from USD.
     USDIMAGING_API
+    // #nv begin #omni-hydra
+    virtual 
+    // nv end
     void ApplyPendingUpdates();
 
     // #nv begin #fast-updates
@@ -595,6 +598,17 @@ protected:
     void _OnUsdObjectsChanged(UsdNotice::ObjectsChanged const&,
                               UsdStageWeakPtr const& sender);
 
+    // #nv begin omni_hydra
+    USDIMAGING_API 
+    virtual void _HandleUsdObjectsChanged(UsdNotice::ObjectsChanged const&,
+        UsdStageWeakPtr const& sender);
+
+    // bit mask provided by derived class to exclude properties from being dirtied
+    // by usd imaging's variability tracking
+    USDIMAGING_API
+    virtual HdDirtyBits _GetTimeVaryingBitMask(SdfPath const& path); 
+    // nv end
+
     // The lightest-weight update, it does fine-grained invalidation of
     // individual properties at the given path (prim or property).
     //
@@ -619,11 +633,12 @@ protected:
     // Repopulate() on those prims individually. If repopulateFromRoot is
     // true, Repopulate() will be called on \p rootPath instead. This is slower,
     // but handles changes in tree topology.
-    void _ResyncUsdPrim(SdfPath const& usdRootPath, UsdImagingIndexProxy* proxy,
-                        bool repopulateFromRoot = false,
-                        // #nv begin #parallel-xform-children
-                        bool fromThread = false);
-                        // nv end
+    // #nv begin #omni_hydra
+    USDIMAGING_API
+    virtual void _ResyncUsdPrim(SdfPath const& usdRootPath, UsdImagingIndexProxy* proxy,
+        bool repopulateFromRoot = false,
+        bool fromThread = false); // #nv #parallel-xform-children
+    // nv end
 
     // ---------------------------------------------------------------------- //
     // Usd Data-Access Helper Methods
