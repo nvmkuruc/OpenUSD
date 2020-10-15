@@ -242,6 +242,7 @@ endif()
 
 if (PXR_BUILD_MATERIALX_PLUGIN)
     find_package(MaterialX REQUIRED)
+    add_definitions(-DPXR_MATERIALX_SUPPORT_ENABLED)
 endif()
 
 if(PXR_ENABLE_OSL_SUPPORT)
