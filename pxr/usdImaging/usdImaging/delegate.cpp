@@ -1266,6 +1266,10 @@ UsdImagingDelegate::ApplyPendingUpdates()
                 _RefreshUsdObject(usdPath.GetParentPath(), TfTokenVector(),
                                &indexProxy);
             } else if (usdPath.IsAbsoluteRootOrPrimPath()) {
+                //+NV_CHANGE BRONG
+                //Not finalized code to handle Animation=>Skeleton resync dependancy.
+                _ResyncUsdAttrQuery(usdPath, &indexProxy);
+                //-NV_CHANGE BRONG
                 _ResyncUsdPrim(usdPath, &indexProxy);
             } else {
                 TF_WARN("Unexpected path type to resync: <%s>",
@@ -1606,6 +1610,25 @@ UsdImagingDelegate::_ResyncUsdPrim(SdfPath const& usdPath,
 void
 UsdImagingDelegate::_ResyncUsdAttrQuery(SdfPath const& usdPath, UsdImagingIndexProxy* proxy)
 {
+    //Not finalized code to handle Animation=>Skeleton resync dependancy.
+    if (usdPath.IsAbsoluteRootOrPrimPath()) {
+        if (UseNVGPUSkinningComputations()) {
+            UsdPrim usdPrim = _stage->GetPrimAtPath(usdPath);
+            if (usdPrim && usdPrim.IsA<UsdSkelAnimation>()) {
+                // _AdapterLookup(usdPrim from usdPrimPath) is empty. So currently try to get the adapter of type Skeleton.
+                UsdImagingPrimAdapterSharedPtr adapter = _AdapterLookup(_tokens->Skeleton);
+
+                // Defacto UsdSkelImagingSkeletonAdapter::ProcessPrimResync(usdPath, proxy)
+                // UsdSkelTokens->joints implies Animation=>Skeleton resync dependancy.
+                adapter->RefreshAnimQuery(usdPath, UsdSkelTokens->joints, proxy);
+            }
+        }
+        return;
+    }
+
+    if (!TF_VERIFY(usdPath.IsPropertyPath()))
+        return;
+
     if (UseNVGPUSkinningComputations()) {
         SdfPath const& usdPrimPath = usdPath.GetPrimPath();
         TfToken const& attrName = usdPath.GetNameToken();
