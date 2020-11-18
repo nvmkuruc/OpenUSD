@@ -273,6 +273,13 @@ UsdSkelImagingSkeletonAdapter::Populate(
         else
         {
             index->_AddHdPrimInfo(animPath, animQuery.GetPrim(), shared_from_this());
+            auto const &skeleton = skelData->skelQuery.GetSkeleton();
+            if (skeleton) {
+                // OM-23103
+                // Make sure that _skelDataCache is blown for the skeleton if the anim query prim is resynced.
+                index->_AddHdPrimInfo(skeleton.GetPath(), skeleton.GetPrim(), shared_from_this());
+                index->AddDependency(skeleton.GetPath(), animQuery.GetPrim());
+            }
         }
         _skelAnimMap[animPath][skelPath] = affectedSkinnedPrimPath;
     }
