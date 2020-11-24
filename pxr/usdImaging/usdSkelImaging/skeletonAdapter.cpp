@@ -599,7 +599,20 @@ UsdSkelImagingSkeletonAdapter::MarkDirty(const UsdPrim& prim,
                                          HdDirtyBits dirty,
                                          UsdImagingIndexProxy* index)
 {
+    // #nv begin #nv-gpu-skinning
+    if (_UseNVGPUSkinningComputations() && !prim) {
+        return;
+    }
+    // nv end
+
     if (_IsCallbackForSkeleton(prim)) {
+
+        // #nv begin #nv-gpu-skinning
+        if (!_ShouldGenerateJointMesh()) {
+            return;
+        }
+        // nv end
+
         // Mark the bone mesh dirty
         index->MarkRprimDirty(cachePath, dirty);
     } else if (_IsSkinnedPrimPath(cachePath)) {
@@ -1082,9 +1095,13 @@ UsdSkelImagingSkeletonAdapter::_RemovePrim(const SdfPath& cachePath,
         TF_DEBUG(USDIMAGING_CHANGES).Msg(
                 "[SkeletonAdapter::_RemovePrim] Remove skeleton"
                 "%s\n", cachePath.GetText());
-        
-        // Remove bone mesh.
-        index->RemoveRprim(cachePath);
+
+        // #nv begin #nv-gpu-skinning
+        if (_ShouldGenerateJointMesh()) {
+        // nv end
+           // Remove bone mesh.
+            index->RemoveRprim(cachePath);
+        }
 
         // Remove all skinned prims that are targered by the skeleton, and their
         // computations.
@@ -1391,9 +1408,13 @@ UsdSkelImagingSkeletonAdapter::_RemoveSkinnedPrimAndComputations(
     // Remove skinned prim.
     index->RemoveRprim(cachePath);
 
-    // Remove the computations it participates in.
-    SdfPath compPath = _GetSkinningComputationPath(cachePath);
-    index->RemoveSprim(HdPrimTypeTokens->extComputation, compPath);
+    // #nv begin #nv-gpu-skinning
+    if (!_UseNVGPUSkinningComputations()) {
+    // nv end
+        // Remove the computations it participates in.
+        SdfPath compPath = _GetSkinningComputationPath(cachePath);
+        index->RemoveSprim(HdPrimTypeTokens->extComputation, compPath);
+    }
     
     if (_IsEnabledAggregatorComputation() 
         //+NV_CHANGE FRZHANG
