@@ -278,6 +278,13 @@ UsdSkelImagingSkeletonAdapter::Populate(
         else
         {
             index->_AddHdPrimInfo(animPath, animQuery.GetPrim(), shared_from_this());
+            auto const &skeleton = skelData->skelQuery.GetSkeleton();
+            if (skeleton) {
+                // OM-23103
+                // Make sure that _skelDataCache is blown for the skeleton if the anim query prim is resynced.
+                index->_AddHdPrimInfo(skeleton.GetPath(), skeleton.GetPrim(), shared_from_this());
+                index->AddDependency(skeleton.GetPath(), animQuery.GetPrim());
+            }
         }
         _skelAnimMap[animPath][skelPath] = affectedSkinnedPrimPath;
     }
@@ -599,7 +606,20 @@ UsdSkelImagingSkeletonAdapter::MarkDirty(const UsdPrim& prim,
                                          HdDirtyBits dirty,
                                          UsdImagingIndexProxy* index)
 {
+    // #nv begin #nv-gpu-skinning
+    if (_UseNVGPUSkinningComputations() && !prim) {
+        return;
+    }
+    // nv end
+
     if (_IsCallbackForSkeleton(prim)) {
+
+        // #nv begin #nv-gpu-skinning
+        if (!_ShouldGenerateJointMesh()) {
+            return;
+        }
+        // nv end
+
         // Mark the bone mesh dirty
         index->MarkRprimDirty(cachePath, dirty);
     } else if (_IsSkinnedPrimPath(cachePath)) {
@@ -1200,9 +1220,13 @@ UsdSkelImagingSkeletonAdapter::_RemovePrim(const SdfPath& cachePath,
         TF_DEBUG(USDIMAGING_CHANGES).Msg(
                 "[SkeletonAdapter::_RemovePrim] Remove skeleton"
                 "%s\n", cachePath.GetText());
-        
-        // Remove bone mesh.
-        index->RemoveRprim(cachePath);
+
+        // #nv begin #nv-gpu-skinning
+        if (_ShouldGenerateJointMesh()) {
+        // nv end
+           // Remove bone mesh.
+            index->RemoveRprim(cachePath);
+        }
 
         // Remove all skinned prims that are targered by the skeleton, and their
         // computations.
@@ -1452,9 +1476,13 @@ UsdSkelImagingSkeletonAdapter::GetExtComputationSceneInputNames(
 
 // FIXME: Resolve merge conflict from v20.11-rc1
 #if 0
-    // Remove the computations it participates in.
-    SdfPath compPath = _GetSkinningComputationPath(cachePath);
-    index->RemoveSprim(HdPrimTypeTokens->extComputation, compPath);
+    // #nv begin #nv-gpu-skinning
+    if (!_UseNVGPUSkinningComputations()) {
+    // nv end
+        // Remove the computations it participates in.
+        SdfPath compPath = _GetSkinningComputationPath(cachePath);
+        index->RemoveSprim(HdPrimTypeTokens->extComputation, compPath);
+    }
     
     if (_IsEnabledAggregatorComputation() 
         //+NV_CHANGE FRZHANG
