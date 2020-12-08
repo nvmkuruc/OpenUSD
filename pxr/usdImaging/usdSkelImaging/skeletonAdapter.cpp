@@ -177,7 +177,7 @@ UsdSkelImagingSkeletonAdapter::Populate(
                 instancer, prim, shared_from_this());
         }
         //+NV_CHANGE FRZHANG
-        else if (_UseNVGPUSkinningComputations())
+        else
         {
             index->_AddHdPrimInfo(prim.GetPath(), prim, shared_from_this());
         }
@@ -1102,7 +1102,7 @@ UsdSkelImagingSkeletonAdapter::_RemovePrim(const SdfPath& cachePath,
             index->RemoveRprim(cachePath);
         }
         // #nv begin #nv-gpu-skinning
-        else if (_UseNVGPUSkinningComputations())
+        else
         {
             index->_hdPrimInfoToRemove.push_back(cachePath);
         }
