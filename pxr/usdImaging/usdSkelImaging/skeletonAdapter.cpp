@@ -168,14 +168,20 @@ UsdSkelImagingSkeletonAdapter::Populate(
         //+NV_CHANGE FRZHANG
         if (_ShouldGenerateJointMesh())
         {
-            //-NV_CHANGE FRZHANG
-               // Insert mesh prim to visualize the bone mesh for the skeleton.
-               // Note: This uses the "rest" pose of the skeleton.
-               // Also, since the bone mesh isn't backed by the UsdStage, we register the
-               // skeleton prim on its behalf.
+        //-NV_CHANGE FRZHANG
+            // Insert mesh prim to visualize the bone mesh for the skeleton.
+            // Note: This uses the "rest" pose of the skeleton.
+            // Also, since the bone mesh isn't backed by the UsdStage, we register the
+            // skeleton prim on its behalf.
             index->InsertRprim(HdPrimTypeTokens->mesh, prim.GetPath(),
                 instancer, prim, shared_from_this());
         }
+        //+NV_CHANGE FRZHANG
+        else if (_UseNVGPUSkinningComputations())
+        {
+            index->_AddHdPrimInfo(prim.GetPath(), prim, shared_from_this());
+        }
+        //- NV_CHANGE FRZHANG
     }
 
     // Insert a computation for each skinned prim targeted by this
@@ -270,22 +276,12 @@ UsdSkelImagingSkeletonAdapter::Populate(
         {
             TF_VERIFY(animPrimAdapter == shared_from_this());
         }
-        else
-        {
-            index->_AddHdPrimInfo(animPath, animQuery.GetPrim(), shared_from_this());
-            auto const &skeleton = skelData->skelQuery.GetSkeleton();
-            if (skeleton) {
-                // OM-23103
-                // Make sure that _skelDataCache is blown for the skeleton if the anim query prim is resynced.
-                index->_AddHdPrimInfo(skeleton.GetPath(), skeleton.GetPrim(), shared_from_this());
-                index->AddDependency(skeleton.GetPath(), animQuery.GetPrim());
-            }
-        }
+        index->_AddHdPrimInfo(animPath, animQuery.GetPrim(), shared_from_this());
         _skelAnimMap[animPath][skelPath] = affectedSkinnedPrimPath;
     }
     //-NV_CHANGE FRZHANG
-
     return prim.GetPath();
+
 }
 
 // ---------------------------------------------------------------------- //
@@ -508,7 +504,7 @@ UsdSkelImagingSkeletonAdapter::ProcessPropertyChange(
     // We don't expect to get callbacks on behalf of any other prims on
     // the USD stage.
     TF_WARN("Unhandled ProcessPropertyChange callback for cachePath <%s> "
-                "in UsdSkelImagingSkelAdapter.", cachePath.GetText());
+    "in UsdSkelImagingSkelAdapter.", cachePath.GetText());
     return HdChangeTracker::Clean;
 }
 
@@ -675,7 +671,10 @@ UsdSkelImagingSkeletonAdapter::MarkDirty(const UsdPrim& prim,
                 for (auto const& skin : skelSkinMap)
                 {
                     SdfPath const& skelPath = skin.first;
-                    index->MarkRprimDirty(skelPath, HdChangeTracker::DirtyPoints);
+                    if (_ShouldGenerateJointMesh())
+                    {
+                        index->MarkRprimDirty(skelPath, HdChangeTracker::DirtyPoints);
+                    }
                     const _SkelData* skelData = _GetSkelData(skelPath);
                     if (skelData != nullptr)
                     {
@@ -1034,7 +1033,7 @@ void UsdSkelImagingSkeletonAdapter::RefreshAnimQuery(const SdfPath& primPath, co
         return;
 
     const auto &skelIt = _skelAnimMap.find(primPath);
-    if (!TF_VERIFY(skelIt != _skelAnimMap.end()))
+    if(skelIt == _skelAnimMap.end())
         return;
 
     _SkelSkinMap const& skelSkinMap = skelIt->second;
@@ -1102,6 +1101,12 @@ UsdSkelImagingSkeletonAdapter::_RemovePrim(const SdfPath& cachePath,
            // Remove bone mesh.
             index->RemoveRprim(cachePath);
         }
+        // #nv begin #nv-gpu-skinning
+        else if (_UseNVGPUSkinningComputations())
+        {
+            index->_hdPrimInfoToRemove.push_back(cachePath);
+        }
+        // nv end
 
         // Remove all skinned prims that are targered by the skeleton, and their
         // computations.
@@ -1123,8 +1128,13 @@ UsdSkelImagingSkeletonAdapter::_RemovePrim(const SdfPath& cachePath,
     //+NV_CHANGE FRZHANG
     else if (_IsSkelAnimPrimPath(cachePath))
     {
+        TF_DEBUG(USDIMAGING_CHANGES).Msg(
+                "[SkeletonAdapter::_RemovePrim] Remove SkelAnimation"
+                "%s\n", cachePath.GetText());
+        index->_hdPrimInfoToRemove.push_back(cachePath);
         _skelAnimMap.erase(cachePath);
     }
+    //-NV_CHANGE FRZHANG
 
     // Ignore callbacks on behalf of the computations since we remove them
     // only when removing the skinned prim.
