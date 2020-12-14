@@ -28,7 +28,7 @@
 #include "pxr/imaging/hdSt/subtextureIdentifier.h"
 #include "pxr/imaging/hdSt/drawTarget.h"
 
-#ifdef PXR_MATERIALX_SUPPORT_ENABLED
+#ifdef PXR_MATERIALX_IMAGING_SUPPORT_ENABLED
 #include "pxr/imaging/hdSt/materialXFilter.h"
 #endif
 
@@ -1161,7 +1161,7 @@ HdStMaterialNetwork::ProcessMaterialNetwork(
     if (HdMaterialNode2 const* surfTerminal = 
             _GetTerminalNode(surfaceNetwork, terminalName, &surfTerminalPath)) {
 
-#ifdef PXR_MATERIALX_SUPPORT_ENABLED
+#ifdef PXR_MATERIALX_IMAGING_SUPPORT_ENABLED
         if (!isVolume) {
             HdSt_ApplyMaterialXFilter(&surfaceNetwork, materialId,
                                       *surfTerminal, surfTerminalPath);
