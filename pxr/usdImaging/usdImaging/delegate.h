@@ -622,6 +622,7 @@ protected:
 
     //+NV_CHANGE BRONG
     void _ResyncUsdAttrQuery(SdfPath const& usdPath, UsdImagingIndexProxy* proxy);
+    void _RefreshUsdAttrQuery(SdfPath const& usdPath, UsdImagingIndexProxy* proxy);
     //-NV_CHANGE BRONG
 
     // Heavy-weight invalidation of an entire prim subtree. All cached data is

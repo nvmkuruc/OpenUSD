@@ -1290,6 +1290,11 @@ UsdImagingDelegate::ApplyPendingUpdates()
             const TfTokenVector& changedPrimInfoFields = pathIt->second;
 
             if (usdPath.IsPropertyPath() || usdPath.IsAbsoluteRootOrPrimPath()){
+
+                //+NV_CHANGE BRONG
+                _RefreshUsdAttrQuery(usdPath, &indexProxy);
+                //-NV_CHANGE BRONG
+
                 // Note that changedPrimInfoFields will be empty if the
                 // path is a property path.
                 _RefreshUsdObject(usdPath, changedPrimInfoFields, &indexProxy);
@@ -1639,6 +1644,28 @@ UsdImagingDelegate::_ResyncUsdAttrQuery(SdfPath const& usdPath, UsdImagingIndexP
 
             // Defacto UsdSkelImagingSkeletonAdapter::RefreshAnimQuery()
             adapter->RefreshAnimQuery(usdPrimPath, attrName, proxy);
+        }
+    }
+}
+
+void
+UsdImagingDelegate::_RefreshUsdAttrQuery(SdfPath const& usdPath, UsdImagingIndexProxy* proxy)
+{
+    if (!usdPath.IsPropertyPath())
+        return;
+
+    // A simple way to handle Animation joints change.
+    if (UseNVGPUSkinningComputations()) {
+        SdfPath const& usdPrimPath = usdPath.GetPrimPath();
+        TfToken const& attrName = usdPath.GetNameToken();
+        UsdPrim usdPrim = _stage->GetPrimAtPath(usdPrimPath);
+        if (usdPrim && usdPrim.IsA<UsdSkelAnimation>() && attrName == UsdSkelTokens->joints) {
+            // _AdapterLookup(usdPrim from usdPrimPath) is empty. So currently try to get the adapter of type Skeleton.
+            UsdImagingPrimAdapterSharedPtr adapter = _AdapterLookup(_tokens->Skeleton);
+
+            // Defacto UsdSkelImagingSkeletonAdapter::ProcessPrimResync(usdPath, proxy)
+            // UsdSkelTokens->joints implies Animation=>Skeleton resync dependancy.
+            adapter->RefreshAnimQuery(usdPrimPath, UsdSkelTokens->joints, proxy);
         }
     }
 }
