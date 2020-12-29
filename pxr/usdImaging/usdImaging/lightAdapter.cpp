@@ -143,6 +143,7 @@ UsdImagingLightAdapter::UpdateForTime(UsdPrim const& prim,
                                UsdImagingInstancerContext const* 
                                    instancerContext) const
 {
+#if 0
 // #nv begin #bind-material-to-domelight
     UsdImagingValueCache* valueCache = _GetValueCache();
     
@@ -169,6 +170,7 @@ UsdImagingLightAdapter::UpdateForTime(UsdPrim const& prim,
                 prim.GetPath().GetText(), materialUsdPath.GetText());
     }
 // #nv end
+#endif
 }
 
 HdDirtyBits
@@ -218,5 +220,17 @@ UsdImagingLightAdapter::MarkLightParamsDirty(UsdPrim const& prim,
     static const HdDirtyBits paramsDirty = HdLight::DirtyParams;
     index->MarkSprimDirty(cachePath, paramsDirty);
 }
+
+// #nv begin #bind-material-to-domelight
+/*virtual*/
+SdfPath
+UsdImagingLightAdapter::GetMaterialId(UsdPrim const& prim,
+    SdfPath const& cachePath,
+    UsdTimeCode time) const
+{
+    return GetMaterialUsdPath(prim);
+}
+// nv end
+
 
 PXR_NAMESPACE_CLOSE_SCOPE

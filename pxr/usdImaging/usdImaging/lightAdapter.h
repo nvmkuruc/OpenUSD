@@ -110,6 +110,13 @@ public:
     virtual void MarkLightParamsDirty(UsdPrim const& prim,
                                       SdfPath const& cachePath,
                                       UsdImagingIndexProxy* index);
+
+    // #nv begin #bind-material-to-domelight
+    USDIMAGING_API
+    virtual SdfPath GetMaterialId(UsdPrim const& prim,
+                                  SdfPath const& cachePath,
+                                  UsdTimeCode time) const;
+    // nv end
 };
 
 
