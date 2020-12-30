@@ -447,6 +447,12 @@ SdfLayer::_CreateNew(
             return TfNullPtr;
         }
 
+    // #nv begin #usd_diff_deltas
+    }
+    // Release layer registry mutex before saving, which triggers another layer creation for deltas.
+    {
+    // nv end
+
         // Stash away the existing layer hints.  The call to _Save below will
         // invalidate them but they should still be good.
         SdfLayerHints hints = layer->_hints;
@@ -459,7 +465,9 @@ SdfLayer::_CreateNew(
         if (!layer->_Save(/* force = */ true)) {
             // Dropping the layer reference will destroy it, and
             // the destructor will remove it from the registry.
+            // #nv begin #usd_diff_deltas
             layer->_FinishInitialization(/* success = */ false);
+            // nv end
             return TfNullPtr;
         }
 
