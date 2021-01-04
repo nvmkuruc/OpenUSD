@@ -1484,42 +1484,6 @@ UsdSkelImagingSkeletonAdapter::GetExtComputationSceneInputNames(
 
     }  
 
-// FIXME: Resolve merge conflict from v20.11-rc1
-#if 0
-    // #nv begin #nv-gpu-skinning
-    if (!_UseNVGPUSkinningComputations()) {
-    // nv end
-        // Remove the computations it participates in.
-        SdfPath compPath = _GetSkinningComputationPath(cachePath);
-        index->RemoveSprim(HdPrimTypeTokens->extComputation, compPath);
-    }
-    
-    if (_IsEnabledAggregatorComputation() 
-        //+NV_CHANGE FRZHANG
-        && !_UseNVGPUSkinningComputations()
-        //-NV_CHANGE FRZHANG
-        ) {
-        SdfPath aggrCompPath =
-            _GetSkinningInputAggregatorComputationPath(cachePath);
-        index->RemoveSprim(HdPrimTypeTokens->extComputation, aggrCompPath);
-    }
-
-    //+NV_CHANGE FRZHANG
-    for (auto& skel : _skelAnimMap)
-    {
-        _SkelSkinMap& skelSkin = skel.second;
-        for (auto& skin : skelSkin)
-        {
-            SdfPathSet& skinnedPrimPaths = skin.second;
-            skinnedPrimPaths.erase(cachePath);
-        }
-    }
-    //-NV_CHANGE FRZHANG
-
-    // Clear cache entry.
-    _skinnedPrimDataCache.erase(cachePath);
-}
-#endif
     return BaseAdapter::GetExtComputationSceneInputNames(cachePath);;
 
 }
@@ -2216,16 +2180,36 @@ UsdSkelImagingSkeletonAdapter::_RemoveSkinnedPrimAndComputations(
     // Remove skinned prim.
     index->RemoveRprim(cachePath);
 
-    // Remove the computations it participates in.
-    SdfPath compPath = _GetSkinningComputationPath(cachePath);
-    index->RemoveSprim(HdPrimTypeTokens->extComputation, compPath);
-    
-    if (_IsEnabledAggregatorComputation()) {
+    // #nv begin #nv-gpu-skinning
+    if (!_UseNVGPUSkinningComputations()) {
+        // nv end
+            // Remove the computations it participates in.
+        SdfPath compPath = _GetSkinningComputationPath(cachePath);
+        index->RemoveSprim(HdPrimTypeTokens->extComputation, compPath);
+    }
+
+    if (_IsEnabledAggregatorComputation()
+        //+NV_CHANGE FRZHANG
+        && !_UseNVGPUSkinningComputations()
+        //-NV_CHANGE FRZHANG
+        ) {
         SdfPath aggrCompPath =
             _GetSkinningInputAggregatorComputationPath(cachePath);
         index->RemoveSprim(HdPrimTypeTokens->extComputation, aggrCompPath);
     }
-    
+
+    //+NV_CHANGE FRZHANG
+    for (auto& skel : _skelAnimMap)
+    {
+        _SkelSkinMap& skelSkin = skel.second;
+        for (auto& skin : skelSkin)
+        {
+            SdfPathSet& skinnedPrimPaths = skin.second;
+            skinnedPrimPaths.erase(cachePath);
+        }
+    }
+    //-NV_CHANGE FRZHANG
+
     // Clear cache entry.
     _skinnedPrimDataCache.erase(cachePath);
 }

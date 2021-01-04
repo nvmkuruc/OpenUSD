@@ -469,16 +469,14 @@ UsdImagingMeshAdapter::GetSubdivTags(UsdPrim const& prim,
 
 // #nv begin #gpu-skinning
 // +NV_CHANGE FRZHANG : Skel Animation Update API
-// FIXME
 void
 UsdImagingMeshAdapter::UpdateRestPoints(UsdPrim const& prim, SdfPath const& cachePath, UsdTimeCode time,
     const VtVec3fArray& restPoints)
 {
-#if 0
     UsdImagingValueCache* valueCache = _GetValueCache();
-    valueCache->GetPoints(cachePath) = restPoints;
+    // As of v20.11, posed points are no longer stored in the value cache.
+    //valueCache->GetPoints(cachePath) = restPoints;
     valueCache->GetRestPoints(cachePath) = restPoints;
-#endif
 }
 
 void
@@ -489,7 +487,6 @@ UsdImagingMeshAdapter::UpdateSkinningBinding(UsdPrim const& prim, SdfPath const&
     const TfToken& skinningMethod, const VtFloatArray& skinningBlendWeights, bool hasConstantSkinningBlendWeights
 )
 {
-#if 0
     UsdImagingValueCache* valueCache = _GetValueCache();
     valueCache->GetGeomBindXform(cachePath) = bindTransform;
     valueCache->GetJointIndices(cachePath) = jointIndices;
@@ -499,19 +496,16 @@ UsdImagingMeshAdapter::UpdateSkinningBinding(UsdPrim const& prim, SdfPath const&
     valueCache->GetSkinningMethod(cachePath) = skinningMethod;
     valueCache->GetSkinningBlendWeights(cachePath) = skinningBlendWeights;
     valueCache->GetHasConstantSkinningBlendWeights(cachePath) = hasConstantSkinningBlendWeights;
-#endif
 }
 
 void
 UsdImagingMeshAdapter::UpdateSkelAnim(UsdPrim const& prim, SdfPath const& cachePath, UsdTimeCode time,
     const VtMatrix4fArray& skelAnim, const GfMatrix4d& primWorldToLocal, const GfMatrix4d& skelLocalToWorld)
 {
-#if 0
     UsdImagingValueCache* valueCache = _GetValueCache();
     valueCache->GetSkinningXforms(cachePath) = skelAnim;
     valueCache->GetPrimWorldToLocal(cachePath) = primWorldToLocal;
     valueCache->GetSkelLocalToWorld(cachePath) = skelLocalToWorld;
-#endif
 }
 //-NV_CHANGE FRZHANG
 

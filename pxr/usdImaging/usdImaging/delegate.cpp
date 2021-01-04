@@ -2843,15 +2843,13 @@ bool UsdImagingDelegate::ShouldGenerateJointMesh()
 /*virtual*/
 bool UsdImagingDelegate::GetSkinningBindingValues(SdfPath const&id, VtValue& restPoints, GfMatrix4d& geomBindXform)
 {
-    // FIXME
-#if 0
 	SdfPath usdPath = ConvertIndexPathToCachePath(id);
 	if (_valueCache.ExtractRestPoints(usdPath, &restPoints) 
 		&& _valueCache.ExtractGeomBindXform(usdPath, &geomBindXform) )
 	{
 		return true;
 	}
-#endif
+
 	return HdSceneDelegate::GetSkinningBindingValues(id, restPoints, geomBindXform);
 }
 
@@ -2859,8 +2857,6 @@ bool UsdImagingDelegate::GetSkinningBindingValues(SdfPath const&id, VtValue& res
 bool
 UsdImagingDelegate::GetSkinningBlendValues(SdfPath const& id, VtValue& jointIndices, VtValue& jointWeights, int& numInfluencesPerPoint, bool& hasConstantInfluences, TfToken& skinningMethod, VtValue& skinningBlendWeights, bool& hasConstantSkinningBlendWeights)
 {
-    // FIXME
-#if 0
 	SdfPath usdPath = ConvertIndexPathToCachePath(id);
 	if (_valueCache.ExtractJointIndices(usdPath, &jointIndices) 
 		&& _valueCache.ExtractJointWeights(usdPath, &jointWeights)
@@ -2873,16 +2869,14 @@ UsdImagingDelegate::GetSkinningBlendValues(SdfPath const& id, VtValue& jointIndi
 	{
 		return true;
 	}
-#endif
-	return HdSceneDelegate::GetSkinningBlendValues(id, jointIndices, jointWeights, numInfluencesPerPoint, hasConstantInfluences, skinningMethod, skinningBlendWeights, hasConstantSkinningBlendWeights);
+
+    return HdSceneDelegate::GetSkinningBlendValues(id, jointIndices, jointWeights, numInfluencesPerPoint, hasConstantInfluences, skinningMethod, skinningBlendWeights, hasConstantSkinningBlendWeights);
 }
 
 /*virtual*/
 bool
 UsdImagingDelegate::GetSkelAnimXformValues(SdfPath const& id, VtValue& skinningXform, GfMatrix4d& primWorldToLocal, GfMatrix4d& skelLocalToWorld)
 {
-    // FIXME
-#if 0
 	SdfPath usdPath = ConvertIndexPathToCachePath(id);
 	if (_valueCache.ExtractSkinningXforms(usdPath, &skinningXform)
 		&& _valueCache.ExtractPrimWorldToLocal(usdPath, &primWorldToLocal)
@@ -2891,7 +2885,7 @@ UsdImagingDelegate::GetSkelAnimXformValues(SdfPath const& id, VtValue& skinningX
 	{
 		return true;
 	}
-#endif
+
 	return HdSceneDelegate::GetSkelAnimXformValues(id, skinningXform, primWorldToLocal, skelLocalToWorld);
 }
 //-NV_CHANGE FRZHANG

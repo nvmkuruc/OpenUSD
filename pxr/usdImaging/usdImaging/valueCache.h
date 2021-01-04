@@ -278,8 +278,6 @@ public:
     void Clear(SdfPath const& path) {
         _Erase<VtValue>(Key::InstanceIndices(path));
 		//+NV_CHANGE FRZHANG : NV GPU Skinning
-        // FIXME
-#if 0
 		_Erase<VtValue>(Key::RestPoints(path));
 		_Erase<GfMatrix4d>(Key::GeomBindXform(path));
 		_Erase<VtValue>(Key::JointIndices(path));
@@ -292,7 +290,6 @@ public:
 		_Erase<GfMatrix4d>(Key::PrimWorldToLocal(path));
 		_Erase<VtValue>(Key::SkinningXforms(path));
 		_Erase<GfMatrix4d>(Key::SkelLocalToWorld(path));
-#endif
 		//-NV_CHANGE FRZHANG
 
         // PERFORMANCE: We're copying the primvar vector here, but we could
@@ -313,8 +310,6 @@ public:
         return _Get<HdPrimvarDescriptorVector>(Key::Primvars(path));
     }
 	//+NV_CHANGE FRZHANG : NV GPU Skinning
-    // FIXME
-#if 0
 	VtValue& GetRestPoints(SdfPath const& path) const {
 		return _Get<VtValue>(Key::RestPoints(path));
 	}
@@ -351,7 +346,6 @@ public:
 	GfMatrix4d& GetSkelLocalToWorld(SdfPath const& path) const {
 		return _Get<GfMatrix4d>(Key::SkelLocalToWorld(path));
 	}
-#endif
 	//-NV_CHANGE FRZHANG
 
     bool FindInstanceIndices(SdfPath const& path, VtValue* value) const {
@@ -361,8 +355,6 @@ public:
         return _Find(Key::Primvars(path), value);
     }
 	//+NV_CHANGE FRZHANG : NV GPU Skinning
-    // FIXME
-#if 0
 	bool FindRestPoints(SdfPath const& path, VtValue* value) const {
 		return _Find(Key::RestPoints(path), value);
 	}
@@ -399,7 +391,6 @@ public:
 	bool FindSkelLocalToWorld(SdfPath const& path, GfMatrix4d* value) const {
 		return _Find(Key::SkelLocalToWorld(path), value);
 	}
-#endif
 	//-NV_CHANGE FRZHANG
     bool ExtractInstanceIndices(SdfPath const& path, VtValue* value) {
         return _Extract(Key::InstanceIndices(path), value);
@@ -408,8 +399,6 @@ public:
         return _Extract(Key::Primvars(path), value);
     }
 	//+NV_CHANGE FRZHANG : NV GPU Skinning
-    // FIXME
-#if 0
 	bool ExtractRestPoints(SdfPath const& path, VtValue* value) {
 		return _Extract(Key::RestPoints(path), value);
 	}
@@ -446,7 +435,6 @@ public:
 	bool ExtractSkelLocalToWorld(SdfPath const& path, GfMatrix4d* value) {
 		return _Extract(Key::SkelLocalToWorld(path), value);
 	}
-#endif
 	//-NV_CHANGE FRZHANG
 
     /// Remove any items from the cache that are marked for defered deletion.
@@ -463,6 +451,15 @@ private:
     bool _locked;
 
 	//+NV_CHANGE FRZHANG
+    typedef _TypedCache<bool> _BoolCache;
+    mutable _BoolCache _boolCache;
+
+    typedef _TypedCache<TfToken> _TokenCache;
+    mutable _TokenCache _tokenCache;
+
+    typedef _TypedCache<GfMatrix4d> _MatrixCache;
+    mutable _MatrixCache _matrixCache;
+
 	typedef _TypedCache<int> _IntCache;
 	mutable _IntCache _intCache;
 	//-NV_CHANGE FRZHANG
@@ -474,6 +471,15 @@ private:
     mutable _PviCache _pviCache;
 
 	//+NV_CHANGE FRZHANG
+    void _GetCache(_BoolCache **cache) const {
+        *cache = &_boolCache;
+    }
+    void _GetCache(_TokenCache **cache) const {
+        *cache = &_tokenCache;
+    }
+    void _GetCache(_MatrixCache **cache) const {
+        *cache = &_matrixCache;
+    }
 	void _GetCache(_IntCache **cache) const {
 		*cache = &_intCache;
 	}
