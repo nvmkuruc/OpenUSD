@@ -226,7 +226,7 @@ void wrapUsdSkelSkinningQuery()
              (arg("xforms"),
               arg("time")=UsdTimeCode::Default()))
 
-        .def("ComputeExentsPadding",
+        .def("ComputeExtentsPadding",
              static_cast<float (UsdSkelSkinningQuery::*)(
                  const VtMatrix4dArray&,
                  const UsdGeomBoundable&) const>(
@@ -235,7 +235,7 @@ void wrapUsdSkelSkinningQuery()
               arg("boundable"),
               arg("time")=UsdTimeCode::Default()))
 
-        .def("ComputeExentsPadding",
+        .def("ComputeExtentsPadding",
              static_cast<float (UsdSkelSkinningQuery::*)(
                  const VtMatrix4fArray&,
                  const UsdGeomBoundable&) const>(

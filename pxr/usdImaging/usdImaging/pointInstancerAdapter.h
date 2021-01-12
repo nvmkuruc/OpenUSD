@@ -27,6 +27,7 @@
 /// \file usdImaging/pointInstancerAdapter.h
 
 #include "pxr/pxr.h"
+#include "pxr/base/tf/denseHashMap.h"
 #include "pxr/usdImaging/usdImaging/version.h"
 #include "pxr/usdImaging/usdImaging/primAdapter.h"
 #include "pxr/usdImaging/usdImaging/gprimAdapter.h"
@@ -138,6 +139,10 @@ public:
                                     float *sampleTimes,
                                     GfMatrix4d *sampleValues) override;
 
+    SdfPath GetInstancerId(
+        UsdPrim const& usdPrim,
+        SdfPath const& cachePath) const override;
+
     GfMatrix4d GetTransform(UsdPrim const& prim, 
                             SdfPath const& cachePath,
                             UsdTimeCode time,
@@ -225,6 +230,11 @@ public:
             SdfPath const& cachePath,
             const UsdImagingInstancerContext* instancerContext) const override;
 
+    VtValue
+    GetInstanceIndices(UsdPrim const& instancerPrim,
+                       SdfPath const& instancerCachePath,
+                       SdfPath const& prototypeCachePath,
+                       UsdTimeCode time) const override;
 
     VtValue Get(UsdPrim const& prim,
                 SdfPath const& cachePath,
@@ -293,6 +303,7 @@ private:
     void _UnloadInstancer(SdfPath const& instancerPath,
                           UsdImagingIndexProxy* index);
 
+<<<<<<< HEAD
     // Computes per-frame instance indices.
     typedef std::unordered_map<SdfPath, VtIntArray, SdfPath::Hash> _InstanceMap;
     _InstanceMap _ComputeInstanceMap(SdfPath const& instancerPath,
@@ -304,6 +315,8 @@ private:
     mutable tbb::spin_mutex _instanceMapCacheMutex;
     // nv end
 
+=======
+>>>>>>> upstream/dev
     // Updates per-frame instancer visibility.
     void _UpdateInstancerVisibility(SdfPath const& instancerPath,
                                     _InstancerData const& instrData,
@@ -400,6 +413,10 @@ private:
         SdfPath parentInstancerCachePath;
         _ProtoPrimMap protoPrimMap;
         SdfPathVector prototypePaths;
+
+        using PathToIndexMap = TfDenseHashMap<SdfPath, size_t, SdfPath::Hash>;
+        PathToIndexMap prototypePathIndices;
+
 
         // XXX: We keep a bunch of state around visibility that's set in
         // TrackVariability and UpdateForTime.  "visible", and "visibleTime"

@@ -139,15 +139,13 @@ UsdImagingGprimAdapter::_AddRprim(TfToken const& primType,
                                       instancerContext)
 {
     SdfPath cachePath = _ResolveCachePath(usdPrim.GetPath(), instancerContext);
-    SdfPath instancer = instancerContext ?
-        instancerContext->instancerCachePath : SdfPath();
 
     // For an instanced gprim, this is the instancer prim.
     // For a non-instanced gprim, this is just the gprim.
     UsdPrim proxyPrim = usdPrim.GetStage()->GetPrimAtPath(
         cachePath.GetAbsoluteRootOrPrimPath());
 
-    index->InsertRprim(primType, cachePath, instancer, proxyPrim,
+    index->InsertRprim(primType, cachePath, proxyPrim,
         instancerContext ? instancerContext->instancerAdapter
             : UsdImagingPrimAdapterSharedPtr());
     HD_PERF_COUNTER_INCR(UsdImagingTokens->usdPopulatedPrimCount);
@@ -301,8 +299,9 @@ UsdImagingGprimAdapter::UpdateForTime(UsdPrim const& prim,
                                UsdImagingInstancerContext const* 
                                    instancerContext) const
 {
-    UsdImagingValueCache* valueCache = _GetValueCache();
-    HdPrimvarDescriptorVector& vPrimvars = valueCache->GetPrimvars(cachePath);
+    UsdImagingPrimvarDescCache* primvarDescCache = _GetPrimvarDescCache();
+    HdPrimvarDescriptorVector& vPrimvars = 
+        primvarDescCache->GetPrimvars(cachePath);
 
     if (requestedBits & HdChangeTracker::DirtyPoints) {
 
@@ -446,24 +445,31 @@ UsdImagingGprimAdapter::ProcessPropertyChange(UsdPrim const& prim,
     if (propertyName == UsdGeomTokens->visibility)
         return HdChangeTracker::DirtyVisibility;
 
-    else if (propertyName == UsdGeomTokens->purpose)
+    if (propertyName == UsdGeomTokens->purpose)
         return HdChangeTracker::DirtyRenderTag;
 
-    else if (UsdGeomXformable::IsTransformationAffectedByAttrNamed(propertyName))
+    if (UsdGeomXformable::IsTransformationAffectedByAttrNamed(propertyName))
         return HdChangeTracker::DirtyTransform;
 
+<<<<<<< HEAD
     else if (propertyName == UsdGeomTokens->extent)
         return HdChangeTracker::DirtyExtent;
 
     else if (propertyName == UsdGeomTokens->doubleSided)
+=======
+    if (propertyName == UsdGeomTokens->extent) 
+        return HdChangeTracker::DirtyExtent;
+
+    if (propertyName == UsdGeomTokens->doubleSided) 
+>>>>>>> upstream/dev
         return HdChangeTracker::DirtyDoubleSided;
 
-    else if (propertyName == UsdGeomTokens->velocities ||
+    if (propertyName == UsdGeomTokens->velocities ||
              propertyName == UsdGeomTokens->accelerations)
         // XXX: "points" is handled by derived classes.
         return HdChangeTracker::DirtyPoints;
 
-    else if (UsdShadeMaterialBindingAPI::CanContainPropertyName(propertyName) ||
+    if (UsdShadeMaterialBindingAPI::CanContainPropertyName(propertyName) ||
             UsdCollectionAPI::CanContainPropertyName(propertyName)) {
         return HdChangeTracker::DirtyMaterialId |
                HdChangeTracker::DirtyPrimvar;

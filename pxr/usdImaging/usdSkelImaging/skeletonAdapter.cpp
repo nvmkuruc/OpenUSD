@@ -167,6 +167,7 @@ UsdSkelImagingSkeletonAdapter::Populate(
         // Note: This uses the "rest" pose of the skeleton.
         // Also, since the bone mesh isn't backed by the UsdStage, we register 
         // the skeleton prim on its behalf.
+<<<<<<< HEAD
         SdfPath instancer = instancerContext ?
             instancerContext->instancerCachePath : SdfPath();
         //+NV_CHANGE FRZHANG
@@ -186,6 +187,10 @@ UsdSkelImagingSkeletonAdapter::Populate(
             index->_AddHdPrimInfo(prim.GetPath(), prim, shared_from_this());
         }
         //- NV_CHANGE FRZHANG
+=======
+        index->InsertRprim(HdPrimTypeTokens->mesh, prim.GetPath(),
+                           prim, shared_from_this());
+>>>>>>> upstream/dev
     }
 
     // Insert a computation for each skinned prim targeted by this
@@ -1213,6 +1218,7 @@ UsdSkelImagingSkeletonAdapter::_RemovePrim(const SdfPath& cachePath,
     
     // Alternative way of finding whether this is a callback for the skeleton/
     // bone mesh.
+<<<<<<< HEAD
     bool isSkelPath = _skelBindingMap.find(cachePath) != _skelBindingMap.end();
 
     // #nv begin #missing-skel-root
@@ -1223,6 +1229,9 @@ UsdSkelImagingSkeletonAdapter::_RemovePrim(const SdfPath& cachePath,
     // nv end
 
     if (isSkelPath) {
+=======
+    if (_GetSkelData(cachePath)) {
+>>>>>>> upstream/dev
 
         TF_DEBUG(USDIMAGING_CHANGES).Msg(
                 "[SkeletonAdapter::_RemovePrim] Remove skeleton"
@@ -1942,13 +1951,19 @@ UsdSkelImagingSkeletonAdapter::_GetExtComputationInputForSkinningComputation(
         if (name == _tokens->skelLocalToWorld) {
             // PERFORMANCE:
             // Would be better if we could access a shared xformCache here?
-
             UsdGeomXformCache xformCache(time);
-            UsdPrim const& skelPrim = skelData->skelQuery.GetPrim();
+
+            UsdPrim skelPrim(skelData->skelQuery.GetPrim());
+            if (skelPrim.IsInPrototype()) {
+                const auto bindingIt = 
+                    _skelBindingMap.find(skinnedPrimData->skelPath);
+                if (bindingIt != _skelBindingMap.end()) {
+                    skelPrim = bindingIt->second.GetSkeleton().GetPrim();
+                }
+            }
             GfMatrix4d skelLocalToWorld =
                 xformCache.GetLocalToWorldTransform(skelPrim);
             return VtValue(skelLocalToWorld);
-
         }
     }
 
@@ -2128,18 +2143,18 @@ UsdSkelImagingSkeletonAdapter::_UpdateBoneMeshForTime(
                                      cachePath.GetText());
 
     if (requestedBits & HdChangeTracker::DirtyPrimvar) {
-        UsdImagingValueCache* valueCache = _GetValueCache();
+        UsdImagingPrimvarDescCache* primvarDescCache = _GetPrimvarDescCache();
 
         // Expose points as a primvar.
-        _MergePrimvar(&valueCache->GetPrimvars(cachePath),
+        _MergePrimvar(&primvarDescCache->GetPrimvars(cachePath),
                       HdTokens->points,
                       HdInterpolationVertex,
                       HdPrimvarRoleTokens->point);
-        _MergePrimvar(&valueCache->GetPrimvars(cachePath),
+        _MergePrimvar(&primvarDescCache->GetPrimvars(cachePath),
                       HdTokens->displayColor,
                       HdInterpolationConstant,
                       HdPrimvarRoleTokens->color);
-        _MergePrimvar(&valueCache->GetPrimvars(cachePath),
+        _MergePrimvar(&primvarDescCache->GetPrimvars(cachePath),
                       HdTokens->displayOpacity,
                       HdInterpolationConstant);
     }
@@ -2494,9 +2509,9 @@ UsdSkelImagingSkeletonAdapter::_UpdateSkinnedPrimForTime(
     // XXX: The usage of elementSize for jointWeights/Indices primvars to have
     // multiple values per-vertex is not supported yet in Hydra.
     if (requestedBits & HdChangeTracker::DirtyPrimvar) {
-        UsdImagingValueCache* valueCache = _GetValueCache();
+        UsdImagingPrimvarDescCache* primvarDescCache = _GetPrimvarDescCache();
         HdPrimvarDescriptorVector& primvars =
-            valueCache->GetPrimvars(skinnedPrimPath);
+            primvarDescCache->GetPrimvars(skinnedPrimPath);
         for (auto it = primvars.begin(); it != primvars.end(); ) {
             if (it->name == _tokens->skelJointIndices ||
                 it->name == _tokens->skelJointWeights  ||

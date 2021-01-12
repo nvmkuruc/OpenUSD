@@ -172,7 +172,6 @@ PXR_NAMESPACE_OPEN_SCOPE
     (skipInvisibleRprimSync)                    \
     (subdivisionRefineCPU)                      \
     (subdivisionRefineGPU)                      \
-    (textureResourceMemory)                     \
     (textureMemory)                             \
     (triangulateFaceVarying)                    \
     (uboSize)                                   \

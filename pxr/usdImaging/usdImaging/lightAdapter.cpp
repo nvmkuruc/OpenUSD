@@ -97,6 +97,7 @@ UsdImagingLightAdapter::TrackVariability(UsdPrim const& prim,
             }
         }
 
+<<<<<<< HEAD
         UsdImagingValueCache* valueCache = _GetValueCache();
 
         UsdLuxLight light(prim);
@@ -106,6 +107,31 @@ UsdImagingLightAdapter::TrackVariability(UsdPrim const& prim,
             collectionCache.UpdateCollection(light.GetShadowLinkCollectionAPI());
             // TODO: When collections change we need to invalidate affected
             // prims with the DirtyCollections flag.
+=======
+    UsdImagingPrimvarDescCache* primvarDescCache = _GetPrimvarDescCache();
+
+    UsdLuxLight light(prim);
+    if (TF_VERIFY(light)) {
+        UsdImaging_CollectionCache &collectionCache = _GetCollectionCache();
+        collectionCache.UpdateCollection(light.GetLightLinkCollectionAPI());
+        collectionCache.UpdateCollection(light.GetShadowLinkCollectionAPI());
+        // TODO: When collections change we need to invalidate affected
+        // prims with the DirtyCollections flag.
+    }
+
+    // XXX Cache primvars for lights.
+    {
+        // Establish a primvar desc cache entry.
+        HdPrimvarDescriptorVector& vPrimvars = 
+            primvarDescCache->GetPrimvars(cachePath);
+
+        // Compile a list of primvars to check.
+        std::vector<UsdGeomPrimvar> primvars;
+        UsdImaging_InheritedPrimvarStrategy::value_type inheritedPrimvarRecord =
+            _GetInheritedPrimvars(prim.GetParent());
+        if (inheritedPrimvarRecord) {
+            primvars = inheritedPrimvarRecord->primvars;
+>>>>>>> upstream/dev
         }
 
         // XXX Cache primvars for lights.

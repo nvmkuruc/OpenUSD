@@ -30,7 +30,7 @@
 #include "pxr/usdImaging/usdImaging/api.h"
 #include "pxr/usdImaging/usdImaging/version.h"
 #include "pxr/usdImaging/usdImaging/collectionCache.h"
-#include "pxr/usdImaging/usdImaging/valueCache.h"
+#include "pxr/usdImaging/usdImaging/primvarDescCache.h"
 #include "pxr/usdImaging/usdImaging/resolvedAttributeCache.h"
 #include "pxr/usdImaging/usdImaging/instancerContext.h"
 
@@ -357,6 +357,7 @@ public:
     virtual GfMatrix4d GetInstancerTransform(SdfPath const &instancerId) 
         override;
 
+<<<<<<< HEAD
 	//+NV_CHANGE FRZHANG  : GPU SKinning value fetch
 	/// NV_Edit
 	/// provide direct access to value cache.
@@ -385,6 +386,10 @@ public:
 	USDIMAGING_API
 	virtual bool GetSkelAnimXformValues(SdfPath const& id, VtValue& skinningXform, GfMatrix4d& primWorldToLocal, GfMatrix4d& skelLocalToWorld) override;
 	//-NV_CHANGE FRZHANG
+=======
+    USDIMAGING_API
+    virtual SdfPath GetInstancerId(SdfPath const &primId) override;
+>>>>>>> upstream/dev
 
     // Motion samples
     USDIMAGING_API
@@ -766,8 +771,8 @@ protected:
     /// Map from USD prim path to refine level.
     _RefineLevelMap _refineLevelMap;
 
-    /// Cached/pre-fetched rprim data.
-    UsdImagingValueCache _valueCache;
+    /// Cached/pre-fetched primvar descriptors.
+    UsdImagingPrimvarDescCache _primvarDescCache;
 
     /// Usd binding.
     UsdStageRefPtr _stage;

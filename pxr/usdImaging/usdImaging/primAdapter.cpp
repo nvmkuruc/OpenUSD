@@ -307,6 +307,15 @@ UsdImagingPrimAdapter::GetInstancerTransform(
 }
 
 /*virtual*/
+SdfPath
+UsdImagingPrimAdapter::GetInstancerId(
+    UsdPrim const& usdPrim,
+    SdfPath const& cachePath) const
+{
+    return SdfPath::EmptyPath();
+}
+
+/*virtual*/
 size_t
 UsdImagingPrimAdapter::SamplePrimvar(
     UsdPrim const& usdPrim,
@@ -502,10 +511,10 @@ UsdImagingPrimAdapter::IsChildPath(SdfPath const& path) const
     return path.IsPropertyPath();
 }
 
-UsdImagingValueCache* 
-UsdImagingPrimAdapter::_GetValueCache() const
+UsdImagingPrimvarDescCache* 
+UsdImagingPrimAdapter::_GetPrimvarDescCache() const
 {
-    return &_delegate->_valueCache; 
+    return &_delegate->_primvarDescCache; 
 }
 
 GfMatrix4d 
@@ -562,19 +571,20 @@ UsdImagingPrimAdapter::_GetPrimPathFromInstancerChain(
 
     SdfPath primPath = instancerChain[0];
 
-    // Every path except the last path should be a path in master.  The idea is
-    // to replace the master path with the instance path that comes next in the
-    // chain, and continue until we're back at scene scope.
+    // Every path except the last path should be a path in prototype.  The idea
+    // is to replace the prototype path with the instance path that comes next
+    // in the chain, and continue until we're back at scene scope.
     for (size_t i = 1; i < instancerChain.size(); ++i)
     {
         UsdPrim prim = _GetPrim(primPath);
-        TF_VERIFY(prim.IsInMaster());
+        TF_VERIFY(prim.IsInPrototype());
 
-        UsdPrim master = prim;
-        while (!master.IsMaster()) {
-            master = master.GetParent();
+        UsdPrim prototype = prim;
+        while (!prototype.IsPrototype()) {
+            prototype = prototype.GetParent();
         }
-        primPath = primPath.ReplacePrefix(master.GetPath(), instancerChain[i]);
+        primPath = primPath.ReplacePrefix(
+            prototype.GetPath(), instancerChain[i]);
     }
 
     return primPath;
@@ -849,7 +859,7 @@ UsdImagingPrimAdapter::_ProcessNonPrefixedPrimvarPropertyChange(
     }
 
     HdPrimvarDescriptorVector& primvarDescs =
-        _GetValueCache()->GetPrimvars(cachePath);  
+        _GetPrimvarDescCache()->GetPrimvars(cachePath);  
     
     PrimvarChange changeType =
         _ProcessPrimvarChange(primvarOnPrim, primvarInterp,
@@ -891,7 +901,7 @@ UsdImagingPrimAdapter::_ProcessPrefixedPrimvarPropertyChange(
     // Determine if primvar is in the value cache.
     TfToken primvarName = UsdGeomPrimvar::StripPrimvarsName(propertyName);
     HdPrimvarDescriptorVector& primvarDescs =
-        _GetValueCache()->GetPrimvars(cachePath);  
+        _GetPrimvarDescCache()->GetPrimvars(cachePath);  
     
     PrimvarChange changeType = _ProcessPrimvarChange(primvarOnPrim,
                                  hdInterpOnPrim,
@@ -1353,6 +1363,16 @@ UsdImagingPrimAdapter::GetExtComputationKernel(
     const UsdImagingInstancerContext* instancerContext) const
 {
     return std::string();
+}
+
+/*virtual*/
+VtValue
+UsdImagingPrimAdapter::GetInstanceIndices(UsdPrim const& instancerPrim,
+                                          SdfPath const& instancerCachePath,
+                                          SdfPath const& prototypeCachePath,
+                                          UsdTimeCode time) const
+{
+    return VtValue();
 }
 
 VtArray<VtIntArray>

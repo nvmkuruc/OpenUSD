@@ -33,7 +33,6 @@ pxr_library(usdImaging
         resolvedAttributeCache
         instancerContext
         tokens
-        valueCache
         basisCurvesAdapter
         capsuleAdapter
         cameraAdapter
@@ -59,6 +58,7 @@ pxr_library(usdImaging
         pointsAdapter
         pointInstancerAdapter
         primAdapter
+        primvarDescCache
         rectLightAdapter
         sphereAdapter
         sphereLightAdapter
