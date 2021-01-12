@@ -1056,11 +1056,7 @@ def InstallOpenVDB(context, force, buildArgs):
         # OpenVDB needs Half type from IlmBase
         extraArgs.append('-DILMBASE_ROOT="{instDir}"'
                          .format(instDir=context.instDir))
-<<<<<<< HEAD
- 
-=======
 
->>>>>>> upstream/dev
         # Add on any user-specified extra arguments.
         extraArgs += buildArgs
 

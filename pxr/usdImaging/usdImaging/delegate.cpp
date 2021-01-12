@@ -1001,7 +1001,7 @@ UsdImagingDelegate::_ExecuteWorkForAffectedCachePaths(_Worker* worker)
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
 
-    worker->DisableValueCacheMutations();
+    //worker->DisableValueCacheMutations();
     {
         // Release the GIL to ensure that threaded work won't deadlock if
         // they also need the GIL.
@@ -1012,7 +1012,7 @@ UsdImagingDelegate::_ExecuteWorkForAffectedCachePaths(_Worker* worker)
             std::bind(&UsdImagingDelegate::_Worker::UpdateAffectedCachePath,
                 worker, std::placeholders::_1, std::placeholders::_2));
     }
-    worker->EnableValueCacheMutations();
+    //worker->EnableValueCacheMutations();
 }
 // nv end
 
@@ -2841,8 +2841,8 @@ bool UsdImagingDelegate::ShouldGenerateJointMesh()
 bool UsdImagingDelegate::GetSkinningBindingValues(SdfPath const&id, VtValue& restPoints, GfMatrix4d& geomBindXform)
 {
 	SdfPath usdPath = ConvertIndexPathToCachePath(id);
-	if (_valueCache.ExtractRestPoints(usdPath, &restPoints) 
-		&& _valueCache.ExtractGeomBindXform(usdPath, &geomBindXform) )
+	if (_primvarDescCache.ExtractRestPoints(usdPath, &restPoints) 
+		&& _primvarDescCache.ExtractGeomBindXform(usdPath, &geomBindXform) )
 	{
 		return true;
 	}
@@ -2855,13 +2855,13 @@ bool
 UsdImagingDelegate::GetSkinningBlendValues(SdfPath const& id, VtValue& jointIndices, VtValue& jointWeights, int& numInfluencesPerPoint, bool& hasConstantInfluences, TfToken& skinningMethod, VtValue& skinningBlendWeights, bool& hasConstantSkinningBlendWeights)
 {
 	SdfPath usdPath = ConvertIndexPathToCachePath(id);
-	if (_valueCache.ExtractJointIndices(usdPath, &jointIndices) 
-		&& _valueCache.ExtractJointWeights(usdPath, &jointWeights)
-		&& _valueCache.ExtractNumInfluencesPerPoint(usdPath, &numInfluencesPerPoint)
-		&& _valueCache.ExtractHasConstantInfluences(usdPath, &hasConstantInfluences)
-        && _valueCache.ExtractSkinningMethod(usdPath, &skinningMethod)
-        && _valueCache.ExtractSkinningBlendWeights(usdPath, &skinningBlendWeights)
-        && _valueCache.ExtractHasConstantSkinningBlendWeights(usdPath, &hasConstantSkinningBlendWeights)
+	if (_primvarDescCache.ExtractJointIndices(usdPath, &jointIndices) 
+		&& _primvarDescCache.ExtractJointWeights(usdPath, &jointWeights)
+		&& _primvarDescCache.ExtractNumInfluencesPerPoint(usdPath, &numInfluencesPerPoint)
+		&& _primvarDescCache.ExtractHasConstantInfluences(usdPath, &hasConstantInfluences)
+        && _primvarDescCache.ExtractSkinningMethod(usdPath, &skinningMethod)
+        && _primvarDescCache.ExtractSkinningBlendWeights(usdPath, &skinningBlendWeights)
+        && _primvarDescCache.ExtractHasConstantSkinningBlendWeights(usdPath, &hasConstantSkinningBlendWeights)
 		)
 	{
 		return true;
@@ -2875,9 +2875,9 @@ bool
 UsdImagingDelegate::GetSkelAnimXformValues(SdfPath const& id, VtValue& skinningXform, GfMatrix4d& primWorldToLocal, GfMatrix4d& skelLocalToWorld)
 {
 	SdfPath usdPath = ConvertIndexPathToCachePath(id);
-	if (_valueCache.ExtractSkinningXforms(usdPath, &skinningXform)
-		&& _valueCache.ExtractPrimWorldToLocal(usdPath, &primWorldToLocal)
-		&& _valueCache.ExtractSkelLocalToWorld(usdPath, &skelLocalToWorld)
+	if (_primvarDescCache.ExtractSkinningXforms(usdPath, &skinningXform)
+		&& _primvarDescCache.ExtractPrimWorldToLocal(usdPath, &primWorldToLocal)
+		&& _primvarDescCache.ExtractSkelLocalToWorld(usdPath, &skelLocalToWorld)
 		)
 	{
 		return true;

@@ -67,8 +67,8 @@ UsdImagingLightAdapter::TrackVariability(UsdPrim const& prim,
 {
     // #nv begin fast-updates
     if (checkVariability) {
-        // nv end
-            // Discover time-varying transforms.
+    // nv end
+        // Discover time-varying transforms.
         _IsTransformVarying(prim,
             HdLight::DirtyBits::DirtyTransform,
             UsdImagingTokens->usdVaryingXform,
@@ -88,26 +88,16 @@ UsdImagingLightAdapter::TrackVariability(UsdPrim const& prim,
         for (UsdAttribute const& attr : attrs) {
             // Don't double-count transform attrs.
             if (UsdGeomXformable::IsTransformationAffectedByAttrNamed(
-                attr.GetBaseName())) {
+                    attr.GetBaseName())) {
                 continue;
             }
-            if (attr.GetNumTimeSamples() > 1) {
+            if (attr.GetNumTimeSamples()>1){
                 *timeVaryingBits |= HdLight::DirtyBits::DirtyParams;
                 break;
             }
         }
+    }
 
-<<<<<<< HEAD
-        UsdImagingValueCache* valueCache = _GetValueCache();
-
-        UsdLuxLight light(prim);
-        if (TF_VERIFY(light)) {
-            UsdImaging_CollectionCache &collectionCache = _GetCollectionCache();
-            collectionCache.UpdateCollection(light.GetLightLinkCollectionAPI());
-            collectionCache.UpdateCollection(light.GetShadowLinkCollectionAPI());
-            // TODO: When collections change we need to invalidate affected
-            // prims with the DirtyCollections flag.
-=======
     UsdImagingPrimvarDescCache* primvarDescCache = _GetPrimvarDescCache();
 
     UsdLuxLight light(prim);
@@ -131,29 +121,13 @@ UsdImagingLightAdapter::TrackVariability(UsdPrim const& prim,
             _GetInheritedPrimvars(prim.GetParent());
         if (inheritedPrimvarRecord) {
             primvars = inheritedPrimvarRecord->primvars;
->>>>>>> upstream/dev
         }
 
-        // XXX Cache primvars for lights.
-        {
-            // Establish a valueCache entry.
-            HdPrimvarDescriptorVector& vPrimvars =
-                valueCache->GetPrimvars(cachePath);
-
-            // Compile a list of primvars to check.
-            std::vector<UsdGeomPrimvar> primvars;
-            UsdImaging_InheritedPrimvarStrategy::value_type inheritedPrimvarRecord =
-                _GetInheritedPrimvars(prim.GetParent());
-            if (inheritedPrimvarRecord) {
-                primvars = inheritedPrimvarRecord->primvars;
-            }
-
-            UsdGeomPrimvarsAPI primvarsAPI(prim);
-            std::vector<UsdGeomPrimvar> local = primvarsAPI.GetPrimvarsWithValues();
-            primvars.insert(primvars.end(), local.begin(), local.end());
-            for (auto const &pv : primvars) {
-                _ComputeAndMergePrimvar(prim, pv, UsdTimeCode(), &vPrimvars);
-            }
+        UsdGeomPrimvarsAPI primvarsAPI(prim);
+        std::vector<UsdGeomPrimvar> local = primvarsAPI.GetPrimvarsWithValues();
+        primvars.insert(primvars.end(), local.begin(), local.end());
+        for (auto const &pv : primvars) {
+            _ComputeAndMergePrimvar(prim, pv, UsdTimeCode(), &vPrimvars);
         }
     }
 }
@@ -169,34 +143,6 @@ UsdImagingLightAdapter::UpdateForTime(UsdPrim const& prim,
                                UsdImagingInstancerContext const* 
                                    instancerContext) const
 {
-#if 0
-// #nv begin #bind-material-to-domelight
-    UsdImagingValueCache* valueCache = _GetValueCache();
-    
-    SdfPath materialUsdPath;
-    if (requestedBits & HdChangeTracker::DirtyMaterialId) {
-        materialUsdPath = GetMaterialUsdPath(prim);
-
-        // If we're processing this gprim on behalf of an instancer,
-        // use the material binding specified by the instancer if we
-        // aren't able to find a material binding for this prim itself.
-        if (instancerContext && materialUsdPath.IsEmpty()) {
-            materialUsdPath = instancerContext->instancerMaterialUsdPath;
-        }
-    }
-
-    if (requestedBits & HdChangeTracker::DirtyMaterialId){
-        // FIXME
-        // Although the material binding cache generally holds
-        // cachePaths, not usdPaths, we can use the usdPath
-        // directly here since we do not instance sprims.
-        //valueCache->GetMaterialId(cachePath) = materialUsdPath;
-
-        TF_DEBUG(USDIMAGING_SHADERS).Msg("Shader for <%s> is <%s>\n",
-                prim.GetPath().GetText(), materialUsdPath.GetText());
-    }
-// #nv end
-#endif
 }
 
 HdDirtyBits

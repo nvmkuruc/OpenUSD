@@ -55,13 +55,8 @@ public:
         friend class UsdImagingPrimvarDescCache;
         SdfPath _path;
         TfToken _attribute;
-<<<<<<< HEAD:pxr/usdImaging/usdImaging/valueCache.h
     public:
 		Key() {}
-=======
-
-     public:
->>>>>>> upstream/dev:pxr/usdImaging/usdImaging/primvarDescCache.h
         Key(SdfPath const& path, TfToken const& attr)
             : _path(path)
             , _attribute(attr)
@@ -270,8 +265,6 @@ public:
 
     /// Clear all data associated with a specific path.
     void Clear(SdfPath const& path) {
-<<<<<<< HEAD:pxr/usdImaging/usdImaging/valueCache.h
-        _Erase<VtValue>(Key::InstanceIndices(path));
 		//+NV_CHANGE FRZHANG : NV GPU Skinning
 		_Erase<VtValue>(Key::RestPoints(path));
 		_Erase<GfMatrix4d>(Key::GeomBindXform(path));
@@ -287,18 +280,7 @@ public:
 		_Erase<GfMatrix4d>(Key::SkelLocalToWorld(path));
 		//-NV_CHANGE FRZHANG
 
-        // PERFORMANCE: We're copying the primvar vector here, but we could
-        // access the map directly, if we need to for performance reasons.
-        HdPrimvarDescriptorVector vars;
-        if (FindPrimvars(path, &vars)) {
-            TF_FOR_ALL(pvIt, vars) {
-                _Erase<VtValue>(Key(path, pvIt->name));
-            }
-            _Erase<HdPrimvarDescriptorVector>(Key::Primvars(path));
-        }
-=======
         _Erase<HdPrimvarDescriptorVector>(Key::Primvars(path));
->>>>>>> upstream/dev:pxr/usdImaging/usdImaging/primvarDescCache.h
     }
 
     HdPrimvarDescriptorVector& GetPrimvars(SdfPath const& path) const {
@@ -346,7 +328,7 @@ public:
     bool FindPrimvars(SdfPath const& path, HdPrimvarDescriptorVector* value) const {
         return _Find(Key::Primvars(path), value);
     }
-<<<<<<< HEAD:pxr/usdImaging/usdImaging/valueCache.h
+
 	//+NV_CHANGE FRZHANG : NV GPU Skinning
 	bool FindRestPoints(SdfPath const& path, VtValue* value) const {
 		return _Find(Key::RestPoints(path), value);
@@ -385,12 +367,7 @@ public:
 		return _Find(Key::SkelLocalToWorld(path), value);
 	}
 	//-NV_CHANGE FRZHANG
-    bool ExtractInstanceIndices(SdfPath const& path, VtValue* value) {
-        return _Extract(Key::InstanceIndices(path), value);
-    }
-=======
 
->>>>>>> upstream/dev:pxr/usdImaging/usdImaging/primvarDescCache.h
     bool ExtractPrimvars(SdfPath const& path, HdPrimvarDescriptorVector* value) {
         return _Extract(Key::Primvars(path), value);
     }
@@ -436,20 +413,16 @@ public:
     /// Remove any items from the cache that are marked for defered deletion.
     void GarbageCollect()
     {
-<<<<<<< HEAD:pxr/usdImaging/usdImaging/valueCache.h
 		//+NV_CHANGE FRZHANG
 		_GarbageCollect(_intCache);
 		//-NV_CHANGE FRZHANG
         _GarbageCollect(_valueCache);
-=======
->>>>>>> upstream/dev:pxr/usdImaging/usdImaging/primvarDescCache.h
         _GarbageCollect(_pviCache);
     }
 
 private:
     bool _locked;
 
-<<<<<<< HEAD:pxr/usdImaging/usdImaging/valueCache.h
 	//+NV_CHANGE FRZHANG
     typedef _TypedCache<bool> _BoolCache;
     mutable _BoolCache _boolCache;
@@ -487,11 +460,7 @@ private:
     void _GetCache(_ValueCache **cache) const {
         *cache = &_valueCache;
     }
-=======
-    typedef _TypedCache<HdPrimvarDescriptorVector> _PviCache;
-    mutable _PviCache _pviCache;
 
->>>>>>> upstream/dev:pxr/usdImaging/usdImaging/primvarDescCache.h
     void _GetCache(_PviCache **cache) const {
         *cache = &_pviCache;
     }

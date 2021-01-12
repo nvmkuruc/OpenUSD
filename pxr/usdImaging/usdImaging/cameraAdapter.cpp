@@ -32,15 +32,10 @@
 #include "pxr/imaging/hd/tokens.h"
 #include "pxr/imaging/hd/camera.h"
 
-<<<<<<< HEAD
-#include "pxr/base/gf/frustum.h"
-
 // #nv begin #kit-gizmos
 #include "pxr/base/tf/envSetting.h"
 // nv end
 
-=======
->>>>>>> upstream/dev
 PXR_NAMESPACE_OPEN_SCOPE
 
 // #nv begin #kit-gizmos
@@ -92,28 +87,16 @@ UsdImagingCameraAdapter::TrackVariability(UsdPrim const& prim,
     // nv end
 {
     // #nv begin fast-updates
-    if (checkVariability) {
-        // nv end
-            // Discover time-varying transforms.
-        _IsTransformVarying(prim,
-            HdCamera::DirtyViewMatrix,
-            UsdImagingTokens->usdVaryingXform,
-            timeVaryingBits);
+    if (!checkVariability) {
+        return;
     }
+    // nv end
 
     UsdGeomCamera cam(prim);
-    if (!TF_VERIFY(prim)) {
+    if (!TF_VERIFY(cam)) {
         return;
     }
 
-<<<<<<< HEAD
-    // #nv begin fast-updates
-    if (checkVariability) {
-        // nv end
-            // Properties that affect the projection matrix.
-            // To get a small speed boost, if an attribute sets a dirty bit we skip
-            // all subsequent checks for that dirty bit.
-=======
     // Discover time-varying transforms.
     _IsTransformVarying(prim,
         HdCamera::DirtyTransform,
@@ -164,131 +147,72 @@ UsdImagingCameraAdapter::TrackVariability(UsdPrim const& prim,
             false);
     }
     if ((*timeVaryingBits & HdCamera::DirtyProjMatrix) == 0) {
->>>>>>> upstream/dev
         _IsVarying(prim,
-            UsdGeomTokens->horizontalAperture,
+            UsdGeomTokens->clippingRange,
             HdCamera::DirtyProjMatrix,
             HdCameraTokens->projectionMatrix,
             timeVaryingBits,
             false);
-
-        if ((*timeVaryingBits & HdCamera::DirtyProjMatrix) == 0) {
-            _IsVarying(prim,
-                UsdGeomTokens->verticalAperture,
-                HdCamera::DirtyProjMatrix,
-                HdCameraTokens->projectionMatrix,
-                timeVaryingBits,
-                false);
-        }
-        if ((*timeVaryingBits & HdCamera::DirtyProjMatrix) == 0) {
-            _IsVarying(prim,
-                UsdGeomTokens->horizontalApertureOffset,
-                HdCamera::DirtyProjMatrix,
-                HdCameraTokens->projectionMatrix,
-                timeVaryingBits,
-                false);
-        }
-        if ((*timeVaryingBits & HdCamera::DirtyProjMatrix) == 0) {
-            _IsVarying(prim,
-                UsdGeomTokens->verticalApertureOffset,
-                HdCamera::DirtyProjMatrix,
-                HdCameraTokens->projectionMatrix,
-                timeVaryingBits,
-                false);
-        }
-        if ((*timeVaryingBits & HdCamera::DirtyProjMatrix) == 0) {
-            _IsVarying(prim,
-                UsdGeomTokens->clippingRange,
-                HdCamera::DirtyProjMatrix,
-                HdCameraTokens->projectionMatrix,
-                timeVaryingBits,
-                false);
-        }
-        if ((*timeVaryingBits & HdCamera::DirtyProjMatrix) == 0) {
-            _IsVarying(prim,
-                UsdGeomTokens->focalLength,
-                HdCamera::DirtyProjMatrix,
-                HdCameraTokens->projectionMatrix,
-                timeVaryingBits,
-                false);
-        }
-
+    }
+    if ((*timeVaryingBits & HdCamera::DirtyProjMatrix) == 0) {
         _IsVarying(prim,
-            UsdGeomTokens->clippingPlanes,
-            HdCamera::DirtyClipPlanes,
-            HdCameraTokens->clipPlanes,
+            UsdGeomTokens->focalLength,
+            HdCamera::DirtyProjMatrix,
+            HdCameraTokens->projectionMatrix,
             timeVaryingBits,
             false);
+    }
 
-        // If any of the physical params that affect the projection matrix are time
-        // varying, we can flag the DirtyParams bit as varying and avoid querying
-        // variability of the remaining params.
-        if (*timeVaryingBits & HdCamera::DirtyProjMatrix) {
-            *timeVaryingBits |= HdCamera::DirtyParams;
-        }
-        else {
+    _IsVarying(prim,
+        UsdGeomTokens->clippingPlanes,
+        HdCamera::DirtyClipPlanes,
+        HdCameraTokens->clipPlanes,
+        timeVaryingBits,
+        false);
+
+    // If any of the physical params that affect the projection matrix are time
+    // varying, we can flag the DirtyParams bit as varying and avoid querying
+    // variability of the remaining params.
+    if (*timeVaryingBits & HdCamera::DirtyProjMatrix) {
+        *timeVaryingBits |= HdCamera::DirtyParams;
+    } else {
+        _IsVarying(prim,
+            UsdGeomTokens->fStop,
+            HdCamera::DirtyParams,
+            HdCameraTokens->fStop,
+            timeVaryingBits,
+            false);
+        if ((*timeVaryingBits & HdCamera::DirtyParams) == 0) {
             _IsVarying(prim,
-                UsdGeomTokens->fStop,
+                UsdGeomTokens->focusDistance,
                 HdCamera::DirtyParams,
-                HdCameraTokens->fStop,
+                HdCameraTokens->focusDistance,
                 timeVaryingBits,
                 false);
-            if ((*timeVaryingBits & HdCamera::DirtyParams) == 0) {
-                _IsVarying(prim,
-                    UsdGeomTokens->focusDistance,
-                    HdCamera::DirtyParams,
-                    HdCameraTokens->focusDistance,
-                    timeVaryingBits,
-                    false);
-            }
-            if ((*timeVaryingBits & HdCamera::DirtyProjMatrix) == 0) {
-                _IsVarying(prim,
-                    UsdGeomTokens->shutterOpen,
-                    HdCamera::DirtyParams,
-                    HdCameraTokens->shutterOpen,
-                    timeVaryingBits,
-                    false);
-            }
-            if ((*timeVaryingBits & HdCamera::DirtyProjMatrix) == 0) {
-                _IsVarying(prim,
-                    UsdGeomTokens->shutterClose,
-                    HdCamera::DirtyParams,
-                    HdCameraTokens->fStop,
-                    timeVaryingBits,
-                    false);
-                if ((*timeVaryingBits & HdCamera::DirtyParams) == 0) {
-                    _IsVarying(prim,
-                        cam.GetFocusDistanceAttr().GetBaseName(),
-                        HdCamera::DirtyParams,
-                        HdCameraTokens->focusDistance,
-                        timeVaryingBits,
-                        false);
-                }
-                if ((*timeVaryingBits & HdCamera::DirtyParams) == 0) {
-                    _IsVarying(prim,
-                        cam.GetShutterOpenAttr().GetBaseName(),
-                        HdCamera::DirtyParams,
-                        HdCameraTokens->shutterOpen,
-                        timeVaryingBits,
-                        false);
-                }
-                if ((*timeVaryingBits & HdCamera::DirtyParams) == 0) {
-                    _IsVarying(prim,
-                        cam.GetShutterCloseAttr().GetBaseName(),
-                        HdCamera::DirtyParams,
-                        HdCameraTokens->shutterClose,
-                        timeVaryingBits,
-                        false);
-                }
-            }
-            if ((*timeVaryingBits & HdCamera::DirtyParams) == 0) {
-                _IsVarying(prim,
-                    UsdGeomTokens->exposure,
-                    HdCamera::DirtyParams,
-                    HdCameraTokens->exposure,
-                    timeVaryingBits,
-                    false);
-            }
+        }
+        if ((*timeVaryingBits & HdCamera::DirtyParams) == 0) {
+            _IsVarying(prim,
+                UsdGeomTokens->shutterOpen,
+                HdCamera::DirtyParams,
+                HdCameraTokens->shutterOpen,
+                timeVaryingBits,
+                false);
+        }
+        if ((*timeVaryingBits & HdCamera::DirtyParams) == 0) {
+            _IsVarying(prim,
+                UsdGeomTokens->shutterClose,
+                HdCamera::DirtyParams,
+                HdCameraTokens->shutterClose,
+                timeVaryingBits,
+                false);
+        }
+        if ((*timeVaryingBits & HdCamera::DirtyParams) == 0) {
+            _IsVarying(prim,
+                UsdGeomTokens->exposure,
+                HdCamera::DirtyParams,
+                HdCameraTokens->exposure,
+                timeVaryingBits,
+                false);
         }
     }
 }

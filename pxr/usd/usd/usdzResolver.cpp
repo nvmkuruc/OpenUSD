@@ -198,11 +198,7 @@ public:
         return count;
     }
     
-<<<<<<< HEAD
     virtual std::pair<ArchFile*, size_t> GetFileUnsafe() override
-=======
-    std::pair<FILE*, size_t> GetFileUnsafe() override
->>>>>>> upstream/dev
     {
         std::pair<ArchFile*, size_t> result = _sourceAsset->GetFileUnsafe();
         if (result.first) {

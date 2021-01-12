@@ -474,7 +474,7 @@ void
 UsdImagingMeshAdapter::UpdateRestPoints(UsdPrim const& prim, SdfPath const& cachePath, UsdTimeCode time,
     const VtVec3fArray& restPoints)
 {
-    UsdImagingValueCache* valueCache = _GetValueCache();
+    UsdImagingPrimvarDescCache* valueCache = _GetPrimvarDescCache();
     // As of v20.11, posed points are no longer stored in the value cache.
     //valueCache->GetPoints(cachePath) = restPoints;
     valueCache->GetRestPoints(cachePath) = restPoints;
@@ -488,7 +488,7 @@ UsdImagingMeshAdapter::UpdateSkinningBinding(UsdPrim const& prim, SdfPath const&
     const TfToken& skinningMethod, const VtFloatArray& skinningBlendWeights, bool hasConstantSkinningBlendWeights
 )
 {
-    UsdImagingValueCache* valueCache = _GetValueCache();
+    UsdImagingPrimvarDescCache* valueCache = _GetPrimvarDescCache();
     valueCache->GetGeomBindXform(cachePath) = bindTransform;
     valueCache->GetJointIndices(cachePath) = jointIndices;
     valueCache->GetJointWeights(cachePath) = jointWeights;
@@ -503,7 +503,7 @@ void
 UsdImagingMeshAdapter::UpdateSkelAnim(UsdPrim const& prim, SdfPath const& cachePath, UsdTimeCode time,
     const VtMatrix4fArray& skelAnim, const GfMatrix4d& primWorldToLocal, const GfMatrix4d& skelLocalToWorld)
 {
-    UsdImagingValueCache* valueCache = _GetValueCache();
+    UsdImagingPrimvarDescCache* valueCache = _GetPrimvarDescCache();
     valueCache->GetSkinningXforms(cachePath) = skelAnim;
     valueCache->GetPrimWorldToLocal(cachePath) = primWorldToLocal;
     valueCache->GetSkelLocalToWorld(cachePath) = skelLocalToWorld;

@@ -303,20 +303,6 @@ private:
     void _UnloadInstancer(SdfPath const& instancerPath,
                           UsdImagingIndexProxy* index);
 
-<<<<<<< HEAD
-    // Computes per-frame instance indices.
-    typedef std::unordered_map<SdfPath, VtIntArray, SdfPath::Hash> _InstanceMap;
-    _InstanceMap _ComputeInstanceMap(SdfPath const& instancerPath,
-                                     _InstancerData const& instrData,
-                                     UsdTimeCode time) const;
-    // #nv begin instance-map-caching
-    typedef std::unordered_map<SdfPath, _InstanceMap, SdfPath::Hash> _InstanceMapCache;
-    mutable _InstanceMapCache _instanceMapCache;
-    mutable tbb::spin_mutex _instanceMapCacheMutex;
-    // nv end
-
-=======
->>>>>>> upstream/dev
     // Updates per-frame instancer visibility.
     void _UpdateInstancerVisibility(SdfPath const& instancerPath,
                                     _InstancerData const& instrData,

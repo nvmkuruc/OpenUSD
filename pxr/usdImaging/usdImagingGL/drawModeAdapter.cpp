@@ -760,36 +760,35 @@ UsdImagingGLDrawModeAdapter::TrackVariability(UsdPrim const& prim,
                                             // nv end
 {
     // #nv begin fast-updates
-    if (checkVariability &&
+    if (!checkVariability) {
+        return;
+    }
     // nv end
-	    _IsMaterialPath(cachePath)) {
+
+    if (_IsMaterialPath(cachePath)) {
         _CheckForTextureVariability(prim, HdMaterial::DirtyResource,
                                     timeVaryingBits);
         return;
     }
 
-    // #nv begin fast-updates
-    if (checkVariability) {
-    // nv end
-        // Discover time-varying transforms. If this card is instantiated on an
-        // instance, skip since the instance adapter will handle transforms
-        // and master roots always have identity transform.
-        if (!prim.IsInstance()) {
-            _IsTransformVarying(prim,
-                HdChangeTracker::DirtyTransform,
-                UsdImagingTokens->usdVaryingXform,
-                timeVaryingBits);
-        }
+    // Discover time-varying transforms. If this card is instantiated on an
+    // instance, skip since the instance adapter will handle transforms
+    // and master roots always have identity transform.
+    if (!prim.IsInstance()) {
+        _IsTransformVarying(prim,
+            HdChangeTracker::DirtyTransform,
+            UsdImagingTokens->usdVaryingXform,
+            timeVaryingBits);
+    }
 
-<<<<<<< HEAD
-        // Discover time-varying visibility.
-        _IsVarying(prim,
-                UsdGeomTokens->visibility,
-                HdChangeTracker::DirtyVisibility,
-                UsdImagingTokens->usdVaryingVisibility,
-                timeVaryingBits,
-                true);
-=======
+    // Discover time-varying visibility.
+    _IsVarying(prim,
+            UsdGeomTokens->visibility,
+            HdChangeTracker::DirtyVisibility,
+            UsdImagingTokens->usdVaryingVisibility,
+            timeVaryingBits,
+            true);
+
     // Discover time-varying extents. Look for time samples on either the
     // extent or extentsHint attribute.
     if (!_IsVarying(prim,
@@ -804,7 +803,6 @@ UsdImagingGLDrawModeAdapter::TrackVariability(UsdPrim const& prim,
             UsdImagingTokens->usdVaryingExtent,
             timeVaryingBits,
             false);
->>>>>>> upstream/dev
     }
 }
 

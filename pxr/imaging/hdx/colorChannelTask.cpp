@@ -53,17 +53,6 @@ HdxColorChannelTask::HdxColorChannelTask(
 
 HdxColorChannelTask::~HdxColorChannelTask()
 {
-<<<<<<< HEAD
-    // #nv begin gl-errors
-    // still needed?
-    //bool performedGLOperation = false;
-    // nv end
-
-    if (_parameterBuffer) {
-        _GetHgi()->DestroyBuffer(&_parameterBuffer);
-    }
-=======
->>>>>>> upstream/dev
 }
 
 void

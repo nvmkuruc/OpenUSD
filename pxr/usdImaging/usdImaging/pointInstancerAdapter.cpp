@@ -636,35 +636,7 @@ UsdImagingPointInstancerAdapter::UpdateForTime(UsdPrim const& prim,
             proto.adapter->UpdateForTime(
                 protoPrim, cachePath, time, requestedBits);
         }
-<<<<<<< HEAD
-    } else  if (_InstancerData const* instrData =
-                TfMapLookupPtr(_instancerData, cachePath)) {
-
-        // On DirtyInstanceIndex, recompute the per-prototype index map.
-        if (requestedBits & HdChangeTracker::DirtyInstanceIndex) {
-            // #nv begin instance-map-caching
-            if (UsdImagingPointInstancerAdapter_CacheInstanceMaps()) {
-                tbb::spin_mutex::scoped_lock lock(_instanceMapCacheMutex);
-                _instanceMapCache.erase(cachePath);
-            }
-            // nv end
-
-            _InstanceMap instanceMap =
-                _ComputeInstanceMap(cachePath, *instrData, time);
-
-            // XXX: See UsdImagingDelegate::GetInstanceIndices;
-            // the change-tracking is on the instancer prim, but for simplicity
-            // we store each prototype's index buffer in that prototype's value
-            // cache (since each prototype can have only one instancer).
-            for (auto const& pair : instrData->protoPrimMap) {
-                valueCache->GetInstanceIndices(pair.first) =
-                    instanceMap[pair.second.protoRootPath];
-            }
-        }
-
-=======
     } else if (_instancerData.find(cachePath) != _instancerData.end()) {
->>>>>>> upstream/dev
         // For the instancer itself, we only send translate, rotate and scale
         // back as primvars, which all fall into the DirtyPrimvar bucket
         // currently.
@@ -1010,12 +982,6 @@ UsdImagingPointInstancerAdapter::_UnloadInstancer(SdfPath const& instancerPath,
     // entry for this instancer before removing prototypes.
 
     const _ProtoPrimMap protoPrimMap = instIt->second.protoPrimMap;
-    // #nv begin instance-map-caching
-    if (UsdImagingPointInstancerAdapter_CacheInstanceMaps()) {
-        tbb::spin_mutex::scoped_lock lock(_instanceMapCacheMutex);
-        _instanceMapCache.erase(instIt->first);
-    }
-    // nv end
     _instancerData.erase(instIt);
 
     // First, we need to make sure all proto rprims are removed.

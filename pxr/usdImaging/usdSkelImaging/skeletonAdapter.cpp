@@ -167,19 +167,14 @@ UsdSkelImagingSkeletonAdapter::Populate(
         // Note: This uses the "rest" pose of the skeleton.
         // Also, since the bone mesh isn't backed by the UsdStage, we register 
         // the skeleton prim on its behalf.
-<<<<<<< HEAD
         SdfPath instancer = instancerContext ?
             instancerContext->instancerCachePath : SdfPath();
         //+NV_CHANGE FRZHANG
         if (_ShouldGenerateJointMesh())
         {
         //-NV_CHANGE FRZHANG
-            // Insert mesh prim to visualize the bone mesh for the skeleton.
-            // Note: This uses the "rest" pose of the skeleton.
-            // Also, since the bone mesh isn't backed by the UsdStage, we register the
-            // skeleton prim on its behalf.
             index->InsertRprim(HdPrimTypeTokens->mesh, prim.GetPath(),
-                               instancer, prim, shared_from_this());
+                           prim, shared_from_this());
         }
         //+NV_CHANGE FRZHANG
         else
@@ -187,10 +182,6 @@ UsdSkelImagingSkeletonAdapter::Populate(
             index->_AddHdPrimInfo(prim.GetPath(), prim, shared_from_this());
         }
         //- NV_CHANGE FRZHANG
-=======
-        index->InsertRprim(HdPrimTypeTokens->mesh, prim.GetPath(),
-                           prim, shared_from_this());
->>>>>>> upstream/dev
     }
 
     // Insert a computation for each skinned prim targeted by this
@@ -1218,20 +1209,7 @@ UsdSkelImagingSkeletonAdapter::_RemovePrim(const SdfPath& cachePath,
     
     // Alternative way of finding whether this is a callback for the skeleton/
     // bone mesh.
-<<<<<<< HEAD
-    bool isSkelPath = _skelBindingMap.find(cachePath) != _skelBindingMap.end();
-
-    // #nv begin #missing-skel-root
-    // If the cachePath is not a SkelPath but can be found in _GetSkelData, 
-    // it means the skeleton hierarchy is ill-formed (for example the 
-    // Skeleton has no UsdSkelRoot), and we need to force a cleanup.
-    isSkelPath = isSkelPath || _GetSkelData(cachePath);
-    // nv end
-
-    if (isSkelPath) {
-=======
     if (_GetSkelData(cachePath)) {
->>>>>>> upstream/dev
 
         TF_DEBUG(USDIMAGING_CHANGES).Msg(
                 "[SkeletonAdapter::_RemovePrim] Remove skeleton"

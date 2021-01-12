@@ -451,17 +451,10 @@ UsdImagingGprimAdapter::ProcessPropertyChange(UsdPrim const& prim,
     if (UsdGeomXformable::IsTransformationAffectedByAttrNamed(propertyName))
         return HdChangeTracker::DirtyTransform;
 
-<<<<<<< HEAD
-    else if (propertyName == UsdGeomTokens->extent)
-        return HdChangeTracker::DirtyExtent;
-
-    else if (propertyName == UsdGeomTokens->doubleSided)
-=======
     if (propertyName == UsdGeomTokens->extent) 
         return HdChangeTracker::DirtyExtent;
 
     if (propertyName == UsdGeomTokens->doubleSided) 
->>>>>>> upstream/dev
         return HdChangeTracker::DirtyDoubleSided;
 
     if (propertyName == UsdGeomTokens->velocities ||

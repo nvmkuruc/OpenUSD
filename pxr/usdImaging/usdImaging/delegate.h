@@ -357,13 +357,12 @@ public:
     virtual GfMatrix4d GetInstancerTransform(SdfPath const &instancerId) 
         override;
 
-<<<<<<< HEAD
 	//+NV_CHANGE FRZHANG  : GPU SKinning value fetch
 	/// NV_Edit
 	/// provide direct access to value cache.
 	/// CAUTION!!! please don't use this function is you have no idea about what is valueCache.
-	USDIMAGING_API
-	const UsdImagingValueCache& ValueCache() const { return _valueCache; }
+	// USDIMAGING_API
+	// const UsdImagingValueCache& ValueCache() const { return _valueCache; }
 
     //+NV_CHANGE FRZHANG
     //If use NV_GPUSkinning computation path, in this case don't generate usd's skinning computation sprim.
@@ -386,10 +385,8 @@ public:
 	USDIMAGING_API
 	virtual bool GetSkelAnimXformValues(SdfPath const& id, VtValue& skinningXform, GfMatrix4d& primWorldToLocal, GfMatrix4d& skelLocalToWorld) override;
 	//-NV_CHANGE FRZHANG
-=======
     USDIMAGING_API
     virtual SdfPath GetInstancerId(SdfPath const &primId) override;
->>>>>>> upstream/dev
 
     // Motion samples
     USDIMAGING_API

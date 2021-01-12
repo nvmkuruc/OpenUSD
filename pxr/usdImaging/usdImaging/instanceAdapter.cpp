@@ -1251,30 +1251,6 @@ UsdImagingInstanceAdapter::UpdateForTime(UsdPrim const& prim,
             time, requestedBits, &instancerContext);
     } else if (_InstancerData const* instrData =
                TfMapLookupPtr(_instancerData, prim.GetPath())) {
-<<<<<<< HEAD
-
-        // We handle per-instance visibility by pulling stuff out of the
-        // instance indices, so DirtyInstanceIndex means we need to recompute
-        // that map.
-        if (requestedBits & HdChangeTracker::DirtyInstanceIndex) {
-            // #nv begin instance-map-caching
-            if (UsdImagingInstancerAdapter_CacheInstanceMaps()) {
-                tbb::spin_mutex::scoped_lock lock(_instanceMapCacheMutex);
-                _instanceMapCache.erase(prim.GetPath());
-            }
-            // nv end
-            VtIntArray indices = _ComputeInstanceMap(prim, *instrData, time);
-            // XXX: See UsdImagingDelegate::GetInstanceIndices;
-            // the change-tracking is on the instancer prim, but for simplicity
-            // we store each prototype's index buffer in that prototype's value
-            // cache (since each prototype can only have one instancer).
-            for (auto const& pair : instrData->primMap) {
-                valueCache->GetInstanceIndices(pair.first) = indices;
-            }
-        }
-
-=======
->>>>>>> upstream/dev
         // Per-instance transforms and inherited primvars are handled by
         // DirtyPrimvar.
         if (requestedBits & HdChangeTracker::DirtyPrimvar) {
@@ -2453,19 +2429,12 @@ UsdImagingInstanceAdapter::GetScenePrimPath(
     HdInstancerContext *instancerContext) const
 {
     HD_TRACE_FUNCTION();
-<<<<<<< HEAD
-    // For child prims (prototypes) and instances, the process is the same:
-    // find the associated hydra instancer, and use the instance index to
-    // look up the composed instance path.  They differ based on whether you
-    // append a prototype path, and how you find the hydra instancer.
-=======
 
     // For child prims (hydra prototypes) and USD instances, the process is
     // the same: find the associated hydra instancer, and use the instance
     // index to look up the composed instance path.  They differ based on
     // whether you append a hydra proto path, and how you find the
     // hydra instancer.
->>>>>>> upstream/dev
     UsdPrim usdPrim = _GetPrim(cachePath.GetAbsoluteRootOrPrimPath());
     if (_IsChildPrim(usdPrim, cachePath)) {
 

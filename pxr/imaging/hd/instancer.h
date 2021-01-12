@@ -31,13 +31,7 @@
 
 #include "pxr/usd/sdf/path.h"
 
-<<<<<<< HEAD
-// #nv begin #omni-hydra
-#include "pxr/imaging/hd/types.h"
-// nv end
-=======
 #include <mutex>
->>>>>>> upstream/dev
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -151,14 +145,13 @@ public:
     HD_API
     TfTokenVector const & GetBuiltinPrimvarNames() const;
 
-<<<<<<< HEAD
     // #nv begin #omni-hydra
     // Allow instancers to be synchronized independently from rprims
     HD_API
     virtual void Sync(HdSceneDelegate *delegate,
                       HdDirtyBits *dirtyBits) {}
     // nv end
-=======
+
     HD_API
     virtual void Sync(HdSceneDelegate *sceneDelegate,
                       HdRenderParam   *renderParam,
@@ -179,7 +172,6 @@ protected:
     HD_API
     void _UpdateInstancer(HdSceneDelegate *delegate,
                           HdDirtyBits *dirtyBits);
->>>>>>> upstream/dev
 
 private:
     HdSceneDelegate* _delegate;
