@@ -106,6 +106,9 @@ public:
     //+NV_CHANGE FRZHANG : fix skelmesh resync
     USDSKELIMAGING_API
     virtual SdfPath GetPrimResyncRootPath(SdfPath const& primPath) override;
+
+    USDSKELIMAGING_API
+    virtual void RefreshSkeletonQuery(const SdfPath& primPath, const TfToken& propertyName, UsdImagingIndexProxy* proxy) override;
     //-NV_CHANGE FRZHANG
 
     //+NV_CHANGE BRONG
@@ -382,7 +385,8 @@ private:
         std::unordered_map<SdfPath, SdfPathSet, SdfPath::Hash>;
     
     using _SkelAnimMap =
-        std::unordered_map<SdfPath, _SkelSkinMap, SdfPath::Hash>;
+        std::unordered_map<SdfPath, SdfPathSet, SdfPath::Hash>;
+    _SkelSkinMap _skelSkinMap;
     _SkelAnimMap _skelAnimMap;
     //-NV_CHANGE FRZHANG
 };
