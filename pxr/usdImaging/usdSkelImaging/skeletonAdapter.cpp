@@ -423,8 +423,9 @@ UsdSkelImagingSkeletonAdapter::ProcessPropertyChange(
             return HdChangeTracker::DirtyTransform;
 
         //+NV_CHANGE_FRZHANG
-        if (propertyName == UsdSkelTokens->restTransforms && _UseNVGPUSkinningComputations())
+        if ((propertyName == UsdSkelTokens->restTransforms || propertyName == UsdSkelTokens->skelAnimationSource) && _UseNVGPUSkinningComputations())
             return HdChangeTracker::NV_DirtySkelAnimXform;
+        //-NV_CHANGE_FRZHANG
 
         // XXX: Changes to properties on the skeleton (e.g., the joint 
         // hierarchy) should propagate to the computations.
@@ -1100,7 +1101,37 @@ void UsdSkelImagingSkeletonAdapter::RefreshSkeletonQuery(const SdfPath& primPath
     _SkelData* skelData = _GetSkelData(primPath);
     if (skelData)
     {
-        skelData->skelQuery.RefreshSkelDefinition(propertyName);
+        if (propertyName == UsdSkelTokens->restTransforms)
+        {
+            skelData->skelQuery.RefreshSkelDefinition(propertyName); 
+        }
+        else if (propertyName == UsdSkelTokens->skelAnimationSource)
+        {
+            UsdPrim skelPrim = skelData->skelQuery.GetPrim();
+            UsdPrim animPrim;
+            if (skelPrim)
+            {
+                animPrim = UsdSkelBindingAPI(skelPrim).GetInheritedAnimationSource();
+            }
+            if (animPrim)
+            {
+                UsdSkelAnimQuery animQuery = _skelCache.GetAnimQuery(animPrim);
+                skelData->skelQuery.ReplaceAnimQuery(animQuery);
+            }
+            else
+            {
+                skelData->skelQuery.ReplaceAnimQuery(UsdSkelAnimQuery());
+            }
+
+            ////tmp disable child refresh. There ight require a new dirtybit to propgate animation dirty message to all decendant skeleton prim.
+            // for (const auto& prim : skelPrim.GetAllChildren())
+            // {
+            //     if (prim.IsA<UsdSkelSkeleton>())
+            //     {
+            //          RefreshSkeletonQuery(skelPrim.GetPath(), propertyName, proxy);
+            //     }
+            // }
+        }
     }
 }
 //-NV_CHANGE FRZHANG
