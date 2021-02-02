@@ -2029,7 +2029,8 @@ else:
 
 if find_executable("cmake"):
     # Check cmake requirements
-    if Windows():
+    # TODO: Update boost and cmake for nv_usd
+    if False: # Windows():
         # Windows build depend on boost 1.70, which is not supported before
         # cmake version 3.14
         cmake_required_version = (3, 14)
