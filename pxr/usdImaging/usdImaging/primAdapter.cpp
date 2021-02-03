@@ -178,6 +178,11 @@ UsdImagingPrimAdapter::GetPrimResyncRootPath(SdfPath const& primPath)
 {
     return primPath;
 }
+/*virtual*/
+void
+UsdImagingPrimAdapter::RefreshSkeletonQuery(const SdfPath& primPath, const TfToken& propertyName, UsdImagingIndexProxy* proxy)
+{
+}
 //-NV_CHANGE FRZHANG 
 
 //+NV_CHANGE BRONG

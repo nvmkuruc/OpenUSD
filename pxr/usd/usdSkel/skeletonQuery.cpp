@@ -432,6 +432,13 @@ UsdSkelSkeletonQuery::GetAnimQuery() const
     return _animQuery;
 }
 
+//+NV_CHANGE FRZHANG
+void UsdSkelSkeletonQuery::RefreshSkelDefinition(const TfToken& propertyName)
+{
+    _definition->Refresh(propertyName);
+}
+//-NV_CHANGE FRZHANG
+
 //+NV_CHANGE BRONG
 void UsdSkelSkeletonQuery::RefreshAnimQuery(const TfToken& propertyName)
 {
