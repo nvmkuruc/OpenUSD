@@ -316,6 +316,29 @@ UsdImagingIndexProxy::MarkInstancerDirty(SdfPath const& cachePath,
     }
 }
 
+
+//+NV_CHANGE FRZHANG
+void
+UsdImagingIndexProxy::UpdateTimeVariability(SdfPath const& cachePath)
+{
+    UsdImagingDelegate::_HdPrimInfo *primInfo =
+        _delegate->_GetHdPrimInfo(cachePath);
+    if (TF_VERIFY(primInfo, "%s", cachePath.GetText())) {
+        if (primInfo->adapter)
+        {
+            primInfo->timeVaryingBits = 0;
+            primInfo->adapter->TrackVariability(primInfo->usdPrim, cachePath, &primInfo->timeVaryingBits, nullptr, true);
+            if (primInfo->timeVaryingBits != HdChangeTracker::Clean) {
+                primInfo->adapter->MarkDirty(primInfo->usdPrim,
+                    cachePath,
+                    primInfo->timeVaryingBits,
+                    this);
+            }
+        }
+    }
+}
+//-NV_CHANGE FRZHANG
+
 UsdImagingPrimAdapterSharedPtr
 UsdImagingIndexProxy::GetMaterialAdapter(UsdPrim const& materialPrim)
 {

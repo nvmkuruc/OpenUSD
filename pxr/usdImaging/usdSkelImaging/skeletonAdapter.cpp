@@ -1123,6 +1123,17 @@ void UsdSkelImagingSkeletonAdapter::RefreshSkeletonQuery(const SdfPath& primPath
                 skelData->skelQuery.ReplaceAnimQuery(UsdSkelAnimQuery());
             }
 
+            const auto skinIt = _skelSkinMap.find(primPath);
+            if (skinIt != _skelSkinMap.end())
+            {
+                SdfPathSet const& skinnedPrimPaths = skinIt->second;
+                for (auto const& skinnedPrimPath : skinnedPrimPaths)
+                {
+                    proxy->UpdateTimeVariability(skinnedPrimPath);
+                }
+            }
+
+
             ////tmp disable child refresh. There ight require a new dirtybit to propgate animation dirty message to all decendant skeleton prim.
             // for (const auto& prim : skelPrim.GetAllChildren())
             // {
