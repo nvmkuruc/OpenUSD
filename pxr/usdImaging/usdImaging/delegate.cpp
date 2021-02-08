@@ -1588,9 +1588,9 @@ UsdImagingDelegate::_RefreshUsdAttrQuery(SdfPath const& usdPath, UsdImagingIndex
         }
         else if (usdPrim && usdPrim.IsA<UsdSkelSkeleton>()) {
             UsdImagingPrimAdapterSharedPtr adapter = _AdapterLookup(_tokens->Skeleton);
-            if(attrName == UsdSkelTokens->restTransforms)
+            if(attrName == UsdSkelTokens->restTransforms || attrName == UsdSkelTokens->skelAnimationSource)
             {
-                adapter->RefreshSkeletonQuery(usdPrimPath, UsdSkelTokens->restTransforms, proxy);
+                adapter->RefreshSkeletonQuery(usdPrimPath, attrName, proxy);
             }
         }
     }
