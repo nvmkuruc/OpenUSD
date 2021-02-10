@@ -30,14 +30,15 @@
 
 #include "pxr/imaging/hd/material.h"
 #include "pxr/usd/ar/resolver.h"
-
-#include "pxr/usd/usd/attribute.h"
-
 #include "pxr/usd/sdf/layerUtils.h"
 #include "pxr/usd/sdr/registry.h"
 #include "pxr/usd/sdr/shaderNode.h"
 #include "pxr/usd/sdr/shaderProperty.h"
+#include "pxr/usd/usd/attribute.h"
+#include "pxr/usd/usdShade/connectableAPI.h"
+// #nv begin #materialx-backport
 #include "pxr/usd/usdShade/shader.h"
+// #nv end
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -233,11 +234,11 @@ _ExtractPrimvarsFromNode(
     UsdShadeShader const & shadeNode,
     HdMaterialNode const & node,
     HdMaterialNetwork *materialNetwork,
-    TfToken const& networkSelector)
+    TfTokenVector const & shaderSourceTypes)
 {
     SdrRegistry &shaderReg = SdrRegistry::GetInstance();
-    SdrShaderNodeConstPtr sdrNode = shaderReg.GetShaderNodeByIdentifierAndType(
-        node.identifier, networkSelector);
+    SdrShaderNodeConstPtr sdrNode = shaderReg.GetShaderNodeByIdentifier(
+        node.identifier, shaderSourceTypes);
 
     if (sdrNode) {
         // GetPrimvars and GetAdditionalPrimvarProperties together give us the
@@ -323,13 +324,12 @@ using _PathSet = std::unordered_set<SdfPath, SdfPath::Hash>;
 
 static
 void _WalkGraph(
-    UsdShadeShader const & shadeNode,
+    UsdShadeConnectableAPI const & shadeNode,
     HdMaterialNetwork* materialNetwork,
     TfToken const& networkSelector,
     _PathSet* visitedNodes,
     TfTokenVector const & shaderSourceTypes,
-    UsdTimeCode time,
-    bool* timeVarying)
+    UsdTimeCode time)
 {
     // Store the path of the node
     HdMaterialNode node;
@@ -340,10 +340,9 @@ void _WalkGraph(
 
     // If this node has already been found via another path, we do
     // not need to add it again.
-    if (visitedNodes->count(node.path) > 0) {
+    if (!visitedNodes->insert(shadeNode.GetPath()).second) {
         return;
     }
-    visitedNodes->emplace(node.path);
 
     // Visit the inputs of this node to ensure they are emitted first.
     const std::vector<UsdShadeInput> shadeNodeInputs = shadeNode.GetInputs();
@@ -359,14 +358,13 @@ void _WalkGraph(
         if (attrType == UsdShadeAttributeType::Output) {
             // If it is an output on a shading node we visit the node and also
             // create a relationship in the network
-            _WalkGraph(UsdShadeShader(
+            _WalkGraph(UsdShadeConnectableAPI(
                 attr.GetPrim()),
                 materialNetwork,
                 networkSelector,
                 visitedNodes,
                 shaderSourceTypes,
-                time,
-                timeVarying);
+                time);
 
             HdMaterialRelationship relationship;
             relationship.outputId = node.path;
@@ -382,18 +380,11 @@ void _WalkGraph(
             // path with a udim pattern, e.g.,
             // //SHOW/myImage.<UDIM>.exr to /filePath/myImage.<UDIM>.exr.
 
-            // #nv begin material-updates
-            const VtValue value =
-                timeVarying == nullptr ? UsdImaging_ResolveMaterialParamValue(attr, time) : VtValue();
-            // nv end
+             const VtValue value =
+                UsdImaging_ResolveMaterialParamValue(attr, time);
             if (!value.IsEmpty()) {
                 node.parameters[inputName] = value;
             }
-
-            // #nv begin material-updates
-            if (timeVarying)
-            // nv end
-                *timeVarying |= attr.ValueMightBeTimeVarying();
 
 // #nv begin #parameter-colorSpace-to-hydra
             TfToken colorSpaceToken = attr.GetColorSpace();
@@ -405,19 +396,32 @@ void _WalkGraph(
         }
     }
 
+// #nv begin #materialx-backport
+    UsdShadeShader shader = UsdShadeShader(shadeNode.GetPrim());
+// #nv end
+
     // Extract the identifier of the node.
     // GetShaderNodeForSourceType will try to find/create an Sdr node for all
     // three info cases: info:id, info:sourceAsset and info:sourceCode.
     TfToken id;
-    if (!shadeNode.GetShaderId(&id)) {
-        for (auto const& sourceType : shaderSourceTypes) {
-            if (SdrShaderNodeConstPtr sdrNode = 
-                    shadeNode.GetShaderNodeForSourceType(sourceType)) {
-                id = sdrNode->GetIdentifier();
-                break;
+// #nv begin #materialx-backport    
+    if (shader) {
+// #nv end
+        if (!shader.GetShaderId(&id)) {
+            for (auto const& sourceType : shaderSourceTypes) {
+                if (SdrShaderNodeConstPtr sdrNode = 
+                        shader.GetShaderNodeForSourceType(sourceType)) {
+                    id = sdrNode->GetIdentifier();
+                    break;
+                }
             }
         }
+// #nv begin #materialx-backport
+    } else {
+        // For lights
+        id = shadeNode.GetPrim().GetTypeName();
     }
+// #nv end
 
     if (!id.IsEmpty()) {
         node.identifier = id;
@@ -426,43 +430,44 @@ void _WalkGraph(
         // the number of primvars send to the render delegate. We extract the
         // primvar names from the material node to ensure these primvars are
         // not filtered-out by GprimAdapter.
-
         _ExtractPrimvarsFromNode(
-            shadeNode, node, materialNetwork, networkSelector);
-    } 
+            shadeNode, node, materialNetwork, shaderSourceTypes);
+    }
 
  // #nv begin #new-MDL-schema   
-    if (timeVarying == nullptr && node.identifier.IsEmpty()) {
-        _GetShaderNodeForSourceTypeFallbackNV(
-            shadeNode, networkSelector, &node.identifier, &node.subIdentifier);
-    }  
+    if (node.identifier.IsEmpty()
+// #nv begin #materialx-backport
+          && shader && !networkSelector.IsEmpty()) {
 // #nv end
-
+        _GetShaderNodeForSourceTypeFallbackNV(
+            shader, networkSelector, &node.identifier, &node.subIdentifier);
+    }
+// #nv end
     materialNetwork->nodes.push_back(node);
 }
 
 void
 UsdImaging_BuildHdMaterialNetworkFromTerminal(
-    UsdShadeShader const& usdTerminal,
+    UsdPrim const& usdTerminal,
     TfToken const& terminalIdentifier,
-    TfToken const& networkSelector,
     TfTokenVector const& shaderSourceTypes,
     HdMaterialNetworkMap *materialNetworkMap,
     UsdTimeCode time,
-    bool* timeVarying)
+// #nv begin #materialx-backport
+    TfToken networkSelector)
+// #nv end
 {
     HdMaterialNetwork& network = materialNetworkMap->map[terminalIdentifier];
     std::vector<HdMaterialNode>& nodes = network.nodes;
     _PathSet visitedNodes;
 
     _WalkGraph(
-        usdTerminal,
+        UsdShadeConnectableAPI(usdTerminal),
         &network,
         networkSelector,
         &visitedNodes, 
         shaderSourceTypes,
-        time,
-        timeVarying);
+        time);
 
     if (!TF_VERIFY(!nodes.empty())) return;
 
@@ -487,6 +492,57 @@ UsdImaging_BuildHdMaterialNetworkFromTerminal(
     // #nv begin #new-MDL-schema
     }
     // nv end
+};
+
+static
+bool _IsGraphTimeVarying(UsdShadeConnectableAPI const & shadeNode,
+                         _PathSet* visitedNodes)
+{
+    // Store the path of the node
+    if (!TF_VERIFY(shadeNode.GetPath() != SdfPath::EmptyPath())) {
+        return false;
+    }
+
+    // If this node has already been found via another path, we do
+    // not need to add it again.
+    if (!visitedNodes->insert(shadeNode.GetPath()).second) {
+        return false;
+    }
+
+    // Visit the inputs of this node to ensure they are emitted first.
+    const std::vector<UsdShadeInput> shadeNodeInputs = shadeNode.GetInputs();
+    for (UsdShadeInput input: shadeNodeInputs) {
+
+        // Find the attribute this input is getting its value from, which might
+        // be an output or an input, including possibly itself if not connected
+        UsdShadeAttributeType attrType;
+        UsdAttribute attr = input.GetValueProducingAttribute(&attrType);
+
+        if (attrType == UsdShadeAttributeType::Output) {
+            // If it is an output on a shading node we visit the node and also
+            // create a relationship in the network
+            if (_IsGraphTimeVarying(
+                    UsdShadeConnectableAPI(attr.GetPrim()), visitedNodes)) {
+                return true;
+            }
+        } else if (attrType == UsdShadeAttributeType::Input) {
+            // If it is an input attribute we get the authored value.
+            if (attr.ValueMightBeTimeVarying()) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+bool
+UsdImaging_IsHdMaterialNetworkTimeVarying(
+    UsdPrim const& usdTerminal)
+{
+    _PathSet visitedNodes;
+    return _IsGraphTimeVarying(
+        UsdShadeConnectableAPI(usdTerminal), &visitedNodes);
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
