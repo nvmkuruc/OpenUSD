@@ -1071,20 +1071,17 @@ void UsdSkelImagingSkeletonAdapter::RefreshAnimQuery(const SdfPath& primPath, co
         if (skelData) {
             // This animation is queried
             if (skelData->skelQuery.GetAnimQuery().GetPrim().GetPath() == primPath) {
-                if (propertyName == UsdSkelTokens->scales ||
-                    propertyName == UsdSkelTokens->rotations ||
-                    propertyName == UsdSkelTokens->translations ||
-                    propertyName == UsdSkelTokens->blendShapeWeights) {
-                    TF_DEBUG(USDIMAGING_CHANGES).Msg("[RefreshAnimQuery] <%s> SRTb \n", skelPath.GetText());
-                    skelData->skelQuery.RefreshAnimQuery(propertyName);
+
+                TF_DEBUG(USDIMAGING_CHANGES).Msg("[RefreshAnimQuery] <%s> SRTb \n", skelPath.GetText());
+                skelData->skelQuery.RefreshAnimQuery(propertyName);
+
+                if (propertyName == UsdSkelTokens->joints)
+                {
+                    skelData->skelQuery.RefreshJointMapper();
                 }
-                else if (propertyName == UsdSkelTokens->joints) {
-                    TF_DEBUG(USDIMAGING_CHANGES).Msg("[RefreshAnimQuery] <%s> joints \n", skelPath.GetText());
-                    // according to FRZHANG, joints change in Animation should trigger Skeleton refresh because there is cache in Skeleton wrt Animation joints.
-                    ProcessPrimResync(skelPath, proxy);
-                }
-                else {
-                    TF_DEBUG(USDIMAGING_CHANGES).Msg("[RefreshAnimQuery] <%s> with unexpected properties<%s> \n", skelPath.GetText(), propertyName.GetText());
+                else if (propertyName == UsdSkelTokens->blendShapes)
+                {
+                    //TODO Refresh blendshape map in SkinningQuery
                 }
             }
         }
@@ -1134,7 +1131,7 @@ void UsdSkelImagingSkeletonAdapter::RefreshSkeletonQuery(const SdfPath& primPath
             }
 
 
-            ////tmp disable child refresh. There ight require a new dirtybit to propgate animation dirty message to all decendant skeleton prim.
+            ////tmp disable child refresh. There might require a new dirtybit to propgate animation dirty message to all decendant skeleton prim.
             // for (const auto& prim : skelPrim.GetAllChildren())
             // {
             //     if (prim.IsA<UsdSkelSkeleton>())
@@ -1142,6 +1139,31 @@ void UsdSkelImagingSkeletonAdapter::RefreshSkeletonQuery(const SdfPath& primPath
             //          RefreshSkeletonQuery(skelPrim.GetPath(), propertyName, proxy);
             //     }
             // }
+        }
+    }
+}
+
+void UsdSkelImagingSkeletonAdapter::ResyncSkelAnimationPrim(const SdfPath& primPath, UsdImagingIndexProxy* proxy)
+{
+        if (!TF_VERIFY(_UseNVGPUSkinningComputations()))
+        return;
+
+    const auto &skelIt = _skelAnimMap.find(primPath);
+    if(skelIt == _skelAnimMap.end())
+        return;
+
+    SdfPathSet skelPaths = skelIt->second;
+    for (const auto& skelPath : skelPaths)
+    {
+        _SkelData* skelData = _GetSkelData(skelPath);
+
+        if (skelData) {
+            // This animation is queried
+            if (skelData->skelQuery.GetAnimQuery().GetPrim().GetPath() == primPath) {
+
+                TF_DEBUG(USDIMAGING_CHANGES).Msg("[ResyncSkelAnimationPrim] <%s> SRTb \n", skelPath.GetText());
+                ProcessPrimResync(skelPath, proxy);
+            }
         }
     }
 }

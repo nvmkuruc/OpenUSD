@@ -1537,6 +1537,7 @@ void
 UsdImagingDelegate::_ResyncUsdAttrQuery(SdfPath const& usdPath, UsdImagingIndexProxy* proxy)
 {
     //Not finalized code to handle Animation=>Skeleton resync dependancy.
+    //Will Be replaced by unique repopulate
     if (usdPath.IsAbsoluteRootOrPrimPath()) {
         if (UseNVGPUSkinningComputations()) {
             UsdPrim usdPrim = _stage->GetPrimAtPath(usdPath);
@@ -1546,7 +1547,7 @@ UsdImagingDelegate::_ResyncUsdAttrQuery(SdfPath const& usdPath, UsdImagingIndexP
 
                 // Defacto UsdSkelImagingSkeletonAdapter::ProcessPrimResync(usdPath, proxy)
                 // UsdSkelTokens->joints implies Animation=>Skeleton resync dependancy.
-                adapter->RefreshAnimQuery(usdPath, UsdSkelTokens->joints, proxy);
+                adapter->ResyncSkelAnimationPrim(usdPath, proxy);
             }
         }
         return;
