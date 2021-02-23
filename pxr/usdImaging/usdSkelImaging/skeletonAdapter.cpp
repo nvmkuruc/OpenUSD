@@ -179,6 +179,8 @@ UsdSkelImagingSkeletonAdapter::Populate(
         //+NV_CHANGE FRZHANG
         else
         {
+            //If not generate bone mesh, should still add skeleton Hdpriminfo 
+            //which can trigger ProcessPropertyChange or ProcessPrimResync
             index->_AddHdPrimInfo(prim.GetPath(), prim, shared_from_this());
         }
         //- NV_CHANGE FRZHANG
@@ -208,7 +210,7 @@ UsdSkelImagingSkeletonAdapter::Populate(
         if (!binding.GetSkinningTargets().empty()) {
             if (const UsdSkelRoot skelRoot =
                 UsdSkelRoot::Find(
-                    binding.GetSkinningTargets().front().GetPrim())) {
+                    binding.GetSkinningTargets().front().GetPrim())) { 
                 skelRootPath = skelRoot.GetPrim().GetPath();
                 skelData->skelRootPaths.insert(skelRootPath);
             }
@@ -266,19 +268,23 @@ UsdSkelImagingSkeletonAdapter::Populate(
     }
 
     //+NV_CHANGE FRZHANG
-    _skelSkinMap[skelPath] = affectedSkinnedPrimPaths;
-    const UsdSkelAnimQuery& animQuery = skelData->skelQuery.GetAnimQuery();
-    if (animQuery.IsValid())
+    if (_UseNVGPUSkinningComputations())
     {
-        SdfPath const& animPath = animQuery.GetPrim().GetPath();
-        UsdImagingPrimAdapterSharedPtr animPrimAdapter =
-            _GetPrimAdapter(animQuery.GetPrim());
-        if (animPrimAdapter)
+        _skelSkinMap[skelPath] = affectedSkinnedPrimPaths;
+        const UsdSkelAnimQuery& animQuery = skelData->skelQuery.GetAnimQuery();
+        if (animQuery.IsValid())
         {
-            TF_VERIFY(animPrimAdapter == shared_from_this());
+            SdfPath const& animPath = animQuery.GetPrim().GetPath();
+            UsdImagingPrimAdapterSharedPtr animPrimAdapter =
+                _GetPrimAdapter(animQuery.GetPrim());
+            if (animPrimAdapter)
+            {
+                TF_VERIFY(animPrimAdapter == shared_from_this());
+            }
+            //Add SkelAnimationPrim to which makes skelanimation can trigger ProcessPropertyChange
+            index->_AddHdPrimInfo(animPath, animQuery.GetPrim(), shared_from_this());
+            _skelAnimMap[animPath].insert(skelPath);
         }
-        index->_AddHdPrimInfo(animPath, animQuery.GetPrim(), shared_from_this());
-        _skelAnimMap[animPath].insert(skelPath);
     }
     //-NV_CHANGE FRZHANG
     return prim.GetPath();
@@ -532,7 +538,33 @@ UsdSkelImagingSkeletonAdapter::ProcessPrimResync(
         if (const _SkinnedPrimData* data = _GetSkinnedPrimData(primPath)) {
             pathsToRepopulate.emplace_back(data->skelRootPath);
         }
-    } else {
+    }
+    else if (_IsSkelAnimPrimPath(primPath) && _UseNVGPUSkinningComputations())
+    {
+        const UsdPrim& animPrim = _GetPrim(primPath);
+        //this skelanimation is removed, refresh the skelQuery's animationSouce
+        if (!animPrim)
+        {
+            //If remove skelanim, related skeleton need to refresh animation source query
+            const auto &skelIt = _skelAnimMap.find(primPath);
+            SdfPathSet skelPaths = skelIt->second;
+            for (const auto& skelPath : skelPaths)
+            {
+                _SkelData* skelData = _GetSkelData(skelPath);
+
+                if (skelData) {
+                    // This animation is queried
+                    if (skelData->skelQuery.GetAnimQuery() 
+                        && skelData->skelQuery.GetAnimQuery().GetPrim().GetPath() == primPath) 
+                    {
+                        _skelAnimMap[primPath].erase(skelPath);
+                        RefreshSkeletonQuery(skelPath, UsdSkelTokens->skelAnimationSource, index);
+                    }
+                }
+            }
+        }
+    }
+    else {
         // PrimResync might be called on behalf of the skeleton.
         if (_SkelData* skelData = _GetSkelData(primPath)) {
             pathsToRepopulate.insert(
@@ -546,6 +578,16 @@ UsdSkelImagingSkeletonAdapter::ProcessPrimResync(
     // A skeleton removal triggers all skinned prims using it to be removed as
     // well.
     _RemovePrim(primPath, index);
+
+    if (_IsSkelAnimPrimPath(primPath) && _UseNVGPUSkinningComputations())
+    {
+        //Repopulate skelanimation should refresh all skelanimQuery's attribute query
+        RefreshAnimQuery(primPath, UsdSkelTokens->translations, index);
+        RefreshAnimQuery(primPath, UsdSkelTokens->rotations, index);
+        RefreshAnimQuery(primPath, UsdSkelTokens->scales, index);
+        RefreshAnimQuery(primPath, UsdSkelTokens->joints, index);
+        RefreshAnimQuery(primPath, UsdSkelTokens->blendShapeWeights, index);
+    }
 
     if (!pathsToRepopulate.empty()) {
         // This isn't as bad as it seems.
@@ -567,33 +609,6 @@ UsdSkelImagingSkeletonAdapter::ProcessPrimRemoval(
     // entries as well (unlike the pattern followed in PrimAdapter)
     _RemovePrim(primPath, index);
 }
-
-//+NV_CHANGE FRZHANG : fix skelmesh resync
-/*virtual*/
-SdfPath
-UsdSkelImagingSkeletonAdapter::GetPrimResyncRootPath(SdfPath const& primPath)
-{
-    // Do this prior to removal of cache entries.
-    bool isSkelPath = _skelBindingMap.find(primPath) != _skelBindingMap.end();
-    bool isCallbackForPrimsOnTheStage = isSkelPath ||
-        _IsSkinnedPrimPath(primPath);
-
-    // find the skelRoot of this skinned Mesh.
-    // This is probably not accurate, use usdSkelAPI to find the skelRoot might be better.
-    // But we're short of the required information.
-    if (isCallbackForPrimsOnTheStage) {
-        SdfPath skelRootPath;
-        UsdPrim prim = _GetPrim(primPath);
-        while (prim) {
-            prim = prim.GetParent();
-            if (prim.IsValid() && prim.IsA<UsdSkelRoot>()) {
-                return prim.GetPath();
-            }
-        }
-    }
-    return primPath;
-}
-//-NV_CHANGE FRZHANG 
 
 void
 UsdSkelImagingSkeletonAdapter::MarkDirty(const UsdPrim& prim,
@@ -1105,19 +1120,41 @@ void UsdSkelImagingSkeletonAdapter::RefreshSkeletonQuery(const SdfPath& primPath
         else if (propertyName == UsdSkelTokens->skelAnimationSource)
         {
             UsdPrim skelPrim = skelData->skelQuery.GetPrim();
-            UsdPrim animPrim;
-            if (skelPrim)
+            UsdSkelAnimQuery oldAnimQuery = skelData->skelQuery.GetAnimQuery();
+            UsdPrim newAnimPrim = UsdPrim();
+            UsdSkelAnimQuery newAnimQuery = UsdSkelAnimQuery();
+            if (skelPrim) 
             {
-                animPrim = UsdSkelBindingAPI(skelPrim).GetInheritedAnimationSource();
+                newAnimPrim = UsdSkelBindingAPI(skelPrim).GetInheritedAnimationSource();
             }
-            if (animPrim)
+            if (newAnimPrim)
             {
-                UsdSkelAnimQuery animQuery = _skelCache.GetAnimQuery(animPrim);
-                skelData->skelQuery.ReplaceAnimQuery(animQuery);
+                newAnimQuery = _skelCache.GetAnimQuery(newAnimPrim);
             }
-            else
+
+            if (newAnimQuery != oldAnimQuery)
             {
-                skelData->skelQuery.ReplaceAnimQuery(UsdSkelAnimQuery());
+                if (oldAnimQuery)
+                {
+                    const UsdPrim& oldAnimPrim = oldAnimQuery.GetPrim();
+                    const SdfPath& oldAnimPrimPath = oldAnimPrim.GetPath();
+                    //remove old skel-anim cache
+                    _skelAnimMap[oldAnimPrimPath].erase(primPath);
+                    //remove the skelanim hdpriminfo & skelAnimMap it prim is invalid (deleted).
+                    _RemovePrim(oldAnimPrimPath, proxy);
+                }
+
+                if (newAnimQuery)
+                {
+                    const SdfPath& newAnimPrimPath = newAnimPrim.GetPath();
+                    if (!_IsSkelAnimPrimPath(newAnimPrimPath))
+                    {
+                        proxy->_AddHdPrimInfo(newAnimPrimPath, newAnimPrim, shared_from_this());
+                    }
+                    _skelAnimMap[newAnimPrimPath].insert(primPath);
+                }
+
+                skelData->skelQuery.ReplaceAnimQuery(newAnimQuery);
             }
 
             const auto skinIt = _skelSkinMap.find(primPath);
@@ -1130,7 +1167,6 @@ void UsdSkelImagingSkeletonAdapter::RefreshSkeletonQuery(const SdfPath& primPath
                 }
             }
 
-
             ////tmp disable child refresh. There might require a new dirtybit to propgate animation dirty message to all decendant skeleton prim.
             // for (const auto& prim : skelPrim.GetAllChildren())
             // {
@@ -1139,31 +1175,6 @@ void UsdSkelImagingSkeletonAdapter::RefreshSkeletonQuery(const SdfPath& primPath
             //          RefreshSkeletonQuery(skelPrim.GetPath(), propertyName, proxy);
             //     }
             // }
-        }
-    }
-}
-
-void UsdSkelImagingSkeletonAdapter::ResyncSkelAnimationPrim(const SdfPath& primPath, UsdImagingIndexProxy* proxy)
-{
-        if (!TF_VERIFY(_UseNVGPUSkinningComputations()))
-        return;
-
-    const auto &skelIt = _skelAnimMap.find(primPath);
-    if(skelIt == _skelAnimMap.end())
-        return;
-
-    SdfPathSet skelPaths = skelIt->second;
-    for (const auto& skelPath : skelPaths)
-    {
-        _SkelData* skelData = _GetSkelData(skelPath);
-
-        if (skelData) {
-            // This animation is queried
-            if (skelData->skelQuery.GetAnimQuery().GetPrim().GetPath() == primPath) {
-
-                TF_DEBUG(USDIMAGING_CHANGES).Msg("[ResyncSkelAnimationPrim] <%s> SRTb \n", skelPath.GetText());
-                ProcessPrimResync(skelPath, proxy);
-            }
         }
     }
 }
@@ -1226,11 +1237,14 @@ UsdSkelImagingSkeletonAdapter::_RemovePrim(const SdfPath& cachePath,
         // TODO: Clearing the entire skel cache is excessive, but correct.
         _skelCache.Clear();
         //+NV_CHANGE_FRZHANG
-        _skelSkinMap.erase(cachePath);
-        for (auto& skelanim : _skelAnimMap)
+        if (_UseNVGPUSkinningComputations())
         {
-            SdfPathSet& skelPaths = skelanim.second;
-            skelPaths.erase(cachePath);
+            _skelSkinMap.erase(cachePath);
+            for (auto& skelanim : _skelAnimMap)
+            {
+                SdfPathSet& skelPaths = skelanim.second;
+                skelPaths.erase(cachePath);
+            }
         }
         //-NV_CHANGE_FRZHANG
 
@@ -1238,13 +1252,18 @@ UsdSkelImagingSkeletonAdapter::_RemovePrim(const SdfPath& cachePath,
         _RemoveSkinnedPrimAndComputations(cachePath, index);
     }
     //+NV_CHANGE FRZHANG
-    else if (_IsSkelAnimPrimPath(cachePath))
+    else if (_IsSkelAnimPrimPath(cachePath) && _UseNVGPUSkinningComputations())
     {
-        TF_DEBUG(USDIMAGING_CHANGES).Msg(
+        //Remove SkelAnimMap only skelanimation prim is invalid
+        UsdPrim prim = _GetPrim(cachePath);
+        if (!prim)
+        {
+            TF_DEBUG(USDIMAGING_CHANGES).Msg(
                 "[SkeletonAdapter::_RemovePrim] Remove SkelAnimation"
                 "%s\n", cachePath.GetText());
-        index->_hdPrimInfoToRemove.push_back(cachePath);
-        _skelAnimMap.erase(cachePath);
+            index->_hdPrimInfoToRemove.push_back(cachePath);
+            _skelAnimMap.erase(cachePath);
+        }
     }
     //-NV_CHANGE FRZHANG
 

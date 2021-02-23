@@ -103,15 +103,9 @@ public:
                                       const SdfPath& cachePath,
                                       const TfToken& propertyName) override;
 
-    //+NV_CHANGE FRZHANG : fix skelmesh resync
-    USDSKELIMAGING_API
-    virtual SdfPath GetPrimResyncRootPath(SdfPath const& primPath) override;
-
+    //+NV_CHANGE FRZHANG
     USDSKELIMAGING_API
     virtual void RefreshSkeletonQuery(const SdfPath& primPath, const TfToken& propertyName, UsdImagingIndexProxy* proxy) override;
-    
-    USDSKELIMAGING_API
-    virtual void ResyncSkelAnimationPrim(const SdfPath& primPath, UsdImagingIndexProxy* proxy) override;
     //-NV_CHANGE FRZHANG
 
     //+NV_CHANGE BRONG
