@@ -437,6 +437,22 @@ void UsdSkelSkeletonQuery::RefreshSkelDefinition(const TfToken& propertyName)
 {
     _definition->Refresh(propertyName);
 }
+
+void UsdSkelSkeletonQuery::ReplaceAnimQuery(const UsdSkelAnimQuery& animQuery)
+{
+    if(_animQuery == animQuery)
+        return;
+
+    _animQuery = animQuery;
+    if (_definition && _animQuery) {
+        _animToSkelMapper = UsdSkelAnimMapper(_animQuery.GetJointOrder(),
+                                              _definition->GetJointOrder());
+    }
+    else
+    {
+        _animToSkelMapper = UsdSkelAnimMapper();
+    }
+}
 //-NV_CHANGE FRZHANG
 
 //+NV_CHANGE BRONG
