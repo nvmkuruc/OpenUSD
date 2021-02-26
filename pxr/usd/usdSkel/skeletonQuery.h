@@ -120,6 +120,14 @@ public:
     /// bound skeleton instance, if any.
     USDSKEL_API
     const UsdSkelAnimQuery& GetAnimQuery() const;
+
+    //+NV_CHANGE FRZHANG
+    USDSKEL_API
+    void RefreshSkelDefinition(const TfToken& propertyName);
+
+    USDSKEL_API
+    void ReplaceAnimQuery(const UsdSkelAnimQuery& animQuery);
+    //-NV_CHANGE FRZHANG
     
     //+NV_CHANGE BRONG
     USDSKEL_API

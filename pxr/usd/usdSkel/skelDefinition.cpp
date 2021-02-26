@@ -454,5 +454,31 @@ UsdSkel_SkelDefinition::HasRestPose()
     return _flags&_HaveRestPose;
 }
 
+//+NV_CHANGE FRZHANG
+void 
+UsdSkel_SkelDefinition::Refresh(const TfToken& propertyName)
+{
+    if (_skel)
+    {
+        if (propertyName == UsdSkelTokens->restTransforms)
+        {
+            _skel.GetRestTransformsAttr().Get(&_jointLocalRestXforms);
+            if (_jointLocalRestXforms.size() == _jointOrder.size()) {
+                _flags = _flags|_HaveRestPose;
+            } else {
+                _flags = _flags & (~_HaveRestPose);
+                TF_WARN("%s -- size of 'restTransforms' attr [%zu] does not "
+                        "match the number of joints in the 'joints' attr [%zu].",
+                        _skel.GetPrim().GetPath().GetText(),
+                        _jointLocalRestXforms.size(), _jointOrder.size());
+            }
+            _flags &= (~_SkelRestXforms4dComputed);
+            _flags &= (~_LocalInverseRestXforms4dComputed);
+            _flags &= (~_SkelRestXforms4fComputed);
+            _flags &= (~_LocalInverseRestXforms4fComputed);
+        }
+    }
+}
+//-NV_CHANGE FRZHANG
 
 PXR_NAMESPACE_CLOSE_SCOPE

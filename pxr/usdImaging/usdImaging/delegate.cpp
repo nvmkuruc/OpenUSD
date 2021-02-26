@@ -63,6 +63,7 @@
 
 //+NV_CHANGE BRONG
 #include "pxr/usd/usdSkel/animation.h"
+#include "pxr/usd/usdSkel/skeleton.h"
 #include "pxr/usd/usdSkel/tokens.h"
 //-NV_CHANGE BRONG
 
@@ -1646,6 +1647,11 @@ UsdImagingDelegate::_ResyncUsdAttrQuery(SdfPath const& usdPath, UsdImagingIndexP
             // Defacto UsdSkelImagingSkeletonAdapter::RefreshAnimQuery()
             adapter->RefreshAnimQuery(usdPrimPath, attrName, proxy);
         }
+        else if(usdPrim && usdPrim.IsA<UsdSkelSkeleton>())
+        {
+            UsdImagingPrimAdapterSharedPtr adapter = _AdapterLookup(_tokens->Skeleton);
+            adapter->RefreshSkeletonQuery(usdPrimPath, attrName, proxy);
+        }
     }
 }
 
@@ -1667,6 +1673,13 @@ UsdImagingDelegate::_RefreshUsdAttrQuery(SdfPath const& usdPath, UsdImagingIndex
             // Defacto UsdSkelImagingSkeletonAdapter::ProcessPrimResync(usdPath, proxy)
             // UsdSkelTokens->joints implies Animation=>Skeleton resync dependancy.
             adapter->RefreshAnimQuery(usdPrimPath, UsdSkelTokens->joints, proxy);
+        }
+        else if (usdPrim && usdPrim.IsA<UsdSkelSkeleton>()) {
+            UsdImagingPrimAdapterSharedPtr adapter = _AdapterLookup(_tokens->Skeleton);
+            if(attrName == UsdSkelTokens->restTransforms || attrName == UsdSkelTokens->skelAnimationSource)
+            {
+                adapter->RefreshSkeletonQuery(usdPrimPath, attrName, proxy);
+            }
         }
     }
 }

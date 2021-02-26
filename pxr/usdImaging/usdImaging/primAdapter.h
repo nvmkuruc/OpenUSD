@@ -211,6 +211,9 @@ public:
     //+NV_CHANGE FRZHANG : fix skelmesh resync
     USDIMAGING_API
     virtual SdfPath GetPrimResyncRootPath(SdfPath const& primPath);
+
+    USDIMAGING_API
+    virtual void RefreshSkeletonQuery(const SdfPath& primPath, const TfToken& propertyName, UsdImagingIndexProxy* proxy);
     //-NV_CHANGE FRZHANG
 
     //+NV_CHANGE BRONG

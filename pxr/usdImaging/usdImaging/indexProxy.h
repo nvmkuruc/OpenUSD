@@ -166,6 +166,11 @@ public:
     USDIMAGING_API
     void MarkInstancerDirty(SdfPath const& cachePath, HdDirtyBits dirtyBits);
 
+    //+NV_CHANGE FRZHANG
+    USDIMAGING_API
+    void UpdateTimeVariability(SdfPath const& cachePath);
+    //-NV_CHANGE FRZHANG
+
     USDIMAGING_API
     bool IsRprimTypeSupported(TfToken const& typeId) const;
 
