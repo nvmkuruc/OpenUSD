@@ -73,6 +73,8 @@ TF_DEFINE_PRIVATE_TOKENS(
     (magFilter)
 
     (in)
+
+    (mtlx)
 );
 
 // These are the same as the UsdHydraTokens.
@@ -714,8 +716,8 @@ _MakeMaterialParamsForTexture(
     if (visitedNodes->find(nodePath) != visitedNodes->end()) return;
 
     SdrRegistry& shaderReg = SdrRegistry::GetInstance();
-    SdrShaderNodeConstPtr sdrNode = shaderReg.GetShaderNodeByIdentifierAndType(
-        node.nodeTypeId, HioGlslfxTokens->glslfx);
+    SdrShaderNodeConstPtr sdrNode = shaderReg.GetShaderNodeByIdentifier(
+        node.nodeTypeId, {HioGlslfxTokens->glslfx, _tokens->mtlx});
 
     HdSt_MaterialParam texParam;
     texParam.paramType = HdSt_MaterialParam::ParamTypeTexture;
@@ -1002,9 +1004,9 @@ _MakeParamsForInputParameter(
                 HdMaterialNode2 const& upstreamNode = upIt->second;
 
                 SdrShaderNodeConstPtr upstreamSdr = 
-                    shaderReg.GetShaderNodeByIdentifierAndType(
+                    shaderReg.GetShaderNodeByIdentifier(
                         upstreamNode.nodeTypeId,
-                        HioGlslfxTokens->glslfx);
+                        {HioGlslfxTokens->glslfx, _tokens->mtlx});
 
                 if (upstreamSdr) {
                     TfToken sdrRole(upstreamSdr->GetRole());
