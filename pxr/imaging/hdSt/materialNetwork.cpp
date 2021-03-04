@@ -64,35 +64,10 @@ TF_DEFINE_PRIVATE_TOKENS(
     (fieldname)
 
     (HwUvTexture_1)
-
     (textureMemory)
-    (wrapS)
-    (wrapT)
-    (wrapR)
-    (minFilter)
-    (magFilter)
-
     (in)
 
     (mtlx)
-);
-
-// These are the same as the UsdHydraTokens.
-TF_DEFINE_PRIVATE_TOKENS(
-    _samplingValueTokens,
-    (repeat)
-    (mirror)
-    (clamp)
-    (black)
-    (useMetadata)
-
-    (linear)
-    (nearest)
-
-    (linearMipmapLinear)
-    (linearMipmapNearest)
-    (nearestMipmapLinear)
-    (nearestMipmapNearest)
 );
 
 static TfToken
@@ -568,25 +543,25 @@ _ResolveWrapSamplerParameter(
     TfToken const &name)
 {
     const TfToken value = _ResolveParameter(
-        node, sdrNode, name, _samplingValueTokens->useMetadata);
+        node, sdrNode, name, HdStTextureTokens->useMetadata);
 
-    if (value == _samplingValueTokens->repeat) {
+    if (value == HdStTextureTokens->repeat) {
         return HdWrapRepeat;
     }
 
-    if (value == _samplingValueTokens->mirror) {
+    if (value == HdStTextureTokens->mirror) {
         return HdWrapMirror;
     }
 
-    if (value == _samplingValueTokens->clamp) {
+    if (value == HdStTextureTokens->clamp) {
         return HdWrapClamp;
     }
 
-    if (value == _samplingValueTokens->black) {
+    if (value == HdStTextureTokens->black) {
         return HdWrapBlack;
     }
 
-    if (value == _samplingValueTokens->useMetadata) {
+    if (value == HdStTextureTokens->useMetadata) {
         if (node.nodeTypeId == _tokens->HwUvTexture_1) {
             return HdWrapLegacy;
         }
@@ -614,30 +589,30 @@ _ResolveMinSamplerParameter(
     // token was authored, linear was used.
 
     const TfToken value = _ResolveParameter(
-        node, sdrNode, _tokens->minFilter,
-        _samplingValueTokens->linearMipmapLinear);
+        node, sdrNode, HdStTextureTokens->minFilter,
+        HdStTextureTokens->linearMipmapLinear);
 
-    if (value == _samplingValueTokens->nearest) {
+    if (value == HdStTextureTokens->nearest) {
         return HdMinFilterNearest;
     }
 
-    if (value == _samplingValueTokens->linear) {
+    if (value == HdStTextureTokens->linear) {
         return HdMinFilterLinear;
     }
 
-    if (value == _samplingValueTokens->nearestMipmapNearest) {
+    if (value == HdStTextureTokens->nearestMipmapNearest) {
         return HdMinFilterNearestMipmapNearest;
     }
 
-    if (value == _samplingValueTokens->nearestMipmapLinear) {
+    if (value == HdStTextureTokens->nearestMipmapLinear) {
         return HdMinFilterNearestMipmapLinear;
     }
 
-    if (value == _samplingValueTokens->linearMipmapNearest) {
+    if (value == HdStTextureTokens->linearMipmapNearest) {
         return HdMinFilterLinearMipmapNearest;
     }
 
-    if (value == _samplingValueTokens->linearMipmapLinear) {
+    if (value == HdStTextureTokens->linearMipmapLinear) {
         return HdMinFilterLinearMipmapLinear;
     }
 
@@ -651,9 +626,9 @@ _ResolveMagSamplerParameter(
     SdrShaderNodeConstPtr const &sdrNode)
 {
     const TfToken value = _ResolveParameter(
-        node, sdrNode, _tokens->magFilter, _samplingValueTokens->linear);
+        node, sdrNode, HdStTextureTokens->magFilter, HdStTextureTokens->linear);
 
-    if (value == _samplingValueTokens->nearest) {
+    if (value == HdStTextureTokens->nearest) {
         return HdMagFilterNearest;
     }
 
@@ -670,11 +645,11 @@ _GetSamplerParameters(
     SdrShaderNodeConstPtr const &sdrNode)
 {
     return { _ResolveWrapSamplerParameter(
-                 nodePath, node, sdrNode, _tokens->wrapS),
+                 nodePath, node, sdrNode, HdStTextureTokens->wrapS),
              _ResolveWrapSamplerParameter(
-                 nodePath, node, sdrNode, _tokens->wrapT),
+                 nodePath, node, sdrNode, HdStTextureTokens->wrapT),
              _ResolveWrapSamplerParameter(
-                 nodePath, node, sdrNode, _tokens->wrapR),
+                 nodePath, node, sdrNode, HdStTextureTokens->wrapR),
              _ResolveMinSamplerParameter(
                  nodePath, node, sdrNode),
              _ResolveMagSamplerParameter(
