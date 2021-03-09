@@ -82,6 +82,11 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+// #nv begin #parallel-xform-children
+// TODO: clean this up-- we likely do not need it, given perf gains from the omni hydra scene delegate.
+#define PARALLEL_XFORM_CHILDREN 0
+// nv end
+
 
 // XXX: Perhaps all interpolation tokens for Hydra should come from Hd and
 // UsdGeom tokens should be passed through a mapping function.
@@ -335,7 +340,8 @@ UsdImagingDelegate::_GetDisplayPredicate() const
 class UsdImagingDelegate::_Worker {
 private:
     // #nv begin #parallel-xform-children
-#if 1
+    // TODO: Clean this up.
+#if 1 // PARALLEL_XFORM_CHILDREN
     struct _Task {
         _Task() : delegate(nullptr) { }
         _Task(UsdImagingDelegate* delegate_,
@@ -377,7 +383,8 @@ public:
     }
 
     // #nv begin #parallel-xform-children
-#if 1
+    // TODO: Clean this up.
+#if 1 // PARALLEL_XFORM_CHILDREN
     void AddTask(SdfPath const& cachePath,
         TfTokenVector const *changedInfoFields = nullptr, UsdImagingIndexProxy *proxy = nullptr,
         const SdfPath *sourcePath = nullptr,
@@ -1709,7 +1716,7 @@ UsdImagingDelegate::_RefreshUsdObject(SdfPath const& usdPath,
     }
 
     // #nv begin #parallel-xform-children
-#if 1
+#if PARALLEL_XFORM_CHILDREN
     UsdImagingDelegate::_Worker worker(this);
     for (SdfPath const& affectedCachePath : affectedCachePaths) {
         worker.AddTask(affectedCachePath, &changedInfoFields, proxy, &usdPath, checkVariability);
@@ -1778,7 +1785,9 @@ UsdImagingDelegate::_RefreshUsdObject(SdfPath const& usdPath,
 
 #endif
 
+#if PARALLEL_XFORM_CHILDREN
     _ExecuteWorkForAffectedCachePaths(&worker);
+#endif
     // nv end
 }
 
