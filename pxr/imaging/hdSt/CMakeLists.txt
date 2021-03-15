@@ -19,7 +19,7 @@ endif()
 set(optionalLibs "")
 set(optionalIncludeDirs "")
 set(optionalPrivateClasses "")
-if (${PXR_ENABLE_MATERIALX_IMAGING_SUPPORT})
+if (${PXR_ENABLE_MATERIALX_SUPPORT})
     add_definitions(-DPXR_MATERIALX_STDLIB_DIR="${MATERIALX_STDLIB_DIR}")
     add_definitions(-DPXR_MATERIALX_RESOURCE_DIR="${MATERIALX_RESOURCE_DIR}")
 
