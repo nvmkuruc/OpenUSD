@@ -1935,8 +1935,11 @@ if context.buildImaging:
     #requiredDependencies += [GLEW, OPENSUBDIV]
     # nv end
 
-    if context.enableOpenVDB:
-        requiredDependencies += [BLOSC, BOOST, OPENEXR, OPENVDB, TBB]
+    # nv begin #deps-locations
+    # TODO: support --openvdb-location
+    #if context.enableOpenVDB:
+    #    requiredDependencies += [BLOSC, BOOST, OPENEXR, OPENVDB, TBB]
+    # nv end
     
     if context.buildOIIO:
         requiredDependencies += [BOOST, JPEG, TIFF, PNG, OPENEXR, OPENIMAGEIO]
