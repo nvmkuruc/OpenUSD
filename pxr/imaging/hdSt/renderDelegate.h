@@ -109,7 +109,7 @@ public:
     virtual void CommitResources(HdChangeTracker *tracker) override;
 
     HDST_API
-    virtual TfToken GetMaterialNetworkSelector() const override;
+    virtual TfTokenVector GetMaterialRenderContexts() const override;
 
     HDST_API
     virtual TfTokenVector GetShaderSourceTypes() const override;
