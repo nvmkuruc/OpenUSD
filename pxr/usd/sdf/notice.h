@@ -92,12 +92,12 @@ public:
         // #nv begin #fast-updates
         SDF_API
         const SdfLayerChangeListVec &GetChangeListVec() const;
-        // nv end
 
-        const_iterator begin() const { return _vec->begin(); }
-        const_iterator cbegin() const { return _vec->cbegin(); }
-        const_iterator end() const { return _vec->end(); } 
-        const_iterator cend() const { return _vec->cend(); }
+        const_iterator begin() const { return GetChangeListVec().begin(); }
+        const_iterator cbegin() const { return GetChangeListVec().cbegin(); }
+        const_iterator end() const { return GetChangeListVec().end(); }
+        const_iterator cend() const { return GetChangeListVec().cend(); }
+        // nv end
 
         const_iterator find(SdfLayerHandle const &layer) const {
             return std::find_if(
