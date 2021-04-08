@@ -143,7 +143,7 @@ public:
                                      HdRprim const& rprim);
 
     HD_API
-    TfTokenVector const & GetBuiltinPrimvarNames() const;
+    static TfTokenVector const & GetBuiltinPrimvarNames();
 
     // #nv begin #omni-hydra
     // Allow instancers to be synchronized independently from rprims

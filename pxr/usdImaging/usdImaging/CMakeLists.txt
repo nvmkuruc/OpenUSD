@@ -45,6 +45,7 @@ pxr_library(usdImaging
         distantLightAdapter
         domeLightAdapter
         fieldAdapter
+        geometryLightAdapter
         gprimAdapter
         hermiteCurvesAdapter
         implicitSurfaceMeshUtils
@@ -55,8 +56,11 @@ pxr_library(usdImaging
         meshAdapter
         nurbsCurvesAdapter
         nurbsPatchAdapter
+        pluginLightAdapter
+        pluginLightFilterAdapter
         pointsAdapter
         pointInstancerAdapter
+        portalLightAdapter
         primAdapter
         primvarDescCache
         rectLightAdapter

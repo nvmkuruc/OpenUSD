@@ -51,7 +51,15 @@ public:
     {}
 
     USDIMAGING_API
-    virtual ~UsdImagingLightAdapter();
+    ~UsdImagingLightAdapter() override;
+
+    USDIMAGING_API
+    SdfPath Populate(UsdPrim const& prim,
+                     UsdImagingIndexProxy* index,
+                     UsdImagingInstancerContext const* instancerContext = NULL) override;
+
+    USDIMAGING_API
+    bool IsSupported(UsdImagingIndexProxy const* index) const override;
 
     // ---------------------------------------------------------------------- //
     /// \name Parallel Setup and Resolve
@@ -59,6 +67,7 @@ public:
 
     /// Thread Safe.
     USDIMAGING_API
+<<<<<<< HEAD
     virtual void TrackVariability(UsdPrim const& prim,
                                   SdfPath const& cachePath,
                                   HdDirtyBits* timeVaryingBits,
@@ -69,15 +78,23 @@ public:
                                   // only populates the value cache with initial values.
                                   bool checkVariability = true) const;
                                   // nv end
+=======
+    void TrackVariability(UsdPrim const& prim,
+                          SdfPath const& cachePath,
+                          HdDirtyBits* timeVaryingBits,
+                          UsdImagingInstancerContext const* 
+                              instancerContext = NULL) const override;
+
+>>>>>>> pxr/dev
 
     /// Thread Safe.
     USDIMAGING_API
-    virtual void UpdateForTime(UsdPrim const& prim,
-                               SdfPath const& cachePath, 
-                               UsdTimeCode time,
-                               HdDirtyBits requestedBits,
-                               UsdImagingInstancerContext const* 
-                                   instancerContext = NULL) const;
+    void UpdateForTime(UsdPrim const& prim,
+                       SdfPath const& cachePath, 
+                       UsdTimeCode time,
+                       HdDirtyBits requestedBits,
+                       UsdImagingInstancerContext const* 
+                           instancerContext = NULL) const override;
 
     // ---------------------------------------------------------------------- //
     /// \name Change Processing 
@@ -86,27 +103,28 @@ public:
     /// Returns a bit mask of attributes to be udpated, or
     /// HdChangeTracker::AllDirty if the entire prim must be resynchronized.
     USDIMAGING_API
-    virtual HdDirtyBits ProcessPropertyChange(UsdPrim const& prim,
-                                              SdfPath const& cachePath,
-                                              TfToken const& propertyName);
+    HdDirtyBits ProcessPropertyChange(UsdPrim const& prim,
+                                      SdfPath const& cachePath,
+                                      TfToken const& propertyName) override;
 
     USDIMAGING_API
-    virtual void MarkDirty(UsdPrim const& prim,
-                           SdfPath const& cachePath,
-                           HdDirtyBits dirty,
-                           UsdImagingIndexProxy* index);
+    void MarkDirty(UsdPrim const& prim,
+                   SdfPath const& cachePath,
+                   HdDirtyBits dirty,
+                   UsdImagingIndexProxy* index) override;
 
     USDIMAGING_API
-    virtual void MarkTransformDirty(UsdPrim const& prim,
-                                    SdfPath const& cachePath,
-                                    UsdImagingIndexProxy* index);
+    void MarkTransformDirty(UsdPrim const& prim,
+                            SdfPath const& cachePath,
+                            UsdImagingIndexProxy* index) override;
 
     USDIMAGING_API
-    virtual void MarkVisibilityDirty(UsdPrim const& prim,
-                                     SdfPath const& cachePath,
-                                     UsdImagingIndexProxy* index);
+    void MarkVisibilityDirty(UsdPrim const& prim,
+                             SdfPath const& cachePath,
+                             UsdImagingIndexProxy* index) override;
 
     USDIMAGING_API
+<<<<<<< HEAD
     virtual void MarkLightParamsDirty(UsdPrim const& prim,
                                       SdfPath const& cachePath,
                                       UsdImagingIndexProxy* index);
@@ -117,6 +135,25 @@ public:
                                   SdfPath const& cachePath,
                                   UsdTimeCode time) const;
     // nv end
+=======
+    void MarkLightParamsDirty(UsdPrim const& prim,
+                              SdfPath const& cachePath,
+                              UsdImagingIndexProxy* index) override;
+
+    // ---------------------------------------------------------------------- //
+    /// \name Utilities 
+    // ---------------------------------------------------------------------- //
+
+    USDIMAGING_API
+    VtValue GetMaterialResource(UsdPrim const &prim,
+                                SdfPath const& cachePath, 
+                                UsdTimeCode time) const override;
+
+protected:
+    void _RemovePrim(SdfPath const& cachePath,
+                     UsdImagingIndexProxy* index) override;
+
+>>>>>>> pxr/dev
 };
 
 

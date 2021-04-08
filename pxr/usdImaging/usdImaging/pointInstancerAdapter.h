@@ -143,6 +143,10 @@ public:
         UsdPrim const& usdPrim,
         SdfPath const& cachePath) const override;
 
+    SdfPathVector GetInstancerPrototypes(
+        UsdPrim const& usdPrim,
+        SdfPath const& cachePath) const override;
+
     GfMatrix4d GetTransform(UsdPrim const& prim, 
                             SdfPath const& cachePath,
                             UsdTimeCode time,
@@ -161,7 +165,8 @@ public:
                          UsdTimeCode time,
                          size_t maxNumSamples, 
                          float *sampleTimes,
-                         VtValue *sampleValues) override;
+                         VtValue *sampleValues,
+                         VtIntArray *sampleIndices) override;
 
     PxOsdSubdivTags GetSubdivTags(UsdPrim const& usdPrim,
                                   SdfPath const& cachePath,
@@ -239,7 +244,8 @@ public:
     VtValue Get(UsdPrim const& prim,
                 SdfPath const& cachePath,
                 TfToken const& key,
-                UsdTimeCode time) const override;
+                UsdTimeCode time,
+                VtIntArray *outIndices) const override;
 
     // ---------------------------------------------------------------------- //
     /// \name Nested instancing support

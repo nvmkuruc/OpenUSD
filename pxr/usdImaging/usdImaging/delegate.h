@@ -39,7 +39,6 @@
 #include "pxr/imaging/hd/coordSys.h"
 #include "pxr/imaging/hd/sceneDelegate.h"
 #include "pxr/imaging/hd/selection.h"
-#include "pxr/imaging/hd/texture.h"
 #include "pxr/imaging/hd/version.h"
 
 #include "pxr/imaging/pxOsd/subdivTags.h"
@@ -337,6 +336,10 @@ public:
     USDIMAGING_API
     virtual VtValue Get(SdfPath const& id, TfToken const& key) override;
     USDIMAGING_API
+    virtual VtValue GetIndexedPrimvar(SdfPath const& id, 
+                                      TfToken const& key, 
+                                      VtIntArray *outIndices) override;
+    USDIMAGING_API
     HdIdVectorSharedPtr
     virtual GetCoordSysBindings(SdfPath const& id) override;
     USDIMAGING_API
@@ -388,6 +391,9 @@ public:
     USDIMAGING_API
     virtual SdfPath GetInstancerId(SdfPath const &primId) override;
 
+    USDIMAGING_API
+    virtual SdfPathVector GetInstancerPrototypes(SdfPath const &instancerId) override;
+
     // Motion samples
     USDIMAGING_API
     virtual size_t
@@ -403,6 +409,12 @@ public:
     SamplePrimvar(SdfPath const& id, TfToken const& key,
                   size_t maxNumSamples, float *times,
                   VtValue *samples) override;
+
+    USDIMAGING_API
+    virtual size_t
+    SampleIndexedPrimvar(SdfPath const& id, TfToken const& key,
+                         size_t maxNumSamples, float *times,
+                         VtValue *samples, VtIntArray *indices) override;
 
     // Material Support
     USDIMAGING_API
@@ -462,6 +474,13 @@ public:
     USDIMAGING_API
     VtValue GetExtComputationInput(SdfPath const& computationId,
                                    TfToken const& input) override;
+
+    USDIMAGING_API
+    size_t SampleExtComputationInput(SdfPath const& computationId,
+                                     TfToken const& input,
+                                     size_t maxSampleCount,
+                                     float *sampleTimes,
+                                     VtValue *sampleValues) override;
 
     USDIMAGING_API
     std::string GetExtComputationKernel(SdfPath const& computationId) override;
@@ -537,6 +556,7 @@ public:
     USDIMAGING_API
     bool IsInInvisedPaths(const SdfPath &usdPath) const;
 
+<<<<<<< HEAD
     // #nv begin #clean-property-invalidation
     /// Handle property changes which are not tied to adapters (e.g., custom primvars, API schema properties).
     USDIMAGING_API
@@ -564,6 +584,16 @@ protected:
 // #nv begin kit-delegate
 // private:
 // nv end
+=======
+private:
+    // Internal Get and SamplePrimvar
+    VtValue _Get(SdfPath const& id, TfToken const& key, VtIntArray *outIndices);
+
+    size_t _SamplePrimvar(SdfPath const& id, TfToken const& key,
+                          size_t maxNumSamples, float *times, VtValue *samples, 
+                          VtIntArray *indices);
+
+>>>>>>> pxr/dev
     // Internal friend class.
     class _Worker;
     friend class UsdImagingIndexProxy;
