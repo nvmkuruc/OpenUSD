@@ -401,8 +401,6 @@ private:
             UsdTimeCode time,
             const UsdImagingInstancerContext* instancerContext) const;
 
-<<<<<<< HEAD
-=======
     size_t
     _SampleExtComputationInputForSkinningComputation(
             UsdPrim const& prim,
@@ -425,8 +423,6 @@ private:
             float *sampleTimes,
             VtValue *sampleValues);
 
-
->>>>>>> pxr/dev
     // ---------------------------------------------------------------------- //
     /// Populated skeleton state
     // ---------------------------------------------------------------------- //

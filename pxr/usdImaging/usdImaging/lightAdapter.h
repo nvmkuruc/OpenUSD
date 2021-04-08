@@ -67,8 +67,7 @@ public:
 
     /// Thread Safe.
     USDIMAGING_API
-<<<<<<< HEAD
-    virtual void TrackVariability(UsdPrim const& prim,
+    void TrackVariability(UsdPrim const& prim,
                                   SdfPath const& cachePath,
                                   HdDirtyBits* timeVaryingBits,
                                   UsdImagingInstancerContext const* 
@@ -78,14 +77,6 @@ public:
                                   // only populates the value cache with initial values.
                                   bool checkVariability = true) const;
                                   // nv end
-=======
-    void TrackVariability(UsdPrim const& prim,
-                          SdfPath const& cachePath,
-                          HdDirtyBits* timeVaryingBits,
-                          UsdImagingInstancerContext const* 
-                              instancerContext = NULL) const override;
-
->>>>>>> pxr/dev
 
     /// Thread Safe.
     USDIMAGING_API
@@ -124,10 +115,9 @@ public:
                              UsdImagingIndexProxy* index) override;
 
     USDIMAGING_API
-<<<<<<< HEAD
-    virtual void MarkLightParamsDirty(UsdPrim const& prim,
-                                      SdfPath const& cachePath,
-                                      UsdImagingIndexProxy* index);
+    void MarkLightParamsDirty(UsdPrim const& prim,
+                              SdfPath const& cachePath,
+                              UsdImagingIndexProxy* index) override;
 
     // #nv begin #bind-material-to-domelight
     USDIMAGING_API
@@ -135,10 +125,6 @@ public:
                                   SdfPath const& cachePath,
                                   UsdTimeCode time) const;
     // nv end
-=======
-    void MarkLightParamsDirty(UsdPrim const& prim,
-                              SdfPath const& cachePath,
-                              UsdImagingIndexProxy* index) override;
 
     // ---------------------------------------------------------------------- //
     /// \name Utilities 
@@ -153,7 +139,6 @@ protected:
     void _RemovePrim(SdfPath const& cachePath,
                      UsdImagingIndexProxy* index) override;
 
->>>>>>> pxr/dev
 };
 
 

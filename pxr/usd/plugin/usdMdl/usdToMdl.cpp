@@ -871,7 +871,10 @@ bool UsdToMdlConverter::ConvertValue(
                 UsdShadeAttributeType sourceType;
                 if (input.GetConnectedSource(&source, &sourceName, &sourceType))
                 {
-                    if (source.IsShader())
+                    // XXX:aluk
+                    // IsShader() deprecated in v21.05
+                    // https://github.com/PixarAnimationStudios/USD/commit/900356c54cf9b711f8520e1aa7d1888a5e310cc5
+                    if (true) //source.IsShader())
                     {
                         UsdPrim prim(source.GetPrim());
                         UsdShadeShader shader(prim);

@@ -92,7 +92,9 @@ UsdImagingLightAdapter::TrackVariability(UsdPrim const& prim,
     bool checkVariability) const
     // nv end
 {
-<<<<<<< HEAD
+    // XXX:aluk
+    // TODO: resolve merge conflict
+#if 0
     // #nv begin fast-updates
     if (checkVariability) {
     // nv end
@@ -123,7 +125,7 @@ UsdImagingLightAdapter::TrackVariability(UsdPrim const& prim,
                 *timeVaryingBits |= HdLight::DirtyBits::DirtyParams;
                 break;
             }
-=======
+#endif
     // Discover time-varying transforms.
     _IsTransformVarying(prim,
         HdLight::DirtyBits::DirtyTransform,
@@ -155,7 +157,6 @@ UsdImagingLightAdapter::TrackVariability(UsdPrim const& prim,
         if (attr.GetNumTimeSamples()>1){
             *timeVaryingBits |= HdLight::DirtyBits::DirtyParams;
             break;
->>>>>>> pxr/dev
         }
     }
 
@@ -254,7 +255,6 @@ UsdImagingLightAdapter::MarkLightParamsDirty(UsdPrim const& prim,
     index->MarkSprimDirty(cachePath, paramsDirty);
 }
 
-<<<<<<< HEAD
 // #nv begin #bind-material-to-domelight
 /*virtual*/
 SdfPath
@@ -266,7 +266,6 @@ UsdImagingLightAdapter::GetMaterialId(UsdPrim const& prim,
 }
 // nv end
 
-=======
 
 VtValue 
 UsdImagingLightAdapter::GetMaterialResource(UsdPrim const &prim,
@@ -297,6 +296,5 @@ UsdImagingLightAdapter::GetMaterialResource(UsdPrim const &prim,
 
     return VtValue(networkMap);
 }
->>>>>>> pxr/dev
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -38,6 +38,7 @@
 
 // #nv begin #new-MDL-schema
 #include "pxr/usd/ar/resolver.h"
+#include "pxr/usd/sdr/registry.h"
 #include "pxr/base/tf/envSetting.h"
 // nv end
 
@@ -177,7 +178,9 @@ UsdImagingMaterialAdapter::TrackVariability(
     bool checkVariability) const
     // nv end
 {
-<<<<<<< HEAD
+    // XXX:aluk
+    // TODO: resolve merge conflict
+#if 0
     // #nv begin fast-updates
     // Early out, as there are no initial values to populate into the value cache.
     if (!checkVariability)
@@ -191,7 +194,7 @@ UsdImagingMaterialAdapter::TrackVariability(
     _GetMaterialNetworkMap(prim, networkSelector, &map, time, &timeVarying);
     if (timeVarying) {
         *timeVaryingBits |= HdMaterial::DirtyResource;
-=======
+#endif
     UsdShadeMaterial material(prim);
     if (!material) {
         TF_RUNTIME_ERROR("Expected material prim at <%s> to be of type "
@@ -226,7 +229,6 @@ UsdImagingMaterialAdapter::TrackVariability(
             }
             return;
         }
->>>>>>> pxr/dev
     }
 }
 
@@ -310,7 +312,9 @@ UsdImagingMaterialAdapter::_RemovePrim(
     index->RemoveSprim(HdPrimTypeTokens->material, cachePath);
 }
 
-<<<<<<< HEAD
+// XXX:aluk
+// TODO: resolve merge conflict
+#if 0
 static TfToken
 _GetPrimvarNameAttributeValue(
     SdrShaderNodeConstPtr const& sdrNode,
@@ -545,12 +549,12 @@ UsdImagingMaterialAdapter::_GetMaterialNetworkMap(
     HdMaterialNetworkMap *networkMap,
     UsdTimeCode time,
     bool* timeVarying) const
-=======
+#endif
+
 VtValue 
 UsdImagingMaterialAdapter::GetMaterialResource(UsdPrim const &prim,
                                                SdfPath const& cachePath, 
                                                UsdTimeCode time) const
->>>>>>> pxr/dev
 {
     UsdShadeMaterial material(prim);
     if (!material) {

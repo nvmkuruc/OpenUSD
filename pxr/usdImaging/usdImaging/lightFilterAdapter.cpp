@@ -87,7 +87,9 @@ UsdImagingLightFilterAdapter::TrackVariability(UsdPrim const& prim,
     bool checkVariability) const
     // nv end
 {
-<<<<<<< HEAD
+    // XXX:aluk
+    // TODO: resolve merge conflict
+#if 0
     if (checkVariability) {
         // Discover time-varying transforms.
         _IsTransformVarying(prim,
@@ -101,7 +103,7 @@ UsdImagingLightFilterAdapter::TrackVariability(UsdPrim const& prim,
         for (UsdAttribute const& attr : attrs) {
             // Don't double-count transform attrs.
             if (UsdGeomXformable::IsTransformationAffectedByAttrNamed(
-=======
+#endif
     // Discover time-varying transforms.
     _IsTransformVarying(prim,
         HdLight::DirtyBits::DirtyTransform,
@@ -119,24 +121,22 @@ UsdImagingLightFilterAdapter::TrackVariability(UsdPrim const& prim,
     for (UsdAttribute const& attr : attrs) {
         // Don't double-count transform attrs.
         if (UsdGeomXformable::IsTransformationAffectedByAttrNamed(
->>>>>>> pxr/dev
-                attr.GetBaseName())) {
-                continue;
-            }
-            if (attr.GetNumTimeSamples() > 1) {
-                *timeVaryingBits |= HdLight::DirtyBits::DirtyParams;
-                break;
-            }
+            attr.GetBaseName())) {
+            continue;
         }
+        if (attr.GetNumTimeSamples() > 1) {
+            *timeVaryingBits |= HdLight::DirtyBits::DirtyParams;
+            break;
+        }
+    }
 
-        UsdLuxLightFilter lightFilter(prim);
-        if (TF_VERIFY(lightFilter)) {
-            UsdImaging_CollectionCache &collectionCache = _GetCollectionCache();
-            collectionCache.UpdateCollection(
-                lightFilter.GetFilterLinkCollectionAPI());
-            // TODO: When collections change we need to invalidate affected
-            // prims with the DirtyCollections flag.
-        }
+    UsdLuxLightFilter lightFilter(prim);
+    if (TF_VERIFY(lightFilter)) {
+        UsdImaging_CollectionCache &collectionCache = _GetCollectionCache();
+        collectionCache.UpdateCollection(
+            lightFilter.GetFilterLinkCollectionAPI());
+        // TODO: When collections change we need to invalidate affected
+        // prims with the DirtyCollections flag.
     }
 }
 

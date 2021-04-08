@@ -589,7 +589,9 @@ UsdShadeConnectableAPI::GetInput(const TfToken &name) const
 std::vector<UsdShadeInput> 
 UsdShadeConnectableAPI::GetInputs(bool onlyAuthored) const
 {
-<<<<<<< HEAD
+    // XXX:aluk
+    // TODO: resolve merge conflict
+#if 0
     std::vector<UsdShadeInput> ret;
 
     std::vector<UsdAttribute> attrs = GetPrim().GetAttributes();
@@ -616,14 +618,13 @@ UsdShadeConnectableAPI::GetInputs(bool onlyAuthored) const
             ret.push_back(UsdShadeInput(attr));
         }
         // nv end
-=======
+#endif
     std::vector<UsdProperty> props;
     if (onlyAuthored) {
         props = GetPrim().GetAuthoredPropertiesInNamespace(
             UsdShadeTokens->inputs);
     } else {
         props = GetPrim().GetPropertiesInNamespace(UsdShadeTokens->inputs);
->>>>>>> pxr/dev
     }
 
     // Filter for attributes and convert them to inputs

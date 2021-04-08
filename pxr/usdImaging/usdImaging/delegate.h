@@ -556,7 +556,6 @@ public:
     USDIMAGING_API
     bool IsInInvisedPaths(const SdfPath &usdPath) const;
 
-<<<<<<< HEAD
     // #nv begin #clean-property-invalidation
     /// Handle property changes which are not tied to adapters (e.g., custom primvars, API schema properties).
     USDIMAGING_API
@@ -584,8 +583,7 @@ protected:
 // #nv begin kit-delegate
 // private:
 // nv end
-=======
-private:
+
     // Internal Get and SamplePrimvar
     VtValue _Get(SdfPath const& id, TfToken const& key, VtIntArray *outIndices);
 
@@ -593,7 +591,6 @@ private:
                           size_t maxNumSamples, float *times, VtValue *samples, 
                           VtIntArray *indices);
 
->>>>>>> pxr/dev
     // Internal friend class.
     class _Worker;
     friend class UsdImagingIndexProxy;
