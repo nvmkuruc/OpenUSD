@@ -542,24 +542,26 @@ UsdSkelImagingSkeletonAdapter::ProcessPrimResync(
     else if (_IsSkelAnimPrimPath(primPath) && _UseNVGPUSkinningComputations())
     {
         const UsdPrim& animPrim = _GetPrim(primPath);
-        //this skelanimation is removed, refresh the skelQuery's animationSouce
-        if (!animPrim)
-        {
-            //If remove skelanim, related skeleton need to refresh animation source query
-            const auto &skelIt = _skelAnimMap.find(primPath);
-            SdfPathSet skelPaths = skelIt->second;
-            for (const auto& skelPath : skelPaths)
-            {
-                _SkelData* skelData = _GetSkelData(skelPath);
 
-                if (skelData) {
-                    // This animation is queried
-                    if (skelData->skelQuery.GetAnimQuery() 
-                        && skelData->skelQuery.GetAnimQuery().GetPrim().GetPath() == primPath) 
+        //If remove skelanim, related skeleton need to refresh animation source query
+        const auto &skelIt = _skelAnimMap.find(primPath);
+        SdfPathSet skelPaths = skelIt->second;
+        for (const auto& skelPath : skelPaths)
+        {
+            _SkelData* skelData = _GetSkelData(skelPath);
+
+            if (skelData) {
+                // This animation is queried
+                if (skelData->skelQuery.GetAnimQuery() 
+                    && skelData->skelQuery.GetAnimQuery().GetPrim().GetPath() == primPath) 
+                {
+                    //this skelanimation is removed
+                    if (!animPrim)
                     {
                         _skelAnimMap[primPath].erase(skelPath);
-                        RefreshSkeletonQuery(skelPath, UsdSkelTokens->skelAnimationSource, index);
                     }
+                    //Refresh SkelAnimQuery no matter remove or resync
+                    RefreshSkeletonQuery(skelPath, UsdSkelTokens->skelAnimationSource, index);
                 }
             }
         }
@@ -581,7 +583,7 @@ UsdSkelImagingSkeletonAdapter::ProcessPrimResync(
 
     if (_IsSkelAnimPrimPath(primPath) && _UseNVGPUSkinningComputations())
     {
-        //Repopulate skelanimation should refresh all skelanimQuery's attribute query
+        //Resync skelanimation should refresh all skelanimQuery's attribute query
         RefreshAnimQuery(primPath, UsdSkelTokens->translations, index);
         RefreshAnimQuery(primPath, UsdSkelTokens->rotations, index);
         RefreshAnimQuery(primPath, UsdSkelTokens->scales, index);
