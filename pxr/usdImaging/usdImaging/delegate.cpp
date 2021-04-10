@@ -1400,6 +1400,9 @@ UsdImagingDelegate::_ResyncUsdPrim(SdfPath const& usdPath,
     for (SdfPath currentPath = usdPath;
          currentPath != SdfPath::AbsoluteRootPath();
          currentPath = currentPath.GetParentPath()) {
+        //+NV_CHANGE FRZHANG : NV GPU Skinning
+        bool stopResyncAncestor = false;
+        //-NV_CHANGE FRZHANG
         auto const& range = _dependencyInfo.equal_range(currentPath);
         for (auto it = range.first; it != range.second; ++it) {
             SdfPath const& cachePath = it->second;
@@ -1417,6 +1420,20 @@ UsdImagingDelegate::_ResyncUsdPrim(SdfPath const& usdPath,
                 TF_VERIFY(primInfo->adapter != nullptr)) {
                 primInfo->adapter->ProcessPrimResync(cachePath, proxy);
             }
+
+            //+NV_CHANGE FRZHANG : NV GPU Skinning
+            if(UseNVGPUSkinningComputations() && currentPath == usdPath)
+            {
+                //if delete and create successively, usdPrim in primInfo will be expired. 
+                //_ResyncUsdPrim postponed hdpriminfo delete, replace skelanim's prim here.
+                if (!primInfo->usdPrim)
+                {
+                    primInfo->usdPrim = _stage->GetPrimAtPath(currentPath);
+                }
+                if (primInfo->usdPrim && primInfo->usdPrim.IsA<UsdSkelAnimation>())
+                    stopResyncAncestor = true;
+            }
+            //-NV_CHANGE FRZHANG
         }
         if ((range.first != range.second)
             // #nv begin #kit-gizmos
@@ -1424,6 +1441,11 @@ UsdImagingDelegate::_ResyncUsdPrim(SdfPath const& usdPath,
             // nv end
             return;
         }
+
+        //+NV_CHANGE FRZHANG : NV GPU Skinning
+        if(stopResyncAncestor)
+            return;
+        //-NV_CHANGE FRZHANG
     }
 
     // If the resync target isn't below a populated prim, search the resync

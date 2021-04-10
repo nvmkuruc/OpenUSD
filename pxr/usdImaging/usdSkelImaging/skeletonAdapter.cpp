@@ -560,11 +560,12 @@ UsdSkelImagingSkeletonAdapter::ProcessPrimResync(
                     {
                         _skelAnimMap[primPath].erase(skelPath);
                     }
-                    //Refresh SkelAnimQuery no matter remove or resync
+                    //Refresh SkelAnimQuery no matter remove or resync, remove and repopulate are handled here.
                     RefreshSkeletonQuery(skelPath, UsdSkelTokens->skelAnimationSource, index);
                 }
             }
         }
+        return; //Skip the remove and repopulate below.
     }
     else {
         // PrimResync might be called on behalf of the skeleton.
@@ -580,16 +581,6 @@ UsdSkelImagingSkeletonAdapter::ProcessPrimResync(
     // A skeleton removal triggers all skinned prims using it to be removed as
     // well.
     _RemovePrim(primPath, index);
-
-    if (_IsSkelAnimPrimPath(primPath) && _UseNVGPUSkinningComputations())
-    {
-        //Resync skelanimation should refresh all skelanimQuery's attribute query
-        RefreshAnimQuery(primPath, UsdSkelTokens->translations, index);
-        RefreshAnimQuery(primPath, UsdSkelTokens->rotations, index);
-        RefreshAnimQuery(primPath, UsdSkelTokens->scales, index);
-        RefreshAnimQuery(primPath, UsdSkelTokens->joints, index);
-        RefreshAnimQuery(primPath, UsdSkelTokens->blendShapeWeights, index);
-    }
 
     if (!pathsToRepopulate.empty()) {
         // This isn't as bad as it seems.
@@ -1222,6 +1213,7 @@ UsdSkelImagingSkeletonAdapter::_RemovePrim(const SdfPath& cachePath,
         else
         {
             index->_hdPrimInfoToRemove.push_back(cachePath);
+            index->_RemoveDependencies(cachePath);
         }
         // nv end
 
@@ -1264,6 +1256,7 @@ UsdSkelImagingSkeletonAdapter::_RemovePrim(const SdfPath& cachePath,
                 "[SkeletonAdapter::_RemovePrim] Remove SkelAnimation"
                 "%s\n", cachePath.GetText());
             index->_hdPrimInfoToRemove.push_back(cachePath);
+            index->_RemoveDependencies(cachePath);
             _skelAnimMap.erase(cachePath);
         }
     }
