@@ -178,10 +178,7 @@ public:
     virtual void ProcessPrimRemoval(SdfPath const& cachePath,
                                    UsdImagingIndexProxy* index);
 
-    //+NV_CHANGE FRZHANG : fix skelmesh resync
-    USDIMAGING_API
-    virtual SdfPath GetPrimResyncRootPath(SdfPath const& primPath);
-
+    //+NV_CHANGE FRZHANG
     USDIMAGING_API
     virtual void RefreshSkeletonQuery(const SdfPath& primPath, const TfToken& propertyName, UsdImagingIndexProxy* proxy);
     //-NV_CHANGE FRZHANG

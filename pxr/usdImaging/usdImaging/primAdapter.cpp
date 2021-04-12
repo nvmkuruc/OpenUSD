@@ -164,13 +164,7 @@ UsdImagingPrimAdapter::ProcessPrimRemoval(SdfPath const& cachePath,
     _RemovePrim(cachePath, index);
 }
 
-//+NV_CHANGE FRZHANG : fix skelmesh resync
-/*virtual*/
-SdfPath
-UsdImagingPrimAdapter::GetPrimResyncRootPath(SdfPath const& primPath)
-{
-    return primPath;
-}
+//+NV_CHANGE FRZHANG
 /*virtual*/
 void
 UsdImagingPrimAdapter::RefreshSkeletonQuery(const SdfPath& primPath, const TfToken& propertyName, UsdImagingIndexProxy* proxy)

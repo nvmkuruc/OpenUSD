@@ -444,6 +444,12 @@ void UsdSkelSkeletonQuery::ReplaceAnimQuery(const UsdSkelAnimQuery& animQuery)
         return;
 
     _animQuery = animQuery;
+
+    RefreshJointMapper();
+}
+
+void UsdSkelSkeletonQuery::RefreshJointMapper()
+{
     if (_definition && _animQuery) {
         _animToSkelMapper = UsdSkelAnimMapper(_animQuery.GetJointOrder(),
                                               _definition->GetJointOrder());
@@ -459,6 +465,7 @@ void UsdSkelSkeletonQuery::ReplaceAnimQuery(const UsdSkelAnimQuery& animQuery)
 void UsdSkelSkeletonQuery::RefreshAnimQuery(const TfToken& propertyName)
 {
     _animQuery.Refresh(propertyName);
+    
 }
 //-NV_CHANGE BRONG
 
