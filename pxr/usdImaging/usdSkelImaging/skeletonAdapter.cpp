@@ -562,6 +562,14 @@ UsdSkelImagingSkeletonAdapter::ProcessPrimResync(
                     }
                     //Refresh SkelAnimQuery no matter remove or resync, remove and repopulate are handled here.
                     RefreshSkeletonQuery(skelPath, UsdSkelTokens->skelAnimationSource, index);
+
+                    //maybe not necessary, but better to refresh all skelanimQuery's attribute query when anim prim resync.
+                    RefreshAnimQuery(primPath, UsdSkelTokens->translations, index);
+                    RefreshAnimQuery(primPath, UsdSkelTokens->rotations, index);
+                    RefreshAnimQuery(primPath, UsdSkelTokens->scales, index);
+                    RefreshAnimQuery(primPath, UsdSkelTokens->joints, index);
+                    RefreshAnimQuery(primPath, UsdSkelTokens->blendShapeWeights, index);
+
                 }
             }
         }
@@ -1387,9 +1395,18 @@ UsdSkelImagingSkeletonAdapter::_TrackBoneMeshVariability(
                timeVaryingBits,
                false);
 
-    // Discover time-varying points.
-    if (const UsdSkelAnimQuery& animQuery =
-        skelData->skelQuery.GetAnimQuery()) {
+    // Discover time-varying joint transforms.
+    const UsdSkelAnimQuery& animQuery =
+        skelData->skelQuery.GetAnimQuery();
+
+    if (animQuery 
+        //+NV_CHANGE FRZHANG: 
+        //check if animQuery's prim is still validate. 
+        //This is aming for avoid crash when a group of resync is triggered and during that animquery's prim might already be expired.
+        //animation prim's resync will also trigger this timevarying track, so it will trigger a proper call of this function to correct time.
+        && animQuery.GetPrim()
+        //-NV_CHANGE FRZHANG
+        ) {
 
         if(animQuery.JointTransformsMightBeTimeVarying()) {
             (*timeVaryingBits) |= HdChangeTracker::DirtyPoints;
@@ -1521,8 +1538,17 @@ UsdSkelImagingSkeletonAdapter::_IsAffectedByTimeVaryingSkelAnim(
     }
 
     // Discover time-varying joint transforms.
-    if (const UsdSkelAnimQuery& animQuery =
-        skelData->skelQuery.GetAnimQuery()) {
+    const UsdSkelAnimQuery& animQuery =
+        skelData->skelQuery.GetAnimQuery();
+
+    if (animQuery 
+        //+NV_CHANGE FRZHANG: 
+        //check if animQuery's prim is still validate. 
+        //This is aming for avoid crash when a group of resync is triggered and during that animquery's prim might already be expired.
+        //animation prim's resync will also trigger this timevarying track, so it will trigger a proper call of this function to correct time.
+        && animQuery.GetPrim()
+        //-NV_CHANGE FRZHANG
+        ) {
 
         return (skinnedPrimData->hasJointInfluences &&
                 animQuery.JointTransformsMightBeTimeVarying()) ||
