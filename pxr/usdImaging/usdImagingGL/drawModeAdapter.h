@@ -121,6 +121,15 @@ public:
                            SdfPath const& cachePath,
                            UsdImagingIndexProxy* index) override;
 
+    // ---------------------------------------------------------------------- //
+    /// \name Data access
+    // ---------------------------------------------------------------------- //
+
+    USDIMAGING_API
+    VtValue GetMaterialResource(UsdPrim const& prim, 
+                                SdfPath const& cachePath, 
+                                UsdTimeCode time) const override;
+  
 protected:
     USDIMAGINGGL_API
     void _RemovePrim(SdfPath const& cachePath,
