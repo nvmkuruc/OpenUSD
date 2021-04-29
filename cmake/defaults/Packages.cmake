@@ -248,6 +248,7 @@ endif()
 if(PXR_ENABLE_OSL_SUPPORT)
     find_package(OSL REQUIRED)
     find_package(OpenEXR REQUIRED)
+    add_definitions(-DPXR_OSL_SUPPORT_ENABLED)
 endif()
 
 find_package(MdlSdk REQUIRED)
