@@ -258,7 +258,7 @@ _ExtractPrimvarsFromNode(
 static void
 _GetShaderNodeForSourceTypeFallbackNV(
     UsdShadeShader const& shader,
-    TfToken const& networkSelector,
+    TfTokenVector const& contexts,
     TfToken* identifier=nullptr,
     TfToken* subIdentifier=nullptr)
 {
@@ -267,38 +267,54 @@ _GetShaderNodeForSourceTypeFallbackNV(
     if (implSource == UsdShadeTokens->id) {
         TfToken shaderId;
 
-        if (shader.GetShaderId(&shaderId)) {
-            auto &shaderReg = SdrRegistry::GetInstance();
-            if (SdrShaderNodeConstPtr sdrNode = 
-                    shaderReg.GetShaderNodeByIdentifierAndType(shaderId, 
-                        networkSelector)) {
-                if (identifier) {
-                    *identifier = TfToken(sdrNode->GetResolvedImplementationURI());
+        for (auto& context : contexts) {
+            if (shader.GetShaderId(&shaderId)) {
+                auto &shaderReg = SdrRegistry::GetInstance();
+                if (SdrShaderNodeConstPtr sdrNode = 
+                        shaderReg.GetShaderNodeByIdentifierAndType(shaderId, 
+                            context)) {
+                    if (identifier) {
+                        *identifier = TfToken(sdrNode->GetResolvedImplementationURI());
+                    }
+                    return;
                 }
             }
         }
     } else if (implSource == UsdShadeTokens->sourceAsset) {
         SdfAssetPath sourceAsset;
-        if (shader.GetSourceAsset(&sourceAsset, networkSelector)) {
-            std::string path = sourceAsset.GetResolvedPath();
-            if (path.empty()) {
-                path = ArGetResolver().Resolve(sourceAsset.GetAssetPath());
+        bool found = false;
+        for (auto& context : contexts) {
+            if (shader.GetSourceAsset(&sourceAsset, context)) {
+                std::string path = sourceAsset.GetResolvedPath();
+                if (path.empty()) {
+                    path = ArGetResolver().Resolve(sourceAsset.GetAssetPath());
+                }
+                if (path.empty()) {
+                    path = sourceAsset.GetAssetPath();
+                }
+                if (identifier) {
+                    *identifier = TfToken(path);
+                    found = true;
+                }
             }
-            if (path.empty()) {
-                path = sourceAsset.GetAssetPath();
+            if (subIdentifier) {
+                if (shader.GetSourceAssetSubIdentifier(subIdentifier,
+                                                       context)) {
+                    found = true;
+                }
             }
-            if (identifier) {
-                *identifier = TfToken(path);
+            if (found) {
+                return;
             }
-        }
-        if (subIdentifier) {
-            shader.GetSourceAssetSubIdentifier(subIdentifier, networkSelector);
         }
     } else if (implSource == UsdShadeTokens->sourceCode) {
         std::string sourceCode;
-        if (shader.GetSourceCode(&sourceCode, networkSelector)) {
-            if (identifier) {
-                *identifier = TfToken(sourceCode);
+        for (auto& context : contexts) {
+            if (shader.GetSourceCode(&sourceCode, context)) {
+                if (identifier) {
+                    *identifier = TfToken(sourceCode);
+                }
+                return;
             }
         }
     }  
@@ -326,10 +342,12 @@ static
 void _WalkGraph(
     UsdShadeConnectableAPI const & shadeNode,
     HdMaterialNetwork* materialNetwork,
-    TfToken const& networkSelector,
     _PathSet* visitedNodes,
     TfTokenVector const & shaderSourceTypes,
-    UsdTimeCode time)
+    UsdTimeCode time,
+// #nv begin #materialx-backport
+    TfTokenVector const* contexts)
+// #nv end
 {
     // Store the path of the node
     HdMaterialNode node;
@@ -361,10 +379,12 @@ void _WalkGraph(
             _WalkGraph(UsdShadeConnectableAPI(
                 attr.GetPrim()),
                 materialNetwork,
-                networkSelector,
                 visitedNodes,
                 shaderSourceTypes,
-                time);
+                time,
+// #nv begin #materialx-backport
+                contexts);
+// #nv end
 
             HdMaterialRelationship relationship;
             relationship.outputId = node.path;
@@ -435,12 +455,9 @@ void _WalkGraph(
     }
 
  // #nv begin #new-MDL-schema   
-    if (node.identifier.IsEmpty()
-// #nv begin #materialx-backport
-          && shader && !networkSelector.IsEmpty()) {
-// #nv end
+    if (node.identifier.IsEmpty() && shader && contexts) {
         _GetShaderNodeForSourceTypeFallbackNV(
-            shader, networkSelector, &node.identifier, &node.subIdentifier);
+            shader, *contexts, &node.identifier, &node.subIdentifier);
     }
 // #nv end
     materialNetwork->nodes.push_back(node);
@@ -454,7 +471,7 @@ UsdImaging_BuildHdMaterialNetworkFromTerminal(
     HdMaterialNetworkMap *materialNetworkMap,
     UsdTimeCode time,
 // #nv begin #materialx-backport
-    TfToken networkSelector)
+    TfTokenVector const* contexts)
 // #nv end
 {
     HdMaterialNetwork& network = materialNetworkMap->map[terminalIdentifier];
@@ -464,10 +481,12 @@ UsdImaging_BuildHdMaterialNetworkFromTerminal(
     _WalkGraph(
         UsdShadeConnectableAPI(usdTerminal),
         &network,
-        networkSelector,
         &visitedNodes, 
         shaderSourceTypes,
-        time);
+        time,
+// #nv begin #materialx-backport
+        contexts);
+// #nv end
 
     if (!TF_VERIFY(!nodes.empty())) return;
 

@@ -62,7 +62,7 @@ UsdImaging_BuildHdMaterialNetworkFromTerminal(
     HdMaterialNetworkMap *materialNetworkMap,
     UsdTimeCode time,
 // #nv begin #materialx-backport
-    TfToken networkSelector=TfToken());
+    TfTokenVector const* contexts=nullptr);
 // #nv end
 
 /// Returns whether the material network built by 
