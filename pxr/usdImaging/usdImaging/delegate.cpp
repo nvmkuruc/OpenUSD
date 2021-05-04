@@ -1673,7 +1673,10 @@ UsdImagingDelegate::_RefreshUsdObject(SdfPath const& usdPath,
             // Coordinate system bindings apply to all descendent gprims.
             _ResyncUsdPrim(usdPrimPath, proxy, true);
             return;
-        } else if (usdPrim && usdPrim.IsA<UsdShadeShader>()) {
+        } else if (usdPrim && (usdPrim.IsA<UsdShadeShader>()
+            // #nv begin #material-editor
+            || usdPrim.IsA<UsdShadeNodeGraph>())) {
+            // nv end
             // Shader edits get forwarded to parent material.
             while (usdPrim && !usdPrim.IsA<UsdShadeMaterial>()) {
                 usdPrim = usdPrim.GetParent();
