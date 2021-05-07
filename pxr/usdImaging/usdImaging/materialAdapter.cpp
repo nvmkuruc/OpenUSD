@@ -271,10 +271,11 @@ UsdImagingMaterialAdapter::GetMaterialResource(UsdPrim const& prim,
                                                SdfPath const& cachePath, 
                                                UsdTimeCode time) const
 {
-    bool timeVarying = false;
     HdMaterialNetworkMap map;
     TfToken const& networkSelector = _GetMaterialNetworkSelector();
-    _GetMaterialNetworkMap(prim, networkSelector, &map, time, &timeVarying);
+    // #nv begin fast-updates
+    _GetMaterialNetworkMap(prim, networkSelector, &map, time);
+    // nv end
     return VtValue(map);
 }
 
@@ -414,13 +415,19 @@ void _WalkGraph(
             // we resolve the asset path with the udim pattern to a file
             // path with a udim pattern, e.g.,
             // //SHOW/myImage.<UDIM>.exr to /filePath/myImage.<UDIM>.exr.
+
+            // #nv begin material-updates
             const VtValue value =
-                UsdImaging_ResolveMaterialParamValue(attr, time);
+                timeVarying == nullptr ? UsdImaging_ResolveMaterialParamValue(attr, time) : VtValue();
+            // nv end
             if (!value.IsEmpty()) {
                 node.parameters[inputName] = value;
             }
 
-            *timeVarying |= attr.ValueMightBeTimeVarying();
+            // #nv begin material-updates
+            if (timeVarying)
+            // nv end
+                *timeVarying |= attr.ValueMightBeTimeVarying();
 
 // #nv begin #parameter-colorSpace-to-hydra
             TfToken colorSpaceToken = attr.GetColorSpace();
@@ -457,7 +464,7 @@ void _WalkGraph(
     }
 
  // #nv begin #new-MDL-schema   
-    if (node.identifier.IsEmpty()) {
+    if (timeVarying == nullptr && node.identifier.IsEmpty()) {
         _GetShaderNodeForSourceTypeFallbackNV(
             shadeNode, networkSelector, &node.identifier, &node.subIdentifier);
     }  
@@ -522,6 +529,10 @@ UsdImagingMaterialAdapter::_GetMaterialNetworkMap(
     UsdTimeCode time,
     bool* timeVarying) const
 {
+    // #nv begin material-updates
+    TRACE_FUNCTION();
+    // nv end
+
     UsdShadeMaterial material(usdPrim);
     if (!material) {
         TF_RUNTIME_ERROR("Expected material prim at <%s> to be of type "

@@ -127,6 +127,9 @@ public:
 
     USDSKEL_API
     void ReplaceAnimQuery(const UsdSkelAnimQuery& animQuery);
+
+    USDSKEL_API
+    void RefreshJointMapper();
     //-NV_CHANGE FRZHANG
     
     //+NV_CHANGE BRONG

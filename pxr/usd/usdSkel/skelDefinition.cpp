@@ -112,6 +112,9 @@ UsdSkel_SkelDefinition::_Init(const UsdSkelSkeleton& skel)
     skel.GetBindTransformsAttr().Get(&_jointWorldBindXforms);
     if (_jointWorldBindXforms.size() == _jointOrder.size()) {
         _flags = _flags|_HaveBindPose;
+        //+NV_CHANGE FRZHANG : tmp fix for multithread crash at UsdSkelSkeletonQuery::_ComputeSkinningTransforms()
+        _ComputeJointWorldInverseBindTransforms<_WorldInverseBindXforms4fComputed, GfMatrix4f>();
+        //-NV_CHANGE FRZHNAG
     } else {
         TF_WARN("%s -- size of 'bindTransforms' attr [%zu] does not "
                 "match the number of joints in the 'joints' attr [%zu].",
