@@ -21,6 +21,11 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+
+// #nv begin #material-updates
+#include "pxr/usdImaging/usdImaging/debugCodes.h"
+// nv end
+
 #include "pxr/usdImaging/usdImaging/materialParamUtils.h"
 
 #include "pxr/base/tf/pathUtils.h"
@@ -202,6 +207,13 @@ UsdImaging_ResolveMaterialParamValue(
     const UsdTimeCode& time)
 {
     TRACE_FUNCTION();
+
+    // #nv begin #material-updates
+    if (TfDebug::IsEnabled(USDIMAGING_TEXTURES) && (attr.GetTypeName() == SdfValueTypeNames->Asset)) {
+        TF_DEBUG(USDIMAGING_TEXTURES).Msg("%s will resolve <%s> at %s\n",
+            TF_FUNC_NAME().c_str(), attr.GetPath().GetText(), TfStringify(time).c_str());
+    }
+    // nv end
 
     VtValue value;
 

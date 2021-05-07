@@ -1278,10 +1278,6 @@ UsdImagingDelegate::ApplyPendingUpdates()
                 _RefreshUsdObject(usdPath.GetParentPath(), TfTokenVector(),
                                &indexProxy);
             } else if (usdPath.IsAbsoluteRootOrPrimPath()) {
-                //+NV_CHANGE BRONG
-                //Not finalized code to handle Animation=>Skeleton resync dependancy.
-                _ResyncUsdAttrQuery(usdPath, &indexProxy);
-                //-NV_CHANGE BRONG
                 _ResyncUsdPrim(usdPath, &indexProxy);
             } else {
                 TF_WARN("Unexpected path type to resync: <%s>",
@@ -1495,6 +1491,9 @@ UsdImagingDelegate::_ResyncUsdPrim(SdfPath const& usdPath,
     for (SdfPath currentPath = usdPath;
          currentPath != SdfPath::AbsoluteRootPath();
          currentPath = currentPath.GetParentPath()) {
+        //+NV_CHANGE FRZHANG : NV GPU Skinning
+        bool stopResyncAncestor = false;
+        //-NV_CHANGE FRZHANG
         auto const& range = _dependencyInfo.equal_range(currentPath);
         for (auto it = range.first; it != range.second; ++it) {
             SdfPath const& cachePath = it->second;
@@ -1512,6 +1511,20 @@ UsdImagingDelegate::_ResyncUsdPrim(SdfPath const& usdPath,
                 TF_VERIFY(primInfo->adapter != nullptr)) {
                 primInfo->adapter->ProcessPrimResync(cachePath, proxy);
             }
+
+            //+NV_CHANGE FRZHANG : NV GPU Skinning
+            if(UseNVGPUSkinningComputations() && currentPath == usdPath)
+            {
+                //if delete and create successively, usdPrim in primInfo will be expired. 
+                //_ResyncUsdPrim postponed hdpriminfo delete, replace skelanim's prim here.
+                if (!primInfo->usdPrim)
+                {
+                    primInfo->usdPrim = _stage->GetPrimAtPath(currentPath);
+                }
+                if (primInfo->usdPrim && primInfo->usdPrim.IsA<UsdSkelAnimation>())
+                    stopResyncAncestor = true;
+            }
+            //-NV_CHANGE FRZHANG
         }
         if ((range.first != range.second)
             // #nv begin #kit-gizmos
@@ -1519,6 +1532,11 @@ UsdImagingDelegate::_ResyncUsdPrim(SdfPath const& usdPath,
             // nv end
             return;
         }
+
+        //+NV_CHANGE FRZHANG : NV GPU Skinning
+        if(stopResyncAncestor)
+            return;
+        //-NV_CHANGE FRZHANG
     }
 
     // If the resync target isn't below a populated prim, search the resync
@@ -1529,9 +1547,6 @@ UsdImagingDelegate::_ResyncUsdPrim(SdfPath const& usdPath,
     SdfPathVector affectedCachePaths;
     _GatherDependencies(usdPath, &affectedCachePaths);
     if (affectedCachePaths.size() > 0) {
-        //+NV_CHANGE FRZHANG : fix skelmesh resync
-        SdfPath rootPathToRepopulate = usdPath;
-        //-NV_CHANGE FRZHANG
         for (SdfPath const& affectedCachePath : affectedCachePaths) {
 
             TF_DEBUG(USDIMAGING_CHANGES).Msg("  - affected child prim: <%s>\n",
@@ -1549,15 +1564,6 @@ UsdImagingDelegate::_ResyncUsdPrim(SdfPath const& usdPath,
                 // ProcessPrimResync to add Repopulate calls for objects not
                 // under "usdPath" (such as sibling native instances)..
                 if (repopulateFromRoot) {
-                    //+NV_CHANGE FRZHANG : fix skelmesh resync
-                    // affectedPrims are all descendants of usdPath, so only calculate ancestor in single direction, otherwise should calculate common ancestor
-                    // Doing rootpath calculation before prim removal
-                    SdfPath resyncRootPath = primInfo->adapter->GetPrimResyncRootPath(usdPath);
-                    if (resyncRootPath != usdPath && rootPathToRepopulate.HasPrefix(resyncRootPath))
-                    {
-                        rootPathToRepopulate = resyncRootPath;
-                    }
-                    //-NV_CHANGE FRZHANG
                     primInfo->adapter->ProcessPrimRemoval(
                         affectedCachePath, proxy);
                 } else {
@@ -1568,9 +1574,7 @@ UsdImagingDelegate::_ResyncUsdPrim(SdfPath const& usdPath,
         }
         if (repopulateFromRoot) {
             TF_DEBUG(USDIMAGING_CHANGES).Msg("  (repopulating from root)\n");
-            //+NV_CHANGE FRZHANG
-            proxy->Repopulate(rootPathToRepopulate);
-            //-NV_CHANGE FRZHANG
+            proxy->Repopulate(usdPath);
         } else {
             // If we resynced prims individually, walk the subtree for new prims
             UsdPrimRange range(_stage->GetPrimAtPath(usdPath),
@@ -1627,22 +1631,6 @@ UsdImagingDelegate::_ResyncUsdPrim(SdfPath const& usdPath,
 void
 UsdImagingDelegate::_ResyncUsdAttrQuery(SdfPath const& usdPath, UsdImagingIndexProxy* proxy)
 {
-    //Not finalized code to handle Animation=>Skeleton resync dependancy.
-    if (usdPath.IsAbsoluteRootOrPrimPath()) {
-        if (UseNVGPUSkinningComputations()) {
-            UsdPrim usdPrim = _stage->GetPrimAtPath(usdPath);
-            if (usdPrim && usdPrim.IsA<UsdSkelAnimation>()) {
-                // _AdapterLookup(usdPrim from usdPrimPath) is empty. So currently try to get the adapter of type Skeleton.
-                UsdImagingPrimAdapterSharedPtr adapter = _AdapterLookup(_tokens->Skeleton);
-
-                // Defacto UsdSkelImagingSkeletonAdapter::ProcessPrimResync(usdPath, proxy)
-                // UsdSkelTokens->joints implies Animation=>Skeleton resync dependancy.
-                adapter->RefreshAnimQuery(usdPath, UsdSkelTokens->joints, proxy);
-            }
-        }
-        return;
-    }
-
     if (!TF_VERIFY(usdPath.IsPropertyPath()))
         return;
 
@@ -1651,7 +1639,7 @@ UsdImagingDelegate::_ResyncUsdAttrQuery(SdfPath const& usdPath, UsdImagingIndexP
         TfToken const& attrName = usdPath.GetNameToken();
         UsdPrim usdPrim = _stage->GetPrimAtPath(usdPrimPath);
         if (usdPrim && usdPrim.IsA<UsdSkelAnimation>()) {
-            // _AdapterLookup(usdPrim from usdPrimPath) is empty. So currently try to get the adapter of type Skeleton.
+            // _AdapterLookup(usdPrim from usdPrimPath)  is empty. So currently try to get the adapter of type Skeleton.
             UsdImagingPrimAdapterSharedPtr adapter = _AdapterLookup(_tokens->Skeleton);
 
             // Defacto UsdSkelImagingSkeletonAdapter::RefreshAnimQuery()
@@ -1776,7 +1764,10 @@ UsdImagingDelegate::_RefreshUsdObject(SdfPath const& usdPath,
             // Coordinate system bindings apply to all descendent gprims.
             _ResyncUsdPrim(usdPrimPath, proxy, true);
             return;
-        } else if (usdPrim && usdPrim.IsA<UsdShadeShader>()) {
+        } else if (usdPrim && (usdPrim.IsA<UsdShadeShader>()
+            // #nv begin #material-editor
+            || usdPrim.IsA<UsdShadeNodeGraph>())) {
+            // nv end
             // Shader edits get forwarded to parent material.
             while (usdPrim && !usdPrim.IsA<UsdShadeMaterial>()) {
                 usdPrim = usdPrim.GetParent();

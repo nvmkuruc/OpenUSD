@@ -120,7 +120,9 @@ private:
                                 TfToken const& materialNetworkSelector,
                                 HdMaterialNetworkMap *materialNetworkMap,
                                 UsdTimeCode time,
-                                bool* timeVarying) const;
+                                // #nv begin material-updates
+                                bool* timeVarying=nullptr) const;
+                                // nv end
 };
 
 
