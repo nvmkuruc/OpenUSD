@@ -121,3 +121,11 @@ set(_PXR_CXX_FLAGS "${_PXR_CXX_FLAGS} /Gm-")
 # with no symbols in it.  We do this a lot because of a pattern of having
 # a C++ source file for many header-only facilities, e.g. tf/bitUtils.cpp.
 set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} /IGNORE:4221")
+
+# nv begin #release-pdb
+# TODO: OM-27926 Investigate why RelWithDebInfo builds increase DLL size 1.5-2x
+set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} /DEBUG /OPT:REF")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /DEBUG /OPT:REF")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /DEBUG /OPT:REF")
+set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} /DEBUG /OPT:REF")
+# nv end
