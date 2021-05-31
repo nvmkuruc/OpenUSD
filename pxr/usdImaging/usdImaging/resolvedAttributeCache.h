@@ -672,6 +672,7 @@ struct UsdImaging_MaterialBindingImplData {
     { return _collQueryCache; }
 
     /// Clears all of the held caches.
+    USDIMAGING_API
     void ClearCaches();
 
 private:
