@@ -66,12 +66,7 @@ pxr_install_test_dir(
 
 pxr_install_test_dir(
     SRC testenv/testUsdMtlxFileFormat.testenv
-    DEST testUsdMtlxFileFormatLooks
-)
-
-pxr_install_test_dir(
-    SRC testenv/testUsdMtlxFileFormat.testenv
-    DEST testUsdMtlxFileFormatNodeGraphs
+    DEST testUsdMtlxFileFormat
 )
 
 pxr_install_test_dir(
@@ -85,17 +80,10 @@ pxr_register_test(testUsdMtlxDiscovery
     EXPECTED_RETURN_CODE 0
 )
 
-pxr_register_test(testUsdMtlxFileFormatLooks
+pxr_register_test(testUsdMtlxFileFormat
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdMtlxFileFormat"
-    DIFF_COMPARE Looks.usda
-    EXPECTED_RETURN_CODE 0
-)
-
-pxr_register_test(testUsdMtlxFileFormatNodeGraphs
-    PYTHON
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdMtlxFileFormat"
-    DIFF_COMPARE NodeGraphs.usda
+    DIFF_COMPARE Looks.usda NodeGraphs.usda usd_preview_surface_gold.usda
     EXPECTED_RETURN_CODE 0
 )
 
