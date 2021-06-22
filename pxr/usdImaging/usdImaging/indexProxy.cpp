@@ -324,7 +324,7 @@ UsdImagingIndexProxy::UpdateTimeVariability(SdfPath const& cachePath)
     UsdImagingDelegate::_HdPrimInfo *primInfo =
         _delegate->_GetHdPrimInfo(cachePath);
     if (TF_VERIFY(primInfo, "%s", cachePath.GetText())) {
-        if (primInfo->adapter)
+        if (primInfo->usdPrim && primInfo->adapter)
         {
             primInfo->timeVaryingBits = 0;
             primInfo->adapter->TrackVariability(primInfo->usdPrim, cachePath, &primInfo->timeVaryingBits, nullptr, true);
