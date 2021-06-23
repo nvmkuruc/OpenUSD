@@ -1921,7 +1921,10 @@ if context.buildAlembic:
     # nv end
 
 if context.buildDraco:
-    requiredDependencies += [DRACO]
+    # nv begin #deps-locations
+    # TODO: support --draco-location
+    requiredDependencies += [] #[DRACO]
+    # nv end
 
 if context.buildMaterialX:
     requiredDependencies += [MATERIALX]
