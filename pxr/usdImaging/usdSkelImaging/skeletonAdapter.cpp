@@ -2549,33 +2549,41 @@ UsdSkelImagingSkeletonAdapter::_UpdateSkinnedPrimForTime(
     TF_DEBUG(USDIMAGING_CHANGES).Msg
         ("[UpdateForTime] Cache path: <%s>\n", cachePath.GetText());
 
+    // Since The SkeletonAdapter hijacks skinned prims (see SkelRootAdapter),
+    // make sure to delegate to the actual adapter registered for the prim.
+    UsdImagingPrimAdapterSharedPtr adapter = _GetPrimAdapter(skinnedPrim);
+    //+NV_CHANGE FRZHANG
+    auto meshAdapter = boost::dynamic_pointer_cast<
+            UsdImagingMeshAdapter> (adapter);
+    //-NV_CHANGE FRZHANG
     // Suppress the dirtybit for points, so we don't publish 'points' as a
     // primvar. Also suppressing normals: normals will instead be computed
     // post-skinning, as if they were unauthored (since GPU normal skinning
     // is not yet supported).
     // #nv begin #gpu-skinning
-    if (_UseNVGPUSkinningComputations()) {
+    if (_UseNVGPUSkinningComputations())
+    {
         // Don't surpress normals for NV GPU skinning.
-        requestedBits &= ~HdChangeTracker::DirtyPoints;
-    } else {
+        if(meshAdapter != nullptr)
+        {
+            requestedBits &= ~HdChangeTracker::DirtyPoints;
+        }
+        //for other xform prim, should update points.
+    }
+    else {
         requestedBits &= ~(HdChangeTracker::DirtyPoints |
             HdChangeTracker::DirtyNormals);
     }
     // nv end
 
-    // Since The SkeletonAdapter hijacks skinned prims (see SkelRootAdapter),
-    // make sure to delegate to the actual adapter registered for the prim.
-    UsdImagingPrimAdapterSharedPtr adapter = _GetPrimAdapter(skinnedPrim);
+
+
     adapter->UpdateForTime(skinnedPrim, skinnedPrimPath,
                            time, requestedBits, instancerContext);
 
     //+NV_CHANGE FRZHANG : nv gpu skinning input update.
-    if (_UseNVGPUSkinningComputations())
+    if (_UseNVGPUSkinningComputations() && meshAdapter != nullptr)
     {
-        auto meshAdapter = boost::dynamic_pointer_cast<
-            UsdImagingMeshAdapter> (adapter);
-        TF_VERIFY(meshAdapter);
-
         const _SkinnedPrimData* skinnedPrimData = _GetSkinnedPrimData(skinnedPrimPath);
         TF_VERIFY(skinnedPrimData);
 
@@ -2602,12 +2610,12 @@ UsdSkelImagingSkeletonAdapter::_UpdateSkinnedPrimForTime(
                 if (_GetInfluences(skinningQuery, time, jointIndices, jointWeights, numInfluencesPerPoint, hasConstantInfluences))
                 {
                     _GetSkinningMethod(skinningQuery, skinningMethod, skinningBlendWeights, hasConstantSkinningBlendWeights);
-                    
+
                     meshAdapter->UpdateSkinningBinding(skinnedPrim, skinnedPrimPath, time,
-                        bindTransform, jointIndices, jointWeights, 
+                        bindTransform, jointIndices, jointWeights,
                         numInfluencesPerPoint, hasConstantInfluences,
                         skinningMethod, skinningBlendWeights, hasConstantSkinningBlendWeights
-                        );
+                    );
                 }
             }
 
