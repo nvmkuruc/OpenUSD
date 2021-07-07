@@ -484,9 +484,8 @@ UsdImagingGprimAdapter::ProcessPropertyChange(UsdPrim const& prim,
     }
 
     // #nv begin #clean-property-invalidation
-    //return GetDelegate()->ProcessNonAdapterBasedPropertyChange(prim, cachePath, propertyName);
+    return GetDelegate()->ProcessNonAdapterBasedPropertyChange(prim, cachePath, propertyName);
     // nv end
-    return HdChangeTracker::Clean;
 }
 
 void
