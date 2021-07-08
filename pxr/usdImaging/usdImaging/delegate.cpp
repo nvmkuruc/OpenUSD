@@ -1849,7 +1849,11 @@ UsdImagingDelegate::_RefreshUsdObject(SdfPath const& usdPath,
                 _timeVaryingPrimCacheValid = false;
                 primInfo->timeVaryingBits = HdChangeTracker::Clean;
                 adapter->TrackVariability(primInfo->usdPrim, affectedCachePath,
-                                          &primInfo->timeVaryingBits);
+                                          &primInfo->timeVaryingBits,
+                                          // #nv begin #fast-updates
+                                          nullptr /*instancerContext*/,
+                                          checkVariability);
+                                          // nv end
 
                 // Propagate the dirty bits back out to the change tracker.
                 HdDirtyBits combinedBits =
