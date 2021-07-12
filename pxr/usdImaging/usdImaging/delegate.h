@@ -654,6 +654,9 @@ protected:
         return p;
     }
 
+    // #nv begin kit-delegate
+    USDIMAGING_API
+    // nv end
     VtValue _GetUsdPrimAttribute(SdfPath const& cachePath,
                                  TfToken const &attrName);
 
