@@ -76,7 +76,12 @@ HdSceneDelegate::GetInstancerDirtyBits(const SdfPath& instancerId)
 }
 
 void
-HdSceneDelegate::GetSemanticClass(PXR_NS::SdfPath const& id, std::string& data, int32_t instanceIndex)
+HdSceneDelegate::GetSemantics(SdfPath const& id, std::string& type, std::string& data, int32_t instanceIndex)
+{
+}
+
+void
+HdSceneDelegate::GetSemanticClass(SdfPath const& id, std::string& data, int32_t instanceIndex)
 {
 }
 

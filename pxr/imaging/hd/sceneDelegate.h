@@ -342,9 +342,13 @@ public:
     HD_API
     virtual HdDirtyBits GetInstancerDirtyBits(const SdfPath& instancerId);
 
-    // Temporary placeholder to land omni.hydra v1. We aim to formulate a more generic mechanism for this.
+    // Placeholder API; modular scene indices will provide a more native way to do this.
+    // Temporarily has 2 signatures for flexibility while the omni.hydra.scene_delegate use case evolves.
     HD_API
-    virtual void GetSemanticClass(PXR_NS::SdfPath const& id, std::string& data, int32_t instanceIndex = -1);
+    virtual void GetSemantics(SdfPath const& id, std::string& type, std::string& data, int32_t instanceIndex = -1);
+
+    HD_API
+    virtual void GetSemanticClass(SdfPath const& id, std::string& data, int32_t instanceIndex = -1);
 
     // nv end
 

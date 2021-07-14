@@ -118,6 +118,19 @@ protected:
     USDIMAGING_API
     void _RemovePrim(SdfPath const& cachePath,
                      UsdImagingIndexProxy* index) final;
+
+// XXX:aluk
+// TODO: resolve merge conflict
+#if 0
+private:
+    void _GetMaterialNetworkMap(UsdPrim const &prim, 
+                                TfToken const& materialNetworkSelector,
+                                HdMaterialNetworkMap *materialNetworkMap,
+                                UsdTimeCode time,
+                                // #nv begin material-updates
+                                bool* timeVarying=nullptr) const;
+                                // nv end
+#endif
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

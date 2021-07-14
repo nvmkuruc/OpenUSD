@@ -649,8 +649,10 @@ protected:
         bool checkVariability = true);
     // nv end
 
-    //+NV_CHANGE BRONG
+    //+NV_CHANGE BRON
+    //Process property layerstack change
     void _ResyncUsdAttrQuery(SdfPath const& usdPath, UsdImagingIndexProxy* proxy);
+    //Process property value change
     void _RefreshUsdAttrQuery(SdfPath const& usdPath, UsdImagingIndexProxy* proxy);
     //-NV_CHANGE BRONG
 
@@ -679,6 +681,9 @@ protected:
         return p;
     }
 
+    // #nv begin kit-delegate
+    USDIMAGING_API
+    // nv end
     VtValue _GetUsdPrimAttribute(SdfPath const& cachePath,
                                  TfToken const &attrName);
 

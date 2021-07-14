@@ -17,6 +17,9 @@ pxr_plugin(hioOpenVDB
         ${OPENVDB_LIBRARY}
 
     INCLUDE_DIRS
+        # nv begin #openvdb-build-fix
+        ${OPENEXR_INCLUDE_DIRS}
+        # nv end
         ${OPENVDB_INCLUDE_DIRS}
 
     PRIVATE_CLASSES

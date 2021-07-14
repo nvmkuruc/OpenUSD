@@ -292,6 +292,7 @@ UsdImagingMaterialAdapter::MarkMaterialDirty(
     MarkDirty(prim, cachePath, HdMaterial::DirtyResource, index);
 }
 
+
 /* virtual */
 void
 UsdImagingMaterialAdapter::_RemovePrim(
@@ -304,6 +305,19 @@ UsdImagingMaterialAdapter::_RemovePrim(
 // XXX:aluk
 // TODO: resolve merge conflict
 #if 0
+VtValue
+UsdImagingMaterialAdapter::GetMaterialResource(UsdPrim const& prim,
+    SdfPath const& cachePath,
+    UsdTimeCode time) const
+{
+    HdMaterialNetworkMap map;
+    TfToken const& networkSelector = _GetMaterialNetworkSelector();
+    // #nv begin fast-updates
+    _GetMaterialNetworkMap(prim, networkSelector, &map, time);
+    // nv end
+    return VtValue(map);
+}
+
 static TfToken
 _GetPrimvarNameAttributeValue(
     SdrShaderNodeConstPtr const& sdrNode,
@@ -431,13 +445,19 @@ void _WalkGraph(
             // we resolve the asset path with the udim pattern to a file
             // path with a udim pattern, e.g.,
             // //SHOW/myImage.<UDIM>.exr to /filePath/myImage.<UDIM>.exr.
+
+            // #nv begin material-updates
             const VtValue value =
-                UsdImaging_ResolveMaterialParamValue(attr, time);
+                timeVarying == nullptr ? UsdImaging_ResolveMaterialParamValue(attr, time) : VtValue();
+            // nv end
             if (!value.IsEmpty()) {
                 node.parameters[inputName] = value;
             }
 
-            *timeVarying |= attr.ValueMightBeTimeVarying();
+            // #nv begin material-updates
+            if (timeVarying)
+            // nv end
+                *timeVarying |= attr.ValueMightBeTimeVarying();
 
 // #nv begin #parameter-colorSpace-to-hydra
             TfToken colorSpaceToken = attr.GetColorSpace();
@@ -474,7 +494,7 @@ void _WalkGraph(
     }
 
  // #nv begin #new-MDL-schema   
-    if (node.identifier.IsEmpty()) {
+    if (timeVarying == nullptr && node.identifier.IsEmpty()) {
         _GetShaderNodeForSourceTypeFallbackNV(
             shadeNode, networkSelector, &node.identifier, &node.subIdentifier);
     }  
@@ -545,6 +565,10 @@ UsdImagingMaterialAdapter::GetMaterialResource(UsdPrim const &prim,
                                                SdfPath const& cachePath, 
                                                UsdTimeCode time) const
 {
+    // #nv begin material-updates
+    TRACE_FUNCTION();
+    // nv end
+
     UsdShadeMaterial material(prim);
     if (!material) {
         TF_RUNTIME_ERROR("Expected material prim at <%s> to be of type "
