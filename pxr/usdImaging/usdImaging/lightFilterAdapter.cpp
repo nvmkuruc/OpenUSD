@@ -87,9 +87,6 @@ UsdImagingLightFilterAdapter::TrackVariability(UsdPrim const& prim,
     bool checkVariability) const
     // nv end
 {
-    // XXX:aluk
-    // TODO: resolve merge conflict
-#if 0
     if (checkVariability) {
         // Discover time-varying transforms.
         _IsTransformVarying(prim,
@@ -97,36 +94,24 @@ UsdImagingLightFilterAdapter::TrackVariability(UsdPrim const& prim,
             UsdImagingTokens->usdVaryingXform,
             timeVaryingBits);
 
+        // Determine if the light filter material network is time varying.
+        if (UsdImaging_IsHdMaterialNetworkTimeVarying(prim)) {
+            *timeVaryingBits |= HdLight::DirtyBits::DirtyResource;
+        }
+
         // If any of the light attributes is time varying 
         // we will assume all light params are time-varying.
         const std::vector<UsdAttribute> &attrs = prim.GetAttributes();
         for (UsdAttribute const& attr : attrs) {
             // Don't double-count transform attrs.
             if (UsdGeomXformable::IsTransformationAffectedByAttrNamed(
-#endif
-    // Discover time-varying transforms.
-    _IsTransformVarying(prim,
-        HdLight::DirtyBits::DirtyTransform,
-        UsdImagingTokens->usdVaryingXform,
-        timeVaryingBits);
-
-    // Determine if the light filter material network is time varying.
-    if (UsdImaging_IsHdMaterialNetworkTimeVarying(prim)) {
-        *timeVaryingBits |= HdLight::DirtyBits::DirtyResource;
-    }
-
-    // If any of the light attributes is time varying 
-    // we will assume all light params are time-varying.
-    const std::vector<UsdAttribute> &attrs = prim.GetAttributes();
-    for (UsdAttribute const& attr : attrs) {
-        // Don't double-count transform attrs.
-        if (UsdGeomXformable::IsTransformationAffectedByAttrNamed(
-            attr.GetBaseName())) {
-            continue;
-        }
-        if (attr.GetNumTimeSamples() > 1) {
-            *timeVaryingBits |= HdLight::DirtyBits::DirtyParams;
-            break;
+                attr.GetBaseName())) {
+                continue;
+            }
+            if (attr.GetNumTimeSamples() > 1) {
+                *timeVaryingBits |= HdLight::DirtyBits::DirtyParams;
+                break;
+            }
         }
     }
 

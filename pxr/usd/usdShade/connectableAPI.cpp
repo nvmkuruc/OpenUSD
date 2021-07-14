@@ -589,36 +589,6 @@ UsdShadeConnectableAPI::GetInput(const TfToken &name) const
 std::vector<UsdShadeInput> 
 UsdShadeConnectableAPI::GetInputs(bool onlyAuthored) const
 {
-    // XXX:aluk
-    // TODO: resolve merge conflict
-#if 0
-    std::vector<UsdShadeInput> ret;
-
-    std::vector<UsdAttribute> attrs = GetPrim().GetAttributes();
-    TF_FOR_ALL(attrIter, attrs) { 
-        const UsdAttribute& attr = *attrIter;
-        // If the attribute is in the "inputs:" namespace, then
-        // it must be a valid UsdShadeInput.
-        if (TfStringStartsWith(attr.GetName().GetString(), 
-                               UsdShadeTokens->inputs)) {
-            ret.push_back(UsdShadeInput(attr));
-            continue;
-        }
-
-        // #nv begin #old-mdl-schema
-        if (!UsdShadeConnectableAPI_OldMdlSupported()) {
-            continue;
-        }
-
-        if (attr.GetNamespace().IsEmpty()) {
-            // Assume that the attribute belongs to a shader.
-            // If it's an unnamespaced (parameter) attribute on a shader,
-            // wrap it in a UsdShadeInput object and add it to the list of
-            // inputs.
-            ret.push_back(UsdShadeInput(attr));
-        }
-        // nv end
-#endif
     std::vector<UsdProperty> props;
     if (onlyAuthored) {
         props = GetPrim().GetAuthoredPropertiesInNamespace(

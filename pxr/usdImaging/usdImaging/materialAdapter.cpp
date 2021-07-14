@@ -178,23 +178,12 @@ UsdImagingMaterialAdapter::TrackVariability(
     bool checkVariability) const
     // nv end
 {
-    // XXX:aluk
-    // TODO: resolve merge conflict
-#if 0
     // #nv begin fast-updates
     // Early out, as there are no initial values to populate into the value cache.
     if (!checkVariability)
         return;
     // nv end
 
-    bool timeVarying = false;
-    HdMaterialNetworkMap map;
-    TfToken const& networkSelector = _GetMaterialNetworkSelector();
-    UsdTimeCode time = UsdTimeCode::Default();
-    _GetMaterialNetworkMap(prim, networkSelector, &map, time, &timeVarying);
-    if (timeVarying) {
-        *timeVaryingBits |= HdMaterial::DirtyResource;
-#endif
     UsdShadeMaterial material(prim);
     if (!material) {
         TF_RUNTIME_ERROR("Expected material prim at <%s> to be of type "
