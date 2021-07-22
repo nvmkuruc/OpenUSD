@@ -39,7 +39,6 @@
 // #nv begin #new-MDL-schema
 #include "pxr/usd/ar/resolver.h"
 #include "pxr/usd/sdr/registry.h"
-#include "pxr/base/tf/envSetting.h"
 // nv end
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -50,66 +49,6 @@ TF_REGISTRY_FUNCTION(TfType)
     TfType t = TfType::Define<Adapter, TfType::Bases<Adapter::BaseAdapter> >();
     t.SetFactory< UsdImagingPrimAdapterFactory<Adapter> >();
 }
-
-// #nv begin #new-MDL-schema
-static void
-_GetShaderNodeForSourceTypeFallbackNV(
-    UsdShadeShader const& shader,
-    TfToken const& networkSelector,
-    TfToken* identifier=nullptr,
-    TfToken* subIdentifier=nullptr)
-{
-    TfToken implSource = shader.GetImplementationSource();
-
-    if (implSource == UsdShadeTokens->id) {
-        TfToken shaderId;
-
-        if (shader.GetShaderId(&shaderId)) {
-            auto &shaderReg = SdrRegistry::GetInstance();
-            if (SdrShaderNodeConstPtr sdrNode = 
-                    shaderReg.GetShaderNodeByIdentifierAndType(shaderId, 
-                        networkSelector)) {
-                if (identifier) {
-                    *identifier = TfToken(sdrNode->GetResolvedImplementationURI());
-                }
-            }
-        }
-    } else if (implSource == UsdShadeTokens->sourceAsset) {
-        SdfAssetPath sourceAsset;
-        if (shader.GetSourceAsset(&sourceAsset, networkSelector)) {
-            std::string path = sourceAsset.GetResolvedPath();
-            if (path.empty()) {
-                path = ArGetResolver().Resolve(sourceAsset.GetAssetPath());
-            }
-            if (path.empty()) {
-                path = sourceAsset.GetAssetPath();
-            }
-            if (identifier) {
-                *identifier = TfToken(path);
-            }
-        }
-        if (subIdentifier) {
-            shader.GetSourceAssetSubIdentifier(subIdentifier, networkSelector);
-        }
-    } else if (implSource == UsdShadeTokens->sourceCode) {
-        std::string sourceCode;
-        if (shader.GetSourceCode(&sourceCode, networkSelector)) {
-            if (identifier) {
-                *identifier = TfToken(sourceCode);
-            }
-        }
-    }  
-}
-
-TF_DEFINE_ENV_SETTING(USDIMAGING_ALLOW_UNREGISTERED_SHADER_IDS, 0,
-    "Allows material networks to be defined under IDs which are not known to SdrRegistry.");
-static bool _UnregisteredShaderIDsAllowed() {
-    static bool _v = TfGetEnvSetting(USDIMAGING_ALLOW_UNREGISTERED_SHADER_IDS) == 1;
-    return _v;
-}
-
-// #nv end
-
 UsdImagingMaterialAdapter::~UsdImagingMaterialAdapter()
 {
 }
