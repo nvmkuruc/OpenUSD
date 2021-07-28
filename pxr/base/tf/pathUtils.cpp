@@ -43,6 +43,10 @@
 #if defined(ARCH_OS_WINDOWS)
 #include <Windows.h>
 #include <Shlwapi.h>
+// #nv begin #win32-utf-8
+#include <locale>
+#include <codecvt>
+// #nv end
 #else
 #include <glob.h>
 #endif
@@ -279,8 +283,11 @@ TfReadLink(string const& path)
 bool TfIsRelativePath(std::string const& path)
 {
 #if defined(ARCH_OS_WINDOWS)
+// #nv begin #win32-utf-8
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
     return path.empty() ||
-        (PathIsRelative(path.c_str()) && path[0] != '/' && path[0] != '\\');
+        (PathIsRelativeW(converter.from_bytes(path).c_str()) && path[0] != '/' && path[0] != '\\');
+// #nv end
 #else
     return path.empty() || path[0] != '/';
 #endif
@@ -336,7 +343,10 @@ Tf_Glob(
         // Conveniently GetFileAttributes() works on paths with a trailing
         // backslash.
         string path = prefix + pattern;
-        const DWORD attributes = GetFileAttributes(path.c_str());
+// #nv begin #win32-utf-8
+        std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+        const DWORD attributes = GetFileAttributesW(converter.from_bytes(path).c_str());
+// #nv end
         if (attributes != INVALID_FILE_ATTRIBUTES) {
             // File exists.
 
@@ -369,14 +379,17 @@ Tf_Glob(
         const string leftmostDir = TfGetPathName(leftmostPattern);
 
         // Glob the leftmost pattern.
-        WIN32_FIND_DATA data;
-        HANDLE find = FindFirstFile(leftmostPattern.c_str(), &data);
+// #nv begin #win32-utf-8
+        WIN32_FIND_DATAW data;
+        std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+        HANDLE find = FindFirstFileW(converter.from_bytes(leftmostPattern).c_str(), &data);
         if (find != INVALID_HANDLE_VALUE) {
             do {
                 // Recurse with next pattern.
-                Tf_Glob(result, leftmostDir + data.cFileName,
+                Tf_Glob(result, leftmostDir + converter.to_bytes(data.cFileName),
                         remainingPattern, flags);
-            } while (FindNextFile(find, &data));
+            } while (FindNextFileW(find, &data));
+// #nv end
             FindClose(find);
         }
     }

@@ -44,6 +44,10 @@
 #if defined(ARCH_OS_WINDOWS)
 #include <Windows.h>
 #include <io.h>
+// #nv begin #win32-utf-8
+#include <locale>
+#include <codecvt>
+// #nv end
 #endif
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -84,8 +88,16 @@ TfAtomicOfstreamWrapper::Open(
     // with the same file name.
     ArchCloseFile(tmpFd);
 
+// #nv begin #win32-utf-8
+#if defined(ARCH_OS_WINDOWS)
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    _stream.open(converter.from_bytes(_tmpFilePath).c_str(),
+                 std::fstream::out | std::fstream::binary | std::fstream::trunc);
+#else
     _stream.open(_tmpFilePath.c_str(),
-                 std::fstream::out|std::fstream::binary|std::fstream::trunc);
+                 std::fstream::out | std::fstream::binary | std::fstream::trunc);
+#endif
+// #nv end
     if (!_stream) {
         if (reason) {
             *reason = TfStringPrintf(

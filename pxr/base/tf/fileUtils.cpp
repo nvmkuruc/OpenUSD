@@ -57,6 +57,10 @@
 #include <Shellapi.h>
 #include <ShlwAPI.h>
 #include <sys/utime.h>
+// #nv begin #win32-utf-8
+#include <locale>
+#include <codecvt>
+// #nv end
 #endif
 using std::set;
 using std::string;
@@ -78,7 +82,10 @@ Tf_HasAttribute(
         SetLastError(ERROR_SUCCESS);
         return false;
     }
-    const DWORD attribs = GetFileAttributes(path.c_str());
+// #nv begin #win32-utf-8
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    const DWORD attribs = GetFileAttributesW(converter.from_bytes(path).c_str());
+// #nv end
     if (attribs == INVALID_FILE_ATTRIBUTES) {
         if (attribute == 0 && GetLastError() == ERROR_FILE_NOT_FOUND) {
             // Don't report an error if we're just testing existence.
@@ -226,7 +233,10 @@ TfIsDirEmpty(string const& path)
     if (!TfIsDir(path))
         return false;
 #if defined(ARCH_OS_WINDOWS)
-    return PathIsDirectoryEmpty(path.c_str()) == TRUE;
+// #nv begin #win32-utf-8
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    return PathIsDirectoryEmptyW(converter.from_bytes(path).c_str()) == TRUE;
+// #nv end
 #else
     if (DIR *dirp = opendir(path.c_str()))
     {
@@ -251,8 +261,11 @@ bool
 TfSymlink(string const& src, string const& dst)
 {
 #if defined(ARCH_OS_WINDOWS)
-    if (CreateSymbolicLink(dst.c_str(), src.c_str(),
+// #nv begin #win32-utf-8
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    if (CreateSymbolicLinkW(converter.from_bytes(dst).c_str(), converter.from_bytes(src).c_str(),
                            TfIsDir(src) ? SYMBOLIC_LINK_FLAG_DIRECTORY : 0)) {
+// #nv end
         return true;
     }
 
@@ -284,7 +297,10 @@ bool
 TfMakeDir(string const& path, int mode)
 {
 #if defined(ARCH_OS_WINDOWS)
-    return CreateDirectory(path.c_str(), nullptr) == TRUE;
+// #nv begin #win32-utf-8
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    return CreateDirectoryW(converter.from_bytes(path).c_str(), nullptr) == TRUE;
+// #nv end
 #else
     // Default mode is 0777
     if (mode == -1)
@@ -344,13 +360,15 @@ TfReadDir(
     string *errMsg)
 {
 #if defined(ARCH_OS_WINDOWS)
-    char szPath[MAX_PATH];
-    WIN32_FIND_DATA fdFile;
+// #nv begin #win32-utf-8
+    wchar_t szPath[MAX_PATH];
+    WIN32_FIND_DATAW fdFile;
     HANDLE hFind = NULL;
 
-    PathCombine(szPath, dirPath.c_str(), "*.*");
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    PathCombineW(szPath, converter.from_bytes(dirPath).c_str(), L"*.*");
 
-    if((hFind = FindFirstFile(szPath, &fdFile)) == INVALID_HANDLE_VALUE)
+    if((hFind = FindFirstFileW(szPath, &fdFile)) == INVALID_HANDLE_VALUE)
     {
         if (errMsg) {
             *errMsg = TfStringPrintf("Path not found: %s", szPath);
@@ -361,22 +379,23 @@ TfReadDir(
     {
         do
         {
-            if(strcmp(fdFile.cFileName, ".") != 0
-                && strcmp(fdFile.cFileName, "..") != 0)
+            if(wcscmp(fdFile.cFileName, L".") != 0
+                && wcscmp(fdFile.cFileName, L"..") != 0)
             {
                 if(fdFile.dwFileAttributes &FILE_ATTRIBUTE_DIRECTORY)
                 {
                     if (dirnames)
-                        dirnames->push_back(fdFile.cFileName);
+                        dirnames->push_back(converter.to_bytes(fdFile.cFileName));
                 }
                 else
                 {
                     if (filenames)
-                        filenames->push_back(fdFile.cFileName);
+                        filenames->push_back(converter.to_bytes(fdFile.cFileName));
                 }
             }
         }
-        while (FindNextFile(hFind, &fdFile));
+        while (FindNextFileW(hFind, &fdFile));
+// #nv end
 
         FindClose(hFind);
 
@@ -664,13 +683,16 @@ TfTouchFile(string const &fileName, bool create)
             return false;
         close(fd);
 #else
-        HANDLE fileHandle = ::CreateFile(fileName.c_str(),
+// #nv begin #win32-utf-8
+        std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+        HANDLE fileHandle = ::CreateFileW(converter.from_bytes(fileName).c_str(),
             GENERIC_WRITE,          // open for write
             0,                      // not for sharing
             NULL,                   // default security
             CREATE_ALWAYS,          // overwrite existing
             FILE_ATTRIBUTE_NORMAL,  //normal file
             NULL);                  // no template
+// #nv end
 
         if (fileHandle == INVALID_HANDLE_VALUE) {
             return false;

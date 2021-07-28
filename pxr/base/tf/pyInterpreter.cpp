@@ -44,6 +44,13 @@
 #include "pxr/base/tf/pySafePython.h"
 #include <signal.h>
 
+// #nv begin #win32-utf-8
+#if defined(ARCH_OS_WINDOWS)
+#include <locale>
+#include <codecvt>
+#endif
+// #nv end
+
 using std::string;
 
 using namespace boost::python;
@@ -194,7 +201,14 @@ boost::python::handle<>
 TfPyRunFile(const std::string &filename, int start,
             object const &globals, object const &locals)
 {
+// #nv begin #win32-utf-8
+#if defined(ARCH_OS_WINDOWS)
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    FILE *f = _wfopen(converter.from_bytes(filename).c_str(), L"r");
+#else
     FILE *f = fopen(filename.c_str(), "r");
+#endif
+// #nv end
     if (!f) {
         TF_CODING_ERROR("Could not open file '%s'!", filename.c_str());
         return handle<>();
