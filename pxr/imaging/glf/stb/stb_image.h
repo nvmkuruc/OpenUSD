@@ -538,6 +538,10 @@ STBIDEF int   stbi_zlib_decode_noheader_buffer(char *obuffer, int olen, const ch
 
 
 #ifdef _MSC_VER
+// #nv begin #win32-utf-8
+#include <locale>
+#include <codecvt>
+// #nv end
 typedef unsigned short stbi__uint16;
 typedef   signed short stbi__int16;
 typedef unsigned int   stbi__uint32;
@@ -1147,7 +1151,10 @@ static FILE *stbi__fopen(char const *filename, char const *mode)
 {
    FILE *f;
 #if defined(_MSC_VER) && _MSC_VER >= 1400
-   if (0 != fopen_s(&f, filename, mode))
+// #nv begin #win32-utf-8
+   std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+   if (0 != _wfopen_s(&f, converter.from_bytes(filename).c_str(), converter.from_bytes(mode).c_str()))
+// #nv end
       f=0;
 #else
    f = fopen(filename, mode);

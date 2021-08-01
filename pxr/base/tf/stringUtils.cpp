@@ -49,6 +49,10 @@
 
 #if defined(ARCH_OS_WINDOWS)
 #include <Shlwapi.h>
+// #nv begin #win32-utf-8
+#include <locale>
+#include <codecvt>
+// #nv end
 #endif
 
 using std::list;
@@ -321,21 +325,25 @@ TfGetBaseName(const string& fileName)
     if (i == fileName.size() - 1)    // ends in directory delimiter
         return TfGetBaseName(fileName.substr(0, i));
 #if defined(ARCH_OS_WINDOWS)
-    PTSTR result = PathFindFileName(fileName.c_str());
+// #nv begin #win32-utf-8
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    const std::wstring wfileName{ converter.from_bytes(fileName) };
+    LPWSTR result = PathFindFileNameW(wfileName.c_str());
 
     // If PathFindFilename returns the same string back, that means it didn't
     // do anything.  That could mean that the patch has no basename, in which
     // case we want to return the empty string, or it could mean that the
     // fileName was already basename, in which case we want to return the
     // string back.
-    if (result == fileName.c_str()) {
+    if (result == wfileName.c_str()) {
         const bool hasDriveLetter = fileName.find(":") != string::npos;
         const bool hasPathSeparator  = i != string::npos;
         if (hasDriveLetter || hasPathSeparator) {
             return std::string();
         }
     }
-    return result;
+    return converter.to_bytes(result);
+// #nv end
 
 #else
     if (i == string::npos)                      // no / in name
