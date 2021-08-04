@@ -57,10 +57,6 @@
 #include <Shellapi.h>
 #include <ShlwAPI.h>
 #include <sys/utime.h>
-// #nv begin #win32-utf-8
-#include <locale>
-#include <codecvt>
-// #nv end
 #endif
 using std::set;
 using std::string;
@@ -83,8 +79,7 @@ Tf_HasAttribute(
         return false;
     }
 // #nv begin #win32-utf-8
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    const DWORD attribs = GetFileAttributesW(converter.from_bytes(path).c_str());
+    const DWORD attribs = GetFileAttributesW(ArchWindowsUtf8ToUtf16(path).c_str());
 // #nv end
     if (attribs == INVALID_FILE_ATTRIBUTES) {
         if (attribute == 0 && GetLastError() == ERROR_FILE_NOT_FOUND) {
@@ -234,8 +229,7 @@ TfIsDirEmpty(string const& path)
         return false;
 #if defined(ARCH_OS_WINDOWS)
 // #nv begin #win32-utf-8
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    return PathIsDirectoryEmptyW(converter.from_bytes(path).c_str()) == TRUE;
+    return PathIsDirectoryEmptyW(ArchWindowsUtf8ToUtf16(path).c_str()) == TRUE;
 // #nv end
 #else
     if (DIR *dirp = opendir(path.c_str()))
@@ -262,8 +256,7 @@ TfSymlink(string const& src, string const& dst)
 {
 #if defined(ARCH_OS_WINDOWS)
 // #nv begin #win32-utf-8
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    if (CreateSymbolicLinkW(converter.from_bytes(dst).c_str(), converter.from_bytes(src).c_str(),
+    if (CreateSymbolicLinkW(ArchWindowsUtf8ToUtf16(dst).c_str(), ArchWindowsUtf8ToUtf16(src).c_str(),
                            TfIsDir(src) ? SYMBOLIC_LINK_FLAG_DIRECTORY : 0)) {
 // #nv end
         return true;
@@ -298,8 +291,7 @@ TfMakeDir(string const& path, int mode)
 {
 #if defined(ARCH_OS_WINDOWS)
 // #nv begin #win32-utf-8
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    return CreateDirectoryW(converter.from_bytes(path).c_str(), nullptr) == TRUE;
+    return CreateDirectoryW(ArchWindowsUtf8ToUtf16(path).c_str(), nullptr) == TRUE;
 // #nv end
 #else
     // Default mode is 0777
@@ -365,8 +357,7 @@ TfReadDir(
     WIN32_FIND_DATAW fdFile;
     HANDLE hFind = NULL;
 
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    PathCombineW(szPath, converter.from_bytes(dirPath).c_str(), L"*.*");
+    PathCombineW(szPath, ArchWindowsUtf8ToUtf16(dirPath).c_str(), L"*.*");
 
     if((hFind = FindFirstFileW(szPath, &fdFile)) == INVALID_HANDLE_VALUE)
     {
@@ -385,12 +376,12 @@ TfReadDir(
                 if(fdFile.dwFileAttributes &FILE_ATTRIBUTE_DIRECTORY)
                 {
                     if (dirnames)
-                        dirnames->push_back(converter.to_bytes(fdFile.cFileName));
+                        dirnames->push_back(ArchWindowsUtf16ToUtf8(fdFile.cFileName));
                 }
                 else
                 {
                     if (filenames)
-                        filenames->push_back(converter.to_bytes(fdFile.cFileName));
+                        filenames->push_back(ArchWindowsUtf16ToUtf8(fdFile.cFileName));
                 }
             }
         }
@@ -684,8 +675,7 @@ TfTouchFile(string const &fileName, bool create)
         close(fd);
 #else
 // #nv begin #win32-utf-8
-        std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-        HANDLE fileHandle = ::CreateFileW(converter.from_bytes(fileName).c_str(),
+        HANDLE fileHandle = ::CreateFileW(ArchWindowsUtf8ToUtf16(fileName).c_str(),
             GENERIC_WRITE,          // open for write
             0,                      // not for sharing
             NULL,                   // default security

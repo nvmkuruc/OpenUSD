@@ -35,10 +35,6 @@
 #if defined(ARCH_OS_WINDOWS)
 #include <Windows.h>
 #include <io.h>
-// #nv begin #win32-utf-8
-#include <locale>
-#include <codecvt>
-// #nv end
 #endif
 
 #include <string>
@@ -54,13 +50,10 @@ Tf_AtomicRenameFileOver(std::string const &srcFileName,
     bool result = true;
 #if defined(ARCH_OS_WINDOWS)
 // #nv begin #win32-utf-8
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    const std::wstring wsrc{ converter.from_bytes(srcFileName) };
-    const std::wstring wdst{ converter.from_bytes(dstFileName) };
-    bool moved = MoveFileExW(wsrc.c_str(),
-                            wdst.c_str(),
-                            MOVEFILE_REPLACE_EXISTING |
-                            MOVEFILE_COPY_ALLOWED) != FALSE;
+    bool moved = MoveFileExW(ArchWindowsUtf8ToUtf16(srcFileName).c_str(),
+                             ArchWindowsUtf8ToUtf16(dstFileName).c_str(),
+                             MOVEFILE_REPLACE_EXISTING |
+                             MOVEFILE_COPY_ALLOWED) != FALSE;
 // #nv end
     if (!moved) {
         *error = TfStringPrintf(
