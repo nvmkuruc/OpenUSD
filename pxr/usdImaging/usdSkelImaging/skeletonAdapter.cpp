@@ -539,6 +539,7 @@ UsdSkelImagingSkeletonAdapter::ProcessPrimResync(
             pathsToRepopulate.emplace_back(data->skelRootPath);
         }
     }
+    //+NV_CHANGE FRZHANG
     else if (_IsSkelAnimPrimPath(primPath) && _UseNVGPUSkinningComputations())
     {
         const UsdPrim& animPrim = _GetPrim(primPath);
@@ -573,8 +574,13 @@ UsdSkelImagingSkeletonAdapter::ProcessPrimResync(
                 }
             }
         }
+        if (!animPrim)
+        {
+            _RemovePrim(primPath, index);
+        }
         return; //Skip the remove and repopulate below.
     }
+    //-NV_CHANGE FRZHANG
     else {
         // PrimResync might be called on behalf of the skeleton.
         if (_SkelData* skelData = _GetSkelData(primPath)) {
@@ -1141,8 +1147,6 @@ void UsdSkelImagingSkeletonAdapter::RefreshSkeletonQuery(const SdfPath& primPath
                     const SdfPath& oldAnimPrimPath = oldAnimPrim.GetPath();
                     //remove old skel-anim cache
                     _skelAnimMap[oldAnimPrimPath].erase(primPath);
-                    //remove the skelanim hdpriminfo & skelAnimMap it prim is invalid (deleted).
-                    _RemovePrim(oldAnimPrimPath, proxy);
                 }
 
                 if (newAnimQuery)
