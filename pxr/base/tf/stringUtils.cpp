@@ -49,10 +49,6 @@
 
 #if defined(ARCH_OS_WINDOWS)
 #include <Shlwapi.h>
-// #nv begin #win32-utf-8
-#include <locale>
-#include <codecvt>
-// #nv end
 #endif
 
 using std::list;
@@ -326,8 +322,7 @@ TfGetBaseName(const string& fileName)
         return TfGetBaseName(fileName.substr(0, i));
 #if defined(ARCH_OS_WINDOWS)
 // #nv begin #win32-utf-8
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    const std::wstring wfileName{ converter.from_bytes(fileName) };
+    const std::wstring wfileName{ ArchWindowsUtf8ToUtf16(fileName) };
     LPWSTR result = PathFindFileNameW(wfileName.c_str());
 
     // If PathFindFilename returns the same string back, that means it didn't
@@ -342,7 +337,7 @@ TfGetBaseName(const string& fileName)
             return std::string();
         }
     }
-    return converter.to_bytes(result);
+    return ArchWindowsUtf16ToUtf8(result);
 // #nv end
 
 #else

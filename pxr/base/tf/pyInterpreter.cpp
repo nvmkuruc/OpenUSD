@@ -44,12 +44,6 @@
 #include "pxr/base/tf/pySafePython.h"
 #include <signal.h>
 
-// #nv begin #win32-utf-8
-#if defined(ARCH_OS_WINDOWS)
-#include <locale>
-#include <codecvt>
-#endif
-// #nv end
 
 using std::string;
 
@@ -203,8 +197,7 @@ TfPyRunFile(const std::string &filename, int start,
 {
 // #nv begin #win32-utf-8
 #if defined(ARCH_OS_WINDOWS)
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    FILE *f = _wfopen(converter.from_bytes(filename).c_str(), L"r");
+    FILE *f = _wfopen(ArchWindowsUtf8ToUtf16(filename).c_str(), L"r");
 #else
     FILE *f = fopen(filename.c_str(), "r");
 #endif

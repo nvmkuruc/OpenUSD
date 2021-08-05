@@ -43,10 +43,6 @@
 #if defined(ARCH_OS_WINDOWS)
 #include <Windows.h>
 #include <Shlwapi.h>
-// #nv begin #win32-utf-8
-#include <locale>
-#include <codecvt>
-// #nv end
 #else
 #include <glob.h>
 #endif
@@ -284,9 +280,8 @@ bool TfIsRelativePath(std::string const& path)
 {
 #if defined(ARCH_OS_WINDOWS)
 // #nv begin #win32-utf-8
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
     return path.empty() ||
-        (PathIsRelativeW(converter.from_bytes(path).c_str()) && path[0] != '/' && path[0] != '\\');
+        (PathIsRelativeW(ArchWindowsUtf8ToUtf16(path).c_str()) && path[0] != '/' && path[0] != '\\');
 // #nv end
 #else
     return path.empty() || path[0] != '/';
@@ -344,8 +339,7 @@ Tf_Glob(
         // backslash.
         string path = prefix + pattern;
 // #nv begin #win32-utf-8
-        std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-        const DWORD attributes = GetFileAttributesW(converter.from_bytes(path).c_str());
+        const DWORD attributes = GetFileAttributesW(ArchWindowsUtf8ToUtf16(path).c_str());
 // #nv end
         if (attributes != INVALID_FILE_ATTRIBUTES) {
             // File exists.
@@ -381,12 +375,11 @@ Tf_Glob(
         // Glob the leftmost pattern.
 // #nv begin #win32-utf-8
         WIN32_FIND_DATAW data;
-        std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-        HANDLE find = FindFirstFileW(converter.from_bytes(leftmostPattern).c_str(), &data);
+        HANDLE find = FindFirstFileW(ArchWindowsUtf8ToUtf16(leftmostPattern).c_str(), &data);
         if (find != INVALID_HANDLE_VALUE) {
             do {
                 // Recurse with next pattern.
-                Tf_Glob(result, leftmostDir + converter.to_bytes(data.cFileName),
+                Tf_Glob(result, leftmostDir + ArchWindowsUtf16ToUtf8(data.cFileName).c_str(),
                         remainingPattern, flags);
             } while (FindNextFileW(find, &data));
 // #nv end

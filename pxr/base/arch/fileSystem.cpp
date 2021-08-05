@@ -52,10 +52,6 @@
 #include <process.h>
 #include <Windows.h>
 #include <WinIoCtl.h>
-// #nv begin #win32-utf-8
-#include <locale>
-#include <codecvt>
-// #nv end
 #else
 #include <alloca.h>
 #include <sys/mman.h>
@@ -155,8 +151,7 @@ namespace
 		{
 // #nv begin #win32-utf-8
 #if defined(ARCH_OS_WINDOWS)
-			std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-			FILE* file = _wfopen(converter.from_bytes(fileName).c_str(), converter.from_bytes(mode).c_str());
+			FILE* file = _wfopen(ArchWindowsUtf8ToUtf16(fileName).c_str(), ArchWindowsUtf8ToUtf16(mode).c_str());
 #else
 			FILE* file = fopen(fileName, mode);
 #endif
@@ -313,8 +308,7 @@ void ArchReleaseFile(ArchFile* file)
 int ArchRmDir(const char* path)
 {
 // #nv begin #win32-utf-8
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    return RemoveDirectoryW(converter.from_bytes(path).c_str()) ? 0 : -1;
+    return RemoveDirectoryW(ArchWindowsUtf8ToUtf16(path).c_str()) ? 0 : -1;
 // #nv end
 }
 #endif
@@ -346,8 +340,7 @@ ArchGetModificationTime(const char* pathname, double* time)
     ArchStatType st;
 #if defined(ARCH_OS_WINDOWS)
 // #nv begin #win32-utf-8
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    if (_wstat64(converter.from_bytes(pathname).c_str(), &st) == 0)
+    if (_wstat64(ArchWindowsUtf8ToUtf16(pathname).c_str(), &st) == 0)
 // #nv end
 #else
     if (stat(pathname, &st) == 0)
@@ -579,9 +572,8 @@ ArchAbsPath(const string& path)
 // #nv begin #win32-utf-8
     // @TODO support 32,767 long paths on windows by prepending "\\?\" to the path
     wchar_t buffer[ARCH_PATH_MAX];
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    if (GetFullPathNameW(converter.from_bytes(path).c_str(), ARCH_PATH_MAX, buffer, nullptr)) {
-        return converter.to_bytes(buffer);
+    if (GetFullPathNameW(ArchWindowsUtf8ToUtf16(path).c_str(), ARCH_PATH_MAX, buffer, nullptr)) {
+        return ArchWindowsUtf16ToUtf8(buffer);
 // #nv end
     }
     else {
@@ -690,9 +682,8 @@ ArchGetFileLength(const char* fileName)
     // Open a handle with 0 as the desired access and full sharing.
     // This opens the file even if exclusively locked.
 // #nv begin #win32-utf-8
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
     HANDLE handle =
-        CreateFileW(converter.from_bytes(fileName).c_str(), 0,
+        CreateFileW(ArchWindowsUtf8ToUtf16(fileName).c_str(), 0,
                    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                    nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 // #nv end
@@ -834,8 +825,7 @@ ArchMakeTmpFile(const std::string& tmpdir,
     auto cTemplate =
 // #nv begin #win32-utf-8
         MakeUnique(sTemplate, [&fd](const char* name){
-            std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-            _wsopen_s(&fd, converter.from_bytes(name).c_str(), _O_CREAT | _O_EXCL | _O_RDWR | _O_BINARY,
+            _wsopen_s(&fd, ArchWindowsUtf8ToUtf16(name).c_str(), _O_CREAT | _O_EXCL | _O_RDWR | _O_BINARY,
                      _SH_DENYNO, _S_IREAD | _S_IWRITE);
 // #nv end
             return fd != -1;
@@ -879,8 +869,7 @@ ArchMakeTmpSubdir(const std::string& tmpdir,
     retstr =
         MakeUnique(sTemplate, [](const char* name){
 // #nv begin #win32-utf-8
-            std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-            return CreateDirectoryW(converter.from_bytes(name).c_str(), NULL) != FALSE;
+            return CreateDirectoryW(ArchWindowsUtf8ToUtf16(name).c_str(), NULL) != FALSE;
 // #nv end
         });
 #else
@@ -922,8 +911,7 @@ Arch_InitTmpDir()
 
     // Strip the trailing slash
     tmpPath[sizeOfPath-1] = 0;
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    _TmpDir = _strdup(converter.to_bytes(tmpPath).c_str());
+    _TmpDir = _strdup(ArchWindowsUtf16ToUtf8(tmpPath).c_str());
 // #nv end
 #else
     const std::string tmpdir = ArchGetEnv("TMPDIR");
@@ -1226,8 +1214,7 @@ int ArchFileAccess(const char* path, int mode)
 {
     // Simple existence check is handled specially.
 // #nv begin #win32-utf-8
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    std::wstring wpath{ converter.from_bytes(path) };
+    std::wstring wpath{ ArchWindowsUtf8ToUtf16(path) };
     if (mode == F_OK) {
         return (GetFileAttributesW(wpath.c_str()) != INVALID_FILE_ATTRIBUTES)
                 ? 0 : Arch_FileAccessError();
@@ -1341,8 +1328,7 @@ typedef struct _REPARSE_DATA_BUFFER {
 std::string ArchReadLink(const char* path)
 {
 // #nv begin #win32-utf-8
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    HANDLE handle = ::CreateFileW(converter.from_bytes(path).c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING,
+    HANDLE handle = ::CreateFileW(ArchWindowsUtf8ToUtf16(path).c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING,
         FILE_FLAG_OPEN_REPARSE_POINT |
         FILE_FLAG_BACKUP_SEMANTICS, NULL);
 // #nv end

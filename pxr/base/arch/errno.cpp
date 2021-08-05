@@ -28,10 +28,6 @@
 #include <cstring>
 #if defined(ARCH_OS_WINDOWS)
 #include <Windows.h>
-// #nv begin #win32-utf-8
-#include <locale>
-#include <codecvt>
-// #nv end
 #endif
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -73,23 +69,20 @@ std::string ArchStrSysError(unsigned long errorCode)
     if(errorCode == 0)
         return std::string();
 
-// #nv begin #win32-utf-8
-    LPWSTR buffer = nullptr;
-    size_t len = FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER |
+    LPSTR buffer = nullptr;
+    size_t len = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |
                                FORMAT_MESSAGE_FROM_SYSTEM |
                                FORMAT_MESSAGE_IGNORE_INSERTS,
                                nullptr,
                                errorCode,
                                MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                               (LPWSTR)&buffer,
+                               (LPSTR)&buffer,
                                0,
                                nullptr);
-    std::wstring wmessage(buffer, len);
+    std::string message(buffer, len);
     LocalFree(buffer);
 
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    return converter.to_bytes(wmessage);
-// #nv end
+    return message;
 }
 #endif
 
