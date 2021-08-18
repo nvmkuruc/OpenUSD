@@ -2453,6 +2453,11 @@ CrateFile::Packer::Close()
                                /*hasOwnership=*/true);
     }
 
+// #nv begin #win32-utf-8
+    if (fileRange.file == nullptr) {
+        return false;
+    }
+// #nv end
     // Reset the filename we've read content from.
     _crate->_fileReadFrom = ArchGetFileName(fileRange.file);
 

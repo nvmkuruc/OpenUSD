@@ -44,6 +44,7 @@
 #include "pxr/base/tf/pySafePython.h"
 #include <signal.h>
 
+
 using std::string;
 
 using namespace boost::python;
@@ -194,7 +195,13 @@ boost::python::handle<>
 TfPyRunFile(const std::string &filename, int start,
             object const &globals, object const &locals)
 {
+// #nv begin #win32-utf-8
+#if defined(ARCH_OS_WINDOWS)
+    FILE *f = _wfopen(ArchWindowsUtf8ToUtf16(filename).c_str(), L"r");
+#else
     FILE *f = fopen(filename.c_str(), "r");
+#endif
+// #nv end
     if (!f) {
         TF_CODING_ERROR("Could not open file '%s'!", filename.c_str());
         return handle<>();
