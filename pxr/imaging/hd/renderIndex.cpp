@@ -1292,8 +1292,10 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
         _tracker.ClearBprimGarbageCollectionNeeded();
     }
 
-
-    _sprimIndex.SyncPrims(_tracker, _renderDelegate->GetRenderParam());
+// #nv begin #parallel-syncprims
+    const bool multithreadedUpdate = _renderDelegate->GetRenderSetting(HdRenderSettingsTokens->staticMaterialNetworkTopology, false);
+    _sprimIndex.SyncPrims(_tracker, _renderDelegate->GetRenderParam(), multithreadedUpdate);
+// #nv end
 
     ////////////////////////////////////////////////////////////////////////////
     //

@@ -350,7 +350,10 @@ TfToken HdAovTokensMakeShader(TfToken const& shader);
     (convergedVariance)                               \
     (convergedSamplesPerPixel)                        \
     /* thread limit settings */                       \
-    (threadLimit)
+    (threadLimit)                                     \
+    /* #nv begin #parallel-syncprims */               \
+    (staticMaterialNetworkTopology)                   \
+    /* #nv end */
 
 #define HD_RESOURCE_TYPE_TOKENS                       \
     (texture)                        
