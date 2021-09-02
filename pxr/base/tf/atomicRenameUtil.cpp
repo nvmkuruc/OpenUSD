@@ -49,10 +49,12 @@ Tf_AtomicRenameFileOver(std::string const &srcFileName,
 {
     bool result = true;
 #if defined(ARCH_OS_WINDOWS)
-    bool moved = MoveFileEx(srcFileName.c_str(),
-                            dstFileName.c_str(),
-                            MOVEFILE_REPLACE_EXISTING |
-                            MOVEFILE_COPY_ALLOWED) != FALSE;
+// #nv begin #win32-utf-8
+    bool moved = MoveFileExW(ArchWindowsUtf8ToUtf16(srcFileName).c_str(),
+                             ArchWindowsUtf8ToUtf16(dstFileName).c_str(),
+                             MOVEFILE_REPLACE_EXISTING |
+                             MOVEFILE_COPY_ALLOWED) != FALSE;
+// #nv end
     if (!moved) {
         *error = TfStringPrintf(
             "Failed to rename temporary file '%s' to '%s': %s",
