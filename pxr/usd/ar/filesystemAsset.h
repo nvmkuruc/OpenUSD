@@ -26,15 +26,19 @@
 /// \file ar/filesystemAsset.h
 
 #include "pxr/pxr.h"
-#include "pxr/usd/ar/api.h"
-#include "pxr/usd/ar/asset.h"
+#include "pxr/usd/ar/ar.h"
 
-#include <cstdio>
-#include <memory>
-#include <utility>
+#define INCLUDE_AR_FILESYSTEM_ASSET
 
-PXR_NAMESPACE_OPEN_SCOPE
+#if AR_VERSION == 1
+#include "pxr/usd/ar/filesystemAsset_v1.h"
+#elif AR_VERSION == 2
+#include "pxr/usd/ar/filesystemAsset_v2.h"
+#else
+#error Unhandled AR_VERSION
+#endif
 
+<<<<<<< HEAD
 /// \class ArFilesystemAsset
 ///
 /// ArAsset implementation for asset represented by a file on a filesystem.
@@ -77,5 +81,8 @@ private:
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
+=======
+#undef INCLUDE_AR_FILESYSTEM_ASSET
+>>>>>>> pxr/release
 
 #endif // PXR_USD_AR_FILESYSTEM_ASSET_H

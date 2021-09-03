@@ -105,6 +105,10 @@ public:
                            SdfPath const& cachePath,
                            UsdImagingIndexProxy* index) override;
 
+    USDIMAGING_API
+    void ProcessPrimResync(SdfPath const& cachePath,
+                           UsdImagingIndexProxy* index) override;
+
     // ---------------------------------------------------------------------- //
     /// \name Utilities 
     // ---------------------------------------------------------------------- //

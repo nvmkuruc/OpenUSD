@@ -746,8 +746,7 @@ Sdf_FileIOUtility::WriteLayerOffset(
 string
 Sdf_FileIOUtility::Quote(const string &str)
 {
-    static const char* hexdigit = "0123456789abcdef";
-    static const bool allowTripleQuotes = true;
+    const bool allowTripleQuotes = true;
 
     string result;
 

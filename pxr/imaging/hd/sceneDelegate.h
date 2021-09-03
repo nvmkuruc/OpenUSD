@@ -353,7 +353,7 @@ public:
     // nv end
 
     /// Opportunity for the delegate to clean itself up after
-    /// performing parrellel work during sync phase
+    /// performing parallel work during sync phase
     HD_API
     virtual void PostSyncCleanup();
 

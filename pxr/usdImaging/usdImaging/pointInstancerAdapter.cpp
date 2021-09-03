@@ -268,6 +268,7 @@ UsdImagingPointInstancerAdapter::_PopulatePrototype(
     size_t instantiatedPrimCount = 0;
 
     std::vector<UsdPrimRange> treeStack;
+<<<<<<< HEAD
 
     // #nv begin prototypes-from-overs
     // Allow prototypes from overs, i.e., structured so that only the instances, not the source geometry itself, are imaged.
@@ -279,6 +280,10 @@ UsdImagingPointInstancerAdapter::_PopulatePrototype(
 
     treeStack.push_back(UsdPrimRange(protoRootPrim, _DisplayPredicate()));
     // nv end
+=======
+    treeStack.push_back(
+        UsdPrimRange(protoRootPrim, _GetDisplayPredicateForPrototypes()));
+>>>>>>> pxr/release
     while (!treeStack.empty()) {
         if (!treeStack.back()) {
             treeStack.pop_back();
@@ -300,9 +305,14 @@ UsdImagingPointInstancerAdapter::_PopulatePrototype(
         // XXX: Should we delegate to instanceAdapter here?
         if (iter->IsInstance()) {
             UsdPrim prototype = iter->GetPrototype();
+<<<<<<< HEAD
             // #nv begin prototypes-from-overs
             UsdPrimRange prototypeRange(prototype, _DisplayPredicate());
             // nv end
+=======
+            UsdPrimRange prototypeRange(
+                prototype, _GetDisplayPredicateForPrototypes());
+>>>>>>> pxr/release
             treeStack.push_back(prototypeRange);
 
             // Make sure to register a dependency on this instancer with the

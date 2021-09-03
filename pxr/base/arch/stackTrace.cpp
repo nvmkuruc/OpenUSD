@@ -583,6 +583,7 @@ nonLockingLinux__execve (const char *file,
                          char *const argv[],
                          char *const envp[])
 {
+<<<<<<< HEAD
 // nv begin #aarch64-support
 #if defined(ARCH_BITS_64) && defined(ARCH_CPU_ARM)
     execve(file, argv, envp);
@@ -590,6 +591,8 @@ nonLockingLinux__execve (const char *file,
 
 #elif defined(ARCH_BITS_64)
 
+=======
+>>>>>>> pxr/release
     /*
      * We make a direct system call here, because we can't find an
      * execve which corresponds with the non-locking fork we call
@@ -600,7 +603,27 @@ nonLockingLinux__execve (const char *file,
      * hangs in a threaded app.  (We use the non-locking fork to get
      * around problems with forking when we have had memory
      * corruption.)  whew.
-     *
+     */
+
+    unsigned long result;
+
+#if defined (ARCH_CPU_ARM)
+    {
+        register long __file_result asm ("x0") = (long)file;
+        register char* const* __argv asm ("x1") = argv;
+        register char* const* __envp asm ("x2") = envp;
+        register long __num_execve asm ("x8") = 221;
+        __asm__ __volatile__ (
+            "svc 0"
+            : "=r" (__file_result)
+            : "r"(__num_execve), "r" (__file_result), "r" (__argv), "r" (__envp)
+            : "memory"
+        );
+        result = __file_result;
+    }
+#elif defined(ARCH_CPU_INTEL) && defined(ARCH_BITS_64)
+
+    /*
      * %rdi, %rsi, %rdx, %rcx, %r8, %r9 are args 0-5
      * syscall clobbers %rcx and %r11
      *
@@ -609,7 +632,6 @@ nonLockingLinux__execve (const char *file,
      * constraints to gcc.
      */
 
-    unsigned long result;
     __asm__ __volatile__ (
         "mov    %0, %%rdi    \n\t"
         "mov    %%rcx, %%rsi \n\t"
@@ -620,6 +642,9 @@ nonLockingLinux__execve (const char *file,
         : "0" (file), "c" (argv), "d" (envp)
         : "memory", "cc", "r11"
     );
+#else
+#error Unknown architecture
+#endif
 
     if (result >= 0xfffffffffffff000) {
         errno = -result;
@@ -627,9 +652,6 @@ nonLockingLinux__execve (const char *file,
     }
 
     return result;
-#else
-#error Unknown architecture
-#endif
 }
 
 #endif
