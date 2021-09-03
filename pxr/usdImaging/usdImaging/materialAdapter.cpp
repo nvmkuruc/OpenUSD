@@ -115,16 +115,13 @@ UsdImagingMaterialAdapter::TrackVariability(
     bool checkVariability) const
     // nv end
 {
-<<<<<<< HEAD
     // #nv begin fast-updates
     // Early out, as there are no initial values to populate into the value cache.
     if (!checkVariability)
         return;
     // nv end
 
-=======
     TRACE_FUNCTION();
->>>>>>> pxr/release
     UsdShadeMaterial material(prim);
     if (!material) {
         TF_RUNTIME_ERROR("Expected material prim at <%s> to be of type "
@@ -239,7 +236,6 @@ UsdImagingMaterialAdapter::_RemovePrim(
     index->RemoveSprim(HdPrimTypeTokens->material, cachePath);
 }
 
-<<<<<<< HEAD
 // XXX:aluk
 // TODO: resolve merge conflict
 #if 0
@@ -498,7 +494,6 @@ UsdImagingMaterialAdapter::_GetMaterialNetworkMap(
     bool* timeVarying) const
 #endif
 
-=======
 /* virtual */
 void
 UsdImagingMaterialAdapter::ProcessPrimResync(
@@ -515,20 +510,12 @@ UsdImagingMaterialAdapter::ProcessPrimResync(
     UsdImagingPrimAdapter::ProcessPrimResync(cachePath, index);
 }
 
->>>>>>> pxr/release
 VtValue 
 UsdImagingMaterialAdapter::GetMaterialResource(UsdPrim const &prim,
                                                SdfPath const& cachePath, 
                                                UsdTimeCode time) const
 {
-<<<<<<< HEAD
-    // #nv begin material-updates
     TRACE_FUNCTION();
-    // nv end
-
-=======
-    TRACE_FUNCTION();
->>>>>>> pxr/release
     UsdShadeMaterial material(prim);
     if (!material) {
         TF_RUNTIME_ERROR("Expected material prim at <%s> to be of type "

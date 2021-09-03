@@ -131,11 +131,9 @@ def GetVisualStudioCompilerAndVersion():
     if not Windows():
         return None
 
-<<<<<<< HEAD
-    msvcCompiler = 'dummy' #find_executable('cl')
-=======
-    msvcCompiler = which('cl')
->>>>>>> pxr/release
+    # nv begin #omni-build
+    msvcCompiler = 'dummy' #which('cl')
+    # nv end
     if msvcCompiler:
         # VisualStudioVersion environment variable should be set by the
         # Visual Studio Command Prompt.

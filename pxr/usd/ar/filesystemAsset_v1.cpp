@@ -31,13 +31,10 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-<<<<<<< HEAD:pxr/usd/ar/filesystemAsset.cpp
-ArFilesystemAsset::ArFilesystemAsset(ArchFile* file) 
-=======
 std::shared_ptr<ArFilesystemAsset>
 ArFilesystemAsset::Open(const ArResolvedPath& resolvedPath)
 {
-    FILE* f = ArchOpenFile(resolvedPath.GetPathString().c_str(), "rb");
+    ArchFile* f = ArchOpenFile(resolvedPath.GetPathString().c_str(), "rb");
     if (!f) {
         return nullptr;
     }
@@ -45,8 +42,7 @@ ArFilesystemAsset::Open(const ArResolvedPath& resolvedPath)
     return std::shared_ptr<ArFilesystemAsset>(new ArFilesystemAsset(f));
 }
 
-ArFilesystemAsset::ArFilesystemAsset(FILE* file) 
->>>>>>> pxr/release:pxr/usd/ar/filesystemAsset_v1.cpp
+ArFilesystemAsset::ArFilesystemAsset(ArchFile* file) 
     : _file(file) 
 { 
     if (!_file) {

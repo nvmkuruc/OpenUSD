@@ -4297,41 +4297,6 @@ UsdStage::_HandleResolverDidChange(
     TF_DEBUG(USD_CHANGES).Msg(
         "\nHandleResolverDidChange received (%s)\n", UsdDescribe(this).c_str());
 
-<<<<<<< HEAD
-    // #nv begin #fast-updates
-    if (!recomposeChanges.empty()) {
-        // Refresh field handles for recomposition changes.
-        TF_FOR_ALL(itr, _fieldHandles) {
-            auto fieldHandleItr = itr->second.begin();
-            while (fieldHandleItr != itr->second.end()) {
-                bool gotHandle = false;
-                if (fieldHandleItr->second.defaultHandle) {
-                    CheckFieldForCompositionDependents(
-                        itr->first, fieldHandleItr->second.defaultHandle, false /* isNewHandle */, &gotHandle);
-                }
-                if (fieldHandleItr->second.timeSamplesHandle) {
-                    CheckFieldForCompositionDependents(
-                        itr->first, fieldHandleItr->second.timeSamplesHandle, false /* isNewHandle */, &gotHandle);
-                }
-                if (gotHandle) {
-                    fieldHandleItr++;
-                }  else {
-                    fieldHandleItr = itr->second.erase(fieldHandleItr);
-                }
-            }
-        }
-    }
-    // nv end
-
-    UsdStageWeakPtr self(this);
-
-    // Notify about changed objects.
-    {
-        TRACE_SCOPE("UsdNotice::ObjectChanged (no fast updates)");
-        UsdNotice::ObjectsChanged(
-            self, &recomposeChanges, &otherInfoChanges).Send(self);
-    }
-=======
     // Merge stage changes computed in this function with other pending changes
     // or start up our own pending changes batch so we can process them at the
     // end of the function.
@@ -4346,7 +4311,6 @@ UsdStage::_HandleResolverDidChange(
     // indicate that resyncs are necessary for those prims.
     PcpChanges& changes = _pendingChanges->pcpChanges;
     changes.DidChangeAssetResolver(_GetPcpCache());
->>>>>>> pxr/release
 
     // Asset-path valued attributes on this stage may be invalidated.
     // We don't want to incur the expense of scanning the entire stage
@@ -4816,7 +4780,6 @@ UsdStage::_RegisterPerLayerNotices()
     _layersAndNoticeKeys.swap(newLayersAndNoticeKeys);
 }
 
-<<<<<<< HEAD
 // #nv begin #fast-updates
 void
 UsdStage::CheckFieldForCompositionDependents(const SdfLayerHandle &layer,
@@ -4853,14 +4816,12 @@ UsdStage::CheckFieldForCompositionDependents(const SdfLayerHandle &layer,
     }
 }
 // nv end
-=======
 void
 UsdStage::_RegisterResolverChangeNotice()
 {
     _resolverChangeKey = TfNotice::Register(
         TfCreateWeakPtr(this), &UsdStage::_HandleResolverDidChange);
 }
->>>>>>> pxr/release
 
 SdfPrimSpecHandle
 UsdStage::_GetPrimSpec(const SdfPath& path)

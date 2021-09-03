@@ -36,18 +36,8 @@
 /// \addtogroup group_arch_SystemFunctions
 ///@{
 
-<<<<<<< HEAD
-#if defined(ARCH_OS_LINUX)
-// nv begin #aarch64-support
-#if defined(ARCH_CPU_ARM)
-#include <time.h>
-// nv end
-#else
-=======
 #if defined(ARCH_OS_LINUX) && defined(ARCH_CPU_INTEL)
->>>>>>> pxr/release
 #include <x86intrin.h>
-#endif
 #elif defined(ARCH_OS_DARWIN)
 #include <mach/mach_time.h>
 #elif defined(ARCH_OS_WINDOWS)
@@ -79,23 +69,10 @@ ArchGetTickTime()
 #elif defined(ARCH_CPU_INTEL)
     // On Intel we'll use the rdtsc instruction.
     return __rdtsc();
-<<<<<<< HEAD
-// nv begin #aarch64-support
-#elif defined(ARCH_CPU_ARM)
-    // CLOCK_MONOTONIC_RAW variant better suited for short timing period
-    // CLOCK_MONOTONIC for longer timing periods to avoid drift
-    uint64_t val;
-    struct timespec t;
-    clock_gettime(CLOCK_MONOTONIC_RAW, &t);
-    val = (t.tv_sec * 1000000000ull) + t.tv_nsec;
-    return val;
-// nv end
-=======
 #elif defined (ARCH_CPU_ARM)
     uint64_t result;
     __asm __volatile("mrs	%0, CNTVCT_EL0" : "=&r" (result));
     return result;
->>>>>>> pxr/release
 #else
 #error Unknown architecture.
 #endif

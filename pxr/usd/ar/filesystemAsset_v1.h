@@ -40,6 +40,7 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 class ArResolvedPath;
+class ArchFile;
 
 /// \class ArFilesystemAsset
 ///
@@ -58,7 +59,7 @@ public:
     /// The ArFilesystemAsset object takes ownership of \p file and will
     /// close the file handle on destruction.
     AR_API
-    explicit ArFilesystemAsset(FILE* file);
+    explicit ArFilesystemAsset(ArchFile* file);
 
     /// Closes the file owned by this object.
     AR_API
@@ -78,14 +79,14 @@ public:
     AR_API
     virtual size_t Read(void* buffer, size_t count, size_t offset) override;
 
-    /// Returns the FILE* handle this object was created with and an offset
+    /// Returns the ArchFile* handle this object was created with and an offset
     /// of 0, since the asset's contents are located at the beginning of the
     /// file.
     AR_API        
-    virtual std::pair<FILE*, size_t> GetFileUnsafe() override;
+    virtual std::pair<ArchFile*, size_t> GetFileUnsafe() override;
 
 private:
-    FILE* _file;
+    ArchFile* _file;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

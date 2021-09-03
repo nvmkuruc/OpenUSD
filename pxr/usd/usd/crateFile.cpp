@@ -160,11 +160,7 @@ static int _GetMMapPrefetchKB()
 #if AR_VERSION == 1
 // Write nbytes bytes to fd at pos.
 static inline int64_t
-<<<<<<< HEAD
-WriteToFd(ArchFile *file, void const *bytes, int64_t nbytes, int64_t pos) {
-=======
-WriteToAsset(FILE *file, void const *bytes, int64_t nbytes, int64_t pos) {
->>>>>>> pxr/release
+WriteToAsset(ArchFile *file, void const *bytes, int64_t nbytes, int64_t pos) {
     int64_t nwritten = ArchPWrite(file, bytes, nbytes, pos);
     if (ARCH_UNLIKELY(nwritten < 0)) {
         TF_RUNTIME_ERROR("Failed writing usdc data: %s",
@@ -776,7 +772,7 @@ class CrateFile::_BufferedOutput
 {
 public:
 #if AR_VERSION == 1
-    using OutputType = FILE*;
+    using OutputType = ArchFile*;
 #else
     using OutputType = ArWritableAsset*;
 #endif
@@ -796,11 +792,7 @@ public:
         int64_t size = 0;
     };
 
-<<<<<<< HEAD
-    explicit _BufferedOutput(ArchFile *file)
-=======
     explicit _BufferedOutput(OutputType file)
->>>>>>> pxr/release
         : _filePos(0)
         , _file(file)
         , _bufferPos(0)
@@ -916,11 +908,7 @@ private:
     
     // Write head in the file.  Always inside the buffer region.
     int64_t _filePos;
-<<<<<<< HEAD
-    ArchFile *_file;
-=======
     OutputType _file;
->>>>>>> pxr/release
 
     // Start of current buffer is at this file offset.
     int64_t _bufferPos;
@@ -941,7 +929,7 @@ struct CrateFile::_PackingContext
 {
 #if AR_VERSION == 1
     using OutputType = TfSafeOutputFile;
-    static FILE* _Get(OutputType& out) { return out.Get(); }
+    static ArchFile* _Get(OutputType& out) { return out.Get(); }
 #else
     using OutputType = ArWritableAssetSharedPtr;
     static ArWritableAsset* _Get(OutputType& out) { return out.get(); }
@@ -2209,33 +2197,9 @@ CrateFile::Open(string const &assetPath)
         return result;
     }
 
-<<<<<<< HEAD
-    // See if we can get an underlying ArchFile * for the asset.
-    ArchFile *file; size_t offset;
-    std::tie(file, offset) = asset->GetFileUnsafe();
-    if (file) {
-        // If so, then we'll either mmap it or use pread() on it.
-		_FileMappingIPtr mapping;
-        if (!TfGetenvBool("USDC_USE_PREAD", false) && (mapping = _MmapAsset(assetPath.c_str(), asset))) {
-            // Try to memory-map the file.
-            result.reset(new CrateFile(assetPath, ArchGetFileName(file),
-                                       std::move(mapping), asset));
-        } else {
-            // Use pread with the asset's file.
-            result.reset(new CrateFile(
-                             assetPath, ArchGetFileName(file),
-                             _FileRange(
-                                 file, offset, asset->GetSize(),
-                                 /*hasOwnership=*/ false),
-                             asset));
-        }
-    }
-    else {
-        // With no underlying ArchFile *, we'll go through ArAsset::Read() directly.
-=======
     if (!TfGetEnvSetting(USDC_USE_ASSET)) {
         // See if we can get an underlying FILE * for the asset.
-        FILE *file; size_t offset;
+        ArchFile *file; size_t offset;
         std::tie(file, offset) = asset->GetFileUnsafe();
         if (file) {
             // If so, then we'll either mmap it or use pread() on it.
@@ -2257,8 +2221,7 @@ CrateFile::Open(string const &assetPath)
     }
 
     if (!result) {
-        // With no underlying FILE *, we'll go through ArAsset::Read() directly.
->>>>>>> pxr/release
+        // With no underlying ArchFile *, we'll go through ArAsset::Read() directly.
         result.reset(new CrateFile(assetPath, asset));
     }
     

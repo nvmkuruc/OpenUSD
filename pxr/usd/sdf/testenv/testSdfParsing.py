@@ -66,11 +66,8 @@ class TestSdfParsing(unittest.TestCase):
         # failures much quicker.
         testFiles = '''
         205_bad_assetPaths.sdf
-<<<<<<< HEAD
-=======
         204_really_empty.sdf
         203_newlines.sdf
->>>>>>> pxr/release
         202_displayGroups.sdf
         201_format_specifiers_in_strings.sdf
         200_bad_emptyFile.sdf
@@ -335,12 +332,9 @@ class TestSdfParsing(unittest.TestCase):
                 # string to a file.
                 with _open(layerFileOut2.name, 'w') as f:
                     f.write(layer.ExportToString())
-<<<<<<< HEAD
-=======
 
                 self.assertTrue(metadataOnlyLayer.Export(layerFileOut3.name))
                     
->>>>>>> pxr/release
             except Exception as e:
                 if '_badwrite_' in file:
                     # Write errors should always be Tf.ErrorExceptions
