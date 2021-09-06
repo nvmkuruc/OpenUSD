@@ -1566,20 +1566,24 @@ UsdImagingDelegate::_ResyncUsdPrim(SdfPath const& usdPath,
             }
             //-NV_CHANGE FRZHANG
         }
-<<<<<<< HEAD
+
+        // XXX:aluk
+        // TODO: Verify that deleting Kit cameras also removes gizmos from the render index,
+        // and that undo/redo works as expected. (USD 21.08)
+        // https://github.com/PixarAnimationStudios/USD/commit/43b3a026090dafcddbca4b38df461ea7d23d4b04
+#if 0
         if ((range.first != range.second)
             // #nv begin #kit-gizmos
             && !_IsEnabledNestedGprims()) {
             // nv end
             return;
         }
+#endif
 
         //+NV_CHANGE FRZHANG : NV GPU Skinning
         if(stopResyncAncestor)
             return;
         //-NV_CHANGE FRZHANG
-=======
->>>>>>> pxr/release
     }
 
     // Whether the resync target is below a populated prim or not, we still 
@@ -1612,17 +1616,9 @@ UsdImagingDelegate::_ResyncUsdPrim(SdfPath const& usdPath,
                 // the whole subtree below, but change processing will
                 // remove the redundancy.  It's important to call
                 // ProcessPrimResync to add Repopulate calls for objects not
-<<<<<<< HEAD
-                // under "usdPath" (such as sibling native instances)..
-                if (repopulateFromRoot) {
-                    primInfo->adapter->ProcessPrimRemoval(
-                        affectedCachePath, proxy);
-                } else {
-=======
                 // under "usdPath" (such as sibling native instances).
                 if (!foundPruningPrim || 
                         _IsCoordSysAdapter(primInfo->adapter)) {
->>>>>>> pxr/release
                     primInfo->adapter->ProcessPrimResync(
                         affectedCachePath, proxy);
                 }

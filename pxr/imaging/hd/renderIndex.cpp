@@ -1082,7 +1082,7 @@ namespace {
     // #nv begin #omni-hydra
     static void
     _DoSyncRprims(HdSceneDelegate* sceneDelegate, 
-        WorkArenaDispatcher& dispatcher, 
+        WorkDispatcher& dispatcher,
         _SyncRPrims& workerState,
         _RprimSyncRequestVector& r)
     {
@@ -1504,7 +1504,6 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
                                    std::placeholders::_2));
     }
 
-<<<<<<< HEAD
     // #nv begin omni-hydra
 
     // sync each post scene delegate
@@ -1605,42 +1604,13 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
     }
 
     // sync dynamic (slow) syncMap for rprim Sync
-    WorkArenaDispatcher dispatcher;
-    TF_FOR_ALL(dlgIt, syncMap) {
-        HdSceneDelegate* sceneDelegate = dlgIt->first;
-
-        _RprimSyncRequestVector& r = dlgIt->second;
-        _SyncRPrims workerState(sceneDelegate, r, reprs, _tracker, renderParam, false);
-
-        _DoSyncRprims(sceneDelegate, dispatcher, workerState, r);
-    }
-    dispatcher.Wait();
-
-    // sync sprims for post sync requests (lights, etc.)
-    TF_FOR_ALL(dlgIt, _postSyncMap) {
-        HdSceneDelegate* sceneDelegate = dlgIt->first;
-        _SprimIndex::PostSyncRequestVector& sprimRequestVector = dlgIt->second.sprimRequestVector;
-        _sprimIndex.SyncPrims(sceneDelegate, sprimRequestVector, renderParam);
-    }
-
-    // sync rprim for postSync delegates
-    TF_FOR_ALL(dlgIt, _postSyncMap) {
-        HdSceneDelegate* sceneDelegate = dlgIt->first;
-
-        _RprimSyncRequestVector& r = reinterpret_cast<_RprimSyncRequestVector&>(dlgIt->second.rprimRequestVector);
-        _SyncRPrims workerState(sceneDelegate, r, reprs, _tracker, renderParam, true);
-
-        _DoSyncRprims(sceneDelegate, dispatcher, workerState, r);
-    }
-    dispatcher.Wait();
-=======
     // Collect results and synchronize.
     WorkWithScopedParallelism([&]() {
         WorkDispatcher dispatcher;
         TF_FOR_ALL(dlgIt, syncMap) {
             HdSceneDelegate* sceneDelegate = dlgIt->first;
             _RprimSyncRequestVector& r = dlgIt->second;
-            
+
             {
                 _SyncRPrims workerState(
                     sceneDelegate, r, reprs, _tracker, renderParam);
@@ -1668,7 +1638,29 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
             }
         }
     });
->>>>>>> pxr/release
+
+    // XXX:aluk
+    // TODO: Port this to WorkWithScopedParallelism (USD 21.08)
+    // https://github.com/PixarAnimationStudios/USD/commit/5fedc80f816947bbc442c0af220087304e680196
+    WorkDispatcher dispatcher;
+
+    // sync sprims for post sync requests (lights, etc.)
+    TF_FOR_ALL(dlgIt, _postSyncMap) {
+        HdSceneDelegate* sceneDelegate = dlgIt->first;
+        _SprimIndex::PostSyncRequestVector& sprimRequestVector = dlgIt->second.sprimRequestVector;
+        _sprimIndex.SyncPrims(sceneDelegate, sprimRequestVector, renderParam);
+    }
+
+    // sync rprim for postSync delegates
+    TF_FOR_ALL(dlgIt, _postSyncMap) {
+        HdSceneDelegate* sceneDelegate = dlgIt->first;
+
+        _RprimSyncRequestVector& r = reinterpret_cast<_RprimSyncRequestVector&>(dlgIt->second.rprimRequestVector);
+        _SyncRPrims workerState(sceneDelegate, r, reprs, _tracker, renderParam, true);
+
+        _DoSyncRprims(sceneDelegate, dispatcher, workerState, r);
+    }
+    dispatcher.Wait();
 
     // nv end
 
