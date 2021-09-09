@@ -155,7 +155,8 @@ public:
     /// Also updates an internal list of scene delegates for the dirty prims.
     ///
     void SyncPrims(HdChangeTracker &tracker,
-                   HdRenderParam *renderParam);
+                   HdRenderParam *renderParam,
+                   const bool multithreaded=false);
 
     // #nv begin #omni-hydra
     struct PostSyncRequestVector
