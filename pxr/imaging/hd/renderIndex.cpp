@@ -1622,13 +1622,17 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
     TF_FOR_ALL(dlgIt, _postSyncMap) {
         HdSceneDelegate* sceneDelegate = dlgIt->first;
 
-        // sync primvars for instancers
-        for (auto iter : _instancerMap)
+        bool needsUpdate = sceneDelegate->NeedsPostSyncInstancerUpdate();
+        if (needsUpdate)
         {
-            const SdfPath& instanceId = iter.first;
-            HdInstancer* instancer = iter.second;
-            HdDirtyBits dirtyBits = sceneDelegate->GetInstancerDirtyBits(instanceId);
-            instancer->Sync(sceneDelegate, &dirtyBits);
+            // sync primvars for instancers
+            for (auto iter : _instancerMap)
+            {
+                const SdfPath& instanceId = iter.first;
+                HdInstancer* instancer = iter.second;
+                HdDirtyBits dirtyBits = sceneDelegate->GetInstancerDirtyBits(instanceId);
+                instancer->Sync(sceneDelegate, &dirtyBits);
+            }
         }
     }
 
@@ -1657,7 +1661,6 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
 
         _RprimSyncRequestVector& r = reinterpret_cast<_RprimSyncRequestVector&>(dlgIt->second.rprimRequestVector);
         _SyncRPrims workerState(sceneDelegate, r, reprs, _tracker, renderParam, true);
-
         _DoSyncRprims(sceneDelegate, dispatcher, workerState, r);
     }
     dispatcher.Wait();
