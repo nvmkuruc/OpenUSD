@@ -325,6 +325,11 @@ public:
     HD_API
     virtual bool NeedsPostSyncUpdate() const;
 
+    /// Returns true if scene graph instancing is enabled by omni hydra
+    HD_API
+    virtual bool NeedsPostSyncInstancerUpdate() const { return true; }
+
+    // allows scene delegate returns instancer dirty bit instead of change tracker
     HD_API
     virtual HdDirtyBits GetInstancerDirtyBits(const SdfPath& instancerId);
 
