@@ -355,7 +355,10 @@ TfToken HdAovTokensMakeShader(TfToken const& shader);
     /* thread limit settings */                       \
     (threadLimit)                                     \
     /* interactive vs offline */                      \
-    (enableInteractive)
+    (enableInteractive)                               \
+    /* #nv begin #parallel-syncprims */               \
+    (staticMaterialNetworkTopology)                   \
+    /* #nv end */
 
 #define HD_RESOURCE_TYPE_TOKENS                       \
     (texture)                                         \
