@@ -1733,3 +1733,22 @@ material material_MDL_422(
 		)
 )
 );
+
+
+export
+material test_OM_11505(
+	int int_parm = 0.0,
+	uniform int2 int2_parm = int2(2,1),
+	uniform int3 int3_parm = int3(3,0,1),
+	uniform int4 int4_parm = int4(4,0,0,1),
+	uniform float2 float2_parm = float2(2,1),
+	uniform float3 float3_parm = float3(3,0,1),
+	uniform float4 float4_parm = float4(4,0,0,1)
+)
+=  material(surface: material_surface
+(
+        scattering : df::diffuse_reflection_bsdf
+		(
+		)
+)
+);
