@@ -25,7 +25,7 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-UsdMdlTokensType::UsdMdlTokensType() :
+UsdMdlAPITokensType::UsdMdlAPITokensType() :
     infoMdlSourceAsset("info:mdl:sourceAsset", TfToken::Immortal),
     infoMdlSourceAssetSubIdentifier("info:mdl:sourceAsset:subIdentifier", TfToken::Immortal),
     allTokens({
@@ -35,6 +35,6 @@ UsdMdlTokensType::UsdMdlTokensType() :
 {
 }
 
-TfStaticData<UsdMdlTokensType> UsdMdlTokens;
+TfStaticData<UsdMdlAPITokensType> UsdMdlAPITokens;
 
 PXR_NAMESPACE_CLOSE_SCOPE

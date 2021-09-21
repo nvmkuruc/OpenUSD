@@ -5,7 +5,7 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-USDMDL_API bool SetMdlSdk(mi::neuraylib::INeuray * neuray)
+bool SetMdlSdk(mi::neuraylib::INeuray * neuray)
 {
     return mi::neuraylib::Mdl::Get().SetNeuray(neuray);
 }

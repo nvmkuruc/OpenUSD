@@ -8,6 +8,6 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 /// SetMdlSdk()
-USDMDL_API bool SetMdlSdk(mi::neuraylib::INeuray * neuray);
+USDMDLAPI_API bool SetMdlSdk(mi::neuraylib::INeuray * neuray);
 
 PXR_NAMESPACE_CLOSE_SCOPE   

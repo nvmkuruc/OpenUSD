@@ -26,6 +26,6 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// -6: Can not create material instance
 /// -7: Can not get material instance
 ///
-USDMDL_API int UsdShadeMaterialToMdl(const UsdShadeMaterial & usdMaterial, const char * mdlMaterialInstanceName);
+USDMDLAPI_API int UsdShadeMaterialToMdl(const UsdShadeMaterial & usdMaterial, const char * mdlMaterialInstanceName);
 
 PXR_NAMESPACE_CLOSE_SCOPE

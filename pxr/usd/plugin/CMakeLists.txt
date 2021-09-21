@@ -10,8 +10,6 @@ endif()
 add_subdirectory(sdrOsl)
 
 # TODO: Get usdMdl working with minimal builds (no-python, no-imaging, monolithic)
-# XXX:aluk
-# TODO: Get usdMdl compiling with USD 21.08
-#if (${PXR_BUILD_IMAGING})
-#    add_subdirectory(usdMdl)
-#endif()
+if (${PXR_BUILD_IMAGING})
+    add_subdirectory(usdMdl)
+endif()

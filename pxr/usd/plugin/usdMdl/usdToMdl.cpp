@@ -1589,7 +1589,7 @@ std::map<RETURN_CODE, std::string> g_returnMessages =
     , { CanNotGetMaterialInstance, "Can not get material instance" }
 };
 
-USDMDL_API int ConvertUsdMaterialToMdl(const UsdShadeMaterial & usdMaterial, mi::neuraylib::INeuray * neuray, const char * mdlMaterialInstanceName)
+int ConvertUsdMaterialToMdl(const UsdShadeMaterial & usdMaterial, mi::neuraylib::INeuray * neuray, const char * mdlMaterialInstanceName)
 {
     if (!mdlMaterialInstanceName)
     {

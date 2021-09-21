@@ -27,6 +27,7 @@
 #include "pxr/usd/sdf/primSpec.h"
 
 #include "pxr/usd/usd/pyConversions.h"
+#include "pxr/base/tf/pyAnnotatedBoolResult.h"
 #include "pxr/base/tf/pyContainerConversions.h"
 #include "pxr/base/tf/pyResultConversions.h"
 #include "pxr/base/tf/pyUtils.h"
@@ -50,24 +51,51 @@ WRAP_CUSTOM;
 
         
 static UsdAttribute
-_CreateInfoMdlSourceAssetAttr(UsdMdlMdlAPI &self,
+_CreateInfoMdlSourceAssetAttr(UsdMdlAPIMdlAPI &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreateInfoMdlSourceAssetAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Asset), writeSparsely);
 }
         
 static UsdAttribute
-_CreateInfoMdlSourceAssetSubIdentifierAttr(UsdMdlMdlAPI &self,
+_CreateInfoMdlSourceAssetSubIdentifierAttr(UsdMdlAPIMdlAPI &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreateInfoMdlSourceAssetSubIdentifierAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Token), writeSparsely);
 }
 
+static std::string
+_Repr(const UsdMdlAPIMdlAPI &self)
+{
+    std::string primRepr = TfPyRepr(self.GetPrim());
+    return TfStringPrintf(
+        "UsdMdlAPI.MdlAPI(%s)",
+        primRepr.c_str());
+}
+
+struct UsdMdlAPIMdlAPI_CanApplyResult : 
+    public TfPyAnnotatedBoolResult<std::string>
+{
+    UsdMdlAPIMdlAPI_CanApplyResult(bool val, std::string const &msg) :
+        TfPyAnnotatedBoolResult<std::string>(val, msg) {}
+};
+
+static UsdMdlAPIMdlAPI_CanApplyResult
+_WrapCanApply(const UsdPrim& prim)
+{
+    std::string whyNot;
+    bool result = UsdMdlAPIMdlAPI::CanApply(prim, &whyNot);
+    return UsdMdlAPIMdlAPI_CanApplyResult(result, whyNot);
+}
+
 } // anonymous namespace
 
-void wrapUsdMdlMdlAPI()
+void wrapUsdMdlAPIMdlAPI()
 {
-    typedef UsdMdlMdlAPI This;
+    typedef UsdMdlAPIMdlAPI This;
+
+    UsdMdlAPIMdlAPI_CanApplyResult::Wrap<UsdMdlAPIMdlAPI_CanApplyResult>(
+        "_CanApplyResult", "whyNot");
 
     class_<This, bases<UsdAPISchemaBase> >
         cls("MdlAPI");
@@ -79,6 +107,9 @@ void wrapUsdMdlMdlAPI()
 
         .def("Get", &This::Get, (arg("stage"), arg("path")))
         .staticmethod("Get")
+
+        .def("CanApply", &_WrapCanApply, (arg("prim")))
+        .staticmethod("CanApply")
 
         .def("Apply", &This::Apply, (arg("prim")))
         .staticmethod("Apply")
@@ -110,6 +141,7 @@ void wrapUsdMdlMdlAPI()
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
 
+        .def("__repr__", ::_Repr)
     ;
 
     _CustomWrapCode(cls);
@@ -138,9 +170,9 @@ namespace {
 
 WRAP_CUSTOM {
     _class
-        .def("Validate", &UsdMdlMdlAPI::Validate, (arg("prim")))
+        .def("Validate", &UsdMdlAPIMdlAPI::Validate, (arg("prim")))
         .staticmethod("Validate")
-        .def("ApplyAndValidate", &UsdMdlMdlAPI::ApplyAndValidate, (arg("prim")))
+        .def("ApplyAndValidate", &UsdMdlAPIMdlAPI::ApplyAndValidate, (arg("prim")))
         .staticmethod("ApplyAndValidate")
     ;
 }

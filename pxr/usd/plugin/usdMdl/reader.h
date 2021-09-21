@@ -28,7 +28,7 @@ TF_DECLARE_WEAK_PTRS(UsdStage);
 /// have all of the look variants.  It will have references into
 /// \p internalPath.  Clients are expected to reference the prim at
 /// \p externalPath to apply looks.
-USDMDL_LOCAL
+USDMDLAPI_API
 void UsdMdlRead(mi::neuraylib::Module& mdl,
                  const UsdStagePtr& stage,
                  const SdfPath& internalPath = SdfPath("/MDL"),

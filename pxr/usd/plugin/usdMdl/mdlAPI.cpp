@@ -34,7 +34,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 // Register the schema with the TfType system.
 TF_REGISTRY_FUNCTION(TfType)
 {
-    TfType::Define<UsdMdlMdlAPI,
+    TfType::Define<UsdMdlAPIMdlAPI,
         TfType::Bases< UsdAPISchemaBase > >();
     
 }
@@ -45,46 +45,57 @@ TF_DEFINE_PRIVATE_TOKENS(
 );
 
 /* virtual */
-UsdMdlMdlAPI::~UsdMdlMdlAPI()
+UsdMdlAPIMdlAPI::~UsdMdlAPIMdlAPI()
 {
 }
 
 /* static */
-UsdMdlMdlAPI
-UsdMdlMdlAPI::Get(const UsdStagePtr &stage, const SdfPath &path)
+UsdMdlAPIMdlAPI
+UsdMdlAPIMdlAPI::Get(const UsdStagePtr &stage, const SdfPath &path)
 {
     if (!stage) {
         TF_CODING_ERROR("Invalid stage");
-        return UsdMdlMdlAPI();
+        return UsdMdlAPIMdlAPI();
     }
-    return UsdMdlMdlAPI(stage->GetPrimAtPath(path));
+    return UsdMdlAPIMdlAPI(stage->GetPrimAtPath(path));
 }
 
 
 /* virtual */
-UsdSchemaType UsdMdlMdlAPI::_GetSchemaType() const {
-    return UsdMdlMdlAPI::schemaType;
+UsdSchemaKind UsdMdlAPIMdlAPI::_GetSchemaKind() const
+{
+    return UsdMdlAPIMdlAPI::schemaKind;
 }
 
 /* static */
-UsdMdlMdlAPI
-UsdMdlMdlAPI::Apply(const UsdPrim &prim)
+bool
+UsdMdlAPIMdlAPI::CanApply(
+    const UsdPrim &prim, std::string *whyNot)
 {
-    return UsdAPISchemaBase::_ApplyAPISchema<UsdMdlMdlAPI>(
-            prim, _schemaTokens->MdlAPI);
+    return prim.CanApplyAPI<UsdMdlAPIMdlAPI>(whyNot);
+}
+
+/* static */
+UsdMdlAPIMdlAPI
+UsdMdlAPIMdlAPI::Apply(const UsdPrim &prim)
+{
+    if (prim.ApplyAPI<UsdMdlAPIMdlAPI>()) {
+        return UsdMdlAPIMdlAPI(prim);
+    }
+    return UsdMdlAPIMdlAPI();
 }
 
 /* static */
 const TfType &
-UsdMdlMdlAPI::_GetStaticTfType()
+UsdMdlAPIMdlAPI::_GetStaticTfType()
 {
-    static TfType tfType = TfType::Find<UsdMdlMdlAPI>();
+    static TfType tfType = TfType::Find<UsdMdlAPIMdlAPI>();
     return tfType;
 }
 
 /* static */
 bool 
-UsdMdlMdlAPI::_IsTypedSchema()
+UsdMdlAPIMdlAPI::_IsTypedSchema()
 {
     static bool isTyped = _GetStaticTfType().IsA<UsdTyped>();
     return isTyped;
@@ -92,41 +103,41 @@ UsdMdlMdlAPI::_IsTypedSchema()
 
 /* virtual */
 const TfType &
-UsdMdlMdlAPI::_GetTfType() const
+UsdMdlAPIMdlAPI::_GetTfType() const
 {
     return _GetStaticTfType();
 }
 
 UsdAttribute
-UsdMdlMdlAPI::GetInfoMdlSourceAssetAttr() const
+UsdMdlAPIMdlAPI::GetInfoMdlSourceAssetAttr() const
 {
-    return GetPrim().GetAttribute(UsdMdlTokens->infoMdlSourceAsset);
+    return GetPrim().GetAttribute(UsdMdlAPITokens->infoMdlSourceAsset);
 }
 
 UsdAttribute
-UsdMdlMdlAPI::CreateInfoMdlSourceAssetAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdMdlAPIMdlAPI::CreateInfoMdlSourceAssetAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdMdlTokens->infoMdlSourceAsset,
+    return UsdSchemaBase::_CreateAttr(UsdMdlAPITokens->infoMdlSourceAsset,
                        SdfValueTypeNames->Asset,
                        /* custom = */ false,
-                       SdfVariabilityUniform,
+                       SdfVariabilityVarying,
                        defaultValue,
                        writeSparsely);
 }
 
 UsdAttribute
-UsdMdlMdlAPI::GetInfoMdlSourceAssetSubIdentifierAttr() const
+UsdMdlAPIMdlAPI::GetInfoMdlSourceAssetSubIdentifierAttr() const
 {
-    return GetPrim().GetAttribute(UsdMdlTokens->infoMdlSourceAssetSubIdentifier);
+    return GetPrim().GetAttribute(UsdMdlAPITokens->infoMdlSourceAssetSubIdentifier);
 }
 
 UsdAttribute
-UsdMdlMdlAPI::CreateInfoMdlSourceAssetSubIdentifierAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdMdlAPIMdlAPI::CreateInfoMdlSourceAssetSubIdentifierAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdMdlTokens->infoMdlSourceAssetSubIdentifier,
+    return UsdSchemaBase::_CreateAttr(UsdMdlAPITokens->infoMdlSourceAssetSubIdentifier,
                        SdfValueTypeNames->Token,
                        /* custom = */ false,
-                       SdfVariabilityUniform,
+                       SdfVariabilityVarying,
                        defaultValue,
                        writeSparsely);
 }
@@ -145,11 +156,11 @@ _ConcatenateAttributeNames(const TfTokenVector& left,const TfTokenVector& right)
 
 /*static*/
 const TfTokenVector&
-UsdMdlMdlAPI::GetSchemaAttributeNames(bool includeInherited)
+UsdMdlAPIMdlAPI::GetSchemaAttributeNames(bool includeInherited)
 {
     static TfTokenVector localNames = {
-        UsdMdlTokens->infoMdlSourceAsset,
-        UsdMdlTokens->infoMdlSourceAssetSubIdentifier,
+        UsdMdlAPITokens->infoMdlSourceAsset,
+        UsdMdlAPITokens->infoMdlSourceAssetSubIdentifier,
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(
