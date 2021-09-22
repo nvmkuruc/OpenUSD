@@ -561,15 +561,15 @@ UsdSkelImagingSkeletonAdapter::ProcessPrimResync(
                     {
                         _skelAnimMap[primPath].erase(skelPath);
                     }
-                    //Refresh SkelAnimQuery no matter remove or resync, remove and repopulate are handled here.
-                    RefreshSkeletonQuery(skelPath, UsdSkelTokens->skelAnimationSource, index);
 
-                    //maybe not necessary, but better to refresh all skelanimQuery's attribute query when anim prim resync.
                     RefreshAnimQuery(primPath, UsdSkelTokens->translations, index);
                     RefreshAnimQuery(primPath, UsdSkelTokens->rotations, index);
                     RefreshAnimQuery(primPath, UsdSkelTokens->scales, index);
                     RefreshAnimQuery(primPath, UsdSkelTokens->joints, index);
                     RefreshAnimQuery(primPath, UsdSkelTokens->blendShapeWeights, index);
+
+                    //Refresh SkelAnimQuery no matter remove or resync, remove and repopulate are handled here.
+                    RefreshSkeletonQuery(skelPath, UsdSkelTokens->skelAnimationSource, index);
 
                 }
             }
