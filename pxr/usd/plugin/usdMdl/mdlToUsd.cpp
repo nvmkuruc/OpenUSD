@@ -368,7 +368,7 @@ ConversionTable theConversionTable;
 const char * MdlToUsd::KEY_MDL_TYPE_INFO = "mdl:type";
 VtValue GetValueFromArrayOfMatrix(const IExpression * expression, MdlToUsd::ExtraInfo & extra);
 
-TfToken MdlToUsd::ConvertComplexType(const IType * type) const
+SdfValueTypeName MdlToUsd::ConvertComplexType(const IType * type) const
 {
     if (type->get_kind() == mi::neuraylib::IType::TK_ALIAS)
     {
@@ -385,13 +385,13 @@ TfToken MdlToUsd::ConvertComplexType(const IType * type) const
         SdfValueTypeName typeName;
         if (theConversionTable.getSdfValueTypeName(type, typeName))
         {
-            return typeName.GetAsToken();
+            return typeName;
         }
     }
-    return TfToken();
+    return {};
 }
 
-TfToken MdlToUsd::ConvertType(const IType * type) const
+SdfValueTypeName MdlToUsd::ConvertType(const IType * type) const
 {
     mi::neuraylib::IType::Kind kind(type->get_kind());
     TYPENAMEMAP::const_iterator itname(m_TypeNameMap.find(kind));
@@ -404,14 +404,13 @@ TfToken MdlToUsd::ConvertType(const IType * type) const
     if (it != m_TypeMap.end())
     {
         //mi::neuraylib::Mdl::LogVerbose("[MdlToUsd] Kind converted as token: " + itnamestr);
-        return it->second.GetAsToken();
+        return it->second;
     }
 
     // Try other types
-    TfToken tk(ConvertComplexType(type));
-    if (!tk.IsEmpty())
+    if (SdfValueTypeName complexType = ConvertComplexType(type))
     {
-        return tk;
+        return complexType;
     }
 
     if (itname != m_TypeNameMap.end())
@@ -422,7 +421,7 @@ TfToken MdlToUsd::ConvertType(const IType * type) const
     {
         mi::neuraylib::Mdl::LogError("[MdlToUsd] Unknown type");
     }
-    return TfToken();
+    return {};
 }
 
 template<class neurayType, class gfType> VtValue GetValueFromArrayOfVector(const mi::neuraylib::IValue_array * valuearray, mi::Size numberOfElements, mi::Size vectorElementSize)
@@ -632,13 +631,13 @@ VtValue GetValueFromBsdfMeasurement(const mi::neuraylib::IExpression * value)
     return GetValueFromResource(value);
 }
 
-VtValue MdlToUsd::GetValue(const IType * type, const IExpression * value, TfToken & typeOut, ExtraInfo & extra) const
+VtValue MdlToUsd::GetValue(const IType * type, const IExpression * value, SdfValueTypeName & typeOut, ExtraInfo & extra) const
 {
     if (value->get_kind() == mi::neuraylib::IExpression::EK_CALL)
     {
         mi::base::Handle<const mi::neuraylib::IExpression_call> callexpr(value->get_interface<mi::neuraylib::IExpression_call>());
         const char* call(callexpr->get_call());
-        typeOut = SdfValueTypeNames->Token.GetAsToken();
+        typeOut = SdfValueTypeNames->Token;
         extra.m_valueType = ExtraInfo::VTT_CALL;
         return VtValue(std::string(call));
     }
@@ -2187,7 +2186,7 @@ void MdlToUsd::extractAnnotations(const mi::neuraylib::IAnnotation_block * annot
                             mi::base::Handle<const mi::neuraylib::IType> type(expression->get_type());
                             if (type)
                             {
-                                TfToken typeOut;
+                                SdfValueTypeName typeOut;
                                 ExtraInfo extra;
                                 MdlToUsd converter;
                                 VtValue value(converter.GetValue(type.get(), expression.get(), typeOut, extra));

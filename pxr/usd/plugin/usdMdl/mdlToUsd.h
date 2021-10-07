@@ -48,10 +48,10 @@ public:
 
 public:
     /// Get USD value of an MDL value
-    VtValue GetValue(const mi::neuraylib::IType * type, const mi::neuraylib::IExpression * value, TfToken & typeOut, ExtraInfo & extra) const;
+    VtValue GetValue(const mi::neuraylib::IType * type, const mi::neuraylib::IExpression * value, SdfValueTypeName& typeOut, ExtraInfo & extra) const;
 
     /// Get USD type for a given MDL type
-    TfToken ConvertType(const mi::neuraylib::IType * type) const;
+    SdfValueTypeName ConvertType(const mi::neuraylib::IType * type) const;
 
 public:
     /// Extract annotations
@@ -116,7 +116,7 @@ private:
     VtValue GetValueFromVector(const mi::neuraylib::IExpression * value, ExtraInfo & extra) const;
     VtValue GetValueFromMatrix(const mi::neuraylib::IExpression * expression, ExtraInfo & extra) const;
     template<class T> VtValue ConvertValue(const mi::neuraylib::IExpression * expression) const;
-    TfToken ConvertComplexType(const mi::neuraylib::IType * type) const;
+    SdfValueTypeName ConvertComplexType(const mi::neuraylib::IType * type) const;
     template<class MdlElementType, class USDElementType> VtValue ConvertArrayValue(const mi::neuraylib::IExpression * expression) const;
 };
 
