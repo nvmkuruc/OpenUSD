@@ -49,6 +49,35 @@ TF_DEFINE_PRIVATE_TOKENS(
     ((defaultOutputName, "result"))
 );
 
+// Subclass SdrShaderProperty to return a better NdrSdfTypeIndicator/SdfTypeIndicator for the property
+//
+class MDLShaderProperty final : public SdrShaderProperty {
+public:
+    MDLShaderProperty(
+        TfToken name, SdfValueTypeName typeName, VtValue defaultValue, bool isOutput,
+        size_t arraySize, NdrTokenMap metadata, NdrTokenMap hints, NdrOptionVec options)
+        : SdrShaderProperty(std::move(name), typeName.GetAsToken(), std::move(defaultValue), isOutput, arraySize, std::move(metadata), std::move(hints), std::move(options))
+        , m_typeName(std::move(typeName))
+    {
+    }
+    ~MDLShaderProperty() override
+    {
+    }
+
+#if PXR_VERSION >= 2108
+    const NdrSdfTypeIndicator
+#else
+    const SdfTypeIndicator
+#endif
+    GetTypeAsSdfType() const override
+    {
+        return { m_typeName, m_typeName.GetAsToken() };
+    }
+
+private:
+    const SdfValueTypeName m_typeName;
+};
+
 class ShaderBuilder
 {
 private:
@@ -59,11 +88,11 @@ private:
     mi::base::Handle<mi::neuraylib::IMdl_compiler> m_mdl_compiler;
     mi::base::Handle<mi::neuraylib::IMdl_factory> m_mdl_factory;
 private:
-    bool ConvertParm(const IType * type, const IExpression * defaultValue, TfToken & typeOut, VtValue & defaultValueOut, MdlToUsd::ExtraInfo & extra)
+    bool ConvertParm(const IType * type, const IExpression * defaultValue, SdfValueTypeName& typeOut, VtValue & defaultValueOut, MdlToUsd::ExtraInfo & extra)
     {
         MdlToUsd converter;
         typeOut = converter.ConvertType(type);
-        if (typeOut.IsEmpty())
+        if (!typeOut)
         {
             return false;
         }
@@ -100,11 +129,11 @@ private:
                 continue;
             }
 
-            TfToken type;
+            SdfValueTypeName sdfType;
             VtValue defaultValue;
 
             MdlToUsd::ExtraInfo extra;
-            if (!ConvertParm(parm_type.get(), defaultexp.get(), type, defaultValue, extra))
+            if (!ConvertParm(parm_type.get(), defaultexp.get(), sdfType, defaultValue, extra))
             {
                 mi::neuraylib::Mdl::LogError("[ShaderBuilder] Failed to convert " + std::string(scene_element->get_mdl_name()) + " " + parm_name);
                 continue;
@@ -139,7 +168,7 @@ private:
                     {
                         if (std::getline(input2_stringstream, enumValue, ':'))
                         {
-			  options.emplace_back(NdrOption(std::make_pair(TfToken(enumDisplayName), TfToken(enumValue))));
+			                options.emplace_back(NdrOption(std::make_pair(TfToken(enumDisplayName), TfToken(enumValue))));
                         }
                     }
                 }
@@ -164,16 +193,16 @@ private:
             storeAnnotations(customdata, metadata);
 
             // Add the property.
-            properties.push_back(
-                SdrShaderPropertyUniquePtr(
-                    new SdrShaderProperty(name,
-                                            type,
-                                            defaultValue,
-                                            isOutput,
-                                            defaultValue.IsArrayValued() ? defaultValue.GetArraySize() : 0,
-                                            metadata,
-                                            hints,
-                                            options)));
+            const size_t arraySize = defaultValue.IsArrayValued() ? defaultValue.GetArraySize() : 0;
+            properties.emplace_back(std::make_unique<MDLShaderProperty>(
+                                          std::move(name),
+                                          std::move(sdfType),
+                                          std::move(defaultValue),
+                                          isOutput,
+                                          arraySize,
+                                          std::move(metadata),
+                                          std::move(hints),
+                                          std::move(options)));
         }
         return true;
     }
