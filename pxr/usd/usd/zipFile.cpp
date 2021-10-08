@@ -106,7 +106,7 @@ private:
 
 struct _OutputStream 
 {
-    _OutputStream(ArchFile* f) : _f(f), _ofs(0) { }
+    _OutputStream(ArchFile* f) : _f(f), _ofs(f->GetFileLength()) { }
 
     template <class T>
     inline void Write(const T& value)
