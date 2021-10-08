@@ -182,6 +182,11 @@ pxr_install_test_dir(
 )
 
 pxr_install_test_dir(
+    SRC testenv/testUsdGeomCamera
+    DEST testUsdGeomCamera
+)
+
+pxr_install_test_dir(
     SRC testenv/testUsdGeomConsts
     DEST testUsdGeomConsts
 )

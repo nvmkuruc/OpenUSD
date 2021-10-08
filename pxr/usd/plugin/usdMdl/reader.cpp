@@ -124,18 +124,17 @@ private:
                 mi::neuraylib::Mdl::LogError("[processExpressionList] Skip bogus parameter, no value or type: " + parmName);
                 continue;
             }
-            TfToken typeOut(converter.ConvertType(type.get()));
-            if (typeOut.IsEmpty())
+            SdfValueTypeName typeName = converter.ConvertType(type.get());
+            if (!typeName)
             {
                 mi::neuraylib::Mdl::LogError("[processExpressionList] Skip bogus parameter, no value or type" + parmName);
                 continue;
             }
             // Convert parameter value to USD
             MdlToUsd::ExtraInfo extra;
-            VtValue expressionOut(converter.GetValue(type.get(), expression.get(), typeOut, extra));
+            VtValue expressionOut(converter.GetValue(type.get(), expression.get(), typeName, extra));
 
             // Create input property
-            SdfValueTypeName typeName(SdfSchema::GetInstance().FindType(typeOut.GetString()));
             UsdShadeInput shadeInput(usdShaderOrMaterial->CreateInput(TfToken(name), typeName));
 
             // Name of annotation, string value for annotation
