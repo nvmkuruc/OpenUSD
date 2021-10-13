@@ -84,17 +84,6 @@ TfAtomicOfstreamWrapper::Open(
     // with the same file name.
     ArchCloseFile(tmpFd);
 
-<<<<<<< HEAD
-// #nv begin #win32-utf-8
-#if defined(ARCH_OS_WINDOWS)
-    _stream.open(ArchWindowsUtf8ToUtf16(_tmpFilePath).c_str(),
-                 std::fstream::out | std::fstream::binary | std::fstream::trunc);
-#else
-    _stream.open(_tmpFilePath.c_str(),
-                 std::fstream::out | std::fstream::binary | std::fstream::trunc);
-#endif
-// #nv end
-=======
 #if defined(ARCH_OS_WINDOWS)
     _stream.open(ArchWindowsUtf8ToUtf16(_tmpFilePath).c_str(),
                  std::fstream::out|std::fstream::binary|std::fstream::trunc);
@@ -102,7 +91,6 @@ TfAtomicOfstreamWrapper::Open(
     _stream.open(_tmpFilePath.c_str(),
         std::fstream::out | std::fstream::binary | std::fstream::trunc);
 #endif
->>>>>>> pxr/dev
     if (!_stream) {
         if (reason) {
             *reason = TfStringPrintf(

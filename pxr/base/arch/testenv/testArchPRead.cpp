@@ -49,7 +49,9 @@ int main(int argc, char** argv)
         return 1;
     }
 
-
+    // XXX:aluk
+    // TODO: Resolve merge conflict
+#if 0
     auto close_file = [](FILE* f) { fclose(f); };
     std::unique_ptr<FILE, decltype(close_file)> f(
         fopen(filename.c_str(), "r"), close_file);
@@ -71,6 +73,7 @@ int main(int argc, char** argv)
     const std::string lastNBytes(
         fileContents.get() + fileSize - bytesFromEnd, bytesFromEnd);
     printf("%s", lastNBytes.c_str());
+#endif
 
     return 0;
 }

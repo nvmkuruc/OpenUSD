@@ -286,15 +286,9 @@ TfReadLink(string const& path)
 bool TfIsRelativePath(std::string const& path)
 {
 #if defined(ARCH_OS_WINDOWS)
-// #nv begin #win32-utf-8
     return path.empty() ||
-<<<<<<< HEAD
-        (PathIsRelativeW(ArchWindowsUtf8ToUtf16(path).c_str()) && path[0] != '/' && path[0] != '\\');
-// #nv end
-=======
         (PathIsRelativeW(ArchWindowsUtf8ToUtf16(path).c_str()) &&
          path[0] != '/' && path[0] != '\\');
->>>>>>> pxr/dev
 #else
     return path.empty() || path[0] != '/';
 #endif
@@ -350,14 +344,8 @@ Tf_Glob(
         // Conveniently GetFileAttributes() works on paths with a trailing
         // backslash.
         string path = prefix + pattern;
-<<<<<<< HEAD
-// #nv begin #win32-utf-8
-        const DWORD attributes = GetFileAttributesW(ArchWindowsUtf8ToUtf16(path).c_str());
-// #nv end
-=======
             const DWORD attributes =
                 GetFileAttributesW(ArchWindowsUtf8ToUtf16(path).c_str());
->>>>>>> pxr/dev
         if (attributes != INVALID_FILE_ATTRIBUTES) {
             // File exists.
 
@@ -390,18 +378,6 @@ Tf_Glob(
         const string leftmostDir = TfGetPathName(leftmostPattern);
 
         // Glob the leftmost pattern.
-<<<<<<< HEAD
-// #nv begin #win32-utf-8
-        WIN32_FIND_DATAW data;
-        HANDLE find = FindFirstFileW(ArchWindowsUtf8ToUtf16(leftmostPattern).c_str(), &data);
-        if (find != INVALID_HANDLE_VALUE) {
-            do {
-                // Recurse with next pattern.
-                Tf_Glob(result, leftmostDir + ArchWindowsUtf16ToUtf8(data.cFileName).c_str(),
-                        remainingPattern, flags);
-            } while (FindNextFileW(find, &data));
-// #nv end
-=======
         WIN32_FIND_DATAW data;
             HANDLE find = FindFirstFileW(
                 ArchWindowsUtf8ToUtf16(leftmostPattern).c_str(), &data);
@@ -412,7 +388,6 @@ Tf_Glob(
                         leftmostDir + ArchWindowsUtf16ToUtf8(data.cFileName),
                         remainingPattern, flags);
             } while (FindNextFileW(find, &data));
->>>>>>> pxr/dev
             FindClose(find);
         }
     }
