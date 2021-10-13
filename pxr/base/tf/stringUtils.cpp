@@ -321,7 +321,10 @@ TfGetBaseName(const string& fileName)
     if (i == fileName.size() - 1)    // ends in directory delimiter
         return TfGetBaseName(fileName.substr(0, i));
 #if defined(ARCH_OS_WINDOWS)
+<<<<<<< HEAD
 // #nv begin #win32-utf-8
+=======
+>>>>>>> pxr/dev
     const std::wstring wfileName{ ArchWindowsUtf8ToUtf16(fileName) };
     LPWSTR result = PathFindFileNameW(wfileName.c_str());
 
@@ -338,7 +341,10 @@ TfGetBaseName(const string& fileName)
         }
     }
     return ArchWindowsUtf16ToUtf8(result);
+<<<<<<< HEAD
 // #nv end
+=======
+>>>>>>> pxr/dev
 
 #else
     if (i == string::npos)                      // no / in name

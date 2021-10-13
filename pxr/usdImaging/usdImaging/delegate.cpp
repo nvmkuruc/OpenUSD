@@ -58,7 +58,7 @@
 #include "pxr/usd/usdGeom/metrics.h"
 #include "pxr/usd/usdGeom/modelAPI.h"
 
-#include "pxr/usd/usdLux/light.h"
+#include "pxr/usd/usdLux/lightAPI.h"
 #include "pxr/usd/usdLux/lightFilter.h"
 
 //+NV_CHANGE BRONG
@@ -93,11 +93,15 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
     (lightFilterType)
+<<<<<<< HEAD
     (textureMemory)
 
     //+NV_CHANGE BRONG
     (Skeleton)
     //-NV_CHANGE BRONG
+=======
+    (LightAPI)
+>>>>>>> pxr/dev
 );
 
 // This environment variable matches a set of similar ones in
@@ -193,7 +197,6 @@ UsdImagingDelegate::~UsdImagingDelegate()
     HdRenderIndex& index = GetRenderIndex();
     index.RemoveSubtree(GetDelegateID(), this);
 
-    _instancerPrimCachePaths.clear();
     _refineLevelMap.clear();
     _pickablesMap.clear();
     _hdPrimInfoMap.clear();
@@ -276,7 +279,18 @@ UsdImagingDelegate::_AdapterLookup(UsdPrim const& prim, bool ignoreInstancing)
         adapterKey = prim.GetPrimTypeInfo().GetSchemaTypeName();
     }
 
-    return _AdapterLookup(adapterKey);
+    const UsdImagingPrimAdapterSharedPtr &adapter = _AdapterLookup(adapterKey);
+
+    // If we couldn't find an adapter and the prim has an applied UsdLuxLightAPI, 
+    // look up the adapter for LightAPI and treat the prim as a light.
+    // XXX: Note that this only works for prims that aren't renderable through
+    // another adapter. So something like a UsdGeomMesh with a LightAPI applied
+    // will not return a light adapter. Support for this is expected to be added
+    // in the future.
+    if (!adapter && prim.HasAPI<UsdLuxLightAPI>()) {
+        return _AdapterLookup(_tokens->LightAPI);
+    }
+    return adapter;
 }
 
 UsdImagingPrimAdapterSharedPtr const& 
@@ -406,6 +420,12 @@ public:
 #endif
     // nv end
 
+    template <class ForwardIter>
+    typename std::enable_if<!std::is_integral<ForwardIter>::value>::type
+    AddTasks(ForwardIter begin, ForwardIter end) {
+        _tasks.insert(_tasks.end(), begin, end);
+    }
+
     size_t GetTaskCount() {
         return _tasks.size();
     }
@@ -471,17 +491,21 @@ public:
             // nv end
 
             _HdPrimInfo *primInfo = _delegate->_GetHdPrimInfo(cachePath);
-            if (TF_VERIFY(primInfo, "%s\n", cachePath.GetText())) {
-                UsdImagingPrimAdapterSharedPtr const& adapter=primInfo->adapter;
-                if (TF_VERIFY(adapter, "%s\n", cachePath.GetText())) {
-                    adapter->UpdateForTime(primInfo->usdPrim,
-                                           cachePath,
-                                           time,
-                                           primInfo->dirtyBits);
+            if (!primInfo) {
+                // Note: if something was invalidated and then deleted,
+                // it can still be in the _dirtyCachePaths list. This isn't
+                // an error, but there's no work to do.
+                continue;
+            }
+            UsdImagingPrimAdapterSharedPtr const& adapter=primInfo->adapter;
+            if (TF_VERIFY(adapter, "%s\n", cachePath.GetText())) {
+                adapter->UpdateForTime(primInfo->usdPrim,
+                                       cachePath,
+                                       time,
+                                       primInfo->dirtyBits);
 
-                    // Prim is now clean
-                    primInfo->dirtyBits = 0;
-                }
+                // Prim is now clean
+                primInfo->dirtyBits = 0;
             }
         }
     }
@@ -615,72 +639,35 @@ UsdImagingDelegate::SyncAll(bool includeUnvarying)
 void
 UsdImagingDelegate::Sync(HdSyncRequestVector* request)
 {
+    TRACE_FUNCTION();
+
+    if (_dirtyCachePaths.empty()) {
+        return;
+    }
+
     UsdImagingDelegate::_Worker worker(this);
-    if (!TF_VERIFY(request)) {
-        return;
-    }
-    if (!TF_VERIFY(request->IDs.size() == request->dirtyBits.size())) {
-        return;
-    }
 
-    // Iterate over each HdSyncRequest.
-    for (size_t i = 0; i < request->IDs.size(); i++) {
-
-        // Note that the incoming ID may be prefixed with the DelegateID, so we
-        // must translate it via ConvertIndexPathToCachePath.
-        SdfPath cachePath = ConvertIndexPathToCachePath(request->IDs[i]);
-        HdDirtyBits dirtyFlags = request->dirtyBits[i];
-
-        _HdPrimInfo *primInfo = _GetHdPrimInfo(cachePath);
-        if (!TF_VERIFY(primInfo != nullptr, "%s\n", cachePath.GetText())) {
-            continue;
-        }
-
-        // Merge UsdImaging's own dirty flags with those coming from hydra.
-        primInfo->dirtyBits |= dirtyFlags;
-
-        UsdImagingPrimAdapterSharedPtr &adapter = primInfo->adapter;
-        if (TF_VERIFY(adapter, "%s\n", cachePath.GetText())) {
+    if (TfDebug::IsEnabled(USDIMAGING_UPDATES)) {
+        for (SdfPath const& cachePath : _dirtyCachePaths) {
+            _HdPrimInfo *primInfo = _GetHdPrimInfo(cachePath);
+            if (!primInfo) {
+                // Note: if something was invalidated and then deleted,
+                // it can still be in the _dirtyCachePaths list. This isn't
+                // an error, but there's no work to do.
+                continue;
+            }
             TF_DEBUG(USDIMAGING_UPDATES).Msg(
                     "[Sync] PREP: <%s> dirtyFlags: 0x%x [%s]\n",
                     cachePath.GetText(), 
                     primInfo->dirtyBits,
                     HdChangeTracker::StringifyDirtyBits(primInfo->dirtyBits).c_str());
-
-            worker.AddTask(cachePath);
         }
     }
 
-    // We always include instancers.
-    for (SdfPath const& cachePath: _instancerPrimCachePaths) {
-        _HdPrimInfo *primInfo = _GetHdPrimInfo(cachePath);
-        if (!TF_VERIFY(primInfo != nullptr, "%s\n", cachePath.GetText())) {
-            continue;
-        }
-
-        if (primInfo->dirtyBits == HdChangeTracker::Clean) {
-            continue;
-        }
-
-        UsdImagingPrimAdapterSharedPtr &adapter = primInfo->adapter;
-        if (TF_VERIFY(adapter, "%s\n", cachePath.GetText())) {
-            TF_DEBUG(USDIMAGING_UPDATES).Msg(
-                    "[Sync] PREP Instancer: <%s> dirtyFlags: 0x%x [%s]\n",
-                    cachePath.GetText(),
-                    primInfo->dirtyBits,
-                    HdChangeTracker::StringifyDirtyBits(
-                                              primInfo->dirtyBits).c_str());
-            worker.AddTask(cachePath);
-        }
-    }
+    worker.AddTasks(_dirtyCachePaths.begin(), _dirtyCachePaths.end());
+    _dirtyCachePaths.clear();
 
     _ExecuteWorkForTimeUpdate(&worker);
-}
-
-void
-UsdImagingDelegate::PostSyncCleanup()
-{
-    _primvarDescCache.GarbageCollect();
 }
 
 void
@@ -1257,6 +1244,7 @@ UsdImagingDelegate::ApplyPendingUpdates()
 
     UsdImagingDelegate::_Worker worker(this);
     UsdImagingIndexProxy indexProxy(this, &worker);
+    SdfPathSet allTrackedVariabilityPaths;
 
     if (!_usdPathsToResync.empty()) {
         // Make a copy of _usdPathsToResync but uniqued with a
@@ -1274,18 +1262,23 @@ UsdImagingDelegate::ApplyPendingUpdates()
 
         for (SdfPath const& usdPath: usdPathsToResync) {
             if (usdPath.IsPropertyPath()) {
+<<<<<<< HEAD
 
                 //+NV_CHANGE BRONG
                 _ResyncUsdAttrQuery(usdPath, &indexProxy);
                 //-NV_CHANGE BRONG
 
                 _RefreshUsdObject(usdPath, TfTokenVector(), &indexProxy);
+=======
+                _RefreshUsdObject(usdPath, TfTokenVector(),
+                                  &indexProxy, &allTrackedVariabilityPaths);
+>>>>>>> pxr/dev
             } else if (usdPath.IsTargetPath()) {
                 // TargetPaths are their own path type, when they change, resync
                 // the relationship at which they're rooted; i.e. per-target
                 // invalidation is not supported.
                 _RefreshUsdObject(usdPath.GetParentPath(), TfTokenVector(),
-                               &indexProxy);
+                                  &indexProxy, &allTrackedVariabilityPaths);
             } else if (usdPath.IsAbsoluteRootOrPrimPath()) {
                 _ResyncUsdPrim(usdPath, &indexProxy);
             } else {
@@ -1314,7 +1307,8 @@ UsdImagingDelegate::ApplyPendingUpdates()
 
                 // Note that changedPrimInfoFields will be empty if the
                 // path is a property path.
-                _RefreshUsdObject(usdPath, changedPrimInfoFields, &indexProxy);
+                _RefreshUsdObject(usdPath, changedPrimInfoFields,
+                                  &indexProxy, &allTrackedVariabilityPaths);
 
                 // If any objects were removed as a result of the refresh (if it
                 // internally decided to resync), they must be ejected now,
@@ -1769,7 +1763,11 @@ void
 UsdImagingDelegate::_RefreshUsdObject(SdfPath const& usdPath, 
                                       TfTokenVector const& changedInfoFields,
                                       UsdImagingIndexProxy* proxy,
+<<<<<<< HEAD
                                       bool checkVariability)
+=======
+                                      SdfPathSet* allTrackedVariabilityPaths) 
+>>>>>>> pxr/dev
 {
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
@@ -1927,6 +1925,7 @@ UsdImagingDelegate::_RefreshUsdObject(SdfPath const& usdPath,
             if (dirtyBits == HdChangeTracker::Clean) {
                 // Do nothing
             } else if (dirtyBits != HdChangeTracker::AllDirty) {
+<<<<<<< HEAD
                 // Update Variability
                 _timeVaryingPrimCacheValid = false;
                 primInfo->timeVaryingBits = HdChangeTracker::Clean;
@@ -1936,6 +1935,19 @@ UsdImagingDelegate::_RefreshUsdObject(SdfPath const& usdPath,
                                           nullptr /*instancerContext*/,
                                           checkVariability);
                                           // nv end
+=======
+                // Update variability, if we haven't already done so for this
+                // prim while refreshing another prim that affects this one.
+                if (allTrackedVariabilityPaths->find(affectedCachePath) ==
+                    allTrackedVariabilityPaths->end()) {
+                    _timeVaryingPrimCacheValid = false;
+                    primInfo->timeVaryingBits = HdChangeTracker::Clean;
+                    adapter->TrackVariability(primInfo->usdPrim,
+                                              affectedCachePath,
+                                              &primInfo->timeVaryingBits);
+                    allTrackedVariabilityPaths->insert(affectedCachePath);
+                }
+>>>>>>> pxr/dev
 
                 // Propagate the dirty bits back out to the change tracker.
                 HdDirtyBits combinedBits =
@@ -3281,7 +3293,7 @@ UsdImagingDelegate::GetLightParamValue(SdfPath const &id,
     if (!TF_VERIFY(prim)) {
         return VtValue();
     }
-    UsdLuxLight light = UsdLuxLight(prim);
+    UsdLuxLightAPI light = UsdLuxLightAPI(prim);
     if (!light) {
         // Its ok that this is not a light. Lets assume its a light filter.
         // Asking for the lightFilterType is the render delegates way of

@@ -90,8 +90,6 @@ struct HdMaterialRelationship {
 HD_API
 bool operator==(const HdMaterialRelationship& lhs, 
                 const HdMaterialRelationship& rhs);
-HD_API
-size_t hash_value(const HdMaterialRelationship& rel);
 
 
 /// \struct HdMaterialNode
@@ -113,8 +111,6 @@ struct HdMaterialNode {
 // VtValue requirements
 HD_API
 bool operator==(const HdMaterialNode& lhs, const HdMaterialNode& rhs);
-HD_API
-size_t hash_value(const HdMaterialNode& node);
 
 
 /// \struct HdMaterialNetwork
@@ -209,8 +205,6 @@ HD_API
 bool operator==(const HdMaterialNetwork& lhs, const HdMaterialNetwork& rhs);
 HD_API
 bool operator!=(const HdMaterialNetwork& lhs, const HdMaterialNetwork& rhs);
-HD_API
-size_t hash_value(const HdMaterialNetwork& network);
 
 HD_API
 std::ostream& operator<<(std::ostream& out,
@@ -221,8 +215,6 @@ bool operator==(const HdMaterialNetworkMap& lhs,
 HD_API
 bool operator!=(const HdMaterialNetworkMap& lhs,
                 const HdMaterialNetworkMap& rhs);
-HD_API
-size_t hash_value(const HdMaterialNetworkMap& networkMap);
 
 
 PXR_NAMESPACE_CLOSE_SCOPE

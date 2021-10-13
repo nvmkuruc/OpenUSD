@@ -51,10 +51,15 @@
 #include <glob.h>
 #elif defined(ARCH_OS_WINDOWS)
 #include <io.h>
+<<<<<<< HEAD
 // #nv begin #win32-utf-8
 #include <windows.h>
 #include <stringapiset.h>
 // #nv end
+=======
+#include <windows.h>
+#include <stringapiset.h>
+>>>>>>> pxr/dev
 #endif
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -553,6 +558,42 @@ bool ArchTryAbsPath(const std::string& pathIn, std::string& pathOut);
 
 ARCH_API
 bool ArchTryIsDir(const std::string& path, bool& result);
+
+#if defined(ARCH_OS_WINDOWS)
+
+/// Converts UTF-16 windows string to regular std::string - Windows-only
+inline std::string ArchWindowsUtf16ToUtf8(const std::wstring &wstr)
+{
+    if (wstr.empty()) return std::string();
+    // first call is only to get required size for string
+    int size = WideCharToMultiByte(
+        CP_UTF8, 0, wstr.data(), (int)wstr.size(), NULL, 0, NULL, NULL);
+    if (size == 0) return std::string();
+    std::string str(size, 0);
+    if (WideCharToMultiByte(CP_UTF8, 0, wstr.data(), (int)wstr.size(),
+                            &str[0], size, NULL, NULL) == 0) {
+        return std::string();
+    }
+    return str;
+}
+
+/// Converts regular std::string to UTF-16 windows string - Windows-only
+inline std::wstring ArchWindowsUtf8ToUtf16(const std::string &str)
+{
+    if (str.empty()) return std::wstring();
+    // first call is only to get required size for wstring
+    int size = MultiByteToWideChar(
+        CP_UTF8, 0, str.data(), (int)str.size(), NULL, 0);
+    if (size == 0) return std::wstring();
+    std::wstring wstr(size, 0);
+    if(MultiByteToWideChar(
+           CP_UTF8, 0, str.data(), (int)str.size(), &wstr[0], size) == 0) {
+        return std::wstring();
+    }
+    return wstr;
+}
+
+#endif
 
 ///@}
 

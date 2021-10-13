@@ -280,6 +280,50 @@ _GetExternalAssetModificationTimes(const SdfLayer& layer)
     return result;
 }
 
+#if AR_VERSION == 1
+static bool
+_ModificationTimesEqual(const VtValue& t1, const VtValue& t2)
+{
+    return t1 == t2;
+}
+
+static bool
+_ModificationTimesEqual(const VtDictionary& t1, const VtDictionary& t2)
+{
+    return t1 == t2;
+}
+#else
+static bool
+_ModificationTimesEqual(const VtValue& v1, const VtValue& v2)
+{
+    if (!v1.IsHolding<ArTimestamp>() || !v2.IsHolding<ArTimestamp>()) {
+        return false;
+    }
+
+    const ArTimestamp& t1 = v1.UncheckedGet<ArTimestamp>();
+    const ArTimestamp& t2 = v2.UncheckedGet<ArTimestamp>();
+    return t1.IsValid() && t2.IsValid() && t1 == t2;
+}
+
+static bool
+_ModificationTimesEqual(const VtDictionary& t1, const VtDictionary& t2)
+{
+    if (t1.size() != t2.size()) {
+        return false;
+    }
+
+    for (const auto& e1 : t1) {
+        const auto t2Iter = t2.find(e1.first);
+        if (t2Iter == t2.end() || 
+            !_ModificationTimesEqual(e1.second, t2Iter->second)) {
+            return false;
+        }
+    }
+    
+    return true;
+}
+#endif
+
 SdfLayerRefPtr
 SdfLayer::CreateAnonymous(
     const string& tag, const FileFormatArguments& args)
@@ -990,14 +1034,16 @@ SdfLayer::_Reload(bool force)
         }
 
         // Get the layer's modification timestamp.
-        VtValue timestamp = ArGetResolver().GetModificationTimestamp(
-            GetIdentifier(), resolvedPath);
+        VtValue timestamp(ArGetResolver().GetModificationTimestamp(
+            GetIdentifier(), resolvedPath));
+#if AR_VERSION == 1
         if (timestamp.IsEmpty()) {
             TF_CODING_ERROR(
                 "Unable to get modification time for '%s (%s)'",
                 GetIdentifier().c_str(), resolvedPath.GetPathString().c_str());
             return _ReloadFailed;
         }
+#endif
 
         // Ask the current external asset dependency state.
         VtDictionary externalAssetTimestamps = 
@@ -1006,8 +1052,9 @@ SdfLayer::_Reload(bool force)
         // See if we can skip reloading.
         if (!force && !IsDirty()
             && (resolvedPath == oldResolvedPath)
-            && (timestamp == _assetModificationTime)
-            && (externalAssetTimestamps == _externalAssetModificationTimes)) {
+            && (_ModificationTimesEqual(timestamp, _assetModificationTime))
+            && (_ModificationTimesEqual(
+                    externalAssetTimestamps, _externalAssetModificationTimes))){
             return _ReloadSkipped;
         }
 
@@ -2567,8 +2614,16 @@ SdfLayer::SetIdentifier(const string &identifier)
     // new location yet.
     const ArResolvedPath newResolvedPath = GetResolvedPath();
     if (oldResolvedPath != newResolvedPath) {
+#if AR_VERSION == 1
         _assetModificationTime = ArGetResolver().GetModificationTimestamp(
             GetIdentifier(), newResolvedPath);
+#else
+        const ArTimestamp timestamp = ArGetResolver().GetModificationTimestamp(
+            GetIdentifier(), newResolvedPath);
+        _assetModificationTime =
+            (timestamp.IsValid() || Sdf_ResolvePath(GetIdentifier())) ?
+            VtValue(timestamp) : VtValue();
+#endif
     }
 }
 
@@ -3045,8 +3100,8 @@ SdfLayer::TransferContent(const SdfLayerHandle& layer)
 }
 
 static void
-_GatherPrimAssetReferences(const SdfPrimSpecHandle &prim,
-                       set<string> *assetReferences)
+_GatherPrimCompositionDependencies(const SdfPrimSpecHandle &prim,
+                                   set<string> *assetReferences)
 {
     if (prim != prim->GetLayer()->GetPseudoRoot()) {
         // Prim references
@@ -3063,37 +3118,51 @@ _GatherPrimAssetReferences(const SdfPrimSpecHandle &prim,
 
         // Prim variants
         SdfVariantSetsProxy variantSetMap = prim->GetVariantSets();
-        TF_FOR_ALL(varSetIt, variantSetMap) {
-            const SdfVariantSetSpecHandle &varSetSpec = varSetIt->second;
+        for (const auto &varSetIt: variantSetMap) {
+            const SdfVariantSetSpecHandle &varSetSpec = varSetIt.second;
             const SdfVariantSpecHandleVector &variants =
                 varSetSpec->GetVariantList();
-            TF_FOR_ALL(varIt, variants) {
-                _GatherPrimAssetReferences( (*varIt)->GetPrimSpec(),
-                                        assetReferences );
+            for(const SdfVariantSpecHandle &varSpec : variants) {
+                _GatherPrimCompositionDependencies( 
+                    varSpec->GetPrimSpec(), assetReferences );
             }
         }
     }
 
     // Recurse on nameChildren
-    TF_FOR_ALL(child, prim->GetNameChildren()) {
-        _GatherPrimAssetReferences(*child, assetReferences);
+    for (const SdfPrimSpecHandle &child : prim->GetNameChildren()) {
+        _GatherPrimCompositionDependencies(child, assetReferences);
     }
 }
 
 set<string>
 SdfLayer::GetExternalReferences() const
 {
+    return GetCompositionAssetDependencies();
+}
+
+bool
+SdfLayer::UpdateExternalReference(
+    const string &oldLayerPath,
+    const string &newLayerPath)
+{
+    return UpdateCompositionAssetDependency(oldLayerPath, newLayerPath);
+}
+
+set<string>
+SdfLayer::GetCompositionAssetDependencies() const
+{
     SdfSubLayerProxy subLayers = GetSubLayerPaths();
 
     set<string> results(subLayers.begin(), subLayers.end());
 
-    _GatherPrimAssetReferences(GetPseudoRoot(), &results);
+    _GatherPrimCompositionDependencies(GetPseudoRoot(), &results);
 
     return results;
 }
 
 bool
-SdfLayer::UpdateExternalReference(
+SdfLayer::UpdateCompositionAssetDependency(
     const string &oldLayerPath,
     const string &newLayerPath)
 {
@@ -3114,10 +3183,12 @@ SdfLayer::UpdateExternalReference(
         return true; // sublayers are unique, do no more...
     }
 
-    _UpdateReferencePaths(GetPseudoRoot(), oldLayerPath, newLayerPath);
+    _UpdatePrimCompositionDependencyPaths(
+        GetPseudoRoot(), oldLayerPath, newLayerPath);
 
     return true;
 }
+
 
 std::set<std::string> 
 SdfLayer::GetExternalAssetDependencies() const
@@ -3148,7 +3219,7 @@ _UpdateRefOrPayloadPath(
 }
 
 void
-SdfLayer::_UpdateReferencePaths(
+SdfLayer::_UpdatePrimCompositionDependencyPaths(
     const SdfPrimSpecHandle &prim,
     const string &oldLayerPath,
     const string &newLayerPath)
@@ -3172,14 +3243,15 @@ SdfLayer::_UpdateReferencePaths(
         const SdfVariantSpecHandleVector &variants =
             varSetSpec->GetVariantList();
         for (const auto& variantSpec : variants) {
-            _UpdateReferencePaths(
+            _UpdatePrimCompositionDependencyPaths(
                 variantSpec->GetPrimSpec(), oldLayerPath, newLayerPath);
         }
     }
 
     // Recurse on nameChildren
     for (const auto& primSpec : prim->GetNameChildren()) {
-        _UpdateReferencePaths(primSpec, oldLayerPath, newLayerPath);
+        _UpdatePrimCompositionDependencyPaths(
+            primSpec, oldLayerPath, newLayerPath);
     }
 }
 
@@ -3302,8 +3374,9 @@ SdfLayer::_OpenLayerAndUnlockRegistry(
     // a newly created non-serialized layer.
     if (!info.isAnonymous) {
         // Grab modification timestamp.
-        VtValue timestamp = ArGetResolver().GetModificationTimestamp(
-            info.identifier, ArResolvedPath(readFilePath));
+        VtValue timestamp(ArGetResolver().GetModificationTimestamp(
+            info.identifier, ArResolvedPath(readFilePath)));
+#if AR_VERSION == 1
         if (timestamp.IsEmpty()) {
             TF_CODING_ERROR(
                 "Unable to get modification timestamp for '%s (%s)'",
@@ -3311,6 +3384,7 @@ SdfLayer::_OpenLayerAndUnlockRegistry(
             layer->_FinishInitialization(/* success = */ false);
             return TfNullPtr;
         }
+#endif
         
         layer->_assetModificationTime.Swap(timestamp);
     }
@@ -4863,14 +4937,16 @@ SdfLayer::_Save(bool force) const
     _hints = SdfLayerHints{};
 
     // Record modification timestamp.
-    VtValue timestamp = ArGetResolver().GetModificationTimestamp(
-        GetIdentifier(), path);
+    VtValue timestamp(ArGetResolver().GetModificationTimestamp(
+        GetIdentifier(), path));
+#if AR_VERSION == 1
     if (timestamp.IsEmpty()) {
         TF_CODING_ERROR(
             "Unable to get modification timestamp for '%s (%s)'",
             GetIdentifier().c_str(), path.GetPathString().c_str());
         return false;
     }
+#endif
     _assetModificationTime.Swap(timestamp);
 
     SdfNotice::LayerDidSaveLayerToFile().Send(_self);

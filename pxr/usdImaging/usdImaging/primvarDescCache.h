@@ -150,7 +150,6 @@ private:
         typedef tbb::concurrent_queue<Key>                          _QueueType;
 
         _MapType   _map;
-        _QueueType _deferredDeleteQueue;
     };
 
 
@@ -171,6 +170,7 @@ private:
         return true;
     }
 
+<<<<<<< HEAD
     /// Locates the requested \p key then populates \p value, swap the value
     /// from the entry and queues the entry up for deletion.
     /// Returns true if found.
@@ -208,6 +208,8 @@ private:
         return true;
     }
 
+=======
+>>>>>>> pxr/dev
     /// Erases the given key from the value cache.
     /// Not thread safe
     template <typename T>
@@ -240,6 +242,7 @@ private:
         return res.first->second;
     }
 
+<<<<<<< HEAD
     /// Removes items from the cache that are marked for deletion.
     /// This is not thread-safe and designed to be called after
     /// all the worker threads have been joined.
@@ -258,6 +261,8 @@ private:
         }
     }
 
+=======
+>>>>>>> pxr/dev
 public:
 
     void EnableMutation() { _locked = false; }
@@ -329,6 +334,7 @@ public:
         return _Find(Key::Primvars(path), value);
     }
 
+<<<<<<< HEAD
 	//+NV_CHANGE FRZHANG : NV GPU Skinning
 	bool FindRestPoints(SdfPath const& path, VtValue* value) const {
 		return _Find(Key::RestPoints(path), value);
@@ -420,6 +426,8 @@ public:
         _GarbageCollect(_pviCache);
     }
 
+=======
+>>>>>>> pxr/dev
 private:
     bool _locked;
 

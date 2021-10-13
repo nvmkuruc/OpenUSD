@@ -252,6 +252,7 @@ ARCH_API bool ArchCanMakeTmpFile(const char* fileName)
 
 ARCH_API bool ArchTryAbsPath(const std::string& pathIn, std::string& pathOut)
 {
+<<<<<<< HEAD
 	ArchFileSysImpl* fileSysImpl = ArchFileSysImplRegistry::GetInst()->Find(pathIn.c_str());
 	if (fileSysImpl == nullptr)
 	{
@@ -302,14 +303,26 @@ ArchFile* ArchOpenFile(int fd, char const* mode)
 void ArchReleaseFile(ArchFile* file)
 {
 	if (file) delete file;
+=======
+#if defined(ARCH_OS_WINDOWS)
+    return _wfopen(ArchWindowsUtf8ToUtf16(fileName).c_str(),
+                   ArchWindowsUtf8ToUtf16(mode).c_str());
+#else
+    return fopen(fileName, mode);
+#endif
+>>>>>>> pxr/dev
 }
 
 #if defined(ARCH_OS_WINDOWS)
 int ArchRmDir(const char* path)
 {
+<<<<<<< HEAD
 // #nv begin #win32-utf-8
     return RemoveDirectoryW(ArchWindowsUtf8ToUtf16(path).c_str()) ? 0 : -1;
 // #nv end
+=======
+    return RemoveDirectoryW(ArchWindowsUtf8ToUtf16(path).c_str()) ? 0 : -1;
+>>>>>>> pxr/dev
 }
 #endif
 
@@ -339,9 +352,13 @@ ArchGetModificationTime(const char* pathname, double* time)
 {
     ArchStatType st;
 #if defined(ARCH_OS_WINDOWS)
+<<<<<<< HEAD
 // #nv begin #win32-utf-8
     if (_wstat64(ArchWindowsUtf8ToUtf16(pathname).c_str(), &st) == 0)
 // #nv end
+=======
+    if (_wstat64(ArchWindowsUtf8ToUtf16(pathname).c_str(), &st) == 0)
+>>>>>>> pxr/dev
 #else
     if (stat(pathname, &st) == 0)
 #endif
@@ -569,12 +586,21 @@ ArchAbsPath(const string& path)
     }
 
 #if defined(ARCH_OS_WINDOWS)
+<<<<<<< HEAD
 // #nv begin #win32-utf-8
     // @TODO support 32,767 long paths on windows by prepending "\\?\" to the path
     wchar_t buffer[ARCH_PATH_MAX];
     if (GetFullPathNameW(ArchWindowsUtf8ToUtf16(path).c_str(), ARCH_PATH_MAX, buffer, nullptr)) {
         return ArchWindowsUtf16ToUtf8(buffer);
 // #nv end
+=======
+    // @TODO support 32,767 long paths on windows by prepending "\\?\" to the
+    // path
+    wchar_t buffer[ARCH_PATH_MAX];
+    if (GetFullPathNameW(ArchWindowsUtf8ToUtf16(path).c_str(),
+                         ARCH_PATH_MAX, buffer, nullptr)) {
+        return ArchWindowsUtf16ToUtf8(buffer);
+>>>>>>> pxr/dev
     }
     else {
         return path;
@@ -825,9 +851,15 @@ ArchMakeTmpFile(const std::string& tmpdir,
     auto cTemplate =
 // #nv begin #win32-utf-8
         MakeUnique(sTemplate, [&fd](const char* name){
+<<<<<<< HEAD
             _wsopen_s(&fd, ArchWindowsUtf8ToUtf16(name).c_str(), _O_CREAT | _O_EXCL | _O_RDWR | _O_BINARY,
                      _SH_DENYNO, _S_IREAD | _S_IWRITE);
 // #nv end
+=======
+                    _wsopen_s(&fd, ArchWindowsUtf8ToUtf16(name).c_str(),
+                              _O_CREAT | _O_EXCL | _O_RDWR | _O_BINARY,
+                              _SH_DENYNO, _S_IREAD | _S_IWRITE);
+>>>>>>> pxr/dev
             return fd != -1;
         });
 #else
@@ -868,9 +900,14 @@ ArchMakeTmpSubdir(const std::string& tmpdir,
 #if defined(ARCH_OS_WINDOWS)
     retstr =
         MakeUnique(sTemplate, [](const char* name){
+<<<<<<< HEAD
 // #nv begin #win32-utf-8
             return CreateDirectoryW(ArchWindowsUtf8ToUtf16(name).c_str(), NULL) != FALSE;
 // #nv end
+=======
+            return CreateDirectoryW(
+                ArchWindowsUtf8ToUtf16(name).c_str(), NULL) != FALSE;
+>>>>>>> pxr/dev
         });
 #else
     // Copy template to a writable buffer.
@@ -898,7 +935,10 @@ void
 Arch_InitTmpDir()
 {
 #if defined(ARCH_OS_WINDOWS)
+<<<<<<< HEAD
 // #nv begin #win32-utf-8
+=======
+>>>>>>> pxr/dev
     wchar_t tmpPath[MAX_PATH];
 
     // On Windows, let GetTempPath use the standard env vars, not our own.
@@ -912,7 +952,10 @@ Arch_InitTmpDir()
     // Strip the trailing slash
     tmpPath[sizeOfPath-1] = 0;
     _TmpDir = _strdup(ArchWindowsUtf16ToUtf8(tmpPath).c_str());
+<<<<<<< HEAD
 // #nv end
+=======
+>>>>>>> pxr/dev
 #else
     const std::string tmpdir = ArchGetEnv("TMPDIR");
     if (!tmpdir.empty()) {
@@ -1082,7 +1125,7 @@ ArchDiscFile::PRead(void *buffer, size_t count, int64_t offset)
         return nread;
 
     // Track a total and retry until we read everything or hit EOF or an error.
-    int64_t total = std::max<int64_t>(nread, 0);
+    int64_t total = 0;
     while (nread != -1 || (nread == -1 && errno == EINTR)) {
         // Update bookkeeping and retry.
         if (nread > 0) {
@@ -1141,7 +1184,7 @@ ArchDiscFile::PWrite(void const *bytes, size_t count, int64_t offset)
         return nwritten;
 
     // Track a total and retry until we write everything or hit an error.
-    int64_t total = std::max<int64_t>(nwritten, 0);
+    int64_t total = 0;
     while (nwritten != -1) {
         // Update bookkeeping and retry.
         total += nwritten;
@@ -1213,7 +1256,10 @@ static int Arch_FileAccessError()
 int ArchFileAccess(const char* path, int mode)
 {
     // Simple existence check is handled specially.
+<<<<<<< HEAD
 // #nv begin #win32-utf-8
+=======
+>>>>>>> pxr/dev
     std::wstring wpath{ ArchWindowsUtf8ToUtf16(path) };
     if (mode == F_OK) {
         return (GetFileAttributesW(wpath.c_str()) != INVALID_FILE_ATTRIBUTES)
@@ -1235,7 +1281,12 @@ int ArchFileAccess(const char* path, int mode)
     // Get the SECURITY_DESCRIPTOR.
     std::unique_ptr<unsigned char[]> buffer(new unsigned char[length]);
     PSECURITY_DESCRIPTOR security = (PSECURITY_DESCRIPTOR)buffer.get();
+<<<<<<< HEAD
     if (!GetFileSecurityW(wpath.c_str(), securityInfo, security, length, &length)) {
+=======
+    if (!GetFileSecurityW(
+            wpath.c_str(), securityInfo, security, length, &length)) {
+>>>>>>> pxr/dev
         return Arch_FileAccessError();
     }
 // #nv end
@@ -1328,8 +1379,14 @@ typedef struct _REPARSE_DATA_BUFFER {
 
 std::string ArchReadLink(const char* path)
 {
+<<<<<<< HEAD
 // #nv begin #win32-utf-8
     HANDLE handle = ::CreateFileW(ArchWindowsUtf8ToUtf16(path).c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING,
+=======
+    HANDLE handle = ::CreateFileW(
+        ArchWindowsUtf8ToUtf16(path).c_str(), GENERIC_READ, 0,
+        NULL, OPEN_EXISTING,
+>>>>>>> pxr/dev
         FILE_FLAG_OPEN_REPARSE_POINT |
         FILE_FLAG_BACKUP_SEMANTICS, NULL);
 // #nv end

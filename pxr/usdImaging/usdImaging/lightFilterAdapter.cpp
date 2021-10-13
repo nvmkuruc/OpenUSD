@@ -199,6 +199,7 @@ UsdImagingLightFilterAdapter::GetMaterialResource(UsdPrim const &prim,
         prim, 
         HdMaterialTerminalTokens->lightFilter,
         _GetShaderSourceTypes(),
+        _GetMaterialRenderContexts(),
         &networkMap,
         time);
 

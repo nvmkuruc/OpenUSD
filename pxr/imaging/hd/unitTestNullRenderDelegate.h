@@ -35,6 +35,7 @@ class Hd_UnitTestNullRenderDelegate final : public HdRenderDelegate
 public:
     HD_API
     Hd_UnitTestNullRenderDelegate() = default;
+<<<<<<< HEAD
 
     HD_API
     virtual ~Hd_UnitTestNullRenderDelegate() = default;
@@ -53,6 +54,15 @@ public:
 
     HD_API
     virtual HdResourceRegistrySharedPtr GetResourceRegistry() const override;
+=======
+    ~Hd_UnitTestNullRenderDelegate() override = default;
+
+    const TfTokenVector &GetSupportedRprimTypes() const override;
+    const TfTokenVector &GetSupportedSprimTypes() const override;
+    const TfTokenVector &GetSupportedBprimTypes() const override;
+    HdRenderParam *GetRenderParam() const override;
+    HdResourceRegistrySharedPtr GetResourceRegistry() const override;
+>>>>>>> pxr/dev
 
     ////////////////////////////////////////////////////////////////////////////
     ///
@@ -60,8 +70,12 @@ public:
     ///
     ////////////////////////////////////////////////////////////////////////////
 
+<<<<<<< HEAD
     HD_API
     virtual HdRenderPassSharedPtr CreateRenderPass(HdRenderIndex *index,
+=======
+    HdRenderPassSharedPtr CreateRenderPass(HdRenderIndex *index,
+>>>>>>> pxr/dev
                 HdRprimCollection const& collection) override;
 
     ////////////////////////////////////////////////////////////////////////////
@@ -70,12 +84,19 @@ public:
     ///
     ////////////////////////////////////////////////////////////////////////////
 
+<<<<<<< HEAD
     HD_API
     virtual HdInstancer *CreateInstancer(HdSceneDelegate *delegate,
                                          SdfPath const& id) override;
 
     HD_API
     virtual void DestroyInstancer(HdInstancer *instancer) override;
+=======
+    HdInstancer *CreateInstancer(HdSceneDelegate *delegate,
+                                 SdfPath const& id) override;
+
+    void DestroyInstancer(HdInstancer *instancer) override;
+>>>>>>> pxr/dev
 
     ////////////////////////////////////////////////////////////////////////////
     ///
@@ -83,6 +104,7 @@ public:
     ///
     ////////////////////////////////////////////////////////////////////////////
 
+<<<<<<< HEAD
     HD_API
     virtual HdRprim *CreateRprim(TfToken const& typeId,
                                  SdfPath const& rprimId) override;
@@ -109,6 +131,25 @@ public:
 
     HD_API
     virtual void DestroyBprim(HdBprim *bprim) override;
+=======
+    HdRprim *CreateRprim(TfToken const& typeId,
+                                 SdfPath const& rprimId) override;
+
+    void DestroyRprim(HdRprim *rPrim) override;
+
+    HdSprim *CreateSprim(TfToken const& typeId,
+                         SdfPath const& sprimId) override;
+
+    HdSprim *CreateFallbackSprim(TfToken const& typeId) override;
+    void DestroySprim(HdSprim *sprim) override;
+
+    HdBprim *CreateBprim(TfToken const& typeId,
+                         SdfPath const& bprimId) override;
+
+    HdBprim *CreateFallbackBprim(TfToken const& typeId) override;
+
+    void DestroyBprim(HdBprim *bprim) override;
+>>>>>>> pxr/dev
 
     ////////////////////////////////////////////////////////////////////////////
     ///
@@ -116,8 +157,12 @@ public:
     ///
     ////////////////////////////////////////////////////////////////////////////
 
+<<<<<<< HEAD
     HD_API
     virtual void CommitResources(HdChangeTracker *tracker) override;
+=======
+    void CommitResources(HdChangeTracker *tracker) override;
+>>>>>>> pxr/dev
 
 
     ////////////////////////////////////////////////////////////////////////////
@@ -126,11 +171,11 @@ public:
     ///
     ////////////////////////////////////////////////////////////////////////////
     
-    virtual HdCommandDescriptors GetCommandDescriptors() const;
+    HdCommandDescriptors GetCommandDescriptors() const override;
 
-    virtual bool InvokeCommand(
+    bool InvokeCommand(
         const TfToken &command,
-        const HdCommandArgs &args = HdCommandArgs());
+        const HdCommandArgs &args = HdCommandArgs()) override;
 
 
 
