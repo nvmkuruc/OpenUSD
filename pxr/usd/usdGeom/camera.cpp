@@ -552,7 +552,16 @@ UsdGeomCamera::SetFromCamera(const GfCamera &camera, const UsdTimeCode &time)
 
     const GfMatrix4d camMatrix = camera.GetTransform() * parentToWorldInverse;
 
-    MakeMatrixXform().Set(camMatrix, time);
+    UsdGeomXformOp xformOp = MakeMatrixXform();
+    if (!xformOp) {
+        // The returned xformOp may be invalid in rare cases of
+        // composition and edit target.
+        TF_CODING_ERROR("SetFromCamera failed, could not author xformOp for %s",
+            GetPrim().GetPath().GetText());
+        return;
+    }
+    xformOp.Set(camMatrix, time);
+    
     GetProjectionAttr().Set(_ProjectionToToken(camera.GetProjection()), time);
     GetHorizontalApertureAttr().Set(camera.GetHorizontalAperture(), time);
     GetVerticalApertureAttr().Set(camera.GetVerticalAperture(), time);

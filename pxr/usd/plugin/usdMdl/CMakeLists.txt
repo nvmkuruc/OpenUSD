@@ -64,6 +64,7 @@ pxr_plugin(usdMdl
 pxr_test_scripts(
     test/testUsdMdlDiscovery.py
     test/testUsdMdlDistiller.py
+    test/testUsdMdlTypes.py
 )
 
 pxr_install_test_dir(
@@ -76,6 +77,11 @@ pxr_install_test_dir(
     DEST testUsdMdlDistiller
 )
 
+pxr_install_test_dir(
+    SRC test/testUsdMdlTypes
+    DEST testUsdMdlTypes
+)
+
 pxr_register_test(testUsdMdlDiscovery
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdMdlDiscovery"
@@ -85,5 +91,11 @@ pxr_register_test(testUsdMdlDiscovery
 pxr_register_test(testUsdMdlDistiller
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdMdlDistiller"
+    EXPECTED_RETURN_CODE 0
+)
+
+pxr_register_test(testUsdMdlTypes
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdMdlTypes"
     EXPECTED_RETURN_CODE 0
 )
