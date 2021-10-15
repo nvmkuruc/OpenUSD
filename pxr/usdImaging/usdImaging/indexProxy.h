@@ -227,19 +227,13 @@ private:
     // Called by UsdImagingDelegate::ApplyPendingUpdates.
     void _UniqueifyPathsToRepopulate();
 
-<<<<<<< HEAD
     // #nv begin #nv-gpu-skel
     USDIMAGING_API
     // nv end
-    bool _AddHdPrimInfo(SdfPath const& cachePath,
-                        UsdPrim const& usdPrim,
-                        UsdImagingPrimAdapterSharedPtr const& adapter);
-=======
     UsdImagingDelegate::_HdPrimInfo*
         _AddHdPrimInfo(SdfPath const& cachePath,
                        UsdPrim const& usdPrim,
                        UsdImagingPrimAdapterSharedPtr const& adapter);
->>>>>>> pxr/dev
 
     USDIMAGING_API
     void _RemoveDependencies(SdfPath const& cachePath);

@@ -637,12 +637,12 @@ protected:
     // If \p path is a prim path, changedPrimInfoFields will be populated
     // with the list of scene description fields that caused this prim to
     // be refreshed.
-<<<<<<< HEAD
     // #nv begin #fast-updates
-    void _RefreshUsdObject(SdfPath const& path,
-        TfTokenVector const& changedPrimInfoFields,
-        UsdImagingIndexProxy* proxy,
-        bool checkVariability = true);
+    void _RefreshUsdObject(SdfPath const& usdPath,
+                           TfTokenVector const& changedPrimInfoFields,
+                           UsdImagingIndexProxy* proxy,
+                           SdfPathSet* allTrackedVariabilityPaths,
+                           bool checkVariability = true);
     // nv end
 
     //+NV_CHANGE BRON
@@ -651,12 +651,6 @@ protected:
     //Process property value change
     void _RefreshUsdAttrQuery(SdfPath const& usdPath, UsdImagingIndexProxy* proxy);
     //-NV_CHANGE BRONG
-=======
-    void _RefreshUsdObject(SdfPath const& usdPath, 
-                           TfTokenVector const& changedPrimInfoFields,
-                           UsdImagingIndexProxy* proxy,
-                           SdfPathSet* allTrackedVariabilityPaths); 
->>>>>>> pxr/dev
 
     // Heavy-weight invalidation of an entire prim subtree. All cached data is
     // reconstructed for all prims below \p rootPath.

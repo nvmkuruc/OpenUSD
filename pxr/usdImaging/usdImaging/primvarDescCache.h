@@ -170,7 +170,7 @@ private:
         return true;
     }
 
-<<<<<<< HEAD
+#if 0
     /// Locates the requested \p key then populates \p value, swap the value
     /// from the entry and queues the entry up for deletion.
     /// Returns true if found.
@@ -208,8 +208,8 @@ private:
         return true;
     }
 
-=======
->>>>>>> pxr/dev
+#endif
+
     /// Erases the given key from the value cache.
     /// Not thread safe
     template <typename T>
@@ -242,7 +242,9 @@ private:
         return res.first->second;
     }
 
-<<<<<<< HEAD
+    // XXX:aluk
+    // TODO: Resolve merge conflict
+#if 0
     /// Removes items from the cache that are marked for deletion.
     /// This is not thread-safe and designed to be called after
     /// all the worker threads have been joined.
@@ -261,8 +263,8 @@ private:
         }
     }
 
-=======
->>>>>>> pxr/dev
+#endif
+
 public:
 
     void EnableMutation() { _locked = false; }
@@ -334,7 +336,6 @@ public:
         return _Find(Key::Primvars(path), value);
     }
 
-<<<<<<< HEAD
 	//+NV_CHANGE FRZHANG : NV GPU Skinning
 	bool FindRestPoints(SdfPath const& path, VtValue* value) const {
 		return _Find(Key::RestPoints(path), value);
@@ -372,13 +373,9 @@ public:
 	bool FindSkelLocalToWorld(SdfPath const& path, GfMatrix4d* value) const {
 		return _Find(Key::SkelLocalToWorld(path), value);
 	}
-	//-NV_CHANGE FRZHANG
 
-    bool ExtractPrimvars(SdfPath const& path, HdPrimvarDescriptorVector* value) {
-        return _Extract(Key::Primvars(path), value);
-    }
-	//+NV_CHANGE FRZHANG : NV GPU Skinning
-	bool ExtractRestPoints(SdfPath const& path, VtValue* value) {
+#if 0
+    bool ExtractRestPoints(SdfPath const& path, VtValue* value) {
 		return _Extract(Key::RestPoints(path), value);
 	}
 	bool ExtractGeomBindXform(SdfPath const& path, GfMatrix4d* value) {
@@ -414,20 +411,9 @@ public:
 	bool ExtractSkelLocalToWorld(SdfPath const& path, GfMatrix4d* value) {
 		return _Extract(Key::SkelLocalToWorld(path), value);
 	}
+#endif
 	//-NV_CHANGE FRZHANG
 
-    /// Remove any items from the cache that are marked for defered deletion.
-    void GarbageCollect()
-    {
-		//+NV_CHANGE FRZHANG
-		_GarbageCollect(_intCache);
-		//-NV_CHANGE FRZHANG
-        _GarbageCollect(_valueCache);
-        _GarbageCollect(_pviCache);
-    }
-
-=======
->>>>>>> pxr/dev
 private:
     bool _locked;
 

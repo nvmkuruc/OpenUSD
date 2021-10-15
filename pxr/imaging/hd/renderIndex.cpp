@@ -906,7 +906,6 @@ namespace {
         void Reserve(size_t newSize)
         {
             rprims.reserve(newSize);
-            reprsMasks.reserve(newSize);
             request.IDs.reserve(newSize);
             request.dirtyBits.reserve(newSize);
         }
@@ -1001,7 +1000,6 @@ namespace {
 
                 HdDirtyBits dirtyBits = _r.request.dirtyBits[i];
 
-<<<<<<< HEAD
                 // #nv begin #omni-hydra
                 if (_useDefaultRepr)
                 {
@@ -1014,59 +1012,33 @@ namespace {
                 // nv end
                 else
                 {
-                    for (const _ReprSpec& spec : _reprs) {
-                        if (reprsMask & 1) {
-                            HdReprSelector reprSelector = 
-                                _GetResolvedReprSelector(rprim.GetReprSelector(),
-                                                         spec.reprSelector,
-                                                         spec.forcedRepr);
+                    TfTokenVector reprsSynced;
+                    for (const _CollectionReprSpec& spec : _reprSpecs) {
+                        // The rprim's authored repr selector is
+                        // guaranteed to have been set at this point (via
+                        // InitRepr/DirtyRepr handling during PreSync)
+                        HdReprSelector reprSelector =
+                            _GetResolvedReprSelector(rprim.GetReprSelector(),
+                                spec.reprSelector,
+                                spec.useCollectionRepr);
 
-                            // Call Rprim::Sync(..) on each valid repr of the
-                            // resolved  repr selector.
-                            // The rprim's authored repr selector is
-                            // guaranteed to have been set at this point (via
-                            // InitRepr in the pre-sync)
-                            for (size_t i = 0;
-                                 i < HdReprSelector::MAX_TOPOLOGY_REPRS; ++i) {
+                        for (size_t i = 0;
+                            i < HdReprSelector::MAX_TOPOLOGY_REPRS; ++i) {
 
-                                if (reprSelector.IsActiveRepr(i)) {
-                                    TfToken const& reprToken = reprSelector[i];
+                            TfToken const& reprToken = reprSelector[i];
+                            // Sync valid repr tokens once.
+                            if (reprSelector.IsActiveRepr(i) &&
+                                std::find(reprsSynced.begin(), reprsSynced.end(),
+                                    reprToken) == reprsSynced.end()) {
 
-                                    rprim.Sync(_sceneDelegate,
-                                               _renderParam,
-                                               &dirtyBits,
-                                               reprToken);
-                                }
+                                rprim.Sync(_sceneDelegate,
+                                    _renderParam,
+                                    &dirtyBits,
+                                    reprToken);
+
+                                reprsSynced.push_back(reprToken);
                             }
-=======
-                TfTokenVector reprsSynced;
-                for (const _CollectionReprSpec& spec : _reprSpecs) {
-                    // The rprim's authored repr selector is
-                    // guaranteed to have been set at this point (via
-                    // InitRepr/DirtyRepr handling during PreSync)
-                    HdReprSelector reprSelector = 
-                        _GetResolvedReprSelector(rprim.GetReprSelector(),
-                                                 spec.reprSelector,
-                                                 spec.useCollectionRepr);
-
-                    for (size_t i = 0;
-                         i < HdReprSelector::MAX_TOPOLOGY_REPRS; ++i) {
-
-                        TfToken const& reprToken = reprSelector[i];
-                        // Sync valid repr tokens once.
-                        if (reprSelector.IsActiveRepr(i) &&
-                            std::find(reprsSynced.begin(), reprsSynced.end(),
-                                      reprToken) == reprsSynced.end()) {
-
-                            rprim.Sync(_sceneDelegate,
-                                        _renderParam,
-                                        &dirtyBits,
-                                        reprToken);
-
-                            reprsSynced.push_back(reprToken);
->>>>>>> pxr/dev
                         }
-                        reprsMask >>= 1;
                     }
                 }
 
@@ -1235,7 +1207,6 @@ namespace {
             workerState.Sync(0, r.rprims.size());
         }
     }
-<<<<<<< HEAD
 };
 
 void HdRenderIndex::AddPostSyncDelegate(HdSceneDelegate* sceneDelegate)
@@ -1247,15 +1218,6 @@ void HdRenderIndex::AddPostSyncDelegate(HdSceneDelegate* sceneDelegate)
 }
 // nv end
 
-void
-HdRenderIndex::EnqueuePrimsToSync(
-    HdDirtyListSharedPtr const &dirtyList,
-    HdRprimCollection const &collection)
-{
-    _syncQueue.emplace_back(_SyncQueueEntry{dirtyList, collection});
-}
-=======
->>>>>>> pxr/dev
 
     // Gather the unique set of render tags requested by the tasks.
     static TfTokenVector
@@ -1324,7 +1286,6 @@ HdRenderIndex::EnqueuePrimsToSync(
 
         return reprs;
     }
-};
 
 void
 HdRenderIndex::EnqueueCollectionToSync(HdRprimCollection const &col)
@@ -1553,7 +1514,6 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
                                    std::placeholders::_2));
     }
 
-<<<<<<< HEAD
     // #nv begin omni-hydra
 
     // sync each post scene delegate
@@ -1626,7 +1586,7 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
     }
 
     // sync instancers for regular syncMap (uses change tracker)
-    TF_FOR_ALL(dlgIt, syncMap) {
+    TF_FOR_ALL(dlgIt, sdRprimSyncMap) {
         HdSceneDelegate* sceneDelegate = dlgIt->first;
 
         // sync primvars for instancers
@@ -1657,15 +1617,6 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
         }
     }
 
-    // sync dynamic (slow) syncMap for rprim Sync
-    // Collect results and synchronize.
-    WorkWithScopedParallelism([&]() {
-        WorkDispatcher dispatcher;
-        TF_FOR_ALL(dlgIt, syncMap) {
-            HdSceneDelegate* sceneDelegate = dlgIt->first;
-            _RprimSyncRequestVector& r = dlgIt->second;
-
-=======
     // f. Rprim Sync
     WorkWithScopedParallelism([&]() {
         WorkDispatcher dispatcher;
@@ -1673,7 +1624,6 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
             HdSceneDelegate* sceneDelegate = entry.first;
             _RprimSyncRequestVector& r = entry.second;
             
->>>>>>> pxr/dev
             {
                 _SyncRPrims workerState(
                     sceneDelegate, r, reprSpecs, _tracker, renderParam);
@@ -1719,7 +1669,7 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
         HdSceneDelegate* sceneDelegate = dlgIt->first;
 
         _RprimSyncRequestVector& r = reinterpret_cast<_RprimSyncRequestVector&>(dlgIt->second.rprimRequestVector);
-        _SyncRPrims workerState(sceneDelegate, r, reprs, _tracker, renderParam, true);
+        _SyncRPrims workerState(sceneDelegate, r, reprSpecs, _tracker, renderParam, true);
         _DoSyncRprims(sceneDelegate, dispatcher, workerState, r);
     }
     dispatcher.Wait();

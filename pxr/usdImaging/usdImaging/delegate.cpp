@@ -93,15 +93,13 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
     (lightFilterType)
-<<<<<<< HEAD
     (textureMemory)
+
+    (LightAPI)
 
     //+NV_CHANGE BRONG
     (Skeleton)
     //-NV_CHANGE BRONG
-=======
-    (LightAPI)
->>>>>>> pxr/dev
 );
 
 // This environment variable matches a set of similar ones in
@@ -363,7 +361,7 @@ class UsdImagingDelegate::_Worker {
 private:
     // #nv begin #parallel-xform-children
     // TODO: Clean this up.
-#if 1 // PARALLEL_XFORM_CHILDREN
+#if PARALLEL_XFORM_CHILDREN
     struct _Task {
         _Task() : delegate(nullptr) { }
         _Task(UsdImagingDelegate* delegate_,
@@ -406,7 +404,7 @@ public:
 
     // #nv begin #parallel-xform-children
     // TODO: Clean this up.
-#if 1 // PARALLEL_XFORM_CHILDREN
+#if PARALLEL_XFORM_CHILDREN
     void AddTask(SdfPath const& cachePath,
         TfTokenVector const *changedInfoFields = nullptr, UsdImagingIndexProxy *proxy = nullptr,
         const SdfPath *sourcePath = nullptr,
@@ -452,11 +450,15 @@ public:
     void UpdateVariability(size_t start, size_t end) {
         for (size_t i = start; i < end; i++) {
             // #nv begin fast-updates
-            const bool &checkVariability = _tasks[i].checkVariability;
+            //const bool &checkVariability = _tasks[i].checkVariability;
             // nv end
             UsdImagingIndexProxy indexProxy(_delegate, nullptr);
             // #nv begin #parallel-xform-children
+#if PARALLEL_XFORM_CHILDREN
             SdfPath const& cachePath = _tasks[i].path;
+#else
+            SdfPath const& cachePath = _tasks[i];
+#endif
             // nv end
 
             _HdPrimInfo *primInfo = _delegate->_GetHdPrimInfo(cachePath);
@@ -465,10 +467,10 @@ public:
                 if (TF_VERIFY(adapter, "%s\n", cachePath.GetText())) {
                     adapter->TrackVariability(primInfo->usdPrim,
                         cachePath,
-                        &primInfo->timeVaryingBits,
+                        &primInfo->timeVaryingBits);
                         // #nv begin fast-updates
-                        nullptr,
-                        checkVariability);
+                        //nullptr,
+                        //checkVariability);
                         // nv end
                     if (primInfo->timeVaryingBits != HdChangeTracker::Clean) {
                         adapter->MarkDirty(primInfo->usdPrim,
@@ -487,7 +489,7 @@ public:
         for (size_t i = start; i < end; i++) {
             UsdTimeCode const& time = _delegate->_time;
             // #nv begin #parallel-xform-children
-            SdfPath const& cachePath = _tasks[i].path;
+            SdfPath const& cachePath = _tasks[i];
             // nv end
 
             _HdPrimInfo *primInfo = _delegate->_GetHdPrimInfo(cachePath);
@@ -511,6 +513,7 @@ public:
     }
 
     // #nv begin #parallel-xform-children
+#if PARALLEL_XFORM_CHILDREN
     void UpdateAffectedCachePath(size_t start, size_t end) {
         for (size_t i = start; i < end; i++) {
             UsdImagingDelegate* delegate = _tasks[i].delegate;
@@ -582,6 +585,7 @@ public:
             }
         }
     }
+#endif
     // nv end
 };
 
@@ -593,8 +597,8 @@ UsdImagingDelegate::_AddTask(
     // nv end
 {
     // #nv begin fast-updates
-    worker->AddTask(cachePath,
-        nullptr, nullptr, nullptr, checkVariability);
+    worker->AddTask(cachePath);// ,
+        //nullptr, nullptr, nullptr, checkVariability);
     // nv end
 }
 
@@ -1005,6 +1009,7 @@ UsdImagingDelegate::_ExecuteWorkForTimeUpdate(_Worker* worker)
 void
 UsdImagingDelegate::_ExecuteWorkForAffectedCachePaths(_Worker* worker)
 {
+#if PARALLEL_XFORM_CHILDREN
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
 
@@ -1020,6 +1025,7 @@ UsdImagingDelegate::_ExecuteWorkForAffectedCachePaths(_Worker* worker)
                 worker, std::placeholders::_1, std::placeholders::_2));
     }
     //worker->EnableValueCacheMutations();
+#endif
 }
 // nv end
 
@@ -1155,9 +1161,10 @@ UsdImagingDelegate::_RefreshObjectsForFastUpdates(
 
     UsdImagingDelegate::_Worker worker(this);
     UsdImagingIndexProxy indexProxy(this, &worker, refreshVariability);
+    SdfPathSet allTrackedVariabilityPaths;
 
     for (const auto &itr : fastUpdates) {
-        _RefreshUsdObject(itr.path, dummyInfoFields, &indexProxy, refreshVariability);
+        _RefreshUsdObject(itr.path, dummyInfoFields, &indexProxy, &allTrackedVariabilityPaths, refreshVariability);
 
         // If any objects were removed as a result of the refresh (if it
         // internally decided to resync), they must be ejected now,
@@ -1262,17 +1269,13 @@ UsdImagingDelegate::ApplyPendingUpdates()
 
         for (SdfPath const& usdPath: usdPathsToResync) {
             if (usdPath.IsPropertyPath()) {
-<<<<<<< HEAD
 
                 //+NV_CHANGE BRONG
                 _ResyncUsdAttrQuery(usdPath, &indexProxy);
                 //-NV_CHANGE BRONG
 
-                _RefreshUsdObject(usdPath, TfTokenVector(), &indexProxy);
-=======
                 _RefreshUsdObject(usdPath, TfTokenVector(),
                                   &indexProxy, &allTrackedVariabilityPaths);
->>>>>>> pxr/dev
             } else if (usdPath.IsTargetPath()) {
                 // TargetPaths are their own path type, when they change, resync
                 // the relationship at which they're rooted; i.e. per-target
@@ -1674,7 +1677,7 @@ UsdImagingDelegate::_ResyncUsdPrim(SdfPath const& usdPath,
         TF_DEBUG(USDIMAGING_CHANGES).Msg("  - affected new prim: <%s>\n",
             usdPath.GetText());
         proxy->Repopulate(usdPath);
-        if (usdPrim.IsA<UsdLuxLight>())
+        if (usdPrim.HasAPI<UsdLuxLightAPI>())
         {
             TRACE_SCOPE("Resync light/shadow link targets");
             auto _MarkLinkPathsDirty = [&](const SdfPathSet& linkedPaths) {
@@ -1690,7 +1693,7 @@ UsdImagingDelegate::_ResyncUsdPrim(SdfPath const& usdPath,
                     }
                 }
             };
-            UsdLuxLight light(usdPrim);
+            UsdLuxLightAPI light(usdPrim);
             UsdCollectionAPI lightLink{ light.GetLightLinkCollectionAPI() };
             _MarkLinkPathsDirty(lightLink.ComputeIncludedPaths(lightLink.ComputeMembershipQuery(), _stage));
             UsdCollectionAPI shadowLink{ light.GetShadowLinkCollectionAPI() };
@@ -1763,11 +1766,8 @@ void
 UsdImagingDelegate::_RefreshUsdObject(SdfPath const& usdPath, 
                                       TfTokenVector const& changedInfoFields,
                                       UsdImagingIndexProxy* proxy,
-<<<<<<< HEAD
+                                      SdfPathSet* allTrackedVariabilityPaths,
                                       bool checkVariability)
-=======
-                                      SdfPathSet* allTrackedVariabilityPaths) 
->>>>>>> pxr/dev
 {
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
@@ -1925,17 +1925,6 @@ UsdImagingDelegate::_RefreshUsdObject(SdfPath const& usdPath,
             if (dirtyBits == HdChangeTracker::Clean) {
                 // Do nothing
             } else if (dirtyBits != HdChangeTracker::AllDirty) {
-<<<<<<< HEAD
-                // Update Variability
-                _timeVaryingPrimCacheValid = false;
-                primInfo->timeVaryingBits = HdChangeTracker::Clean;
-                adapter->TrackVariability(primInfo->usdPrim, affectedCachePath,
-                                          &primInfo->timeVaryingBits,
-                                          // #nv begin #fast-updates
-                                          nullptr /*instancerContext*/,
-                                          checkVariability);
-                                          // nv end
-=======
                 // Update variability, if we haven't already done so for this
                 // prim while refreshing another prim that affects this one.
                 if (allTrackedVariabilityPaths->find(affectedCachePath) ==
@@ -1944,10 +1933,13 @@ UsdImagingDelegate::_RefreshUsdObject(SdfPath const& usdPath,
                     primInfo->timeVaryingBits = HdChangeTracker::Clean;
                     adapter->TrackVariability(primInfo->usdPrim,
                                               affectedCachePath,
-                                              &primInfo->timeVaryingBits);
+                                              &primInfo->timeVaryingBits,
+                                              // #nv begin #fast-updates
+                                              nullptr /*instancerContext*/,
+                                              checkVariability);
+
                     allTrackedVariabilityPaths->insert(affectedCachePath);
                 }
->>>>>>> pxr/dev
 
                 // Propagate the dirty bits back out to the change tracker.
                 HdDirtyBits combinedBits =
@@ -2974,8 +2966,8 @@ bool UsdImagingDelegate::ShouldGenerateJointMesh()
 bool UsdImagingDelegate::GetSkinningBindingValues(SdfPath const&id, VtValue& restPoints, GfMatrix4d& geomBindXform)
 {
 	SdfPath usdPath = ConvertIndexPathToCachePath(id);
-	if (_primvarDescCache.ExtractRestPoints(usdPath, &restPoints) 
-		&& _primvarDescCache.ExtractGeomBindXform(usdPath, &geomBindXform) )
+	if (_primvarDescCache.FindRestPoints(usdPath, &restPoints) 
+		&& _primvarDescCache.FindGeomBindXform(usdPath, &geomBindXform) )
 	{
 		return true;
 	}
@@ -2988,13 +2980,13 @@ bool
 UsdImagingDelegate::GetSkinningBlendValues(SdfPath const& id, VtValue& jointIndices, VtValue& jointWeights, int& numInfluencesPerPoint, bool& hasConstantInfluences, TfToken& skinningMethod, VtValue& skinningBlendWeights, bool& hasConstantSkinningBlendWeights)
 {
 	SdfPath usdPath = ConvertIndexPathToCachePath(id);
-	if (_primvarDescCache.ExtractJointIndices(usdPath, &jointIndices) 
-		&& _primvarDescCache.ExtractJointWeights(usdPath, &jointWeights)
-		&& _primvarDescCache.ExtractNumInfluencesPerPoint(usdPath, &numInfluencesPerPoint)
-		&& _primvarDescCache.ExtractHasConstantInfluences(usdPath, &hasConstantInfluences)
-        && _primvarDescCache.ExtractSkinningMethod(usdPath, &skinningMethod)
-        && _primvarDescCache.ExtractSkinningBlendWeights(usdPath, &skinningBlendWeights)
-        && _primvarDescCache.ExtractHasConstantSkinningBlendWeights(usdPath, &hasConstantSkinningBlendWeights)
+	if (_primvarDescCache.FindJointIndices(usdPath, &jointIndices) 
+		&& _primvarDescCache.FindJointWeights(usdPath, &jointWeights)
+		&& _primvarDescCache.FindNumInfluencesPerPoint(usdPath, &numInfluencesPerPoint)
+		&& _primvarDescCache.FindHasConstantInfluences(usdPath, &hasConstantInfluences)
+        && _primvarDescCache.FindSkinningMethod(usdPath, &skinningMethod)
+        && _primvarDescCache.FindSkinningBlendWeights(usdPath, &skinningBlendWeights)
+        && _primvarDescCache.FindHasConstantSkinningBlendWeights(usdPath, &hasConstantSkinningBlendWeights)
 		)
 	{
 		return true;
@@ -3008,9 +3000,9 @@ bool
 UsdImagingDelegate::GetSkelAnimXformValues(SdfPath const& id, VtValue& skinningXform, GfMatrix4d& primWorldToLocal, GfMatrix4d& skelLocalToWorld)
 {
 	SdfPath usdPath = ConvertIndexPathToCachePath(id);
-	if (_primvarDescCache.ExtractSkinningXforms(usdPath, &skinningXform)
-		&& _primvarDescCache.ExtractPrimWorldToLocal(usdPath, &primWorldToLocal)
-		&& _primvarDescCache.ExtractSkelLocalToWorld(usdPath, &skelLocalToWorld)
+	if (_primvarDescCache.FindSkinningXforms(usdPath, &skinningXform)
+		&& _primvarDescCache.FindPrimWorldToLocal(usdPath, &primWorldToLocal)
+		&& _primvarDescCache.FindSkelLocalToWorld(usdPath, &skelLocalToWorld)
 		)
 	{
 		return true;
