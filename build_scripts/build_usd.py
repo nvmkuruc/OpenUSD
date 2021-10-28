@@ -1938,7 +1938,10 @@ if context.buildDraco:
     # nv end
 
 if context.buildMaterialX:
-    requiredDependencies += [MATERIALX]
+    # nv begin #deps-locations
+    # TODO: support --materialx-location
+    requiredDependencies += [] #[MATERIALX]
+    # nv end
 
 if context.buildImaging:
     if context.enablePtex:
