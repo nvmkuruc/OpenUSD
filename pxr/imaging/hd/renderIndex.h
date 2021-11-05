@@ -547,7 +547,6 @@ public:
     {
         // do not change order here
         std::vector<HdRprim*> rprims;
-        std::vector<size_t> reprsMasks;
         _PostSyncRequestVector r;
     };
 

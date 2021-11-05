@@ -1550,7 +1550,6 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
             r.IDs.clear();
             r.dirtyBits.clear();
             rprimRequestVector.rprims.clear();
-            rprimRequestVector.reprsMasks.clear();
 
             _SprimIndex::PostSyncRequestVector& sprimRequestVector = dlgIt->second.sprimRequestVector;
             sprimRequestVector.prims.clear();
@@ -1570,7 +1569,6 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
                     r.IDs.push_back(id);
                     r.dirtyBits.push_back(dirtyBits);
                     rprimRequestVector.rprims.push_back(iter->second.rprim);
-                    rprimRequestVector.reprsMasks.push_back(reprMask);
                 }
                 else
                 {
