@@ -54,6 +54,7 @@ TF_DECLARE_PUBLIC_TOKENS(SdfDataTokens, SDF_API, SDF_DATA_TOKENS);
 
 
 // #nv begin #fast-updates
+#define SDF_SUPPORTS_FIELD_HANDLES
 class SdfAbstractDataFieldAccess : public TfRefBase, public TfWeakBase
 {
 public:
