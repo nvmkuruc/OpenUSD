@@ -100,6 +100,10 @@ TF_DEFINE_PRIVATE_TOKENS(
     //+NV_CHANGE BRONG
     (Skeleton)
     //-NV_CHANGE BRONG
+
+    // #nv begin #less-conservative-collection-dirty
+    ((collectionColliders, "collection:colliders"))
+    // nv end
 );
 
 // This environment variable matches a set of similar ones in
@@ -1822,7 +1826,12 @@ UsdImagingDelegate::_RefreshUsdObject(SdfPath const& usdPath,
             // _GatherDependencies on a leaf prim won't invoke any extra work
             // vs the equal_range below...
             _GatherDependencies(usdPrimPath, &affectedCachePaths);
-        } else if (UsdCollectionAPI::CanContainPropertyName(attrName)) {
+        } else if (UsdCollectionAPI::CanContainPropertyName(attrName)
+                  // #nv begin #less-conservative-collection-dirty
+                  && !TfStringStartsWith(attrName, _tokens->collectionColliders)
+                  // nv end
+                 )
+            {
             // XXX Performance: Collections used for material bindings
             // can refer to prims at arbitrary locations in the scene.
             // Accordingly, we conservatively invalidate everything.
