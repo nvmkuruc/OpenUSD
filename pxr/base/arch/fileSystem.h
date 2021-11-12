@@ -185,6 +185,7 @@ public:
 using ArchConstFileMapping = ArchMapping<char const>;
 using ArchMutableFileMapping = ArchMapping<char>;
 
+#define ARCH_SUPPORTS_ABSTRACT_ARCH_FILE
 // ArchFile abstract class
 class ArchFile
 {
