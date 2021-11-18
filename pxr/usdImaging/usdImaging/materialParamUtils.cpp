@@ -289,9 +289,6 @@ _GetShaderNodeForSourceTypeFallbackNV(
                 if (path.empty()) {
                     path = ArGetResolver().Resolve(sourceAsset.GetAssetPath());
                 }
-                if (path.empty()) {
-                    path = sourceAsset.GetAssetPath();
-                }
                 if (identifier) {
                     *identifier = TfToken(path);
                     found = true;
