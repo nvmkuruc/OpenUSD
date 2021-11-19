@@ -47,6 +47,8 @@ namespace mx = MaterialX;
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+TF_DEFINE_PUBLIC_TOKENS(UsdMtlxTokens, USD_MTLX_TOKENS);
+
 namespace {
 
 using DocumentCache = std::map<std::string, mx::DocumentPtr>;
@@ -145,7 +147,6 @@ _GetUsdValue(const std::string& valueString, const std::string& type)
         CASTA(float, float)
         CASTA(std::string, std::string)
 
-        CASTV(mx::Color2, GfVec2f)
         CASTV(mx::Color3, GfVec3f)
         CASTV(mx::Color4, GfVec4f)
         CASTV(mx::Vector2, GfVec2f)
@@ -210,15 +211,7 @@ UsdMtlxStandardFileExtensions()
     return extensions;
 }
 
-bool
-UsdMtlxOutputNodesRequireMultiOutputStringType() 
-{
-    static const bool versionCheck = 
-        (MaterialX::getVersionIntegers() < std::make_tuple(1, 37, 0));
-    return versionCheck;
-}
-
-MaterialX::ConstDocumentPtr 
+mx::ConstDocumentPtr 
 UsdMtlxGetDocumentFromString(const std::string &mtlxXml)
 {
     std::string hashStr = std::to_string(std::hash<std::string>{}(mtlxXml));
@@ -241,7 +234,7 @@ UsdMtlxGetDocumentFromString(const std::string &mtlxXml)
     return document;
 }
 
-MaterialX::ConstDocumentPtr
+mx::ConstDocumentPtr
 UsdMtlxGetDocument(const std::string& resolvedUri)
 {
     // Look up in the cache, inserting a null document if missing.
@@ -286,7 +279,7 @@ UsdMtlxGetDocument(const std::string& resolvedUri)
     }
     else {
         try {
-            auto doc = mx::createDocument();
+            mx::DocumentPtr doc = mx::createDocument();
             mx::readFromXmlFile(doc, resolvedUri);
             document = doc;
         }
@@ -302,7 +295,7 @@ UsdMtlxGetDocument(const std::string& resolvedUri)
 
 NdrVersion
 UsdMtlxGetVersion(
-    const MaterialX::ConstElementPtr& mtlx, bool* implicitDefault)
+    const mx::ConstInterfaceElementPtr& mtlx, bool* implicitDefault)
 {
     TfErrorMark mark;
 
@@ -310,7 +303,7 @@ UsdMtlxGetVersion(
     auto version = NdrVersion().GetAsDefault();
 
     // Get the version, if any, otherwise use the invalid version.
-    std::string versionString = mtlx->getAttribute("version");
+    std::string versionString = mtlx->getVersionString();
     if (versionString.empty()) {
         // No version specified.  Use the default.
     }
@@ -325,17 +318,14 @@ UsdMtlxGetVersion(
 
     // Check for explicitly default/not default.
     if (implicitDefault) {
-        std::string isdefault = mtlx->getAttribute("isdefaultversion");
-        if (isdefault.empty()) {
-            // No opinion means implicitly a (potential) default.
-            *implicitDefault = true;
+        const bool isdefault = mtlx->getDefaultVersion();
+        if (isdefault) {
+            *implicitDefault = false;
+            version = version.GetAsDefault();
         }
         else {
-            *implicitDefault = false;
-            if (isdefault == "true") {
-                // Explicitly the default.
-                version = version.GetAsDefault();
-            }
+            // No opinion means implicitly a (potential) default.
+            *implicitDefault = true;
         }
     }
 
@@ -344,7 +334,7 @@ UsdMtlxGetVersion(
 }
 
 const std::string&
-UsdMtlxGetSourceURI(const MaterialX::ConstElementPtr& element)
+UsdMtlxGetSourceURI(const mx::ConstElementPtr& element)
 {
     for (auto scan = element; scan; scan = scan->getParent()) {
         const auto& uri = scan->getSourceUri();
@@ -411,7 +401,7 @@ UsdMtlxGetUsdType(const std::string& mtlxTypeName)
 
 VtValue
 UsdMtlxGetUsdValue(
-    const MaterialX::ConstElementPtr& mtlx,
+    const mx::ConstElementPtr& mtlx,
     bool getDefaultValue)
 {
     static const std::string defaultAttr("default");

@@ -497,31 +497,39 @@ _GetOutputName(const TfToken &baseName, const TfToken &renderContext)
 bool
 UsdShadeMaterial::_ComputeNamedOutputSource(
     const TfToken &baseName, 
-    const TfToken &renderContext,
+    const TfTokenVector &contextVector,
     UsdShadeConnectableAPI *source,
     TfToken *sourceName,
     UsdShadeAttributeType *sourceType) const
 {
-    const TfToken outputName = _GetOutputName(baseName, renderContext);
-    UsdShadeOutput output = GetOutput(outputName);
-    if (output) {
-        if (renderContext == UsdShadeTokens->universalRenderContext && 
-            !output.GetAttr().IsAuthored()) {
-            return false;
-        } else if (output.GetConnectedSource(source, sourceName, sourceType)) {
-            return true;
+    TRACE_FUNCTION();
+    bool universalRenderContextComputed = false;
+    for (TfToken const& renderContext : contextVector) {
+        
+        universalRenderContextComputed |= 
+            (renderContext == UsdShadeTokens->universalRenderContext);
+        
+        const TfToken outputName = _GetOutputName(baseName, renderContext);
+        UsdShadeOutput output = GetOutput(outputName);
+        if (output) {
+            if (renderContext == UsdShadeTokens->universalRenderContext && 
+                !output.GetAttr().IsAuthored()) {
+                return false;
+            } else if (output.GetConnectedSource(source, sourceName, sourceType)) {
+                return true;
+            }
+            // If we didn't find any connected attributes continue checking the 
+            // renderContexts, then as a fallback we will check the universal
+            // context below
         }
     }
 
-    if (renderContext != UsdShadeTokens->universalRenderContext) {
+    if (!universalRenderContextComputed) {
         const TfToken universalOutputName = _GetOutputName(
                 baseName, UsdShadeTokens->universalRenderContext);
         UsdShadeOutput universalOutput = GetOutput(universalOutputName);
         if (TF_VERIFY(universalOutput)) {
-            if (renderContext == UsdShadeTokens->universalRenderContext && 
-                !universalOutput.GetAttr().IsAuthored()) {
-                return false;
-            } else if (universalOutput.GetConnectedSource(source, sourceName, 
+            if (universalOutput.GetConnectedSource(source, sourceName, 
                     sourceType)) {
                 return true;
             }
@@ -534,14 +542,14 @@ UsdShadeMaterial::_ComputeNamedOutputSource(
 UsdShadeShader 
 UsdShadeMaterial::_ComputeNamedOutputShader(
     const TfToken &baseName,
-    const TfToken &renderContext,
+    const TfTokenVector &contextVector,
     TfToken *sourceName, 
     UsdShadeAttributeType *sourceType) const
 {
     UsdShadeConnectableAPI source;
     TfToken srcName; 
     UsdShadeAttributeType srcType;
-    if (_ComputeNamedOutputSource(baseName, renderContext, 
+    if (_ComputeNamedOutputSource(baseName, contextVector, 
                                   &source, &srcName, &srcType)) {
         if (source.IsNodeGraph()) {
             source = UsdShadeNodeGraph(source.GetPrim()).ComputeOutputSource(
@@ -574,8 +582,20 @@ UsdShadeMaterial::ComputeSurfaceSource(
     TfToken *sourceName, 
     UsdShadeAttributeType *sourceType) const
 {
+    TRACE_FUNCTION();
     return _ComputeNamedOutputShader(UsdShadeTokens->surface, 
-            renderContext, sourceName, sourceType);
+            {renderContext}, sourceName, sourceType);
+}
+
+UsdShadeShader 
+UsdShadeMaterial::ComputeSurfaceSource(
+    const TfTokenVector &contextVector,
+    TfToken *sourceName, 
+    UsdShadeAttributeType *sourceType) const
+{
+    TRACE_FUNCTION();
+    return _ComputeNamedOutputShader(UsdShadeTokens->surface, 
+            contextVector, sourceName, sourceType);
 }
 
 UsdShadeOutput 
@@ -597,8 +617,20 @@ UsdShadeMaterial::ComputeDisplacementSource(
     TfToken *sourceName, 
     UsdShadeAttributeType *sourceType) const
 {
+    TRACE_FUNCTION();
     return _ComputeNamedOutputShader(UsdShadeTokens->displacement, 
-            renderContext, sourceName, sourceType);
+            {renderContext}, sourceName, sourceType);
+}
+
+UsdShadeShader 
+UsdShadeMaterial::ComputeDisplacementSource(
+    const TfTokenVector &contextVector,
+    TfToken *sourceName, 
+    UsdShadeAttributeType *sourceType) const
+{
+    TRACE_FUNCTION();
+    return _ComputeNamedOutputShader(UsdShadeTokens->displacement, 
+            contextVector, sourceName, sourceType);
 }
 
 UsdShadeOutput 
@@ -620,9 +652,20 @@ UsdShadeMaterial::ComputeVolumeSource(
     TfToken *sourceName, 
     UsdShadeAttributeType *sourceType) const
 {
-    return _ComputeNamedOutputShader(UsdShadeTokens->volume, renderContext, 
+    TRACE_FUNCTION();
+    return _ComputeNamedOutputShader(UsdShadeTokens->volume, {renderContext}, 
             sourceName, sourceType);
 }
 
+UsdShadeShader 
+UsdShadeMaterial::ComputeVolumeSource(
+    const TfTokenVector &contextVector,
+    TfToken *sourceName, 
+    UsdShadeAttributeType *sourceType) const
+{
+    TRACE_FUNCTION();
+    return _ComputeNamedOutputShader(UsdShadeTokens->volume, contextVector, 
+            sourceName, sourceType);
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE

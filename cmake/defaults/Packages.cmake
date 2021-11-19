@@ -240,13 +240,15 @@ if (PXR_BUILD_DRACO_PLUGIN)
     find_package(Draco REQUIRED)
 endif()
 
-if (PXR_BUILD_MATERIALX_PLUGIN)
+if (PXR_ENABLE_MATERIALX_SUPPORT)
     find_package(MaterialX REQUIRED)
+    add_definitions(-DPXR_MATERIALX_SUPPORT_ENABLED)
 endif()
 
 if(PXR_ENABLE_OSL_SUPPORT)
     find_package(OSL REQUIRED)
     find_package(OpenEXR REQUIRED)
+    add_definitions(-DPXR_OSL_SUPPORT_ENABLED)
 endif()
 
 find_package(MdlSdk REQUIRED)

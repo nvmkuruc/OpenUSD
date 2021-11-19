@@ -18,6 +18,23 @@ if(WIN32)
 elseif(APPLE)
     set( CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined dynamic_lookup -headerpad_max_install_names" )
 endif()
+
+set(optionalIncludeDirs "")
+set(optionalPublicClasses "")
+if (${PXR_ENABLE_MATERIALX_SUPPORT})
+    add_definitions(-DPXR_MATERIALX_STDLIB_DIR="${MATERIALX_STDLIB_DIR}")
+    add_definitions(-DPXR_MATERIALX_BASE_DIR="${MATERIALX_BASE_DIR}")
+
+    list(APPEND optionalLibs ${MATERIALX_LIBRARIES} hdMtlx)
+    list(APPEND optionalIncludeDirs ${MATERIALX_INCLUDE_DIRS})
+    list(APPEND optionalPublicClasses matfiltMaterialX)
+
+    if (${PXR_ENABLE_OSL_SUPPORT})
+        list(APPEND optionalLibs ${OSL_COMP_LIBRARY})
+        list(APPEND optionalIncludeDirs ${OSL_INCLUDE_DIR})
+    endif()
+endif()
+
 pxr_shared_library(${PXR_PACKAGE}
     LIBRARIES
         ar
@@ -33,6 +50,7 @@ pxr_shared_library(${PXR_PACKAGE}
 
     INCLUDE_DIRS
         ${RENDERMAN_INCLUDE_DIR}
+        ${optionalIncludeDirs}
 
     PUBLIC_CLASSES
         basisCurves
@@ -46,7 +64,6 @@ pxr_shared_library(${PXR_PACKAGE}
         lightFilter
         lightFilterUtils
         material
-        matfiltConversions
         matfiltConvertPreviewMaterial
         matfiltFilterChain
         matfiltResolveVstructs
@@ -57,6 +74,7 @@ pxr_shared_library(${PXR_PACKAGE}
         rixStrings
         volume
         xcpt
+        ${optionalPublicClasses}
 
     PUBLIC_HEADERS
         api.h

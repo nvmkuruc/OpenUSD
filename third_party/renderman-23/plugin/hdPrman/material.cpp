@@ -25,10 +25,12 @@
 #include "hdPrman/context.h"
 #include "hdPrman/debugCodes.h"
 #include "hdPrman/renderParam.h"
-#include "hdPrman/matfiltConversions.h"
 #include "hdPrman/matfiltConvertPreviewMaterial.h"
 #include "hdPrman/matfiltFilterChain.h"
 #include "hdPrman/matfiltResolveVstructs.h"
+#ifdef PXR_MATERIALX_SUPPORT_ENABLED
+#include "hdPrman/matfiltMaterialX.h"
+#endif
 #include "pxr/base/gf/vec3f.h"
 #include "pxr/usd/sdf/types.h"
 #include "pxr/base/tf/staticData.h"
@@ -52,7 +54,13 @@ TF_DEFINE_PRIVATE_TOKENS(
 );
 
 TF_MAKE_STATIC_DATA(NdrTokenVec, _sourceTypes) {
-    *_sourceTypes = { TfToken("OSL"), TfToken("RmanCpp") };
+    *_sourceTypes = { 
+        TfToken("OSL"), 
+        TfToken("RmanCpp"),    
+#ifdef PXR_MATERIALX_SUPPORT_ENABLED
+        TfToken("mtlx") 
+#endif
+    };
 }
 
 TfTokenVector const&
@@ -64,7 +72,10 @@ HdPrmanMaterial::GetShaderSourceTypes()
 TF_MAKE_STATIC_DATA(MatfiltFilterChain, _filterChain) {
     *_filterChain = {
         MatfiltConvertPreviewMaterial,
-        MatfiltResolveVstructs
+        MatfiltResolveVstructs,
+#ifdef PXR_MATERIALX_SUPPORT_ENABLED
+        MatfiltMaterialX
+#endif
     };
 }
 
@@ -127,23 +138,23 @@ _ConvertToVec3fArray(const VtArray<GfVec3d>& v)
     return out;
 }
 
-// Recursively convert a Matfilt node and its upstream dependencies
+// Recursively convert a HdMaterialNode2 and its upstream dependencies
 // to Riley equivalents.  Avoids adding redundant nodes in the case
 // of multi-path dependencies.
 static bool
 _ConvertNodes(
-    MatfiltNetwork const& network,
+    HdMaterialNetwork2 const& network,
     SdfPath const& nodePath,
     std::vector<riley::ShadingNode> *result)
 {
-    // Find matfilt node.
+    // Find HdMaterialNetwork2 node.
     auto iter = network.nodes.find(nodePath);
     if (iter == network.nodes.end()) {
         // This could be caused by a bad connection to a non-existent node.
         TF_WARN("Unknown material node '%s'", nodePath.GetText());
         return false;
     }
-    MatfiltNode const& node = iter->second;
+    HdMaterialNode2 const& node = iter->second;
     // Riley expects nodes to be provided in topological dependency order.
     // Pre-traverse upstream nodes.
     for (auto const& connEntry: node.inputConnections) {
@@ -377,7 +388,7 @@ _ConvertNodes(
     for (auto const& connEntry: node.inputConnections) {
         for (auto const& e: connEntry.second) {
             // Find the output & input shader nodes of the connection.
-            MatfiltNode const* upstreamNode =
+            HdMaterialNode2 const* upstreamNode =
                 TfMapLookupPtr(network.nodes, e.upstreamNode);
             if (!upstreamNode) {
                 TF_WARN("Unknown upstream node %s", e.upstreamNode.GetText());
@@ -448,7 +459,7 @@ _ConvertNodes(
     
 // Debug helper
 void
-HdPrman_DumpNetwork(MatfiltNetwork const& network, SdfPath const& id)
+HdPrman_DumpNetwork(HdMaterialNetwork2 const& network, SdfPath const& id)
 {
     printf("material network for %s:\n", id.GetText());
     for (auto const& nodeEntry: network.nodes) {
@@ -478,14 +489,14 @@ HdPrman_DumpNetwork(MatfiltNetwork const& network, SdfPath const& id)
     }
 }
     
-// Convert given Matfilt network to Riley material and displacement
+// Convert given HdMaterialNetwork2 to Riley material and displacement
 // shader networks. If the Riley network exists, it will be modified;
 // otherwise it will be created as needed.
 static void
-_ConvertMatfiltNetworkToRman(
+_ConvertHdMaterialNetwork2ToRman(
     HdPrman_Context *context,
     SdfPath const& id,
-    const MatfiltNetwork &network,
+    const HdMaterialNetwork2 &network,
     riley::MaterialId *materialId,
     riley::DisplacementId *displacementId)
 {
@@ -558,15 +569,15 @@ HdPrmanMaterial::Sync(HdSceneDelegate *sceneDelegate,
         (*dirtyBits & HdMaterial::DirtyParams)) {
         VtValue hdMatVal = sceneDelegate->GetMaterialResource(id);
         if (hdMatVal.IsHolding<HdMaterialNetworkMap>()) {
-            // Convert Hd material to Matfilt network form.
-            MatfiltNetwork matfiltNetwork;
-            MatfiltConvertFromHdMaterialNetworkMap(
-                hdMatVal.UncheckedGet<HdMaterialNetworkMap>(), &matfiltNetwork);
+            // Convert HdMaterial to HdMaterialNetwork2 form.
+            HdMaterialNetwork2 matNetwork2;
+            HdMaterialNetwork2ConvertFromHdMaterialNetworkMap(
+                hdMatVal.UncheckedGet<HdMaterialNetworkMap>(), &matNetwork2);
             // Apply material filter chain to the network.
             if (!_filterChain->empty()) {
                 std::vector<std::string> errors;
-                MatfiltExecFilterChain(*_filterChain, id, matfiltNetwork, {},
-                                           *_sourceTypes, &errors);
+                MatfiltExecFilterChain(*_filterChain, id, matNetwork2, {},
+                                       *_sourceTypes, &errors);
                 if (!errors.empty()) {
                     TF_RUNTIME_ERROR("HdPrmanMaterial: %s\n",
                         TfStringJoin(errors).c_str());
@@ -574,10 +585,10 @@ HdPrmanMaterial::Sync(HdSceneDelegate *sceneDelegate,
                 }
             }
             if (TfDebug::IsEnabled(HDPRMAN_MATERIALS)) {
-                HdPrman_DumpNetwork(matfiltNetwork, id);
+                HdPrman_DumpNetwork(matNetwork2, id);
                 }
-            _ConvertMatfiltNetworkToRman(context, id, matfiltNetwork,
-                                         &_materialId, &_displacementId);
+            _ConvertHdMaterialNetwork2ToRman(context, id, matNetwork2,
+                                             &_materialId, &_displacementId);
         } else {
             TF_WARN("HdPrmanMaterial: Expected material resource "
                     "for <%s> to contain HdMaterialNodes, but "

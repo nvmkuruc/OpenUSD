@@ -42,7 +42,12 @@
 // 32 -> 33: Deleted GetPathForInstanceIndex; added GetScenePrimPath.
 // 32 -> 34: Added HdInstancerContext to GetScenePrimPath.
 // 34 -> 35: HdRepr is using std::unique_ptr<HdDrawItem>
-#define HD_API_VERSION 35
+// #nv begin #materialx-backport
+//    (NVIDIA: the 41 api is from pixar - we've just skipped 36-40)
+// 35 -> 41: Renamed HdDelegate::GetMaterialNeworkselector() to 
+//           GetMaterialRenderContexts(). It now returns a TfTokenVector.
+// #nv end
+#define HD_API_VERSION 41
 
 // 1  ->  2: SimpleLighting -> FallbackLighting
 #define HD_SHADER_API 2

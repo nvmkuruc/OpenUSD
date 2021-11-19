@@ -29,7 +29,7 @@
 # MATERIALX_FOUND            Defined if MaterialX has been detected
 # MATERIALX_BASE_DIR         Path to the root of the MaterialX installation 
 # MATERIALX_INCLUDE_DIRS     Path to the MaterialX include directories
-# MATERIALX_LIB_DIRS         Path to the MaterialX libraray directories
+# MATERIALX_LIB_DIRS         Path to the MaterialX library directories
 # MATERIALX_STDLIB_DIR       Path to the MaterialX standard library directory
 # MATERIALX_LIBRARIES        List of MaterialX libraries
 
@@ -67,13 +67,20 @@ find_path(MATERIALX_INCLUDE_DIRS
 )
 
 if (WIN32)
-    set(MATERIALX_CORE_LIB_NAME MaterialXCore.lib)
+    set(MATERIALX_CORE_STATIC_LIB_NAME MaterialXCore.lib)
+    set(MATERIALX_CORE_DYNAMIC_LIB_NAME MaterialXCore.dll)
 else()
-    set(MATERIALX_CORE_LIB_NAME libMaterialXCore.a)
+    set(MATERIALX_CORE_STATIC_LIB_NAME libMaterialXCore.a)
+    if (APPLE)
+        set(MATERIALX_CORE_DYNAMIC_LIB_NAME libMaterialXCore.dylib)
+    else()
+        set(MATERIALX_CORE_DYNAMIC_LIB_NAME libMaterialXCore.so)
+    endif()
 endif()
 
 find_path(MATERIALX_LIB_DIRS 
-    "${MATERIALX_CORE_LIB_NAME}"
+    "${MATERIALX_CORE_STATIC_LIB_NAME}"
+    "${MATERIALX_CORE_DYNAMIC_LIB_NAME}"
     HINTS
         "${MATERIALX_ROOT}"
         "$ENV{MATERIALX_ROOT}"        
@@ -84,23 +91,30 @@ find_path(MATERIALX_LIB_DIRS
         "MaterialX Library Path"
 )
 
-find_path(MATERIALX_STDLIB_DIR 
-    stdlib_defs.mtlx
+find_path(MATERIALX_STDLIB_DIR
+    stdlib/stdlib_defs.mtlx
     HINTS
         "${MATERIALX_ROOT}"
-        "$ENV{MATERIALX_ROOT}"        
+        "$ENV{MATERIALX_ROOT}"
         "${MATERIALX_BASE_DIR}"
         "${MATERIALX_DATA_ROOT}"
     PATH_SUFFIXES
-        documents/Libraries
-        libraries/stdlib
+        libraries
     DOC
         "MaterialX Standard Libraries Path"
 )
 
 foreach(MATERIALX_LIB
     Core
-    Format)
+    Format
+    GenGlsl
+    GenOsl
+    GenShader
+    Render
+    RenderGlsl
+    RenderHw
+    RenderOsl
+    )
     find_library(MATERIALX_${MATERIALX_LIB}_LIBRARY
             MaterialX${MATERIALX_LIB}
         HINTS

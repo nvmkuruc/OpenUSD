@@ -513,9 +513,9 @@ protected:
     USDIMAGING_API
     TfToken _GetMaterialBindingPurpose() const;
 
-    // Returns the material context from the renderer delegate.
+    // Returns the material contexts from the renderer delegate.
     USDIMAGING_API
-    TfToken _GetMaterialNetworkSelector() const;
+    TfTokenVector _GetMaterialRenderContexts() const;
 
     // Returns true if render delegate wants primvars to be filtered based.
     // This will filter the primvars based on the bound material primvar needs.

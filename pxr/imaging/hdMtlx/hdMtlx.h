@@ -1,5 +1,5 @@
 //
-// Copyright 2019 Pixar
+// Copyright 2021 Pixar
 //
 // Licensed under the Apache License, Version 2.0 (the "Apache License")
 // with the following modification; you may not use this file except in
@@ -21,20 +21,44 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef EXT_RMANPKG_23_0_PLUGIN_RENDERMAN_PLUGIN_HD_PRMAN_MATFILT_CONVERSIONS_H
-#define EXT_RMANPKG_23_0_PLUGIN_RENDERMAN_PLUGIN_HD_PRMAN_MATFILT_CONVERSIONS_H
+#ifndef PXR_IMAGING_HD_MTLX_HDMTLX_H
+#define PXR_IMAGING_HD_MTLX_HDMTLX_H
 
 #include "pxr/pxr.h"
-#include "hdPrman/matfiltFilterChain.h"
-#include "pxr/imaging/hd/material.h"
+#include "pxr/imaging/hdMtlx/api.h"
+#include <memory>
+#include <set>
+#include <unordered_map>
+
+namespace MaterialX {
+    using DocumentPtr = std::shared_ptr<class Document>;
+    using StringMap = std::unordered_map<std::string, std::string>;
+}
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-/// Converts a single terminal of an HdMaterialNetworkMap to a MatfiltNetwork
-/// NOTE: currently doesn't handle primvars field of HdMaterialNetwork
-bool MatfiltConvertFromHdMaterialNetworkMap(
-    const HdMaterialNetworkMap & hdNetworkMap,
-    MatfiltNetwork *result);
+class SdfPath;
+class VtValue;
+struct HdMaterialNetwork2;
+struct HdMaterialNode2;
+
+/// Converts the HdParameterValue to a string MaterialX can understand
+HDMTLX_API
+std::string
+HdMtlxConvertToString(VtValue const& hdParameterValue);
+
+/// Creates and returns a MaterialX Document from the given HdMaterialNetwork2 
+/// Collecting the hdTextureNodes as the HdMaterialNetwork2 is traversed as
+/// well as the Texture name mapping between MaterialX and Hydra
+HDMTLX_API
+MaterialX::DocumentPtr
+HdMtlxCreateMtlxDocumentFromHdNetwork(
+    HdMaterialNetwork2 const& hdNetwork,
+    HdMaterialNode2 const& hdMaterialXNode,
+    SdfPath const& materialPath,
+    MaterialX::DocumentPtr const& libraries,
+    std::set<SdfPath> * hdTextureNodes,
+    MaterialX::StringMap * mxHdTextureMap);
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

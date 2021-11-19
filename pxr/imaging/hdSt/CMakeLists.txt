@@ -16,6 +16,21 @@ if (OPENSUBDIV_HAS_GLSL_COMPUTE)
     add_definitions(-DOPENSUBDIV_HAS_GLSL_COMPUTE)
 endif()
 
+set(optionalLibs "")
+set(optionalIncludeDirs "")
+set(optionalPrivateClasses "")
+if (${PXR_ENABLE_MATERIALX_SUPPORT})
+    add_definitions(-DPXR_MATERIALX_STDLIB_DIR="${MATERIALX_STDLIB_DIR}")
+    add_definitions(-DPXR_MATERIALX_BASE_DIR="${MATERIALX_BASE_DIR}")
+
+    list(APPEND optionalLibs ${MATERIALX_LIBRARIES} hdMtlx)
+    list(APPEND optionalIncludeDirs ${MATERIALX_INCLUDE_DIRS})
+    list(APPEND optionalPrivateClasses
+         materialXFilter
+         materialXShaderGen
+    )
+endif()
+
 pxr_library(hdSt
     LIBRARIES
         hio
@@ -28,10 +43,12 @@ pxr_library(hdSt
         trace
         ${GLEW_LIBRARY}
         ${OPENSUBDIV_LIBRARIES}
+        ${optionalLibs}
 
     INCLUDE_DIRS
         ${GLEW_INCLUDE_DIR}
         ${OPENSUBDIV_INCLUDE_DIR}
+        ${optionalIncludeDirs}
 
     PUBLIC_CLASSES
         basisCurves
@@ -134,6 +151,7 @@ pxr_library(hdSt
         unitTestHelper
         volumeShader
         volumeShaderKey
+        ${optionalPrivateClasses}
 
     RESOURCE_FILES
         plugInfo.json
