@@ -135,8 +135,8 @@ HdSt_GenMaterialXShaderCode(
     mx::TypedElementPtr renderableElem = renderableElements.at(0);
     mx::NodePtr node = renderableElem->asA<mx::Node>();
     if (node && node->getType() == mx::MATERIAL_TYPE_STRING) {
-        std::unordered_set<mx::NodePtr> mxShaderNodes;
-        mxShaderNodes = mx::getShaderNodes(node, mx::SURFACE_SHADER_TYPE_STRING);
+        // Use auto so can compile against MaterialX 1.38.0 or 1.38.1
+        auto mxShaderNodes = mx::getShaderNodes(node, mx::SURFACE_SHADER_TYPE_STRING);
         if (!mxShaderNodes.empty()) {
             renderableElem = *mxShaderNodes.begin();
         }
@@ -376,12 +376,12 @@ _UpdateTextureNodes(
         textureConn.upstreamNode = texturePath;
         textureConn.upstreamOutputName = TfToken(newConnName);
         hdNetwork->nodes[hdTerminalNodePath].
-            inputConnections[textureConn.upstreamOutputName] = {textureConn};
+            inputConnections[textureConn.upstreamOutputName] = { textureConn };
     }
 }
 
 // Connect the primvar nodes to the terminal node
-static void 
+static void
 _UpdatePrimvarNodes(
     mx::DocumentPtr const &mxDoc,
     HdMaterialNetwork2* hdNetwork,
@@ -400,7 +400,7 @@ _UpdatePrimvarNodes(
 
             // Figure out the mx typename
             mx::NodeDefPtr mxNodeDef = mxDoc->getNodeDef(
-                    hdPrimvarNode.nodeTypeId.GetString());
+                hdPrimvarNode.nodeTypeId.GetString());
             if (mxNodeDef) {
                 (*mxHdPrimvarMap)[primvarName] = mxNodeDef->getType();
             }
@@ -413,7 +413,7 @@ _UpdatePrimvarNodes(
         primvarConn.upstreamNode = primvarPath;
         primvarConn.upstreamOutputName = TfToken(newConnName);
         hdNetwork->nodes[hdTerminalNodePath]
-            .inputConnections[primvarConn.upstreamOutputName] = {primvarConn};
+            .inputConnections[primvarConn.upstreamOutputName] = { primvarConn };
     }
 }
 

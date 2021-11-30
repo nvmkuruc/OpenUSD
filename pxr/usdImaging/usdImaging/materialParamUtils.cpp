@@ -224,58 +224,6 @@ _ResolveAssetAttribute(
             ArJoinPackageRelativePath(firstTilePackage, firstTilePath));
 }
 
-// #nv begin #new-MDL-schema
-static void
-_GetShaderNodeForSourceTypeFallbackNV(
-    UsdShadeShader const& shader,
-    TfToken const& networkSelector,
-    TfToken* identifier = nullptr,
-    TfToken* subIdentifier = nullptr)
-{
-    TfToken implSource = shader.GetImplementationSource();
-
-    if (implSource == UsdShadeTokens->id) {
-        TfToken shaderId;
-
-        if (shader.GetShaderId(&shaderId)) {
-            auto &shaderReg = SdrRegistry::GetInstance();
-            if (SdrShaderNodeConstPtr sdrNode =
-                shaderReg.GetShaderNodeByIdentifierAndType(shaderId,
-                    networkSelector)) {
-                if (identifier) {
-                    *identifier = TfToken(sdrNode->GetResolvedImplementationURI());
-                }
-            }
-        }
-    }
-    else if (implSource == UsdShadeTokens->sourceAsset) {
-        SdfAssetPath sourceAsset;
-        if (shader.GetSourceAsset(&sourceAsset, networkSelector)) {
-            std::string path = sourceAsset.GetResolvedPath();
-            if (path.empty()) {
-                path = ArGetResolver().Resolve(sourceAsset.GetAssetPath());
-            }
-            if (path.empty()) {
-                path = sourceAsset.GetAssetPath();
-            }
-            if (identifier) {
-                *identifier = TfToken(path);
-            }
-        }
-        if (subIdentifier) {
-            shader.GetSourceAssetSubIdentifier(subIdentifier, networkSelector);
-        }
-    }
-    else if (implSource == UsdShadeTokens->sourceCode) {
-        std::string sourceCode;
-        if (shader.GetSourceCode(&sourceCode, networkSelector)) {
-            if (identifier) {
-                *identifier = TfToken(sourceCode);
-            }
-        }
-    }
-}
-
 TF_DEFINE_ENV_SETTING(USDIMAGING_ALLOW_UNREGISTERED_SHADER_IDS, 0,
     "Allows material networks to be defined under IDs which are not known to SdrRegistry.");
 static bool _UnregisteredShaderIDsAllowed() {
@@ -424,6 +372,71 @@ TfToken _GetNodeId(UsdShadeConnectableAPI const &shadeNode,
     return shadeNode.GetPrim().GetTypeName();
 }
 
+// #nv begin #new-MDL-schema
+static void
+_GetShaderNodeForSourceTypeFallbackNV(
+    UsdShadeShader const& shader,
+    TfTokenVector const& contexts,
+    TfToken* identifier=nullptr,
+    TfToken* subIdentifier=nullptr)
+{
+    TfToken implSource = shader.GetImplementationSource();
+
+    if (implSource == UsdShadeTokens->id) {
+        TfToken shaderId;
+
+        for (auto& context : contexts) {
+            if (shader.GetShaderId(&shaderId)) {
+                auto &shaderReg = SdrRegistry::GetInstance();
+                if (SdrShaderNodeConstPtr sdrNode = 
+                        shaderReg.GetShaderNodeByIdentifierAndType(shaderId, 
+                            context)) {
+                    if (identifier) {
+                        *identifier = TfToken(sdrNode->GetResolvedImplementationURI());
+                    }
+                    return;
+                }
+            }
+        }
+    } else if (implSource == UsdShadeTokens->sourceAsset) {
+        SdfAssetPath sourceAsset;
+        bool found = false;
+        for (auto& context : contexts) {
+            if (shader.GetSourceAsset(&sourceAsset, context)) {
+                std::string path = sourceAsset.GetResolvedPath();
+                if (path.empty()) {
+                    path = ArGetResolver().Resolve(sourceAsset.GetAssetPath());
+                }
+                if (identifier) {
+                    *identifier = TfToken(path);
+                    found = true;
+                }
+            }
+            if (subIdentifier) {
+                if (shader.GetSourceAssetSubIdentifier(subIdentifier,
+                                                       context)) {
+                    found = true;
+                }
+            }
+            if (found) {
+                return;
+            }
+        }
+    } else if (implSource == UsdShadeTokens->sourceCode) {
+        std::string sourceCode;
+        for (auto& context : contexts) {
+            if (shader.GetSourceCode(&sourceCode, context)) {
+                if (identifier) {
+                    *identifier = TfToken(sourceCode);
+                }
+                return;
+            }
+        }
+    }  
+}
+
+// #nv end
+
 // Walk the shader graph and emit nodes in topological order to avoid
 // forward-references.
 // This current implementation of _WalkGraph flattens the shading network into
@@ -518,18 +531,19 @@ void _WalkGraph(
         // the number of primvars send to the render delegate. We extract the
         // primvar names from the material node to ensure these primvars are
         // not filtered-out by GprimAdapter.
-        _ExtractPrimvarsFromNode(node, materialNetwork, shaderSourceTypes);
+        _ExtractPrimvarsFromNode(
+            node, materialNetwork, shaderSourceTypes);
     }
 
-    // #nv begin #new-MDL-schema   
+    // #nv begin #new-MDL-schema
+    UsdShadeShader shader = UsdShadeShader(shadeNode.GetPrim());
     // TODO: resolve merge conflict
-    if (/*timeVarying == nullptr && */node.identifier.IsEmpty()) {
-        static TfToken networkSelector("mdl");
+    if (/*timeVarying == nullptr && */node.identifier.IsEmpty() && shader) {
         _GetShaderNodeForSourceTypeFallbackNV(
-            shadeNode, networkSelector, &node.identifier, &node.subIdentifier);
+            shader, renderContexts, &node.identifier, &node.subIdentifier);
     }
     // #nv end
-
+    
     materialNetwork->nodes.push_back(node);
 }
 
@@ -564,7 +578,7 @@ UsdImaging_BuildHdMaterialNetworkFromTerminal(
 
     // #nv begin #new-MDL-schema
     if (!_UnregisteredShaderIDsAllowed()) {
-        // nv end
+    // nv end
         // Validate that idenfitier (info:id) is known to Sdr.
         // Return empty network if it fails so backend can use fallback material.
         SdrRegistry &shaderReg = SdrRegistry::GetInstance();

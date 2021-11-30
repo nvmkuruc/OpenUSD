@@ -49,6 +49,7 @@ TF_REGISTRY_FUNCTION(TfType)
     TfType t = TfType::Define<Adapter, TfType::Bases<Adapter::BaseAdapter> >();
     t.SetFactory< UsdImagingPrimAdapterFactory<Adapter> >();
 }
+
 UsdImagingMaterialAdapter::~UsdImagingMaterialAdapter()
 {
 }
@@ -115,13 +116,13 @@ UsdImagingMaterialAdapter::TrackVariability(
     bool checkVariability) const
     // nv end
 {
+    TRACE_FUNCTION();
     // #nv begin fast-updates
     // Early out, as there are no initial values to populate into the value cache.
     if (!checkVariability)
         return;
     // nv end
 
-    TRACE_FUNCTION();
     UsdShadeMaterial material(prim);
     if (!material) {
         TF_RUNTIME_ERROR("Expected material prim at <%s> to be of type "

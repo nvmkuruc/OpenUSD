@@ -327,7 +327,7 @@ evaluateIndirectLighting(
     vec2 coord = projectToLatLong(dir);
     vec3 diffuse = HdGet_domeLightIrradiance(coord).rgb;
 
-    // Specular Component 
+    // Specular Component
     const float MAX_REFLECTION_LOD = 
         textureQueryLevels(HdGetSampler_domeLightPrefilter());
     float lod = roughness * MAX_REFLECTION_LOD;
