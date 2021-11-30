@@ -98,4 +98,6 @@ pxr_register_test(testUsdMdlTypes
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdMdlTypes"
     EXPECTED_RETURN_CODE 0
+    ENV
+        SDR_DEFAULT_VALUE_AS_SDF_DEFAULT_VALUE=0
 )
