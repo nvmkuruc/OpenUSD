@@ -30,7 +30,10 @@
 
 #include "pxr/usd/sdf/path.h"
 #include "pxr/usd/sdr/registry.h"
+
+#include "pxr/base/arch/fileSystem.h"
 #include "pxr/base/tf/diagnostic.h"
+#include "pxr/base/tf/getenv.h"
 
 #include <MaterialXCore/Document.h>
 #include <MaterialXCore/Node.h>
@@ -40,6 +43,55 @@
 namespace mx = MaterialX;
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+static const NdrStringVec
+_GetSearchPathsFromEnvVar(const char* name)
+{
+    const std::string paths = TfGetenv(name);
+    return !paths.empty() 
+                ? TfStringSplit(paths, ARCH_PATH_LIST_SEP) 
+                : NdrStringVec();
+}
+
+static mx::FileSearchPath
+_ComputeSearchPaths()
+{
+    mx::FileSearchPath searchPaths;
+    // Add any additional custom mtlx path(s)
+    // Note this is the same envar used in UsdMtlxDiscoveryPlugin. This is used
+    // to indicate the location of any additional custom mtlx files.
+    static const auto customSearchPaths =
+        _GetSearchPathsFromEnvVar("PXR_MTLX_PLUGIN_SEARCH_PATHS");
+    for (auto path : customSearchPaths) {
+        searchPaths.append(mx::FilePath(path));
+    }
+
+    // Add the MaterialX/libraries path(s)
+    // Note this is the same envar used in UsdMtlxStandardLibraryPaths() 
+    // This is used to indicate the location of the MaterialX/libraries folder 
+    // if moved/changed from the path initilialized in PXR_MATERIALX_STDLIB_DIR.
+    static const auto stdlibSearchPaths =
+        _GetSearchPathsFromEnvVar("PXR_MTLX_STDLIB_SEARCH_PATHS");
+    for (auto path : stdlibSearchPaths) {
+        searchPaths.append(mx::FilePath(path));
+    }
+
+    // Add path to the MaterialX standard library discovered at build time.
+    searchPaths.append(mx::FilePath(PXR_MATERIALX_STDLIB_DIR));
+
+    return searchPaths;
+}
+
+// Return the MaterialX search paths. In order, this includes:
+// - Paths set in the environment variable 'PXR_MTLX_PLUGIN_SEARCH_PATHS'
+// - Paths set in the environment variable 'PXR_MTLX_STDLIB_SEARCH_PATHS'
+// - Path to the MaterialX standard library discovered at build time.
+const mx::FileSearchPath &
+HdMtlxSearchPaths()
+{
+    static const mx::FileSearchPath searchPaths = _ComputeSearchPaths();
+    return searchPaths;
+}
 
 // Return the MaterialX Node Type based on the corresponding NodeDef name, 
 // which is stored as the hdNodeType. 
@@ -210,7 +262,8 @@ _AddMaterialXNode(
     mx::StringSet * addedNodeNames,
     std::set<SdfPath> * hdTextureNodes,
     std::string const& connectionName,
-    mx::StringMap * mxHdTextureMap)
+    mx::StringMap * mxHdTextureMap,
+    std::set<SdfPath> * hdPrimvarNodes)
 {
     // Get the mxNode information
     mx::NodeDefPtr mxNodeDef = mxDoc->getNodeDef(hdNode.nodeTypeId.GetString());
@@ -240,10 +293,21 @@ _AddMaterialXNode(
         if (mxNodeCategory == "image" || mxNodeCategory == "tiledimage") {
 
             // Save the corresponding MaterialX and Hydra names for ShaderGen
-            (*mxHdTextureMap)[hdNodePath.GetName()] = connectionName;
+            if (mxHdTextureMap) {
+                (*mxHdTextureMap)[hdNodePath.GetName()] = connectionName;
+            }
 
             // Save the path to adjust the parameters after traversing the network
-            hdTextureNodes->insert(hdNodePath);
+            if (hdTextureNodes) {
+                hdTextureNodes->insert(hdNodePath);
+            }
+        }
+
+        // If this is a MaterialX primvar node
+        if (mxNodeCategory == "geompropvalue") {
+            if (hdPrimvarNodes) {
+                hdPrimvarNodes->insert(hdNodePath);
+            }
         }
     }
     return mxNode;
@@ -261,7 +325,8 @@ _GatherUpstreamNodes(
     mx::NodePtr * mxUpstreamNode,
     std::set<SdfPath> * hdTextureNodes,
     std::string const& connectionName,
-    mx::StringMap * mxHdTextureMap)
+    mx::StringMap * mxHdTextureMap,
+    std::set<SdfPath> * hdPrimvarNodes)
 {
     // Get the connected node (hdNode) from the hdConnection
     SdfPath hdNodePath;
@@ -284,7 +349,8 @@ _GatherUpstreamNodes(
     // Add the node to the mxNodeGraph/mxDoc.
     mx::NodePtr mxCurrNode = _AddMaterialXNode(hdNetwork, hdNode, hdNodePath, 
                                 mxDoc, *mxNodeGraph, addedNodeNames, 
-                                hdTextureNodes, connectionName, mxHdTextureMap);
+                                hdTextureNodes, connectionName, mxHdTextureMap,
+                                hdPrimvarNodes);
 
     if (!mxCurrNode) {
         return;
@@ -299,7 +365,8 @@ _GatherUpstreamNodes(
             // Gather the nodes uptream from the mxCurrNode
             _GatherUpstreamNodes(hdNetwork, currConnection, mxDoc, mxNodeGraph,
                                  addedNodeNames, mxUpstreamNode, hdTextureNodes, 
-                                 connName.GetString(), mxHdTextureMap);
+                                 connName.GetString(), mxHdTextureMap,
+                                 hdPrimvarNodes);
 
             // Connect mxCurrNode to the mxUpstreamNode
             mx::NodePtr mxNextNode = *mxUpstreamNode;
@@ -325,7 +392,8 @@ HdMtlxCreateMtlxDocumentFromHdNetwork(
     SdfPath const& materialPath,
     mx::DocumentPtr const& libraries,
     std::set<SdfPath> * hdTextureNodes, // Paths to the Hd Texture Nodes
-    mx::StringMap * mxHdTextureMap)     // Mx-Hd texture name counterparts
+    mx::StringMap * mxHdTextureMap,     // Mx-Hd texture name counterparts
+    std::set<SdfPath> * hdPrimvarNodes) // Paths to the Hd primvar nodes
 {
     // Initialize a MaterialX Document
     mx::DocumentPtr mxDoc = mx::createDocument();
@@ -351,7 +419,7 @@ HdMtlxCreateMtlxDocumentFromHdNetwork(
             mx::NodePtr mxUpstreamNode;
             _GatherUpstreamNodes(hdNetwork, currConnection, mxDoc, &mxNodeGraph,
                         &addedNodeNames, &mxUpstreamNode, hdTextureNodes, 
-                        mxNodeGraphOutput, mxHdTextureMap);
+                        mxNodeGraphOutput, mxHdTextureMap, hdPrimvarNodes);
 
             if (!mxUpstreamNode) {
                 continue;
