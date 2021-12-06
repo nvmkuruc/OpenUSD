@@ -166,8 +166,9 @@ public:
     };
 
     void SyncPrims(HdSceneDelegate* sceneDelegate,
-                  PostSyncRequestVector& syncRequestVector,
-                  HdRenderParam *renderParam);
+                   PostSyncRequestVector& syncRequestVector,
+                   HdRenderParam *renderParam,
+                   const bool multithreaded=false);
 
     /// Obtains a modifiable pointer the prim with the given type and id.
     PrimType *GetPrim(const SdfPath &primId) const;

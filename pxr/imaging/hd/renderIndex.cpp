@@ -48,6 +48,7 @@
 #include "pxr/base/work/arenaDispatcher.h"
 #include "pxr/base/work/loops.h"
 #include "pxr/base/tf/pyLock.h"
+#include "pxr/base/tf/envSetting.h"
 
 #include <iostream>
 #include <mutex>
@@ -59,6 +60,17 @@
 #include <boost/functional/hash.hpp>
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+TF_DEFINE_ENV_SETTING(HD_ENABLE_MULTITHREADED_NON_MATERIAL_SPRIM_SYNC, 0,
+                      "Enable multithreaded Hydra Sync for SPrims other than materials");
+
+static bool
+_IsEnabledMultithreadedNonMaterialSprimSync()
+{
+    static bool enabled =
+        (TfGetEnvSetting(HD_ENABLE_MULTITHREADED_NON_MATERIAL_SPRIM_SYNC) == 1);
+    return enabled;
+}
 
 
 HdRenderIndex::HdRenderIndex(
@@ -1134,7 +1146,8 @@ void HdRenderIndex::AddPostSyncDelegate(HdSceneDelegate* sceneDelegate)
     // add sync request vector for this scene delegate
     auto& r = _postSyncMap[sceneDelegate];
     r.rprimRequestVector = _RprimPostSyncRequestVector();
-    r.sprimRequestVector = _SprimIndex::PostSyncRequestVector();
+    r.sprimMaterialRequestVector = _SprimIndex::PostSyncRequestVector();
+    r.sprimNonMaterialRequestVector = _SprimIndex::PostSyncRequestVector();
 }
 // nv end
 
@@ -1577,9 +1590,12 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
             rprimRequestVector.rprims.clear();
             rprimRequestVector.reprsMasks.clear();
 
-            _SprimIndex::PostSyncRequestVector& sprimRequestVector = dlgIt->second.sprimRequestVector;
-            sprimRequestVector.prims.clear();
-            sprimRequestVector.dirtyBits.clear();
+            _SprimIndex::PostSyncRequestVector& sprimMaterialRequestVector = dlgIt->second.sprimMaterialRequestVector;
+            sprimMaterialRequestVector.prims.clear();
+            sprimMaterialRequestVector.dirtyBits.clear();
+            _SprimIndex::PostSyncRequestVector& sprimNonMaterialRequestVector = dlgIt->second.sprimNonMaterialRequestVector;
+            sprimNonMaterialRequestVector.prims.clear();
+            sprimNonMaterialRequestVector.dirtyBits.clear();
 
             // merge current sync requests
             for (size_t i = 0; i < numPostSyncRequests; i++)
@@ -1599,11 +1615,20 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
                 }
                 else
                 {
-                    auto sprim = _sprimIndex.GetPrim(id);
-                    if (sprim)
+                    auto sprimMat = _sprimIndex.GetPrim(HdPrimTypeTokens->material, id);
+                    if (sprimMat)
                     {
-                        sprimRequestVector.prims.push_back(sprim);
-                        sprimRequestVector.dirtyBits.push_back(dirtyBits);
+                        sprimMaterialRequestVector.prims.push_back(sprimMat);
+                        sprimMaterialRequestVector.dirtyBits.push_back(dirtyBits);
+                    }
+                    else
+                    {
+                        auto sprimOther = _sprimIndex.GetPrim(id);
+                        if (sprimOther)
+                        {
+                            sprimNonMaterialRequestVector.prims.push_back(sprimOther);
+                            sprimNonMaterialRequestVector.dirtyBits.push_back(dirtyBits);
+                        }
                     }
                 }
             }
@@ -1654,11 +1679,27 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
     }
     dispatcher.Wait();
 
-    // sync sprims for post sync requests (lights, etc.)
+    // sync sprims for post sync requests (Materials - cannot be multi-threaded)
     TF_FOR_ALL(dlgIt, _postSyncMap) {
         HdSceneDelegate* sceneDelegate = dlgIt->first;
-        _SprimIndex::PostSyncRequestVector& sprimRequestVector = dlgIt->second.sprimRequestVector;
+        _SprimIndex::PostSyncRequestVector& sprimRequestVector = dlgIt->second.sprimMaterialRequestVector;
         _sprimIndex.SyncPrims(sceneDelegate, sprimRequestVector, renderParam);
+    }
+
+    // sync sprims for non material post sync requests (can be multi-threaded)
+    if(_IsEnabledMultithreadedNonMaterialSprimSync()) {
+        WorkParallelForEach(_postSyncMap.begin(), _postSyncMap.end(), [&](auto& dlgIt) {
+            HdSceneDelegate* sceneDelegate = dlgIt.first;
+            _SprimIndex::PostSyncRequestVector& sprimRequestVector = dlgIt.second.sprimNonMaterialRequestVector;
+            _sprimIndex.SyncPrims(sceneDelegate, sprimRequestVector, renderParam, true);
+        });
+    }
+    else {
+        TF_FOR_ALL(dlgIt, _postSyncMap) {
+            HdSceneDelegate* sceneDelegate = dlgIt->first;
+            _SprimIndex::PostSyncRequestVector& sprimRequestVector = dlgIt->second.sprimNonMaterialRequestVector;
+            _sprimIndex.SyncPrims(sceneDelegate, sprimRequestVector, renderParam);
+        }
     }
 
     // sync rprim for postSync delegates
