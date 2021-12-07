@@ -553,7 +553,8 @@ public:
     struct PostSyncRequestVector
     {
         _RprimPostSyncRequestVector rprimRequestVector;
-        _SprimIndex::PostSyncRequestVector sprimRequestVector;
+        _SprimIndex::PostSyncRequestVector sprimMaterialRequestVector;
+        _SprimIndex::PostSyncRequestVector sprimNonMaterialRequestVector;
     };
 
 private:

@@ -419,14 +419,22 @@ Hd_PrimTypeIndex<PrimType>::SyncPrims(HdChangeTracker  &tracker,
 template <class PrimType>
 void
 Hd_PrimTypeIndex<PrimType>::SyncPrims(HdSceneDelegate* sceneDelegate,
-                  PostSyncRequestVector& syncRequestVector,
-                  HdRenderParam *renderParam)
+                                      PostSyncRequestVector& syncRequestVector,
+                                      HdRenderParam *renderParam,
+                                      const bool multithreaded)
 {
-    for (size_t i = 0; i < syncRequestVector.prims.size(); ++i) 
-    {
-        auto& prim = syncRequestVector.prims[i];
-        HdDirtyBits dirtyBits = syncRequestVector.dirtyBits[i];
-        prim->Sync(sceneDelegate, renderParam, &dirtyBits);
+    auto syncPrims = [&](size_t begin, size_t end) {
+        for (size_t i = begin; i < end; ++i) {
+            auto& prim = syncRequestVector.prims[i];
+            HdDirtyBits dirtyBits = syncRequestVector.dirtyBits[i];
+            prim->Sync(sceneDelegate, renderParam, &dirtyBits);
+        }
+    };
+    if (multithreaded) {
+        WorkParallelForN(syncRequestVector.prims.size(), syncPrims);
+    }
+    else {
+        syncPrims(0, syncRequestVector.prims.size());
     }
 }
 
