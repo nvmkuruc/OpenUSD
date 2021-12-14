@@ -10,10 +10,8 @@ pxr_library(hdMtlx
         trace
         usdMtlx
         vt
-        ${MATERIALX_LIBRARIES}
-
-    INCLUDE_DIRS
-        ${MATERIALX_INCLUDE_DIRS}
+        MaterialXCore
+        MaterialXFormat
 
     PUBLIC_CLASSES
         hdMtlx
