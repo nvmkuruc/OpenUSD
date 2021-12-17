@@ -48,13 +48,13 @@ using _NameMapping = std::map<std::string, std::string>;
 
 // Fill the name mapping with the shortest name found in the inheritance
 // hierarchy:
-void _FindAncestralMappings(mx::ConstElementPtr mtlx, _NameMapping& mappping)
+void
+_MapNodeNamesToBaseForVersioning(mx::ConstElementPtr mtlx, _NameMapping* mapping)
 {
     static const std::string inheritAttr("inherit");
 
-    const std::string* shortestName = &mtlx->getName();
-
     // Find shortest:
+    const std::string* shortestName = &mtlx->getName();
     mx::ConstElementPtr current = mtlx;
     while (true) {
         const std::string& inherit = current->getAttribute(inheritAttr);
@@ -71,8 +71,13 @@ void _FindAncestralMappings(mx::ConstElementPtr mtlx, _NameMapping& mappping)
             break;
         }
     }
+
     // Populate mapping:
-    mappping.emplace(mtlx->getName(), *shortestName);
+    auto r = mapping->emplace(mtlx->getName(), *shortestName);
+    // If shortestName is shorter than the existing name, replace it.
+    if (!r.second && shortestName->size() < r.first->second.size()) {
+        r.first->second = *shortestName;
+    }
     while (true) {
         const std::string& inherit = mtlx->getAttribute(inheritAttr);
         if (inherit.empty()) {
@@ -80,7 +85,11 @@ void _FindAncestralMappings(mx::ConstElementPtr mtlx, _NameMapping& mappping)
         }
         if (auto inherited = mtlx->getRoot()->getChild(inherit)) {
             mtlx = inherited;
-            mappping.emplace(mtlx->getName(), *shortestName);
+            auto r = mapping->emplace(mtlx->getName(), *shortestName);
+            // If shortestName is shorter than the existing name, replace it.
+            if (!r.second && shortestName->size() < r.first->second.size()) {
+                r.first->second = *shortestName;
+            }
         }
         else {
             break;
@@ -94,10 +103,9 @@ _ComputeNameMapping(const mx::ConstDocumentPtr& doc)
 {
     _NameMapping result;
 
-    // We use the simple heuristic of using the name of the top-most
-    // nodedef on the inheritance chain where top-most is the one
-    // that doesn't itself inherit anything.  The 1.36 spec gives
-    // guidance that this should be sufficient.
+    // For each nodeDef with an inheritance chain, we populate the 
+    // _NameMapping with the shortest name found in the inheritance
+    // hierarchy
     //
     //    mix_float_210 (v2.1)
     //      inherits mix_float_200 (v2.0)
@@ -114,7 +122,7 @@ _ComputeNameMapping(const mx::ConstDocumentPtr& doc)
     // shortest name.
     for (auto&& mtlxNodeDef: doc->getNodeDefs()) {
         if (mtlxNodeDef->hasInheritString()) {
-            _FindAncestralMappings(mtlxNodeDef, result);
+            _MapNodeNamesToBaseForVersioning(mtlxNodeDef, &result);
         }
     }
 
