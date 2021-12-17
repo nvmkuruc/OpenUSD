@@ -36,7 +36,6 @@
 #include "pxr/base/tf/diagnostic.h"
 
 #include <MaterialXGenShader/Util.h>
-#include <MaterialXGenShader/Shader.h>
 #include <MaterialXRender/Util.h>
 #include <MaterialXRender/LightHandler.h> 
 
@@ -94,10 +93,10 @@ R"(
 </materialx>
 )";
 
-// Use the given mxDocument to generate the corresponding glsl source code
+// Use the given mxDocument to generate the corresponding glsl shader
 // Based on MaterialXViewer Viewer::loadDocument()
-static mx::ShaderPtr
-_GenMaterialXShader(
+mx::ShaderPtr
+HdSt_GenMaterialXShader(
     mx::DocumentPtr const& mxDoc,
     mx::FileSearchPath const& searchPath,
     MxHdInfo const& mxHdInfo)
@@ -470,29 +469,31 @@ _GetMaterialTag(HdMaterialNode2 const& terminal)
     return HdStMaterialTagTokens->defaultMaterialTag.GetString();
 }
 
-void _AddMaterialXParams(mx::ShaderPtr glslfxShader, 
-                         HdSt_MaterialParamVector* materialParams)
+void _AddMaterialXParams(
+    mx::ShaderPtr const& glslfxShader,
+    HdSt_MaterialParamVector* materialParams)
 {
     if (!glslfxShader) {
         return;
     }
 
-    mx::ShaderStage& pixelStage = glslfxShader->getStage(mx::Stage::PIXEL);
-    const auto& paramsBlock = pixelStage.getUniformBlock(mx::HW::PUBLIC_UNIFORMS);
+    const mx::ShaderStage& pxlStage = glslfxShader->getStage(mx::Stage::PIXEL);
+    const auto& paramsBlock = pxlStage.getUniformBlock(mx::HW::PUBLIC_UNIFORMS);
+    for (size_t i = 0; i < paramsBlock.size(); ++i) {
 
-    for (size_t i = 0; i < paramsBlock.size(); ++i)
-    {
-        auto variable = paramsBlock[i];
-        auto varValue = variable->getValue();
-        std::istringstream valueStream(
-            varValue ? varValue->getValueString() : std::string());
-        std::string separator;
+        // MaterialX parameter Information
+        const auto variable = paramsBlock[i];
+        const auto varValue = variable->getValue();
+        std::istringstream valueStream(varValue 
+            ? varValue->getValueString() : std::string());
 
+        // Create a corresponding HdSt_MaterialParam
         HdSt_MaterialParam param;
         param.paramType = HdSt_MaterialParam::ParamTypeFallback;
         param.name = TfToken(variable->getVariable());
 
-        auto varType = variable->getType();
+        std::string separator;
+        const auto varType = variable->getType();
         if (varType->getBaseType() == mx::TypeDesc::BASETYPE_FLOAT) {
             if (varType->getSize() == 1) {
                 float val;
@@ -506,7 +507,8 @@ void _AddMaterialXParams(mx::ShaderPtr glslfxShader,
             }
             else if (varType->getSize() == 3) {
                 GfVec3f val;
-                valueStream >> val[0] >> separator >> val[1] >> separator >> val[2];
+                valueStream >> val[0] >> separator >> val[1] >> separator 
+                            >> val[2];
                 param.fallbackValue = VtValue(val);
             }
             else if (varType->getSize() == 4) {
@@ -516,8 +518,7 @@ void _AddMaterialXParams(mx::ShaderPtr glslfxShader,
                 param.fallbackValue = VtValue(val);
             }
         }
-        else if (varType->getBaseType() == mx::TypeDesc::BASETYPE_INTEGER)
-        {
+        else if (varType->getBaseType() == mx::TypeDesc::BASETYPE_INTEGER) {
             if (varType->getSize() == 1) {
                 int val;
                 valueStream >> val;
@@ -530,7 +531,8 @@ void _AddMaterialXParams(mx::ShaderPtr glslfxShader,
             }
             else if (varType->getSize() == 3) {
                 GfVec3i val;
-                valueStream >> val[0] >> separator >> val[1] >> separator >> val[2];
+                valueStream >> val[0] >> separator >> val[1] >> separator 
+                            >> val[2];
                 param.fallbackValue = VtValue(val);
             }
             else if (varType->getSize() == 4) {
@@ -541,8 +543,7 @@ void _AddMaterialXParams(mx::ShaderPtr glslfxShader,
             }
         }
 
-        if (!param.fallbackValue.IsEmpty())
-        {
+        if (!param.fallbackValue.IsEmpty()) {
             materialParams->push_back(std::move(param));
         }
     }
@@ -596,13 +597,16 @@ HdSt_ApplyMaterialXFilter(
         mxHdInfo.bindlessTexturesEnabled = bindlessTexturesEnabled;
 
         // Load MaterialX Document and generate the glslfxShader
-        mx::ShaderPtr glslfxShader = _GenMaterialXShader(mtlxDoc,
+        mx::ShaderPtr glslfxShader = HdSt_GenMaterialXShader(mtlxDoc,
                                     searchPath, mxHdInfo);
 
+        // Add material parameters from the glslfxShader to the materialParams
+        _AddMaterialXParams(glslfxShader, materialParams);
+
         // Create a new terminal node with the new glslfxSource
-        std::string glslfxSource = glslfxShader ?
-            glslfxShader->getSourceCode(mx::Stage::PIXEL) :
-            mx::EMPTY_STRING;
+        const std::string glslfxSource = glslfxShader
+            ? glslfxShader->getSourceCode(mx::Stage::PIXEL)
+            : mx::EMPTY_STRING;
         SdrShaderNodeConstPtr sdrNode = 
             sdrRegistry.GetShaderNodeFromSourceCode(glslfxSource, 
                                                     HioGlslfxTokens->glslfx,
@@ -614,9 +618,6 @@ HdSt_ApplyMaterialXFilter(
 
         // Replace the original terminalNode with this newTerminalNode
         hdNetwork->nodes[terminalNodePath] = newTerminalNode;
-
-        // add shader input params
-        _AddMaterialXParams(glslfxShader, materialParams);
     }
 }
 

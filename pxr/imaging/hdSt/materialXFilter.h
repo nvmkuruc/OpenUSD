@@ -31,6 +31,7 @@
 #include "pxr/usd/sdf/path.h"
 #include <MaterialXCore/Document.h>
 #include <MaterialXFormat/Util.h>
+#include <MaterialXGenShader/Shader.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -59,6 +60,12 @@ void HdSt_ApplyMaterialXFilter(
     HdSt_MaterialParamVector* materialParams,
     bool const bindlessTexturesEnabled);
 
+
+// Generates the glsfx shader for the given MaterialX Document
+MaterialX::ShaderPtr HdSt_GenMaterialXShader(
+    MaterialX::DocumentPtr const& mxDoc,
+    MaterialX::FileSearchPath const& searchPath,
+    MxHdInfo const& mxHdInfo=MxHdInfo());
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

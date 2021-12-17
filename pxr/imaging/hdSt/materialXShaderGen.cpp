@@ -203,20 +203,18 @@ HdStMaterialXShaderGen::_EmitGlslfxHeader(mx::ShaderStage& mxStage) const
     emitLineBreak(mxStage);
 }
 
-static bool _IsHardcodedPublicUniform(const mx::TypeDesc& varType)
+static bool 
+_IsHardcodedPublicUniform(const mx::TypeDesc& varType)
 {
-    // all major types of public uniforms are set through 
-    // HdSt_MaterialParamVector in the function _AddMaterialXParams
-    // The rest is hardcoded in the shader
-
+    // Most major types of public uniforms are set through 
+    // HdSt_MaterialParamVector in HdStMaterialXFilter's
+    // _AddMaterialXParams function, the rest are hardcoded 
+    // in the shader
     if (varType.getBaseType() != mx::TypeDesc::BASETYPE_FLOAT &&
-        varType.getBaseType() != mx::TypeDesc::BASETYPE_INTEGER)
-    {
+        varType.getBaseType() != mx::TypeDesc::BASETYPE_INTEGER) {
         return true;
     }
-
-    if (varType.getSize() < 1 || varType.getSize() > 4)
-    {
+    if (varType.getSize() < 1 || varType.getSize() > 4) {
         return true;
     }
 
@@ -513,6 +511,20 @@ HdStMaterialXShaderGen::_EmitMxInitFunction(
                                   mx::Syntax::COMMA, mxStage);
     emitLineBreak(mxStage);
 
+    // Initialize MaterialX parameters with HdGet_ equivalents
+    emitComment("Initialize Material Parameters", mxStage);
+    const mx::VariableBlock& paramsBlock =
+        mxStage.getUniformBlock(mx::HW::PUBLIC_UNIFORMS);
+    for (size_t i = 0; i < paramsBlock.size(); ++i) {
+        const auto variable = paramsBlock[i];
+        const auto variableType = variable->getType();
+        if (!_IsHardcodedPublicUniform(*variableType)) {
+            emitLine(variable->getVariable() + " = HdGet_" +
+                variable->getVariable() + "()", mxStage);
+        }
+    }
+    emitLineBreak(mxStage);
+
     // Initialize the Indirect Light Textures
     // Note: only need to initialize textures when bindlessTextures are enabled,
     // when bindlessTextures are not enabled, mappings are defined in 
@@ -535,22 +547,6 @@ HdStMaterialXShaderGen::_EmitMxInitFunction(
         }
         emitLineBreak(mxStage);
     }
-
-    // Initialize MaterialX parameters with HdGet_ equivalents
-    emitComment("Initialize Material Parameters", mxStage);
-    const auto& paramsBlock = mxStage.getUniformBlock(mx::HW::PUBLIC_UNIFORMS);
-    for (size_t i = 0; i < paramsBlock.size(); ++i)
-    {
-        auto variable = paramsBlock[i];
-        auto varType = variable->getType();
-        
-        if (!_IsHardcodedPublicUniform(*varType))
-        {
-            emitLine(variable->getVariable() + " = HdGet_" +
-                variable->getVariable() + "()", mxStage);
-        }
-    }
-    emitLineBreak(mxStage);
 
     // Gather Direct light data from Hydra and apply the Hydra transformation 
     // matrix to the environment map matrix (u_envMatrix) to account for the
@@ -679,18 +675,14 @@ HdStMaterialXShaderGen::emitVariableDeclarations(
         mx::HW::T_ALBEDO_TABLE      // BRDF texture
     };
 
-    // most public uniforms are set from outside the shader
-    const bool arePublicUniforms = block.getName() == mx::HW::PUBLIC_UNIFORMS;
+    // Most public uniforms are set from outside the shader
+    const bool isPublicUniform = block.getName() == mx::HW::PUBLIC_UNIFORMS;
 
     for (size_t i = 0; i < block.size(); ++i)
     {
         emitLineBegin(stage);
-
-        auto variable    = block[i];
-        auto varType     = variable->getType();
-        bool onlyDeclare = 
-            (arePublicUniforms && !_IsHardcodedPublicUniform(*varType)) ||
-            (MxHdVariables.count(variable->getName()));
+        const auto variable = block[i];
+        const auto varType = variable->getType();
 
         // If bindlessTextures are not enabled the Mx Smpler names are mapped 
         // to the Hydra equivalents in HdStMaterialXShaderGen::_EmitMxFunctions
@@ -699,7 +691,8 @@ HdStMaterialXShaderGen::emitVariableDeclarations(
         }
 
         // Only declare the variables that we need to initialize with Hd Data
-        if (onlyDeclare) {
+        if ( (isPublicUniform && !_IsHardcodedPublicUniform(*varType))
+            || MxHdVariables.count(variable->getName()) ) {
             emitVariableDeclaration(variable, mx::EMPTY_STRING,
                                     context, stage, false);
         }
