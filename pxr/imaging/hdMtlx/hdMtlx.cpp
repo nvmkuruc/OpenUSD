@@ -34,6 +34,7 @@
 #include "pxr/base/arch/fileSystem.h"
 #include "pxr/base/tf/diagnostic.h"
 #include "pxr/base/tf/getenv.h"
+#include "pxr/base/tf/token.h"
 
 #include <MaterialXCore/Document.h>
 #include <MaterialXCore/Node.h>
@@ -251,7 +252,7 @@ _GetMxInputInfo(
     }
 }
 
-// Add a MaterialX version of the HdNode to the mxDoc/mxNodeGraph
+// Add a MaterialX version of the hdNode to the mxDoc/mxNodeGraph
 static mx::NodePtr 
 _AddMaterialXNode(
     HdMaterialNetwork2 const& hdNetwork,
@@ -282,7 +283,6 @@ _AddMaterialXNode(
     // For each of the HdNode parameters add the corresponding parameter/input 
     // to the mxNode
     for (auto const& currParam : hdNode.parameters) {
-        
         // Get the MaterialX Parameter info
         std::string mxInputName, mxInputValue, mxInputType;
         _GetMxInputInfo(currParam, mxNodeDef, &mxInputName,
@@ -291,7 +291,6 @@ _AddMaterialXNode(
 
         // If this is a MaterialX Texture node
         if (mxNodeCategory == "image" || mxNodeCategory == "tiledimage") {
-
             // Save the corresponding MaterialX and Hydra names for ShaderGen
             if (mxHdTextureMap) {
                 (*mxHdTextureMap)[hdNodePath.GetName()] = connectionName;
@@ -313,7 +312,7 @@ _AddMaterialXNode(
     return mxNode;
 }
 
-// Recurrsively traverse the HdNetwork and gather the nodes in the MaterialX
+// Recursively traverse the material n/w and gather the nodes in the MaterialX
 // NodeGraph and Document
 static void
 _GatherUpstreamNodes(
@@ -339,7 +338,7 @@ _GatherUpstreamNodes(
                     hdConnection.upstreamNode.GetText());
         return;
     }
-
+    
     // Initilize the mxNodeGraph if needed
     if (!(*mxNodeGraph)) {
         const std::string nodeGraphName = mxDoc->createValidChildName(
@@ -384,65 +383,16 @@ _GatherUpstreamNodes(
     *mxUpstreamNode = mxCurrNode;
 }
 
-
-// Create a MaterialX Document from the given HdMaterialNetwork
-mx::DocumentPtr 
-HdMtlxCreateMtlxDocumentFromHdNetwork(
+// Add parameter inputs for the terminal node (which is a StandardSurface or
+// USDPreviewSurface node)
+static void
+_AddParameterInputsToTerminalNode(
     HdMaterialNetwork2 const& hdNetwork,
     HdMaterialNode2 const& hdMaterialXNode,
-    SdfPath const& materialPath,
-    mx::DocumentPtr const& libraries,
-    std::set<SdfPath> * hdTextureNodes, // Paths to the Hd Texture Nodes
-    mx::StringMap * mxHdTextureMap,     // Mx-Hd texture name counterparts
-    std::set<SdfPath> * hdPrimvarNodes) // Paths to the Hd primvar nodes
+    TfToken const& mxType,
+    mx::NodePtr const& mxShaderNode)
 {
-    // Initialize a MaterialX Document
-    mx::DocumentPtr mxDoc = mx::createDocument();
-    mxDoc->importLibrary(libraries);
-    
-    // Create a material that instantiates the shader
-    const std::string & materialName = materialPath.GetName();
-    TfToken mxType = _GetMxNodeType(mxDoc, hdMaterialXNode.nodeTypeId);
-    mx::NodePtr mxShaderNode = mxDoc->addNode(mxType.GetString(),
-                                              "SR_" + materialName,
-                                              "surfaceshader");
-    mx::NodePtr mxMaterial = mxDoc->addMaterialNode(materialName, mxShaderNode);
-
-    // Create mxNodeGraph from the inputConnections in the HdMaterialNetwork
-    mx::NodeGraphPtr mxNodeGraph;
-    mx::StringSet addedNodeNames;   // Set of NodeNames in the mxNodeGraph
-    for (auto inputConns : hdMaterialXNode.inputConnections) {
-
-        const std::string & mxNodeGraphOutput = inputConns.first.GetString();
-        for (HdMaterialConnection2 & currConnection : inputConns.second) {
-
-            // Gather the nodes uptream from the hdMaterialXNode
-            mx::NodePtr mxUpstreamNode;
-            _GatherUpstreamNodes(hdNetwork, currConnection, mxDoc, &mxNodeGraph,
-                        &addedNodeNames, &mxUpstreamNode, hdTextureNodes, 
-                        mxNodeGraphOutput, mxHdTextureMap, hdPrimvarNodes);
-
-            if (!mxUpstreamNode) {
-                continue;
-            }
-
-            // Connect currNode to the upstream Node
-            std::string fullOutputName = mxNodeGraphOutput + "_" +
-                                currConnection.upstreamOutputName.GetString();
-            mx::OutputPtr mxOutput = mxNodeGraph->addOutput(fullOutputName, 
-                                                    mxUpstreamNode->getType());
-            mxOutput->setConnectedNode(mxUpstreamNode);
-
-            // Connect NodeGraph Output to the ShaderNode
-            mx::InputPtr mxInput = mxShaderNode->addInput(mxNodeGraphOutput,
-                                                          mxOutput->getType());
-            mxInput->setConnectedOutput(mxOutput);
-        }
-    }
-
-    // Add Inputs - The StandardSurface or USDPreviewSurface inputs
     for (auto currParameter : hdMaterialXNode.parameters) {
-
         const std::string & mxInputName = currParameter.first.GetString();
         mx::InputPtr mxInput = mxShaderNode->addInput(mxInputName);
         
@@ -482,6 +432,83 @@ HdMtlxCreateMtlxDocumentFromHdNetwork(
                     mxType.GetText());
         }
     }
+}
+
+// Updates mxDoc from traversing the node graph leading into the terminal node.
+static void
+_CreateMtlxNodeGraphFromTerminalNodeConnections(
+    HdMaterialNetwork2 const& hdNetwork,
+    HdMaterialNode2 const& hdMaterialXNode,
+    mx::DocumentPtr const& mxDoc,
+    mx::NodePtr const& mxShaderNode,
+    std::set<SdfPath> * hdTextureNodes,
+    MaterialX::StringMap * mxHdTextureMap,
+    std::set<SdfPath> * hdPrimvarNodes)
+{
+    mx::NodeGraphPtr mxNodeGraph;
+    mx::StringSet addedNodeNames; // Set of NodeNames in the mxNodeGraph
+    for (auto inputConns : hdMaterialXNode.inputConnections) {
+        const std::string & mxNodeGraphOutput = inputConns.first.GetString();
+        for (HdMaterialConnection2 & currConnection : inputConns.second) {
+            // Gather the nodes uptream from the hdMaterialXNode
+            mx::NodePtr mxUpstreamNode;
+
+            _GatherUpstreamNodes(hdNetwork, currConnection, mxDoc, &mxNodeGraph,
+                        &addedNodeNames, &mxUpstreamNode, hdTextureNodes, 
+                        mxNodeGraphOutput, mxHdTextureMap, hdPrimvarNodes);
+            
+            if (!mxUpstreamNode) {
+                continue;
+            }
+
+            // Connect currNode to the upstream Node
+            std::string fullOutputName = mxNodeGraphOutput + "_" +
+                            currConnection.upstreamOutputName.GetString();
+            mx::OutputPtr mxOutput = mxNodeGraph->addOutput(fullOutputName, 
+                                            mxUpstreamNode->getType());
+            mxOutput->setConnectedNode(mxUpstreamNode);
+
+            // Connect NodeGraph Output to the ShaderNode
+            mx::InputPtr mxInput = mxShaderNode->addInput(mxNodeGraphOutput,
+                                                    mxOutput->getType());
+            mxInput->setConnectedOutput(mxOutput);
+        }
+    }
+}
+
+// Create a MaterialX Document from the given HdMaterialNetwork2
+mx::DocumentPtr 
+HdMtlxCreateMtlxDocumentFromHdNetwork(
+    HdMaterialNetwork2 const& hdNetwork,
+    HdMaterialNode2 const& hdMaterialXNode,
+    SdfPath const& hdMaterialXNodePath,
+    SdfPath const& materialPath,
+    mx::DocumentPtr const& libraries,
+    std::set<SdfPath> * hdTextureNodes, // Paths to the Hd Texture Nodes
+    mx::StringMap * mxHdTextureMap,     // Mx-Hd texture name counterparts
+    std::set<SdfPath> * hdPrimvarNodes) // Paths to the Hd primvar nodes
+{
+    // Initialize a MaterialX Document
+    mx::DocumentPtr mxDoc = mx::createDocument();
+    mxDoc->importLibrary(libraries);
+    
+    // Create a material that instantiates the shader
+    const std::string & materialName = materialPath.GetName();
+    TfToken mxType = _GetMxNodeType(mxDoc, hdMaterialXNode.nodeTypeId);
+    mx::NodePtr mxShaderNode = mxDoc->addNode(mxType.GetString(),
+                                              "SR_" + materialName,
+                                              "surfaceshader");
+    mx::NodePtr mxMaterial = mxDoc->addMaterialNode(materialName, mxShaderNode);
+
+    _CreateMtlxNodeGraphFromTerminalNodeConnections(
+        hdNetwork, hdMaterialXNode,
+        mxDoc, mxShaderNode, hdTextureNodes, mxHdTextureMap, hdPrimvarNodes);
+
+    _AddParameterInputsToTerminalNode(
+        hdNetwork,
+        hdMaterialXNode,
+        mxType,
+        mxShaderNode);
 
     // Validate the MaterialX Document.
     std::string message;

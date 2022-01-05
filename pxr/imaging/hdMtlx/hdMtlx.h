@@ -25,6 +25,7 @@
 #define PXR_IMAGING_HD_MTLX_HDMTLX_H
 
 #include "pxr/pxr.h"
+#include "pxr/base/tf/token.h"
 #include "pxr/imaging/hdMtlx/api.h"
 #include <memory>
 #include <set>
@@ -64,6 +65,7 @@ MaterialX::DocumentPtr
 HdMtlxCreateMtlxDocumentFromHdNetwork(
     HdMaterialNetwork2 const& hdNetwork,
     HdMaterialNode2 const& hdMaterialXNode,
+    SdfPath const& hdMaterialXNodePath,
     SdfPath const& materialPath,
     MaterialX::DocumentPtr const& libraries,
     std::set<SdfPath> * hdTextureNodes = nullptr,
