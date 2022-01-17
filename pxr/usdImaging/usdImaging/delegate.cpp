@@ -1475,14 +1475,10 @@ UsdImagingDelegate::_ResyncUsdPrim(SdfPath const& usdPath,
                 // the whole subtree below, but change processing will
                 // remove the redundancy.  It's important to call
                 // ProcessPrimResync to add Repopulate calls for objects not
-                // under "usdPath" (such as sibling native instances)..
-                if (repopulateFromRoot) {
-                    primInfo->adapter->ProcessPrimRemoval(
-                        affectedCachePath, proxy);
-                } else {
-                    primInfo->adapter->ProcessPrimResync(
-                        affectedCachePath, proxy);
-                }
+                // under "usdPath" (such as sibling native instances).
+                primInfo->adapter->ProcessPrimResync(
+                    affectedCachePath, proxy);
+
             }
         }
         if (repopulateFromRoot) {
