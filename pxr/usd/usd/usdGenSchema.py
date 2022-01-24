@@ -1371,7 +1371,6 @@ if __name__ == '__main__':
         libTokens, \
         skipCodeGen, \
         classes = ParseUsd(schemaPath)
-        tokenData = GatherTokens(classes, libName, libTokens)
         
         if args.validate:
             Print('Validation on, any diffs found will cause failure.')
@@ -1402,6 +1401,8 @@ if __name__ == '__main__':
 
         # Generate code for schema libraries that aren't specified as codeless.
         if not skipCodeGen:
+            # Gathered tokens are only used for code-full schemas.
+            tokenData = GatherTokens(classes, libName, libTokens)
             GenerateCode(templatePath, codeGenPath, tokenData, classes, 
                          args.validate,
                          namespaceOpen, namespaceClose, namespaceUsing,
