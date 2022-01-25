@@ -34,9 +34,8 @@
 
 #include "pxr/imaging/hd/material.h"
 
+#include "pxr/imaging/glf/contextCaps.h"
 #include "pxr/imaging/glf/udimTexture.h"
-
-#include "pxr/imaging/hgi/capabilities.h"
 
 #include "pxr/imaging/hio/glslfx.h"
 
@@ -1142,9 +1141,8 @@ HdStMaterialNetwork::ProcessMaterialNetwork(
 
 #ifdef PXR_MATERIALX_SUPPORT_ENABLED
         if (!isVolume) {
-            const bool bindlessTexturesEnabled = 
-                resourceRegistry->GetHgi()->GetCapabilities()->IsSet(
-                    HgiDeviceCapabilitiesBitsBindlessTextures);
+            const bool bindlessTexturesEnabled =
+                GlfContextCaps::GetInstance().bindlessTextureEnabled;
             HdSt_ApplyMaterialXFilter(&surfaceNetwork, materialId,
                                       *surfTerminal, surfTerminalPath,
                                       &_materialParams,
