@@ -78,6 +78,13 @@ Tf_HasAttribute(
         SetLastError(ERROR_SUCCESS);
         return false;
     }
+
+    // On Linux, a trailing slash forces the resolution of symlinks
+    // (https://man7.org/linux/man-pages/man7/path_resolution.7.html).
+    // We need to provide the same behavior on Windows.
+    if (path.back() == '/' || path.back() == '\\')
+        resolveSymlinks = true;
+
 // #nv begin #win32-utf-8
     const DWORD attribs = GetFileAttributesW(ArchWindowsUtf8ToUtf16(path).c_str());
 // #nv end
@@ -314,7 +321,7 @@ Tf_MakeDirsRec(string const& path, int mode, bool existOk)
     const string head = TfStringTrimRight(TfGetPathName(path), pathsep.c_str());
     const string tail = TfGetBaseName(path);
 
-    if (!head.empty() && !tail.empty() && !TfPathExists(head)) {
+    if (!head.empty() && !tail.empty() && !TfPathExists(head) && head != path) {
         if (!Tf_MakeDirsRec(head, mode, existOk)) {
 #if defined(ARCH_OS_WINDOWS)
             if (GetLastError() != ERROR_ALREADY_EXISTS)
