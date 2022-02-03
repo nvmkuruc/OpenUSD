@@ -79,6 +79,12 @@ public:
     VtArray<TfToken>
     ComputeCollectionsContainingPath(SdfPath const& path) const;
 
+    // #nv begin #light-link-refresh
+    /// Return the cached MembershipQuery for a given id
+    void
+    GetMembershipQuery(TfToken const& id, const Query** query) const;
+    // nv end
+
 private:
     // The cache boils down to tracking the correspondence of
     // collection paths, their computed queries, and the id
