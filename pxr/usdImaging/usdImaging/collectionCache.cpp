@@ -146,4 +146,16 @@ UsdImaging_CollectionCache::ComputeCollectionsContainingPath(
     return result;
 }
 
+// #nv begin #light-link-refresh
+void
+UsdImaging_CollectionCache::GetMembershipQuery(TfToken const& path, const UsdImaging_CollectionCache::Query** query) const
+{
+    *query = nullptr;
+    auto it = _queryForId.find(path);
+    if(it != _queryForId.end()){
+        *query = &it->second;
+    }
+}
+// nv end
+
 PXR_NAMESPACE_CLOSE_SCOPE
