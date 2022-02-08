@@ -149,6 +149,14 @@ HdStLight::Sync(HdSceneDelegate *sceneDelegate,
         }
     }
 
+    // #nv begin: OM-44148 Editing light transform in Storm doesn't trigger an update.
+    // This looks to be caused by the DirtyParams bit rebuilding the shader, but not accounting
+    // for the fact the transform is used in the shader for lights other than simpleLight
+    if ((bits & DirtyTransform) && (_lightType != HdPrimTypeTokens->simpleLight)) {
+        bits |= DirtyParams;
+    }
+    // #nv end: OM-44148
+
     // Lighting Params
     if (bits & DirtyParams) {
         if (_lightType == HdPrimTypeTokens->simpleLight) {
