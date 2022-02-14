@@ -2822,8 +2822,14 @@ UsdImagingDelegate::Get(SdfPath const& id, TfToken const& key)
     }
 
     if (value.IsEmpty()) {
-        TF_WARN("Empty VtValue: <%s> %s\n", id.GetText(), key.GetText());
+        // #nv begin Can discard this change after 20.11
+        // OM-44824: Vray inspects scene delegate for custom top-level attributes.
+        // We don't want to spam output on scenes that don't have them.
+        // This warning looks to have evaporated 21.02 with the value-cache removal.
+        TF_DEBUG(HD_SAFE_MODE).Msg("Empty VtValue: <%s> %s\n", id.GetText(), key.GetText());
+        // #nv end
     }
+ 
 
     // We generally don't want Vec2d arrays, convert to vec2f.
     if (value.IsHolding<VtVec2dArray>()) {
