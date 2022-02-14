@@ -87,6 +87,9 @@ public:
     /// invisible prims. The dirty bits in the change tracker remain the same.
     /// See the implementation for the finer details.
     HD_API
+    // #nv begin #virtual-canskip-rprim
+    virtual
+    // nv end
     bool CanSkipDirtyBitPropagationAndSync(HdDirtyBits bits) const;
 
     /// This function gives an Rprim the chance to set additional dirty bits

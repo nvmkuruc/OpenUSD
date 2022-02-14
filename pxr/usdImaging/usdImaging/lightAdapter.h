@@ -139,6 +139,13 @@ protected:
     void _RemovePrim(SdfPath const& cachePath,
                      UsdImagingIndexProxy* index) override;
 
+// #nv begin #light-link-refresh
+private:
+
+    // Cache to detect collection changes
+    mutable size_t _lightCollectionHash = 0;
+    mutable size_t _shadowCollectionHash = 0;
+// nv end
 };
 
 

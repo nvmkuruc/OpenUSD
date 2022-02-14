@@ -133,10 +133,26 @@ UsdImagingLightAdapter::TrackVariability(UsdPrim const& prim,
     UsdLuxLightAPI light(prim);
     if (TF_VERIFY(light)) {
         UsdImaging_CollectionCache &collectionCache = _GetCollectionCache();
-        collectionCache.UpdateCollection(light.GetLightLinkCollectionAPI());
-        collectionCache.UpdateCollection(light.GetShadowLinkCollectionAPI());
-        // TODO: When collections change we need to invalidate affected
-        // prims with the DirtyCollections flag.
+        // #nv begin #light-link-refresh
+        auto getCollectionHash = [&collectionCache] (const UsdCollectionAPI& api) -> size_t {
+            const TfToken id = collectionCache.UpdateCollection(api);
+            const UsdImaging_CollectionCache::Query* query = nullptr;
+            collectionCache.GetMembershipQuery(id, &query);
+            return query != nullptr ? query->GetHash() : 0;
+        };
+        const size_t newLightCollectionHash = getCollectionHash(light.GetLightLinkCollectionAPI());
+        const size_t newShadowCollectionHash = getCollectionHash(light.GetShadowLinkCollectionAPI());
+        if (newLightCollectionHash != _lightCollectionHash || newShadowCollectionHash != _shadowCollectionHash)
+        {
+            *timeVaryingBits |= HdLight::DirtyBits::DirtyCollection;
+            _lightCollectionHash = newLightCollectionHash;
+            _shadowCollectionHash = newShadowCollectionHash;
+        }
+        else
+        {
+            *timeVaryingBits &= ~HdLight::DirtyBits::DirtyCollection;
+        }
+        // nv end
     }
 
     // XXX Cache primvars for lights.
