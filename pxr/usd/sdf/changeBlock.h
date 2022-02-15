@@ -79,7 +79,14 @@ public:
     // nv end
     SDF_API
     SdfChangeBlock();
+    ~SdfChangeBlock() {
+        if (_key) {
+            _CloseChangeBlock(_key);
+        }
+    }
+private:
     SDF_API
+<<<<<<< HEAD
     ~SdfChangeBlock();
 
     // #nv begin #fast-updates
@@ -87,6 +94,11 @@ public:
     SDF_API
     static bool IsFastUpdating();
     // nv end
+=======
+    void _CloseChangeBlock(void const *key) const;
+    
+    void const *_key;
+>>>>>>> pxr/dev
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

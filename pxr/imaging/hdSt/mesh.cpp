@@ -29,7 +29,6 @@
 #include "pxr/imaging/hdSt/extCompGpuComputation.h"
 #include "pxr/imaging/hdSt/flatNormals.h"
 #include "pxr/imaging/hdSt/geometricShader.h"
-#include "pxr/imaging/hdSt/glUtils.h"
 #include "pxr/imaging/hdSt/instancer.h"
 #include "pxr/imaging/hdSt/material.h"
 #include "pxr/imaging/hdSt/mesh.h"
@@ -41,6 +40,8 @@
 #include "pxr/imaging/hdSt/resourceRegistry.h"
 #include "pxr/imaging/hdSt/smoothNormals.h"
 #include "pxr/imaging/hdSt/tokens.h"
+
+#include "pxr/imaging/hgi/capabilities.h"
 
 #include "pxr/base/arch/hash.h"
 
@@ -110,6 +111,13 @@ HdStMesh::HdStMesh(SdfPath const& id)
 }
 
 HdStMesh::~HdStMesh() = default;
+
+void
+HdStMesh::UpdateRenderTag(HdSceneDelegate *delegate,
+                          HdRenderParam *renderParam)
+{
+    HdStUpdateRenderTag(delegate, renderParam, this);
+}
 
 void
 HdStMesh::Sync(HdSceneDelegate *delegate,
@@ -227,6 +235,8 @@ HdStMesh::Finalize(HdRenderParam *renderParam)
             geomSubsetDescIndex++;
         }
     }
+
+    stRenderParam->DecreaseRenderTagCount(GetRenderTag());
 }
 
 HdMeshTopologySharedPtr
@@ -611,8 +621,15 @@ HdStMesh::_PopulateTopology(HdSceneDelegate *sceneDelegate,
             _limitNormals = true;
         }
 
+        bool const hasBuiltinBarycentrics =
+            resourceRegistry->GetHgi()->GetCapabilities()->
+                IsSet(HgiDeviceCapabilitiesBitsBuiltinBarycentrics);
+
         HdSt_MeshTopologySharedPtr topology =
-            HdSt_MeshTopology::New(meshTopology, refineLevel, refineMode);
+            HdSt_MeshTopology::New(meshTopology, refineLevel, refineMode,
+                hasBuiltinBarycentrics
+                    ? HdSt_MeshTopology::QuadsTriangulated
+                    : HdSt_MeshTopology::QuadsUntriangulated);
         
         // Gather and sanitize geom subsets
         const HdGeomSubsets &oldGeomSubsets = _topology ? 
@@ -654,7 +671,7 @@ HdStMesh::_PopulateTopology(HdSceneDelegate *sceneDelegate,
                                      sizeof(int) * it.first.size(), 
                                      _topologyId);
             for (const TfToken& it2 : it.second) {
-                _topologyId = ArchHash64(it2.GetText(), it.first.size(),
+                _topologyId = ArchHash64(it2.GetText(), it2.size(),
                                         _topologyId);
             }
         }
@@ -1336,6 +1353,9 @@ HdStMesh::_PopulateVertexPrimvars(HdSceneDelegate *sceneDelegate,
         }
     }
 
+    // Track primvars that are skipped because they have zero elements
+    HdPrimvarDescriptorVector zeroElementPrimvars;
+
     // Track index to identify varying primvars.
     int i = 0;
     for (HdPrimvarDescriptor const& primvar: primvars) {
@@ -1354,6 +1374,14 @@ HdStMesh::_PopulateVertexPrimvars(HdSceneDelegate *sceneDelegate,
         if (!value.IsEmpty()) {
             HdBufferSourceSharedPtr source =
                 std::make_shared<HdVtBufferSource>(primvar.name, value);
+
+            if (source->GetNumElements() == 0 &&
+                source->GetName() != HdTokens->points) {
+                // zero elements for primvars other than points will be treated
+                // as if the primvar doesn't exist, so no warning is necessary
+                zeroElementPrimvars.push_back(primvar);
+                continue;
+            }
 
             // verify primvar length -- it is alright to have more data than we
             // index into; the inverse is when we issue a warning and skip
@@ -1425,6 +1453,14 @@ HdStMesh::_PopulateVertexPrimvars(HdSceneDelegate *sceneDelegate,
                     HdSt_MeshTopology::INTERPOLATE_VERTEX);
 
             sources.push_back(source);
+        }
+    }
+
+    // remove the primvars with zero elements from further processing
+    for (HdPrimvarDescriptor const& primvar: zeroElementPrimvars) {
+        auto pos = std::find(primvars.begin(), primvars.end(), primvar);
+        if (pos != primvars.end()) {
+            primvars.erase(pos);
         }
     }
 
@@ -1746,6 +1782,9 @@ HdStMesh::_PopulateFaceVaryingPrimvars(HdSceneDelegate *sceneDelegate,
        _UseQuadIndices(sceneDelegate->GetRenderIndex(), _topology) ||
        (refineLevel > 0 && !_topology->RefinesToTriangles());
 
+    // Track primvars that are skipped because they have zero elements
+    HdPrimvarDescriptorVector zeroElementPrimvars;
+
     for (HdPrimvarDescriptor const& primvar: primvars) {
         if (!HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, primvar.name)) {
             continue;
@@ -1764,6 +1803,13 @@ HdStMesh::_PopulateFaceVaryingPrimvars(HdSceneDelegate *sceneDelegate,
         if (!value.IsEmpty()) {
             HdBufferSourceSharedPtr source =
                 std::make_shared<HdVtBufferSource>(primvar.name, value);
+
+            if (!useUnflattendPrimvar && source->GetNumElements() == 0) {
+                // zero elements for primvars will be treated as if the primvar
+                // doesn't exist, so no warning is necessary
+                zeroElementPrimvars.push_back(primvar);
+                continue;
+            }
 
             // verify primvar length
             if ((int)source->GetNumElements() != numFaceVaryings && 
@@ -1794,6 +1840,14 @@ HdStMesh::_PopulateFaceVaryingPrimvars(HdSceneDelegate *sceneDelegate,
                 resourceRegistry, &computations, channel);
             
             sources.push_back(source);
+        }
+    }
+
+    // remove the primvars with zero elements from further processing
+    for (HdPrimvarDescriptor const& primvar: zeroElementPrimvars) {
+        auto pos = std::find(primvars.begin(), primvars.end(), primvar);
+        if (pos != primvars.end()) {
+            primvars.erase(pos);
         }
     }
 
@@ -1880,6 +1934,9 @@ HdStMesh::_PopulateElementPrimvars(HdSceneDelegate *sceneDelegate,
 
     int numFaces = _topology ? _topology->GetNumFaces() : 0;
 
+    // Track primvars that are skipped because they have zero elements
+    HdPrimvarDescriptorVector zeroElementPrimvars;
+
     for (HdPrimvarDescriptor const& primvar: primvars) {
         if (!HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, primvar.name))
             continue;
@@ -1888,6 +1945,13 @@ HdStMesh::_PopulateElementPrimvars(HdSceneDelegate *sceneDelegate,
         if (!value.IsEmpty()) {
             HdBufferSourceSharedPtr source =
                 std::make_shared<HdVtBufferSource>(primvar.name, value);
+
+            if (source->GetNumElements() == 0) {
+                // zero elements for primvars other will be treated as if the
+                // primvar doesn't exist, so no warning is necessary
+                zeroElementPrimvars.push_back(primvar);
+                continue;
+            }
 
             // verify primvar length
             if ((int)source->GetNumElements() != numFaces) {
@@ -1905,6 +1969,14 @@ HdStMesh::_PopulateElementPrimvars(HdSceneDelegate *sceneDelegate,
                 _displayOpacity = true;
             }
             sources.push_back(source);
+        }
+    }
+
+    // remove the primvars with zero elements from further processing
+    for (HdPrimvarDescriptor const& primvar: zeroElementPrimvars) {
+        auto pos = std::find(primvars.begin(), primvars.end(), primvar);
+        if (pos != primvars.end()) {
+            primvars.erase(pos);
         }
     }
 
@@ -2234,9 +2306,14 @@ HdStMesh::_UpdateDrawItem(HdSceneDelegate *sceneDelegate,
         _PopulateAdjacency(resourceRegistry);
     }
 
-    // Reset value of _displayOpacity
-    if (HdChangeTracker::IsAnyPrimvarDirty(*dirtyBits, id)) {
+    // Reset value of _displayOpacity and _sceneNormals if dirty
+    if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id,
+        HdTokens->displayOpacity)) {
         _displayOpacity = false;
+    }
+    if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id,
+        HdTokens->normals)) {
+        _sceneNormals = false;
     }
 
     /* INSTANCE PRIMVARS */
@@ -2366,11 +2443,19 @@ HdStMesh::_UpdateDrawItemGeometricShader(HdSceneDelegate *sceneDelegate,
             primType = PrimitiveType::PRIM_MESH_REFINED_TRIANGLES;
         } else {
             // uniform catmark/bilinear subdivision generates quads.
-            primType = PrimitiveType::PRIM_MESH_REFINED_QUADS;
+            if (_topology->TriangulateQuads()) {
+                primType = PrimitiveType::PRIM_MESH_REFINED_TRIQUADS;
+            } else {
+                primType = PrimitiveType::PRIM_MESH_REFINED_QUADS;
+            }
         }
     } else if (_UseQuadIndices(renderIndex, _topology)) {
         // quadrangulate coarse mesh (e.g. for ptex)
-        primType = PrimitiveType::PRIM_MESH_COARSE_QUADS;
+        if (_topology->TriangulateQuads()) {
+            primType = PrimitiveType::PRIM_MESH_COARSE_TRIQUADS;
+        } else {
+            primType = PrimitiveType::PRIM_MESH_COARSE_QUADS;
+        }
     }
 
     // Determine fvar patch type based on refinement level, uniform/adaptive
@@ -2391,7 +2476,8 @@ HdStMesh::_UpdateDrawItemGeometricShader(HdSceneDelegate *sceneDelegate,
             fvarPatchType = FvarPatchType::PATCH_REFINED_QUADS;
         }
     } else if (((refineLevel == 0) && 
-               (primType == PrimitiveType::PRIM_MESH_COARSE_QUADS)) || 
+               ((primType == PrimitiveType::PRIM_MESH_COARSE_QUADS) || 
+                (primType == PrimitiveType::PRIM_MESH_COARSE_TRIQUADS))) || 
                ((refineLevel > 0) && (!_topology->RefinesToTriangles()))) {
         fvarPatchType = FvarPatchType::PATCH_COARSE_QUADS;  
     }
@@ -2462,12 +2548,15 @@ HdStMesh::_UpdateDrawItemGeometricShader(HdSceneDelegate *sceneDelegate,
         material && material->HasDisplacement();
     bool hasPtex = material && material->HasPtex();
 
+    // FaceVarying primvars or ptex requires per-face interpolation.
+    bool const hasPerFaceInterpolation = hasFaceVaryingPrimvars || hasPtex;
+
     bool hasTopologicalVisibility =
         (bool) drawItem->GetTopologyVisibilityRange();
 
     // Enable displacement shading only if the repr enables it, and the
     // entrypoint exists.
-    bool useCustomDisplacement = hasCustomDisplacementTerminal &&
+    bool hasCustomDisplacement = hasCustomDisplacementTerminal &&
         desc.useCustomDisplacement && _displacementEnabled;
 
     bool hasInstancer = !GetInstancerId().IsEmpty();
@@ -2482,27 +2571,32 @@ HdStMesh::_UpdateDrawItemGeometricShader(HdSceneDelegate *sceneDelegate,
         }
     }
 
-    // create a shaderKey and set to the geometric shader.
-    HdSt_MeshShaderKey shaderKey(primType,
-                                 shadingTerminal,
-                                 useCustomDisplacement,
-                                 normalsSource,
-                                 normalsInterpolation,
-                                 _doubleSided || desc.doubleSided,
-                                 hasFaceVaryingPrimvars || hasPtex,
-                                 hasTopologicalVisibility,
-                                 blendWireframeColor,
-                                 cullStyle,
-                                 geomStyle,
-                                 desc.lineWidth,
-                                 _hasMirroredTransform,
-                                 hasInstancer,
-                                 desc.enableScalarOverride,
-                                 fvarPatchType);
-
     HdStResourceRegistrySharedPtr resourceRegistry =
         std::static_pointer_cast<HdStResourceRegistry>(
             renderIndex.GetResourceRegistry());
+
+    bool const hasBuiltinBarycentrics =
+        resourceRegistry->GetHgi()->GetCapabilities()->
+            IsSet(HgiDeviceCapabilitiesBitsBuiltinBarycentrics);
+
+    // create a shaderKey and set to the geometric shader.
+    HdSt_MeshShaderKey shaderKey(primType,
+                                 shadingTerminal,
+                                 normalsSource,
+                                 normalsInterpolation,
+                                 cullStyle,
+                                 geomStyle,
+                                 fvarPatchType,
+                                 desc.lineWidth,
+                                 _doubleSided || desc.doubleSided,
+                                 hasBuiltinBarycentrics,
+                                 hasCustomDisplacement,
+                                 hasPerFaceInterpolation,
+                                 hasTopologicalVisibility,
+                                 blendWireframeColor,
+                                 _hasMirroredTransform,
+                                 hasInstancer,
+                                 desc.enableScalarOverride);
 
     HdSt_GeometricShaderSharedPtr geomShader =
         HdSt_GeometricShader::Create(shaderKey, resourceRegistry);

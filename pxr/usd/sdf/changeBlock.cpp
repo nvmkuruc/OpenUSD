@@ -32,6 +32,7 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+<<<<<<< HEAD
 // #nv begin #fast-updates
 TF_DEFINE_ENV_SETTING(SDF_CHANGEBLOCK_IMPLICIT_FAST_UPDATES, false,
     "Enable Fast Updates in SdfChangeBlocks by default");
@@ -44,11 +45,17 @@ SdfChangeBlock::SdfChangeBlock(bool fastUpdates)
     // nv end
 
     Sdf_ChangeManager::Get().OpenChangeBlock(fastUpdates);
+=======
+SdfChangeBlock::SdfChangeBlock()
+    : _key(Sdf_ChangeManager::Get()._OpenChangeBlock(this))
+{
+>>>>>>> pxr/dev
 }
 
-SdfChangeBlock::~SdfChangeBlock() 
+void
+SdfChangeBlock::_CloseChangeBlock(void const *key) const
 {
-    Sdf_ChangeManager::Get().CloseChangeBlock();
+    Sdf_ChangeManager::Get()._CloseChangeBlock(this, key);
 }
 
 // #nv begin #fast-updates

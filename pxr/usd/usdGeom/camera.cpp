@@ -554,6 +554,7 @@ UsdGeomCamera::SetFromCamera(const GfCamera &camera, const UsdTimeCode &time)
 
     UsdGeomXformOp xformOp = MakeMatrixXform();
     if (!xformOp) {
+<<<<<<< HEAD
         // The returned xformOp may be invalid in rare cases of
         // composition and edit target.
         TF_CODING_ERROR("SetFromCamera failed, could not author xformOp for %s",
@@ -562,6 +563,15 @@ UsdGeomCamera::SetFromCamera(const GfCamera &camera, const UsdTimeCode &time)
     }
     xformOp.Set(camMatrix, time);
     
+=======
+        // The returned xformOp may be invalid if there are xform op
+        // opinions in the composed layer stack stronger than that of
+        // the current edit target.
+        return;
+    }
+    xformOp.Set(camMatrix, time);
+
+>>>>>>> pxr/dev
     GetProjectionAttr().Set(_ProjectionToToken(camera.GetProjection()), time);
     GetHorizontalApertureAttr().Set(camera.GetHorizontalAperture(), time);
     GetVerticalApertureAttr().Set(camera.GetVerticalAperture(), time);

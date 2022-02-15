@@ -29,6 +29,8 @@
 
 #include <boost/python.hpp>
 
+#include <memory>
+
 using namespace boost::python;
 
 PXR_NAMESPACE_USING_DIRECTIVE
@@ -37,6 +39,7 @@ namespace {
 
 class Sdf_PythonChangeBlock {
 public:
+<<<<<<< HEAD
     // #nv begin #fast-updates
     Sdf_PythonChangeBlock(bool fastUpdates=false) : _block(0), _fastUpdates(fastUpdates)
     // nv end
@@ -57,18 +60,27 @@ public:
         // #nv begin #fast-updates
         _block = new SdfChangeBlock(_fastUpdates);
         // nv end
+=======
+    explicit Sdf_PythonChangeBlock(bool enabled) : _enabled(enabled) {}
+    
+    void Open() {
+        if (!_enabled || !TF_VERIFY(!_block)) {
+            return;
+        }
+        _block.reset(new SdfChangeBlock);
+>>>>>>> pxr/dev
     }
 
     void Close(object, object, object)
     {
-        if (!TF_VERIFY(_block != 0)) {
+        if (!_enabled || !TF_VERIFY(_block)) {
             return;
         }
-        delete _block;
-        _block = 0;
+        _block.reset();
     }
 
 private:
+<<<<<<< HEAD
     SdfChangeBlock* _block;
 
     // #nv begin #fast-updates
@@ -92,6 +104,12 @@ _EndBlock()
     Sdf_ChangeManager::Get().CloseChangeBlock();
 }
 
+=======
+    std::unique_ptr<SdfChangeBlock> _block;
+    const bool _enabled;
+};
+
+>>>>>>> pxr/dev
 } // anonymous namespace 
 
 void
@@ -100,6 +118,7 @@ wrapChangeBlock()
     // This allows SdfChangeBlocks to be used in an RAII fashion in Python 
     // with the 'with' statement.
     typedef Sdf_PythonChangeBlock This;
+<<<<<<< HEAD
     class_<This, boost::noncopyable>("ChangeBlock", init<>())
         // #nv begin #fast-updates
         .def(init<bool>(arg("fastUpdates")))
@@ -115,4 +134,11 @@ wrapChangeBlock()
     def("BeginChangeBlock", &_BeginBlock, arg("fastUpdates")=false);
     // nv end
     def("EndChangeBlock", &_EndBlock);
+=======
+    class_<This, boost::noncopyable>("ChangeBlock",
+                                     init<bool>(arg("enabled")=true))
+        .def("__enter__", &This::Open)
+        .def("__exit__", &This::Close)
+        ;
+>>>>>>> pxr/dev
 }

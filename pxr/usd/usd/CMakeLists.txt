@@ -434,6 +434,16 @@ pxr_build_test(testUsdUsdzResolver
         testenv/testUsdUsdzResolver.cpp
 )
 
+pxr_build_test(testUsdZipFile_CPP
+    LIBRARIES
+        ar
+        arch
+        tf
+        usd
+    CPPFILES
+        testenv/testUsdZipFile.cpp
+)
+
 pxr_install_test_dir(
     SRC testenv/testUsdAppliedAPISchemas
     DEST testUsdAppliedAPISchemas
@@ -654,6 +664,11 @@ pxr_install_test_dir(
 pxr_install_test_dir(
     SRC testenv/testUsdZipFile.testenv
     DEST testUsdZipFile
+)
+
+pxr_install_test_dir(
+    SRC testenv/testUsdZipFile.testenv
+    DEST testUsdZipFile_CPP
 )
 
 pxr_register_test(testUsdAppliedAPISchemas
@@ -1123,6 +1138,12 @@ pxr_register_test(testUsdZipFile
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdZipFile"
     EXPECTED_RETURN_CODE 0
 )
+
+pxr_register_test(testUsdZipFile_CPP
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdZipFile_CPP"
+    EXPECTED_RETURN_CODE 0
+)
+
 pxr_register_test(testUsdUsdzResolver
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUsdzResolver"
     EXPECTED_RETURN_CODE 0

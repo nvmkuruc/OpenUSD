@@ -92,6 +92,7 @@ UsdImagingLightAdapter::TrackVariability(UsdPrim const& prim,
     bool checkVariability) const
     // nv end
 {
+<<<<<<< HEAD
     if (checkVariability) {
         // Discover time-varying transforms.
         _IsTransformVarying(prim,
@@ -111,6 +112,26 @@ UsdImagingLightAdapter::TrackVariability(UsdPrim const& prim,
         if (UsdImaging_IsHdMaterialNetworkTimeVarying(prim)) {
             *timeVaryingBits |= HdLight::DirtyBits::DirtyResource;
         }
+=======
+    // Discover time-varying transforms.
+    _IsTransformVarying(prim,
+        HdLight::DirtyBits::DirtyTransform,
+        UsdImagingTokens->usdVaryingXform,
+        timeVaryingBits);
+
+    // Discover time-varying visibility.
+    _IsVarying(prim,
+        UsdGeomTokens->visibility,
+        HdLight::DirtyBits::DirtyParams,
+        UsdImagingTokens->usdVaryingVisibility,
+        timeVaryingBits,
+        true);
+    
+    // Determine if the light material network is time varying.
+    if (UsdImagingIsHdMaterialNetworkTimeVarying(prim)) {
+        *timeVaryingBits |= HdLight::DirtyBits::DirtyResource;
+    }
+>>>>>>> pxr/dev
 
         // If any of the light attributes is time varying 
         // we will assume all light params are time-varying.
@@ -256,6 +277,10 @@ UsdImagingLightAdapter::GetMaterialResource(UsdPrim const &prim,
                                             SdfPath const& cachePath, 
                                             UsdTimeCode time) const
 {
+    if (!_GetSceneLightsEnabled()) {
+        return VtValue();
+    }
+
     if (!prim.HasAPI<UsdLuxLightAPI>()) {
         TF_RUNTIME_ERROR("Expected light prim at <%s> to have an applied API "
                          "of type 'UsdLuxLightAPI'; ignoring",
@@ -269,7 +294,7 @@ UsdImagingLightAdapter::GetMaterialResource(UsdPrim const &prim,
 
     HdMaterialNetworkMap networkMap;
 
-    UsdImaging_BuildHdMaterialNetworkFromTerminal(
+    UsdImagingBuildHdMaterialNetworkFromTerminal(
         prim, 
         HdMaterialTerminalTokens->light,
         _GetShaderSourceTypes(),

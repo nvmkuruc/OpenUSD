@@ -32,6 +32,10 @@ if (${PXR_ENABLE_MATERIALX_SUPPORT})
     endif()
 endif()
 
+if (${PXR_ENABLE_OPENVDB_SUPPORT})
+    list(APPEND optionalLibs hioOpenVDB)
+endif()
+
 pxr_plugin(${PXR_PACKAGE}
     LIBRARIES
         ar
@@ -54,7 +58,6 @@ pxr_plugin(${PXR_PACKAGE}
     PUBLIC_CLASSES
         basisCurves
         camera
-        context
         coordSys
         debugCodes
         gprim
@@ -67,7 +70,7 @@ pxr_plugin(${PXR_PACKAGE}
         matfiltFilterChain
         matfiltResolveVstructs
         mesh
-        offlineContext
+        paramsSetter
         points
         renderDelegate
         rixStrings
@@ -76,26 +79,26 @@ pxr_plugin(${PXR_PACKAGE}
         ${optionalPublicClasses}
 
     PRIVATE_CLASSES
-        interactiveContext
-        interactiveRenderPass
-        framebuffer
-        offlineRenderPass
-        renderBuffer
-        rendererPlugin
+        cameraContext
         renderPass
+        framebuffer
+        renderBuffer
+        renderParam
+        renderViewContext
         resourceRegistry
+        velocityMotionBlurSceneIndexPlugin
+        virtualStructResolvingSceneIndex
 
     PUBLIC_HEADERS
         api.h
-        renderParam.h
 
     PRIVATE_HEADERS
-        interactiveRenderParam.h
         virtualStructConditionalGrammar.tab.h
 
     CPPFILES
         virtualStructConditionalGrammar.tab.cpp
         virtualStructConditionalGrammar.lex.cpp
+        rendererPlugin.cpp
 
     RESOURCE_FILES
         plugInfo.json

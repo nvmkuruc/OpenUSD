@@ -95,6 +95,7 @@ PXR_NAMESPACE_OPEN_SCOPE
     (primvar)                                   \
     (primID)                                    \
     (primitiveParam)                            \
+    (tessFactors)                               \
     (quadInfo)                                  \
     (renderTags)                                \
     (rightHanded)                               \
@@ -192,6 +193,7 @@ PXR_NAMESPACE_OPEN_SCOPE
     (cullStyle)                                 \
     (drawRange)                                 \
     (environmentMap)                            \
+    (displacementShader)                        \
     (fragmentShader)                            \
     (geometryShader)                            \
     (indicatorColor)                            \
@@ -205,6 +207,8 @@ PXR_NAMESPACE_OPEN_SCOPE
     (materialTag)                               \
     (tessControlShader)                         \
     (tessEvalShader)                            \
+    (postTessControlShader)                     \
+    (postTessVertexShader)                      \
     (tessLevel)                                 \
     (viewport)                                  \
     (vertexShader)                              \
@@ -230,7 +234,8 @@ PXR_NAMESPACE_OPEN_SCOPE
     (guide)                                     \
     (hidden)                                    \
     (proxy)                                     \
-    (render)
+    (render)                                    \
+    (widget)
 
 #define HD_RENDER_CONTEXT_TOKENS                \
     ((universal, ""))
@@ -299,6 +304,10 @@ bool HdPrimTypeIsLight(TfToken const& primType);
      * depth of the final fragment.
      */                                         \
     (depth)                                     \
+    /* HdAovTokens->depthStencil represents the clip-space
+     * depth of the final fragment w/ 8-bit stencil.
+     */                                         \
+    (depthStencil)                              \
     /* HdAovTokens->cameraDepth represents the camera-space
      * depth of the final fragment.
      */                                         \
