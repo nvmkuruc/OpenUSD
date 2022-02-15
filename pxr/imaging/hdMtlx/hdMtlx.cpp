@@ -35,10 +35,7 @@
 #include "pxr/base/arch/fileSystem.h"
 #include "pxr/base/tf/diagnostic.h"
 #include "pxr/base/tf/getenv.h"
-<<<<<<< HEAD
-=======
 #include "pxr/base/tf/token.h"
->>>>>>> pxr/dev
 
 #include <MaterialXCore/Document.h>
 #include <MaterialXCore/Node.h>

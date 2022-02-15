@@ -18,14 +18,7 @@ pxr_library(hioOpenVDB
         ${OPENVDB_LIBRARY}
 
     INCLUDE_DIRS
-<<<<<<< HEAD
-        # nv begin #openvdb-build-fix
-        ${OPENEXR_INCLUDE_DIRS}
-        # nv end
-        ${OPENVDB_INCLUDE_DIRS}
-=======
         ${OPENVDB_INCLUDE_DIR}
->>>>>>> pxr/dev
 
     PUBLIC_CLASSES
         utils

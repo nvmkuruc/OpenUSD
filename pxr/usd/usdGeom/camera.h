@@ -563,15 +563,6 @@ public:
     ///  - clippingPlanes
     ///  - fStop
     ///  - focalDistance
-<<<<<<< HEAD
-    ///  - xformOpOrder and xformOp:transform **
-    /// **NOTE: This will clear any existing xformOpOrder and replace
-    /// it with a single xformOp:transform entry. The xformOp:transform
-    /// property is created or updated here to match the transform
-    /// on \p camera . This operation will fail if there is an xformOpOrder
-    /// opinion containing xformOp:transform in the composed layer stack that
-    /// is stronger than that of the current edit target.
-=======
     ///  - xformOpOrder and xformOp:transform
     /// 
     /// \note This will clear any existing xformOpOrder and replace
@@ -580,7 +571,6 @@ public:
     /// on \p camera . This operation will fail if there are stronger xform op
     /// opinions in the composed layer stack that are stronger than that of
     /// the current edit target.
->>>>>>> pxr/dev
     ///
     USDGEOM_API
     void SetFromCamera(const GfCamera &camera, const UsdTimeCode &time);

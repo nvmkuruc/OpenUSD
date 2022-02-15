@@ -6123,68 +6123,6 @@ bool
 UsdStage::_SetValueImpl(
     UsdTimeCode time, const UsdAttribute &attr, const T& newValue)
 {
-    // #nv begin #fast-updates
-    // For now, we only support fast updates on prims that require no compositon remapping.
-    bool fastUpdates = SdfChangeBlock::IsFastUpdating() && (GetEditTarget().GetMapFunction() == PcpMapFunction::Identity());
-    if (fastUpdates) {
-        auto GetOrInsertFieldHandle = [this](SdfLayerHandle layer, UsdAttribute attr, bool forDefaults, FieldHandleEntry *entry) {
-            auto path = attr.GetPath();
-            auto &fieldName = forDefaults ? SdfFieldKeys->Default : SdfFieldKeys->TimeSamples;
-            _CreateAttributeSpecForEditing(attr);
-            auto fieldHandle = layer->CreateFieldHandle(path, fieldName);
-            CheckFieldForCompositionDependents(layer, fieldHandle, false);
-            if (forDefaults) {
-                entry->defaultHandle = fieldHandle;
-            }
-            else {
-                entry->timeSamplesHandle = fieldHandle;
-            }
-            return fieldHandle;
-        };
-
-        auto &layer = GetEditTarget().GetLayer();
-        auto path = attr.GetPath();
-        bool forDefaults = time.IsDefault();
-        SdfAbstractDataFieldAccessHandle fieldHandle;
-        auto layerLookup = _fieldHandles.find(layer);
-        if (layerLookup != _fieldHandles.end()) {
-            auto fieldLookup = layerLookup->second.find(path);
-            if (fieldLookup != layerLookup->second.end()) {
-                if (forDefaults) {
-                    if (fieldLookup->second.defaultHandle) {
-                        fieldHandle = fieldLookup->second.defaultHandle;
-                    }
-                    else {
-                        fieldHandle = GetOrInsertFieldHandle(layer, attr, true, &(layerLookup->second[path]));
-                    }
-                }
-                else {
-                    if (fieldLookup->second.timeSamplesHandle) {
-                        fieldHandle = fieldLookup->second.timeSamplesHandle;
-                    }
-                    else {
-                        fieldHandle = GetOrInsertFieldHandle(layer, attr, false, &(layerLookup->second[path]));
-                    }
-                }
-            }
-            else {
-                fieldHandle = GetOrInsertFieldHandle(layer, attr, forDefaults, &(layerLookup->second[path]));
-            }
-        }
-        else {
-            fieldHandle = GetOrInsertFieldHandle(layer, attr, forDefaults, &(_fieldHandles[layer][path]));
-        }
-        if (forDefaults) {
-            layer->SetField(fieldHandle, newValue);
-        }
-        else {
-            layer->SetTimeSample(fieldHandle, time.GetValue(), newValue);
-        }
-
-        return true;
-    }
-    // nv end
-
     // if we are setting a value block, we don't want type checking
     if (!Usd_ValueContainsBlock(&newValue)) {
         // Do a type check.  Obtain typeName.

@@ -383,7 +383,6 @@ public:
     HD_API
     HdResourceRegistrySharedPtr GetResourceRegistry() const;
 
-<<<<<<< HEAD
     // #nv begin omni-hydra
     // ---------------------------------------------------------------------- //
     /// \name Post Sync Delegates
@@ -394,13 +393,12 @@ public:
     HD_API
     void AddPostSyncDelegate(HdSceneDelegate* sceneDelegate);
     // nv end
-=======
+
     /// Returns true if scene index features are available
     /// This is true by default but can be controlled via an
     /// HD_ENABLE_SCENE_INDEX_EMULATION environment variable.
     HD_API
     static bool IsSceneIndexEmulationEnabled();
->>>>>>> pxr/dev
 
 private:
     // The render index constructor is private so we can check

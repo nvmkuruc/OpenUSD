@@ -1513,15 +1513,6 @@ SdfLayer::SetTimeSample(const SdfAbstractDataFieldAccessHandle &fieldHandle, dou
         .DidChangeAttributeTimeSamples(SdfLayerHandle(this),
             fieldHandle->GetPath());
 
-#if 0
-    // TODO (fast-updates): Indicate affected time interval in change notice.
-    Sdf_ChangeManager::Get()
-        .DidFastUpdate(SdfLayerHandle(this),
-            fieldHandle->GetPath(),
-            value,
-            fieldHandle->HasCompositionDependents());
-#endif
-
     _data->SetTimeSample(fieldHandle, time, value);
 }
 
@@ -3785,17 +3776,9 @@ SdfLayer::SetField(const SdfAbstractDataFieldAccessHandle &fieldHandle, const Vt
 
         const TfToken &fieldName = fieldHandle->GetFieldName();
 
-        if (fieldName == SdfFieldKeys->Default) {
-            Sdf_ChangeManager::Get()
-                .DidFastUpdate(SdfLayerHandle(this),
-                    fieldHandle->GetPath(),
-                    value,
-                    fieldHandle->HasCompositionDependents());
-        } else {
-            Sdf_ChangeManager::Get().DidChangeField(
-                SdfLayerHandle(this),
-                fieldHandle->GetPath(), fieldHandle->GetFieldName(), oldValue, value);
-        }
+        Sdf_ChangeManager::Get().DidChangeField(
+            SdfLayerHandle(this),
+            fieldHandle->GetPath(), fieldHandle->GetFieldName(), oldValue, value);
 
         _data->Set(fieldHandle, value);
     }
@@ -4264,21 +4247,11 @@ SdfLayer::_PrimSetField(const SdfPath& path,
         oldValuePtr ? *oldValuePtr : GetField(path, fieldName);
     const VtValue& newValue = _GetVtValue(value);
 
-    // #nv begin #fast-updates
     // Send notification when leaving the change block.
     SdfChangeBlock block;
-    if ((fastUpdates || SdfChangeBlock::IsFastUpdating()) && (fieldName == SdfFieldKeys->Default)) {
-        Sdf_ChangeManager::Get()
-            .DidFastUpdate(SdfLayerHandle(this),
-                path,
-                newValue,
-                // TODO: Provide a way for the caller to determine this.
-                true /*hasCompositionDependents*/);
-    } else {
-        Sdf_ChangeManager::Get().DidChangeField(
-            _self, path, fieldName, oldValue, newValue);
-    }
-    // nv end
+
+    Sdf_ChangeManager::Get().DidChangeField(
+        _self, path, fieldName, oldValue, newValue);
 
     _data->Set(path, fieldName, value);
 }

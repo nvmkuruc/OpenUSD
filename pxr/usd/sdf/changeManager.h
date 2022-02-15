@@ -70,11 +70,6 @@ public:
     void DidChangeField(const SdfLayerHandle &layer,
                         const SdfPath & path, const TfToken &field,
                         const VtValue & oldValue, const VtValue & newValue );
-
-    // #nv begin #fast-updates
-    void DidFastUpdate(const SdfLayerHandle &layer, const SdfPath &path, const VtValue &value, bool hasCompositionDependents);
-    // nv end
-
     void DidChangeAttributeTimeSamples(const SdfLayerHandle &layer,
                                        const SdfPath &attrPath);
 
@@ -87,26 +82,6 @@ public:
                        bool inert);
     void RemoveSpecIfInert(const SdfSpec&);
 
-<<<<<<< HEAD
-    // Open/close change blocks. SdfChangeBlock provides stack-based management
-    // of change blocks and should be preferred over this API.
-    // #nv begin fast-updates
-    // The fastUpdates flag will enable fast updates for all authoring made
-    // within this change block.
-    SDF_API
-    void OpenChangeBlock(bool fastUpdates=false);
-    // nv end
-    SDF_API
-    void CloseChangeBlock();
-
-    // #nv begin #fast-updates
-    // Indicates whether a change block with fast updates enabled is in scope.
-    SDF_API
-    bool IsFastUpdating();
-    // nv end
-
-=======
->>>>>>> pxr/dev
 private:
     friend class SdfChangeBlock;
     
@@ -138,20 +113,6 @@ private:
                                SdfLayerHandle const &layer);
 
 private:
-<<<<<<< HEAD
-    struct _Data {
-        _Data();
-        SdfLayerChangeListVec changes;
-        int changeBlockDepth;
-        std::vector<SdfSpec> removeIfInert;
-
-        // #nv begin #fast-updates
-        SdfLayerFastUpdatesMap fastUpdates;
-        int highestFastUpdateDepth;
-        // nv end
-    };
-=======
->>>>>>> pxr/dev
 
     tbb::enumerable_thread_specific<_Data> _data;
 

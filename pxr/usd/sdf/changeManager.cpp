@@ -44,14 +44,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_INSTANTIATE_SINGLETON(Sdf_ChangeManager);
 
 Sdf_ChangeManager::_Data::_Data()
-<<<<<<< HEAD
-    : changeBlockDepth(0),
-    // #nv begin #fast-updates
-    highestFastUpdateDepth(0)
-    // nv end
-=======
     : outermostBlock(nullptr)
->>>>>>> pxr/dev
 {
 }
 
@@ -95,15 +88,6 @@ Sdf_ChangeManager::_SendNoticesForChangeList( const SdfLayerHandle & layer,
     }
 }
 
-<<<<<<< HEAD
-void
-Sdf_ChangeManager::OpenChangeBlock(bool fastUpdates)
-{
-    ++_data.local().changeBlockDepth;
-    if (fastUpdates && _data.local().highestFastUpdateDepth == 0) {
-        _data.local().highestFastUpdateDepth = _data.local().changeBlockDepth;
-    }
-=======
 void const *
 Sdf_ChangeManager::_OpenChangeBlock(SdfChangeBlock const *block)
 {
@@ -113,7 +97,6 @@ Sdf_ChangeManager::_OpenChangeBlock(SdfChangeBlock const *block)
         return static_cast<void const *>(&data);
     }
     return nullptr;
->>>>>>> pxr/dev
 }
 
 void
@@ -124,26 +107,6 @@ Sdf_ChangeManager::_CloseChangeBlock(
     TF_VERIFY(data.outermostBlock == block,
               "Improperly nested SdfChangeBlocks!");
 
-<<<<<<< HEAD
-        // Send notices with no change block open.
-        --changeBlockDepth;
-        TF_VERIFY(changeBlockDepth == 0);
-        // #nv begin #fast-updates
-        _data.local().highestFastUpdateDepth = 0;
-        // nv end
-        _SendNotices();
-    }
-    else {
-        // Not outermost.
-        TF_VERIFY(changeBlockDepth > 0);
-        --changeBlockDepth;
-        // #nv begin #fast-updates
-        if (changeBlockDepth < _data.local().highestFastUpdateDepth) {
-            _data.local().highestFastUpdateDepth = 0;
-        }
-        // nv end
-    }
-=======
     // Closing outermost (last) change block.  Process removes while the change
     // block is still open.
     _ProcessRemoveIfInert(&data);
@@ -151,17 +114,7 @@ Sdf_ChangeManager::_CloseChangeBlock(
     // Send notices with no change block open.
     data.outermostBlock = nullptr;
     _SendNotices(&data);
->>>>>>> pxr/dev
 }
-
-// #nv begin #fast-updates
-bool Sdf_ChangeManager::IsFastUpdating()
-{
-    // Const methods can't seem to read _data?
-    return _data.local().changeBlockDepth > 0 &&
-        _data.local().highestFastUpdateDepth > 0;
-}
-// nv end
 
 void
 Sdf_ChangeManager::RemoveSpecIfInert(const SdfSpec& spec)
@@ -223,48 +176,6 @@ Sdf_ChangeManager::_SendNotices(_Data *data)
                        }),
         changes.end());
 
-    static tbb::atomic<size_t> &changeSerialNumber = _InitChangeSerialNumber();
-
-    // +nv #begin #fast-updates
-    SdfLayerFastUpdatesMap fastUpdates;
-    fastUpdates.swap(_data.local().fastUpdates);
-    if (fastUpdates.size() == 1 && changes.empty()) {
-        // Optimal case-- the change block contains only fast updates for a single layer.
-        TF_DEBUG(SDF_CHANGES).Msg("Sending only fast updates for layer %s\n",
-            fastUpdates.begin()->first->GetIdentifier().c_str());
-
-        // Obtain a serial number for this round of change processing.
-        size_t serialNumber = changeSerialNumber.fetch_and_increment();
-
-        SdfNotice::LayersDidChange(fastUpdates, serialNumber).Send();
-        SdfNotice::LayersDidChangeSentPerLayer(fastUpdates, serialNumber).Send(fastUpdates.begin()->first);
-        return;
-    } else {
-        // Otherwise make a dummy change entry for each fast update whose path does not already have a change entry.
-        // These will not have the normal infoChanged data or the flags set, but semantically has
-        // the desired effect of invalidating the data at these paths without triggering recomposition.
-        // This works as long as there are no notice listeners which need to respond specifically
-        // to changes in attribute defaults and timesamples.
-        TF_FOR_ALL(itr, fastUpdates) {
-            SdfLayerChangeListVec::iterator candidate = std::find_if(changes.begin(), changes.end(),
-                [&itr](std::pair<SdfLayerHandle, SdfChangeList> inpair) { return inpair.first == itr->first; });
-            TF_FOR_ALL(itr2, itr->second.fastUpdates) {
-                if (candidate == changes.end()) {
-                    SdfChangeList dummyList;
-                    dummyList.FastUpdateFallback(itr2->path);
-                    changes.push_back(std::make_pair(itr->first, dummyList));
-                } else {
-                    auto &entryList = candidate->second.GetEntryList();
-                    if (std::find_if(entryList.begin(), entryList.end(),
-                        [&itr2](std::pair<SdfPath, SdfChangeList::Entry> inpair) { return inpair.first == itr2->path; })
-                        == entryList.end()) {
-                        candidate->second.FastUpdateFallback(itr2->path);
-                    }
-                }
-            }
-        }
-    }
-    // nv end
     if (changes.empty())
         return;
 
@@ -279,6 +190,7 @@ Sdf_ChangeManager::_SendNotices(_Data *data)
     }
 
     // Obtain a serial number for this round of change processing.
+    static tbb::atomic<size_t> &changeSerialNumber = _InitChangeSerialNumber();
     size_t serialNumber = changeSerialNumber.fetch_and_increment();
 
     // Send global notice.
@@ -594,21 +506,6 @@ Sdf_ChangeManager::DidChangeField(const SdfLayerHandle &layer,
             .DidChangeInfo(path, field, oldVal, newVal);
     }
 }
-
-// +nv #begin #fast-updates
-void
-Sdf_ChangeManager::DidFastUpdate(const SdfLayerHandle &layer, const SdfPath &path, const VtValue &value,
-                                 bool hasCompositionDependents)
-{
-    if (!layer->_ShouldNotify())
-        return;
-
-    SdfLayerFastUpdatesMap &fastUpdates = _data.local().fastUpdates;
-    fastUpdates[layer].fastUpdates.push_back({ path, value });
-    if (hasCompositionDependents)
-        fastUpdates[layer].hasCompositionDependents = true;
-}
-// nv end
 
 void
 Sdf_ChangeManager::DidChangeAttributeTimeSamples(const SdfLayerHandle &layer,

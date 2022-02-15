@@ -139,14 +139,6 @@ UsdImagingCameraAdapter::TrackVariability(UsdPrim const& prim,
                    timeVaryingBits,
                    false)) {
         return;
-<<<<<<< HEAD
-    }
-
-    if (_IsVarying(prim,
-                   UsdGeomTokens->horizontalApertureOffset,
-                   HdCamera::DirtyParams,
-                   HdCameraTokens->horizontalApertureOffset,
-=======
     }
 
     if (_IsVarying(prim,
@@ -162,44 +154,21 @@ UsdImagingCameraAdapter::TrackVariability(UsdPrim const& prim,
                    UsdGeomTokens->verticalApertureOffset,
                    HdCamera::DirtyParams,
                    HdCameraTokens->verticalApertureOffset,
->>>>>>> pxr/dev
                    timeVaryingBits,
                    false)) {
         return;
     }
 
     if (_IsVarying(prim,
-<<<<<<< HEAD
-                   UsdGeomTokens->verticalApertureOffset,
-                   HdCamera::DirtyParams,
-                   HdCameraTokens->verticalApertureOffset,
-=======
                    UsdGeomTokens->focalLength,
                    HdCamera::DirtyParams,
                    HdCameraTokens->focalLength,
->>>>>>> pxr/dev
                    timeVaryingBits,
                    false)) {
         return;
     }
 
     if (_IsVarying(prim,
-<<<<<<< HEAD
-                   UsdGeomTokens->focalLength,
-                   HdCamera::DirtyParams,
-                   HdCameraTokens->focalLength,
-=======
-                   UsdGeomTokens->clippingRange,
-                   HdCamera::DirtyParams,
-                   HdCameraTokens->clippingRange,
->>>>>>> pxr/dev
-                   timeVaryingBits,
-                   false)) {
-        return;
-    }
-
-    if (_IsVarying(prim,
-<<<<<<< HEAD
                    UsdGeomTokens->clippingRange,
                    HdCamera::DirtyParams,
                    HdCameraTokens->clippingRange,
@@ -209,8 +178,6 @@ UsdImagingCameraAdapter::TrackVariability(UsdPrim const& prim,
     }
 
     if (_IsVarying(prim,
-=======
->>>>>>> pxr/dev
                    UsdGeomTokens->fStop,
                    HdCamera::DirtyParams,
                    HdCameraTokens->fStop,

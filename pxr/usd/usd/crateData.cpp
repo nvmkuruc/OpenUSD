@@ -260,29 +260,14 @@ public:
             // Do nothing, we do not store target specs.
             return;
         }
-<<<<<<< HEAD
-        if (_MaybeMoveToHashTable()) {
-            _hashLastSet = nullptr;
-            TF_VERIFY(_hashData->erase(path), "%s", path.GetText());
-        } else {
-            auto iter = _flatData.find(path);
-            size_t index = iter - _flatData.begin();
-            if (TF_VERIFY(iter != _flatData.end(), "%s", path.GetText())) {
-                _flatLastSet = nullptr;
-                _flatData.erase(iter);
-                _flatTypes.erase(_flatTypes.begin() + index);
-            }
-        }
+        _lastSet = _data.end();
+        TF_VERIFY(_data.erase(path), "%s", path.GetText());
 
         // #nv begin #fast-updates
         _AllFieldHandleHashTable::iterator fieldItr = _fieldHandles.find(path);
         if (fieldItr != _fieldHandles.end())
             _fieldHandles.erase(fieldItr);
         // nv end
-=======
-        _lastSet = _data.end();
-        TF_VERIFY(_data.erase(path), "%s", path.GetText());
->>>>>>> pxr/dev
     }
 
     inline void MoveSpec(const SdfPath& oldPath,
@@ -295,20 +280,18 @@ public:
         if (!TF_VERIFY(oldIter != _data.end())) {
             return;
         }
-<<<<<<< HEAD
+
+        _lastSet = _data.end();
+        auto tmpFields(std::move(oldIter->second));
+        _data.erase(oldIter);
+        auto iresult = _data.emplace(newPath, std::move(tmpFields));
+        TF_VERIFY(iresult.second);
 
         // #nv begin #fast-updates
         _AllFieldHandleHashTable::iterator fieldItr = _fieldHandles.find(oldPath);
         if (fieldItr != _fieldHandles.end())
             _fieldHandles.erase(fieldItr);
         // nv end
-=======
-        _lastSet = _data.end();
-        auto tmpFields(std::move(oldIter->second));
-        _data.erase(oldIter);
-        auto iresult = _data.emplace(newPath, std::move(tmpFields));
-        TF_VERIFY(iresult.second);
->>>>>>> pxr/dev
     }
 
     inline SdfSpecType GetSpecType(const SdfPath &path) const {
@@ -542,23 +525,14 @@ public:
         return names;
     }
 
-<<<<<<< HEAD
-    template <class Data>
-    inline void _SetHelper(
-        Data &d, SdfPath const &path,
-        typename Data::value_type *&lastSet,
-        TfToken const &fieldName, VtValue const &value,
-        // #nv #begin #fast-updates
-        VtValue **fieldValLocation = nullptr) {
+    inline void Set(const SdfPath& path,
+                    const TfToken& fieldName,
+                    const VtValue& value,
+                    // #nv #begin #fast-updates
+                    VtValue **fieldValLocation = nullptr) {
         TRACE_FUNCTION();
         // nv end
 
-        if (!lastSet || lastSet->first != path) {
-            auto i = d.find(path);
-=======
-    inline void Set(const SdfPath& path,
-                    const TfToken& fieldName,
-                    const VtValue& value) {
         if (ARCH_UNLIKELY(value.IsEmpty())) {
             Erase(path, fieldName);
             return;
@@ -572,7 +546,6 @@ public:
         }
         if (_lastSet == _data.end() || _lastSet->first != path) {
             auto i = _data.find(path);
->>>>>>> pxr/dev
             if (!TF_VERIFY(
                     i != _data.end(),
                     "Tried to set field '%s' on nonexistent spec at <%s>",
@@ -660,6 +633,15 @@ public:
     }
 
     inline void Erase(const SdfPath& path, const TfToken & field) {
+        // #nv begin #fast-updates
+        // Remove field handle if found.
+        _SpecFieldHandleHashTable &specFieldHandles = _fieldHandles[path];
+        _SpecFieldHandleHashTable::iterator fieldHandleItr = specFieldHandles.find(field);
+        if (fieldHandleItr != specFieldHandles.end()) {
+            specFieldHandles.erase(fieldHandleItr);
+        }
+        // nv end
+
         auto i = _data.find(path);
         if (i == _data.end())
             return;
@@ -677,48 +659,35 @@ public:
         }
     }
 
-<<<<<<< HEAD
-    inline void Erase(const SdfPath& path, const TfToken & field) {
-        _hashData ?
-            _EraseHelper(*_hashData, path, field) :
-            _EraseHelper(_flatData, path, field);
-
-        // #nv begin #fast-updates
-        // Remove field handle if found.
-        _SpecFieldHandleHashTable &specFieldHandles = _fieldHandles[path];
-        _SpecFieldHandleHashTable::iterator fieldHandleItr = specFieldHandles.find(field);
-        if (fieldHandleItr != specFieldHandles.end()) {
-            specFieldHandles.erase(fieldHandleItr);
-        }
-        // nv end
-    }
-
     // #nv begin #fast-updates
     inline SdfAbstractDataFieldAccessHandle CreateFieldHandle(const SdfPath &path, const TfToken &fieldName) {
-        TfAutoMallocTag tag("Usd_CrateDataImpl::CreateFieldHandle");
+        #if 0
+            TfAutoMallocTag tag("Usd_CrateDataImpl::CreateFieldHandle");
 
-        // Get existing handle if possible.
-        _AllFieldHandleHashTable::iterator allItr = _fieldHandles.find(path);
-        if (allItr != _fieldHandles.end()) {
-            _SpecFieldHandleHashTable::iterator specItr = allItr->second.find(fieldName);
-            if (specItr != allItr->second.end()) {
-                return specItr->second;
+            // Get existing handle if possible.
+            _AllFieldHandleHashTable::iterator allItr = _fieldHandles.find(path);
+            if (allItr != _fieldHandles.end()) {
+                _SpecFieldHandleHashTable::iterator specItr = allItr->second.find(fieldName);
+                if (specItr != allItr->second.end()) {
+                    return specItr->second;
+                }
             }
-        }
 
-        // Get existing location if available.
-        VtValue *fieldValLocation = _GetMutableFieldValue(path, fieldName);
-        if (!fieldValLocation) {
-            // If there is no existing location, make one with an empty value.
-            VtValue value = (fieldName == SdfFieldKeys->TimeSamples) ? VtValue(TimeSamples()) : VtValue();
-            _hashData ?
-                _SetHelper(*_hashData, path, _hashLastSet, fieldName, value, &fieldValLocation) :
-                _SetHelper(_flatData, path, _flatLastSet, fieldName, value, &fieldValLocation);
-        }
+            // Get existing location if available.
+            VtValue *fieldValLocation = _GetMutableFieldValue(path, fieldName);
+            if (!fieldValLocation) {
+                // If there is no existing location, make one with an empty value.
+                VtValue value = (fieldName == SdfFieldKeys->TimeSamples) ? VtValue(TimeSamples()) : VtValue();
+                _hashData ?
+                    _SetHelper(*_hashData, path, _hashLastSet, fieldName, value, &fieldValLocation) :
+                    _SetHelper(_flatData, path, _flatLastSet, fieldName, value, &fieldValLocation);
+            }
 
-        _FieldHandleData *fieldHandle = new _FieldHandleData(path, fieldName, fieldValLocation);
-        _fieldHandles[path][fieldName] = TfCreateRefPtr(fieldHandle);
-        return TfCreateWeakPtr(fieldHandle);
+            _FieldHandleData *fieldHandle = new _FieldHandleData(path, fieldName, fieldValLocation);
+            _fieldHandles[path][fieldName] = TfCreateRefPtr(fieldHandle);
+            return TfCreateWeakPtr(fieldHandle);
+        #endif
+        return SdfAbstractDataFieldAccessHandle();
     }
 
     inline void ReleaseFieldHandle(SdfAbstractDataFieldAccessHandle *fieldHandle) {
@@ -765,8 +734,6 @@ public:
     }
     // nv end
 
-=======
->>>>>>> pxr/dev
     inline std::set<double>
     ListAllTimeSamples() const {
         auto times = _ListAllTimeSamples();
@@ -1222,55 +1189,11 @@ private:
     }
 
     inline void _ClearSpecData() {
-<<<<<<< HEAD
-        _hashData.reset();
-        TfReset(_flatData);
-        TfReset(_flatTypes);
-        _flatLastSet = nullptr;
-        _hashLastSet = nullptr;
-
+        TfReset(_data);
+        _lastSet = _data.end();
         // #nv begin #fast-updates
         TfReset(_fieldHandles);
         // nv end
-    }
-
-    bool _MaybeMoveToHashTable() {
-        // Arbitrary size threshold for flat_map data.
-        constexpr size_t FlatDataThreshold = 1024;
-        if (!_hashData && _flatData.size() > FlatDataThreshold) {
-            // blow lastSet caches.
-            _flatLastSet = nullptr;
-            _hashLastSet = nullptr;
-
-            // move to hash table.
-            _hashData.reset(new decltype(_hashData)::element_type);
-            auto &d = *_hashData;
-            auto flatBeginIter = _flatData.begin();
-            for (size_t i = 0; i != _flatData.size(); ++i) {
-                auto const &p = flatBeginIter[i];
-                _MapSpecData msd {
-                    std::move(p.second.fields), _flatTypes[i].type };
-                d.emplace(p.first, std::move(msd));
-            }
-            TfReset(_flatData);
-            TfReset(_flatTypes);
-
-            // #nv begin #fast-updates
-            // We need to refresh affected live field handles.
-            for (auto specsByName : _fieldHandles) {
-                for (auto fieldsByName : specsByName.second) {
-                    auto &fieldHandle = fieldsByName.second;
-                    fieldHandle->vtValue =
-                        _GetMutableFieldValue(fieldHandle->GetPath(), fieldHandle->GetFieldName());
-                }
-            }
-            // nv end
-        }
-        return static_cast<bool>(_hashData);
-=======
-        TfReset(_data);
-        _lastSet = _data.end();
->>>>>>> pxr/dev
     }
 
     // In-memory storage for a single "spec" -- prim, property, etc.

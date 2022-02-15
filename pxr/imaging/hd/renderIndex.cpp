@@ -76,8 +76,6 @@ _IsEnabledSceneIndexEmulation()
     return enabled;
 }
 
-<<<<<<< HEAD
-
 TF_DEFINE_ENV_SETTING(HD_ENABLE_MULTITHREADED_NON_MATERIAL_SPRIM_SYNC, 0,
                       "Enable multithreaded Hydra Sync for SPrims other than materials");
 
@@ -87,12 +85,12 @@ _IsEnabledMultithreadedNonMaterialSprimSync()
     static bool enabled =
         (TfGetEnvSetting(HD_ENABLE_MULTITHREADED_NON_MATERIAL_SPRIM_SYNC) == 1);
     return enabled;
-=======
+}
+
 bool
 HdRenderIndex::IsSceneIndexEmulationEnabled()
 {
     return _IsEnabledSceneIndexEmulation();
->>>>>>> pxr/dev
 }
 
 HdRenderIndex::HdRenderIndex(

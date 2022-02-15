@@ -224,7 +224,6 @@ _ResolveAssetAttribute(
             ArJoinPackageRelativePath(firstTilePackage, firstTilePath));
 }
 
-<<<<<<< HEAD
 TF_DEFINE_ENV_SETTING(USDIMAGING_ALLOW_UNREGISTERED_SHADER_IDS, 0,
     "Allows material networks to be defined under IDs which are not known to SdrRegistry.");
 static bool _UnregisteredShaderIDsAllowed() {
@@ -235,9 +234,6 @@ static bool _UnregisteredShaderIDsAllowed() {
 // #nv end
 
 
-VtValue
-UsdImaging_ResolveMaterialParamValue(
-=======
 // Get the value from the usd attribute at given time. If it is an
 // SdfAssetPath containing a UDIM pattern, e.g., //SHOW/myImage.<UDIM>.exr,
 // the resolved path of the SdfAssetPath will be updated to a file path
@@ -249,7 +245,6 @@ UsdImaging_ResolveMaterialParamValue(
 //
 static VtValue
 _ResolveMaterialParamValue(
->>>>>>> pxr/dev
     const UsdAttribute& attr,
     const UsdTimeCode& time)
 {

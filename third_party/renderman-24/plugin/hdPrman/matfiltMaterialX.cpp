@@ -616,42 +616,6 @@ MatfiltMaterialX(
         return;
     }
 
-<<<<<<< HEAD
-    if (mtlxSdrNode) {
-
-        // if we have a nodegraph (ie. input into the terminal node)
-        if (!terminalNode->inputConnections.empty()) {
-
-            // Load Standard Libraries/setup SearchPaths (for mxDoc and mxShaderGen)
-            mx::FilePathVec libraryFolders;
-            mx::FileSearchPath searchPath = HdMtlxSearchPaths();
-            mx::DocumentPtr stdLibraries = mx::createDocument();
-            mx::loadLibraries(libraryFolders, searchPath, stdLibraries);
-
-            // Create the MaterialX Document from the HdMaterialNetwork 
-            std::set<SdfPath> hdTextureNodes;
-            mx::StringMap mxHdTextureMap; // Store Mx-Hd texture counterparts 
-            mx::DocumentPtr mxDoc = HdMtlxCreateMtlxDocumentFromHdNetwork(
-                                        hdNetwork, *terminalNode, 
-                                        materialPath, stdLibraries, 
-                                        &hdTextureNodes, &mxHdTextureMap);
-
-            _UpdateTextureNodes(hdNetwork, hdTextureNodes, mxDoc);
-
-            // Remove the material and shader nodes from the MaterialX Document
-            // (since we need to use PxrSurface as the closure instead of the 
-            // MaterialX surfaceshader node)
-            mxDoc->removeNode("SR_" + materialPath.GetName());  // Shader Node
-            mxDoc->removeNode(materialPath.GetName());          // Material Node
-
-            // Update nodes directly connected to the terminal node with 
-            // MX generated shaders that capture the rest of the nodegraph
-            _UpdateNetwork(&hdNetwork, terminalNode, terminalNodePath, 
-                           mxDoc, searchPath);
-        }
-        // Convert the terminal node to an AdapterNode + PxrSurfaceNode
-        _UpdateTerminal(&hdNetwork, *terminalNode, terminalNodePath);
-=======
     TfTokenVector cNames =
         netInterface->GetNodeInputConnectionNames(terminalNodeName);
     // If we have a nodegraph (i.e., input into the terminal node)...
@@ -683,7 +647,6 @@ MatfiltMaterialX(
         // Update nodes directly connected to the terminal node with 
         // MX generated shaders that capture the rest of the nodegraph
         _UpdateNetwork(netInterface, terminalNodeName, mxDoc, searchPath);
->>>>>>> pxr/dev
     }
 
     // Convert the terminal node to an AdapterNode + PxrSurfaceNode

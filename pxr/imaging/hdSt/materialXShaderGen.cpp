@@ -21,7 +21,6 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/imaging/glf/contextCaps.h"
 #include "pxr/imaging/hdSt/materialXShaderGen.h"
 #include "pxr/imaging/hdSt/materialXFilter.h"
 #include "pxr/base/tf/stringUtils.h"
@@ -31,7 +30,6 @@
 #include <MaterialXGenShader/Shader.h>
 #include <MaterialXGenShader/ShaderGenerator.h>
 #include <MaterialXGenShader/Syntax.h>
-#include <MaterialXGenShader/TypeDesc.h>
 
 namespace mx = MaterialX;
 
@@ -310,35 +308,6 @@ HdStMaterialXShaderGen::_EmitMxFunctions(
         }
     }
 
-<<<<<<< HEAD
-    GlfContextCaps const &caps = GlfContextCaps::GetInstance();
-    if (caps.bindlessTextureEnabled) {
-        // if we're using bindlessTextures, we can just use non-uniform
-        // samplers (which simply won't be assigned to if we're not using
-        // domeLightIrradiance)
-        emitLine("sampler2D u_envIrradiance", mxStage);
-        emitLine("sampler2D u_envRadiance", mxStage);
-    }
-    else {
-        // If we're not using bindless textures, we can't declare non-uniform
-        // sampler2D vars, but we still need to map the names that mx uses to our
-        // names - do that with #defines
-
-        emitLine("#ifdef HD_HAS_domeLightIrradiance", mxStage, false);
-        emitLine("#define u_envIrradiance HdGetSampler_domeLightIrradiance()", mxStage, false);
-        emitLine("#define u_envRadiance HdGetSampler_domeLightPrefilter()", mxStage, false);
-        emitLine("#else", mxStage, false);
-        // If HD isn't using domeLightIrradiance, we still need to define
-        // u_envRadiance / u_envIrradiance, because mx will use them - declare
-        // them as uniforms (which will likely never get set)
-        emitLine("uniform sampler2D u_envIrradiance", mxStage);
-        emitLine("uniform sampler2D u_envRadiance", mxStage);
-        emitLine("#endif", mxStage, false);
-        emitLineBreak(mxStage);
-
-        if (!_mxHdTextureMap.empty()) {
-            emitComment("Define MaterialX->Hydra sampler name mappings", mxStage);
-=======
     // If bindlessTextures are not enabled, the above for loop skips 
     // initializing textures. Initialize them here by defining mappings 
     // to the appropriate HdGetSampler function. 
@@ -357,7 +326,6 @@ HdStMaterialXShaderGen::_EmitMxFunctions(
         // Define mappings for the MaterialX Textures
         if (!_mxHdTextureMap.empty()) {
             emitComment("Define MaterialX to Hydra Sampler mappings", mxStage);
->>>>>>> pxr/dev
             for (auto texturePair : _mxHdTextureMap) {
                 emitLine(TfStringPrintf("#define %s_file HdGetSampler_%s()",
                                         texturePair.first.c_str(),
@@ -601,23 +569,11 @@ HdStMaterialXShaderGen::_EmitMxInitFunction(
     emitLineBreak(mxStage);
 
     // Initialize the Indirect Light Textures
-<<<<<<< HEAD
-
-    GlfContextCaps const &caps = GlfContextCaps::GetInstance();
-
-    // Initialize MaterialX Texture samplers with HdGetSampler equivalents
-    // ...not needed if we're not using bindless textures, because then all
-    // sampler "variables" are actually just #defines at top-level
-
-    emitLine("#ifdef HD_HAS_domeLightIrradiance", mxStage, false);
-    if (caps.bindlessTextureEnabled) {
-=======
     // Note: only need to initialize textures when bindlessTextures are enabled,
     // when bindlessTextures are not enabled, mappings are defined in 
     // HdStMaterialXShaderGen::_EmitMxFunctions
     emitLine("#ifdef HD_HAS_domeLightIrradiance", mxStage, false);
     if (_bindlessTexturesEnabled) {
->>>>>>> pxr/dev
         emitLine("u_envIrradiance = HdGetSampler_domeLightIrradiance()", mxStage);
         emitLine("u_envRadiance = HdGetSampler_domeLightPrefilter()", mxStage);
     }
@@ -625,12 +581,8 @@ HdStMaterialXShaderGen::_EmitMxInitFunction(
     emitLine("#endif", mxStage, false);
     emitLineBreak(mxStage);
 
-<<<<<<< HEAD
-    if (!_mxHdTextureMap.empty() && caps.bindlessTextureEnabled) {
-=======
     // Initialize MaterialX Texture samplers with HdGetSampler equivalents
     if (_bindlessTexturesEnabled && !_mxHdTextureMap.empty()) {
->>>>>>> pxr/dev
         emitComment("Initialize Material Textures", mxStage);
         for (auto texturePair : _mxHdTextureMap) {
             emitLine(texturePair.first + "_file = "
@@ -766,12 +718,8 @@ HdStMaterialXShaderGen::emitVariableDeclarations(
         mx::HW::T_ALBEDO_TABLE      // BRDF texture
     };
 
-<<<<<<< HEAD
-    GlfContextCaps const &caps = GlfContextCaps::GetInstance();
-=======
     // Most public uniforms are set from outside the shader
     const bool isPublicUniform = block.getName() == mx::HW::PUBLIC_UNIFORMS;
->>>>>>> pxr/dev
 
     for (size_t i = 0; i < block.size(); ++i)
     {
@@ -785,35 +733,10 @@ HdStMaterialXShaderGen::emitVariableDeclarations(
             continue;
         }
 
-        if (!caps.bindlessTextureEnabled &&
-            block[i]->getType() == mx::Type::FILENAME) {
-            // If we're not using bindless textures, we can only have uniform
-            // sampler2D variables - otherwise, we get this:
-            //     error C7554: OpenGL requires sampler variables to be
-            //     explicitly declared as uniform
-            // In that case, the mx sampler names are mapped to the hydra
-            // names elsewhere... skip...
-            continue;
-        }
-
         // Only declare the variables that we need to initialize with Hd Data
-<<<<<<< HEAD
-        if (MxHdVariables.count(block[i]->getName())) {
-            emitVariableDeclaration(block[i],
-                                    // Ensure sampler2D variables are declared
-                                    // uniform, or else get this error:
-                                    //    error C7554: OpenGL requires sampler
-                                    //    variables to be explicitly declared as
-                                    //    uniform
-                                    // mx::Type::FILENAME in glsl = "sampler2D"
-                                    block[i]->getType() == mx::Type::FILENAME
-                                        ? _syntax->getUniformQualifier()
-                                        : mx::EMPTY_STRING,
-=======
         if ( (isPublicUniform && !_IsHardcodedPublicUniform(*varType))
             || MxHdVariables.count(variable->getName()) ) {
             emitVariableDeclaration(variable, mx::EMPTY_STRING,
->>>>>>> pxr/dev
                                     context, stage, false);
         }
         // Otherwise assign the value from MaterialX

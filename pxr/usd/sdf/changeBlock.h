@@ -71,12 +71,6 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 class SdfChangeBlock {
 public:
-    // #nv begin fast-updates
-    // The fastUpdates flag will enable fast updates for all authoring made
-    // within this change block.
-    SDF_API
-    SdfChangeBlock(bool fastUpdates);
-    // nv end
     SDF_API
     SdfChangeBlock();
     ~SdfChangeBlock() {
@@ -86,19 +80,9 @@ public:
     }
 private:
     SDF_API
-<<<<<<< HEAD
-    ~SdfChangeBlock();
-
-    // #nv begin #fast-updates
-    // Indicates whether a change block with fast updates enabled is in scope.
-    SDF_API
-    static bool IsFastUpdating();
-    // nv end
-=======
     void _CloseChangeBlock(void const *key) const;
     
     void const *_key;
->>>>>>> pxr/dev
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
