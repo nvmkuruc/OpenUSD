@@ -140,6 +140,10 @@ ShaderBuilder::AddProperty(
         // Not found.  If an Sdf type exists use that.
         if (converted.valueTypeName) {
             type = converted.valueTypeName.GetAsToken();
+            // Do not use GetAsToken for comparison as recommended in the API
+            if (converted.valueTypeName == SdfValueTypeNames->Bool) {
+                 defaultValue = UsdMtlxGetUsdValue(element, isOutput);
+            }
         }
         else {
             type = TfToken(mtlxType);
