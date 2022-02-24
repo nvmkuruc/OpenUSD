@@ -78,14 +78,12 @@ _GetMxNodeType(mx::DocumentPtr const& mxDoc, TfToken const& hdNodeType)
     }
 
     std::string namespaceName = mxNodeDef->getNamespace();
-    if (!namespaceName.empty())
-    {
+    if (!namespaceName.empty()) {
         // in case the nodedef is in a namespace, 
         // we need to add it to the node name 
         return TfToken(namespaceName + ":" + mxNodeDef->getNodeString());
     }
-    else
-    {
+    else {
         return TfToken(mxNodeDef->getNodeString());
     }
 }

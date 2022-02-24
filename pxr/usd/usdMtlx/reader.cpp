@@ -227,16 +227,14 @@ _MakeName(const std::string& mtlxName)
     // A MaterialX name may have a namespace name included,
     // which then will be separated by a colon
     auto colonPos = mtlxName.find(':');
-    if (colonPos != std::string::npos)
-    {
+    if (colonPos != std::string::npos) {
         // Replace the colon with "__" to 
         // make a valid USD name token
         std::string modifiedName = mtlxName;
         modifiedName.replace(colonPos, 1, "__");
         return TfToken(modifiedName);
     }
-    else
-    {
+    else {
         return TfToken(mtlxName);
     }
 }
