@@ -88,19 +88,6 @@ _GetMxNodeType(mx::DocumentPtr const& mxDoc, TfToken const& hdNodeType)
     }
 }
 
-// Determine if the given mxInputName is of type mx::Vector3 
-// Hd stores both mx::Vector3 and mx::Color3 as a GlfVec3f
-static bool
-_IsInputVector3(std::string const& mxInputName)
-{
-    // mxInputs from UsdPreviewSurface and standard_surface nodes that are 
-    // Vector3 types
-    static const mx::StringSet Vector3Inputs = {"normal", 
-                                                "coat_normal",
-                                                "tangent"};
-    return Vector3Inputs.count(mxInputName) > 0;
-}
-
 // Find the HdNode and its corresponding NodePath in the given HdNetwork 
 // based on the given HdConnection
 static bool 
@@ -226,7 +213,7 @@ _GetMxInputInfo(
     *mxInputValue = HdMtlxConvertToString(hdParameter.second);
 
     // Get the mxInputType for the mxNodeDef
-    mx::InputPtr mxInput = mxNodeDef->getInput(*mxInputName);
+    mx::InputPtr mxInput = mxNodeDef->getActiveInput(*mxInputName);
     if (mxInput) {
         *mxInputType = mxInput->getType();
     }
@@ -458,45 +445,22 @@ _AddParameterInputsToTerminalNode(
     TfToken const& mxType,
     mx::NodePtr const& mxShaderNode)
 {
-    for (auto currParameter : hdMaterialXNode.parameters) {
-        const std::string & mxInputName = currParameter.first.GetString();
-        mx::InputPtr mxInput = mxShaderNode->addInput(mxInputName);
-        
-        // Convert the parameter to the appropriate MaterialX input format
-        VtValue hdParamValue = currParameter.second;
-        if (hdParamValue.IsHolding<bool>()) {
-            bool value = hdParamValue.UncheckedGet<bool>();
-            mxInput->setValue(value);
-        }
-        else if (hdParamValue.IsHolding<int>()) {
-            int value = hdParamValue.UncheckedGet<int>();
-            mxInput->setValue(value);
-        }
-        else if (hdParamValue.IsHolding<float>()) {
-            float value = hdParamValue.UncheckedGet<float>();
-            mxInput->setValue(value);
-        }
-        else if (hdParamValue.IsHolding<GfVec3f>()) {
+    mx::NodeDefPtr mxNodeDef = mxShaderNode->getNodeDef();
+    if (!mxNodeDef){
+        TF_WARN("NodeDef not found for Node '%s'", mxType.GetText());
+        return;
+    }
 
-            const GfVec3f & value = hdParamValue.UncheckedGet<GfVec3f>();
-            // Check if the parameter is a mx::vector3 or mx::color3
-            if (_IsInputVector3(mxInputName)) {
-                mxInput->setValue(mx::Vector3(value.data()[0], 
-                                              value.data()[1], 
-                                              value.data()[2]));
-            }
-            else {
-                mxInput->setValue(mx::Color3(value.data()[0], 
-                                             value.data()[1], 
-                                             value.data()[2]));
-            }
+    for (auto currParameter : hdMaterialXNode.parameters) {
+        // Get the MaterialX Parameter info
+        const std::string & mxInputName = currParameter.first.GetString();
+        std::string mxInputType;
+        mx::InputPtr mxInput = mxNodeDef->getActiveInput(mxInputName);
+        if (mxInput) {
+            mxInputType = mxInput->getType();
         }
-        else {
-            mxShaderNode->removeInput(mxInputName);
-            TF_WARN("Unsupported Input Type '%s' for mxNode '%s' of type '%s'",
-                    hdParamValue.GetTypeName().c_str(), mxInputName.c_str(), 
-                    mxType.GetText());
-        }
+        std::string mxInputValue = HdMtlxConvertToString(currParameter.second);
+        mxShaderNode->setInputValue(mxInputName, mxInputValue, mxInputType);
     }
 }
 
