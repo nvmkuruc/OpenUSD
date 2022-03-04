@@ -319,7 +319,7 @@ UsdMtlxGetDocument(const std::string& resolvedUri)
     if (resolvedUri.empty()) {
         document = mx::createDocument();
         for (auto&& fileResult:
-                NdrFsHelpersDiscoverNodes(
+                NdrFsHelpersDiscoverFiles(
                     UsdMtlxStandardLibraryPaths(),
                     UsdMtlxStandardFileExtensions(),
                     false)) {

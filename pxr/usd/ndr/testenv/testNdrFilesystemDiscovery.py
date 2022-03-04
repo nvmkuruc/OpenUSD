@@ -33,6 +33,7 @@ os.environ["PXR_NDR_FS_PLUGIN_SEARCH_PATHS"] = os.getcwd()
 os.environ["PXR_NDR_FS_PLUGIN_ALLOWED_EXTS"] = "oso:args"
 
 from pxr.Ndr import _FilesystemDiscoveryPlugin
+from pxr import Ndr
 
 class TestNdrFilesystemDiscovery(unittest.TestCase):
     def test_NdrFilesystemDiscovery(self):
@@ -51,6 +52,16 @@ class TestNdrFilesystemDiscovery(unittest.TestCase):
             "TestNodeARGS", "TestNodeOSL", "NestedTestARGS", "NestedTestOSL",
             "TestNodeSameName"
         }
+
+        # Verify that the discovery files helper returns the same URIs as 
+        # full discovery plugin when run on the same search path and allowed
+        # extensions.
+        discoveryUris = Ndr.FsHelpersDiscoverFiles(
+            [os.getcwd()], ["oso","args"], True)
+        assert len(discoveryResults) == 6
+        for result, uris in zip(discoveryResults, discoveryUris):
+            assert result.uri == uris.uri
+            assert result.resolvedUri == result.resolvedUri
 
 if __name__ == '__main__':
     unittest.main()
