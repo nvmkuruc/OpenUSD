@@ -185,7 +185,10 @@ UsdBakeMtlxBakeMaterial(
     bool isVolume = false;
     HdMaterialNetwork2ConvertFromHdMaterialNetworkMap(
         networkMap, &network2, &isVolume);
-
+    if (isVolume) {
+        // Not supported
+        return std::string();
+    }
 
     // Load Standard Libraries/setup SearchPaths
     // XXX This does not follow the pattern used elsewhere because of how
