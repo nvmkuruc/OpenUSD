@@ -65,7 +65,7 @@ HdMtlxConvertToString(VtValue const& hdParameterValue);
 HDMTLX_API
 MaterialX::DocumentPtr
 HdMtlxCreateMtlxDocumentFromHdNetwork(
-    HdMaterialNetwork2 const& hdNetwork,
+    HdMaterialNetwork2 & hdNetwork,
     HdMaterialNode2 const& hdMaterialXNode,
     SdfPath const& hdMaterialXNodePath,
     SdfPath const& materialPath,
