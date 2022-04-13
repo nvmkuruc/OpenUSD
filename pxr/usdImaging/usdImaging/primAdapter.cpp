@@ -872,7 +872,6 @@ _GetDirtyBitsForPrimvarChange(
     HdDirtyBits dirty = HdChangeTracker::Clean;
 
     switch (changeType) {
-        case PrimvarChangeAdd:
         case PrimvarChangeRemove:
         case PrimvarChangeDesc:
         {
@@ -881,6 +880,7 @@ _GetDirtyBitsForPrimvarChange(
             dirty = HdChangeTracker::DirtyPrimvar;
             break;
         }
+        case PrimvarChangeAdd:
         case PrimvarChangeValue:
         {
             dirty = valueChangeDirtyBit;
