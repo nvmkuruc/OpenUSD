@@ -7381,7 +7381,8 @@ public:
     {
         const SdfPath specPath =
             info._primPathInLayerStack.AppendProperty(attr.GetName());
-        const SdfLayerHandle& layer = info._layer;
+        const SdfLayerRefPtr& layer = 
+            info._layerStack->GetLayers()[info._layerIndex];
         const double localTime =
             info._layerToStageOffset.GetInverse() * time.GetValue();
 
@@ -7503,7 +7504,8 @@ UsdStage::_GetLayerWithStrongestValue(
         
         if (resolveInfo._source == UsdResolveInfoSourceTimeSamples ||
             resolveInfo._source == UsdResolveInfoSourceDefault) {
-            resultLayer = resolveInfo._layer;
+            resultLayer = 
+                resolveInfo._layerStack->GetLayers()[resolveInfo._layerIndex];
         }
         else if (resolveInfo._source == UsdResolveInfoSourceValueClips) {
             const Usd_ClipSetRefPtr& clipSet = extraResolveInfo.clipSet;
@@ -7691,7 +7693,7 @@ struct UsdStage::_ResolveInfoResolver
 
         if (_resolveInfo->_source != UsdResolveInfoSourceNone) {
             _resolveInfo->_layerStack = nodeLayers;
-            _resolveInfo->_layer = layer;
+            _resolveInfo->_layerIndex = layerStackPosition;
             _resolveInfo->_primPathInLayerStack = node.GetPath();
             _resolveInfo->_layerToStageOffset = layerToStageOffset;
             _resolveInfo->_node = node;
@@ -7875,7 +7877,8 @@ UsdStage::_GetValueFromResolveInfoImpl(const UsdResolveInfo &info,
     else if (info._source == UsdResolveInfoSourceDefault) {
         const SdfPath specPath =
             info._primPathInLayerStack.AppendProperty(attr.GetName());
-        const SdfLayerHandle& layer = info._layer;
+        const SdfLayerHandle& layer = 
+            info._layerStack->GetLayers()[info._layerIndex];
 
         TF_DEBUG(USD_VALUE_RESOLUTION).Msg(
             "RESOLVE: reading field %s:%s from @%s@, with t = %.3f"
@@ -8032,7 +8035,8 @@ UsdStage::_GetTimeSamplesInIntervalFromResolveInfo(
     if (info._source == UsdResolveInfoSourceTimeSamples) {
         const SdfPath specPath =
             info._primPathInLayerStack.AppendProperty(attr.GetName());
-        const SdfLayerHandle& layer = info._layer;
+        const SdfLayerRefPtr& layer = 
+            info._layerStack->GetLayers()[info._layerIndex];
 
         const std::set<double> samples =
             layer->ListTimeSamplesForPath(specPath);
@@ -8105,7 +8109,8 @@ UsdStage::_GetNumTimeSamplesFromResolveInfo(const UsdResolveInfo &info,
     if (info._source == UsdResolveInfoSourceTimeSamples) {
         const SdfPath specPath =
             info._primPathInLayerStack.AppendProperty(attr.GetName());
-        const SdfLayerHandle& layer = info._layer;
+        const SdfLayerRefPtr& layer = 
+            info._layerStack->GetLayers()[info._layerIndex];
 
         return layer->GetNumTimeSamplesForPath(specPath);
     } 
@@ -8185,7 +8190,8 @@ UsdStage::_GetBracketingTimeSamplesFromResolveInfo(const UsdResolveInfo &info,
     if (info._source == UsdResolveInfoSourceTimeSamples) {
         const SdfPath specPath =
             info._primPathInLayerStack.AppendProperty(attr.GetName());
-        const SdfLayerHandle& layer = info._layer;
+        const SdfLayerRefPtr& layer = 
+            info._layerStack->GetLayers()[info._layerIndex];
         const double layerTime =
             info._layerToStageOffset.GetInverse() * desiredTime;
         
