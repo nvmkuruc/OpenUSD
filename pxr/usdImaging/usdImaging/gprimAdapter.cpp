@@ -228,113 +228,65 @@ UsdImagingGprimAdapter::TrackVariability(UsdPrim const& prim,
                 }
             }
 
-            // Discover time-varying extent.
-            _IsVarying(prim,
-                UsdGeomTokens->extent,
-                HdChangeTracker::DirtyExtent,
-                UsdImagingTokens->usdVaryingExtent,
-                timeVaryingBits,
-                false);
-
-            // Discover time-varying transforms.
-            _IsTransformVarying(prim,
-                HdChangeTracker::DirtyTransform,
-                UsdImagingTokens->usdVaryingXform,
-                timeVaryingBits);
-
-            // Discover time-varying visibility.
-            _IsVarying(prim,
-                UsdGeomTokens->visibility,
-                HdChangeTracker::DirtyVisibility,
-                UsdImagingTokens->usdVaryingVisibility,
-                timeVaryingBits,
-                true);
-
-            // Discover time-varying points.
-            _IsVarying(prim,
-                UsdGeomTokens->velocities,
-                HdChangeTracker::DirtyPoints,
-                UsdImagingTokens->usdVaryingPrimvar,
-                timeVaryingBits,
-                false) ||
-                _IsVarying(prim,
-                    UsdGeomTokens->accelerations,
-                    HdChangeTracker::DirtyPoints,
-                    UsdImagingTokens->usdVaryingPrimvar,
-                    timeVaryingBits,
-                    false);
-            // XXX: "points" is handled by derived classes.
-
-            // Discover time-varying double-sidedness.
-            _IsVarying(prim,
-                UsdGeomTokens->doubleSided,
-                HdChangeTracker::DirtyDoubleSided,
-                UsdImagingTokens->usdVaryingTopology,
-                timeVaryingBits,
-                false);
-        }
-    }
-<<<<<<< HEAD
-=======
-
-    // Discover time-varying extent.
-    _IsVarying(prim,
-               UsdGeomTokens->extent,
-               HdChangeTracker::DirtyExtent,
-               UsdImagingTokens->usdVaryingExtent,
-               timeVaryingBits,
-               false);
-
-    // Discover time-varying transforms.
-    _IsTransformVarying(prim,
-               HdChangeTracker::DirtyTransform,
-               UsdImagingTokens->usdVaryingXform,
-               timeVaryingBits);
-
-    // Discover time-varying visibility.
-    _IsVarying(prim,
-               UsdGeomTokens->visibility,
-               HdChangeTracker::DirtyVisibility,
-               UsdImagingTokens->usdVaryingVisibility,
-               timeVaryingBits,
-               true);
-
-    // Discover time-varying points.
-    _IsVarying(prim,
-               UsdGeomTokens->velocities,
-               HdChangeTracker::DirtyPoints,
-               UsdImagingTokens->usdVaryingPrimvar,
-               timeVaryingBits,
-               false) ||
+        // Discover time-varying extent.
         _IsVarying(prim,
-                   UsdGeomTokens->accelerations,
+                   UsdGeomTokens->extent,
+                   HdChangeTracker::DirtyExtent,
+                   UsdImagingTokens->usdVaryingExtent,
+                   timeVaryingBits,
+                   false);
+
+        // Discover time-varying transforms.
+        _IsTransformVarying(prim,
+                   HdChangeTracker::DirtyTransform,
+                   UsdImagingTokens->usdVaryingXform,
+                   timeVaryingBits);
+
+        // Discover time-varying visibility.
+        _IsVarying(prim,
+                   UsdGeomTokens->visibility,
+                   HdChangeTracker::DirtyVisibility,
+                   UsdImagingTokens->usdVaryingVisibility,
+                   timeVaryingBits,
+                   true);
+
+        // Discover time-varying points.
+        _IsVarying(prim,
+                   UsdGeomTokens->velocities,
                    HdChangeTracker::DirtyPoints,
                    UsdImagingTokens->usdVaryingPrimvar,
                    timeVaryingBits,
                    false) ||
             _IsVarying(prim,
-                       UsdGeomTokens->motionNonlinearSampleCount,
+                       UsdGeomTokens->accelerations,
                        HdChangeTracker::DirtyPoints,
                        UsdImagingTokens->usdVaryingPrimvar,
                        timeVaryingBits,
-                       true) ||
+                       false) ||
                 _IsVarying(prim,
-                           UsdGeomTokens->motionBlurScale,
+                           UsdGeomTokens->motionNonlinearSampleCount,
                            HdChangeTracker::DirtyPoints,
                            UsdImagingTokens->usdVaryingPrimvar,
                            timeVaryingBits,
-                           true);
+                           true) ||
+                    _IsVarying(prim,
+                               UsdGeomTokens->motionBlurScale,
+                               HdChangeTracker::DirtyPoints,
+                               UsdImagingTokens->usdVaryingPrimvar,
+                               timeVaryingBits,
+                               true);
 
-    // XXX: "points" is handled by derived classes.
+        // XXX: "points" is handled by derived classes.
 
-    // Discover time-varying double-sidedness.
-    _IsVarying(prim,
-               UsdGeomTokens->doubleSided,
-               HdChangeTracker::DirtyDoubleSided,
-               UsdImagingTokens->usdVaryingTopology,
-               timeVaryingBits,
-               false);
->>>>>>> v22.05-rc1
+        // Discover time-varying double-sidedness.
+        _IsVarying(prim,
+                   UsdGeomTokens->doubleSided,
+                   HdChangeTracker::DirtyDoubleSided,
+                   UsdImagingTokens->usdVaryingTopology,
+                   timeVaryingBits,
+                   false);
+        }
+    }
 }
 
 void

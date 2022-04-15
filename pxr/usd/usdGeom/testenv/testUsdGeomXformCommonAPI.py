@@ -763,7 +763,6 @@ class TestUsdGeomXformAPI(unittest.TestCase):
             with self.assertRaises(Tf.ErrorException):
                 UsdGeom.XformCommonAPI.ConvertOpTypeToRotationOrder(opType)
 
-<<<<<<< HEAD
     #nv begin #xformcommonapi-doubles
     def test_GetXformVectorsFromDoubles(self):
         """"
@@ -782,7 +781,7 @@ class TestUsdGeomXformAPI(unittest.TestCase):
             (Gf.Vec3d(0.0, 0.0, 0.0), Gf.Vec3f(0.0, 60.0, 0.0), Gf.Vec3f(1.0, 1.0, 1.0), Gf.Vec3f(0.0, 0.0, 0.0),
             UsdGeom.XformCommonAPI.RotationOrderZYX))
     #nv end
-=======
+
     def test_Doulbe3AndFloat3PivotPosition(self):
         # tests that GetXformVectorsByAccumulation() properly extract pivot
         # position, whether it was authored as double3 or float3.
@@ -821,7 +820,6 @@ def Xform "Float"
             Gf.Vec3f(0.5, 0.0, 0.0),
             UsdGeom.XformCommonAPI.RotationOrderXYZ)
 
->>>>>>> v22.05-rc1
 
 if __name__ == "__main__":
     unittest.main()

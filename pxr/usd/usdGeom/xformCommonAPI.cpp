@@ -557,23 +557,8 @@ UsdGeomXformCommonAPI::GetXformVectors(
         }
     }
 
-<<<<<<< HEAD
-    if (!p || !p.Get(pivot, time)) {
-        bool gotValue = false;
-        if (_IsSupportedXformAttrDoubles()) {
-            GfVec3d scaleD;
-            if (p && p.Get(&scaleD, time)) {
-                *scale = GfVec3f(scaleD);
-                gotValue = true;
-            }
-        }
-        if (!gotValue) {
-            *pivot = GfVec3f(0.);
-        }
-=======
     if (!p || !_GetFromVec3dOrVec3f(p, pivot, time)) {
         *pivot = GfVec3f(0.);
->>>>>>> v22.05-rc1
     }
 
     *rotOrder = r ? ConvertOpTypeToRotationOrder(r.GetOpType())
