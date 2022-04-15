@@ -463,6 +463,29 @@ _GetCommonOpTypesForOpOrder(const vector<UsdGeomXformOp>& xformOps,
     return commonOpTypes;
 }
 
+static bool
+_GetFromVec3dOrVec3f(
+        const UsdGeomXformOp& attr,
+        GfVec3f* value,
+        const UsdTimeCode& time)
+{
+    // First, try GfVec3d which we downcast to GfVec3f.
+    GfVec3d valueD;
+    if (attr.Get(&valueD, time)) {
+        if (value) {
+            *value = GfVec3f(valueD);
+        }
+        return true;
+    }
+
+    // Fallback to GfVec3f.
+    if (attr.Get(value, time)) {
+        return true;
+    }
+
+    return false;
+}
+
 bool 
 UsdGeomXformCommonAPI::GetXformVectors(
     GfVec3d *translation, 
@@ -534,6 +557,7 @@ UsdGeomXformCommonAPI::GetXformVectors(
         }
     }
 
+<<<<<<< HEAD
     if (!p || !p.Get(pivot, time)) {
         bool gotValue = false;
         if (_IsSupportedXformAttrDoubles()) {
@@ -546,6 +570,10 @@ UsdGeomXformCommonAPI::GetXformVectors(
         if (!gotValue) {
             *pivot = GfVec3f(0.);
         }
+=======
+    if (!p || !_GetFromVec3dOrVec3f(p, pivot, time)) {
+        *pivot = GfVec3f(0.);
+>>>>>>> v22.05-rc1
     }
 
     *rotOrder = r ? ConvertOpTypeToRotationOrder(r.GetOpType())

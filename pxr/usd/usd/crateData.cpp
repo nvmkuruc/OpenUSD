@@ -405,7 +405,7 @@ public:
                     // SdfPayload to be compatible with older crate versions.
                     val = _ToPayloadListOpValue(val);
                 }
-                return value->StoreValue(val);
+                return value->StoreValue(std::move(val));
             }
             return true;
         }
@@ -1018,7 +1018,9 @@ private:
 
     inline VtValue _UnpackForField(ValueRep rep) const {
         VtValue ret;
-        if (rep.IsInlined() || rep.GetType() == TypeEnum::TimeSamples) {
+        if (rep.IsInlined() ||
+            rep.GetType() == TypeEnum::TimeSamples ||
+            rep.GetType() == TypeEnum::TokenVector) {
             ret = _crateFile->UnpackValue(rep);
         } else {
             ret = rep;

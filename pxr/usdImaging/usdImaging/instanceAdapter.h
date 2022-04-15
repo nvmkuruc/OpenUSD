@@ -319,6 +319,11 @@ public:
         int instanceIndex,
         HdInstancerContext *instancerContext) const override;
 
+    virtual SdfPathVector GetScenePrimPaths(
+        SdfPath const& cachePath,
+        std::vector<int> const& instanceIndices,
+        std::vector<HdInstancerContext> *instancerCtxs) const override;
+
     virtual bool PopulateSelection( 
         HdSelection::HighlightMode const& highlightMode,
         SdfPath const &cachePath,
@@ -464,7 +469,7 @@ private:
     bool _IsInstanceInheritedPrimvarVarying(UsdPrim const& instancer) const;
 
     struct _PopulateInstanceSelectionFn;
-    struct _GetScenePrimPathFn;
+    struct _GetScenePrimPathsFn;
 
     // Helper functions for dealing with "actual" instances to be drawn.
     //

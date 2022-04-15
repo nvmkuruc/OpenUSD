@@ -29,6 +29,7 @@ pxr_library(usdImaging
         collectionCache
         dataSourceAttribute
         dataSourceBasisCurves
+        dataSourceCamera
         dataSourceGprim
         dataSourceMesh
         dataSourcePoints
@@ -36,6 +37,7 @@ pxr_library(usdImaging
         dataSourcePrimvars
         dataSourceRelationship
         dataSourceStageGlobals
+        dataSourceVolume
         debugCodes
         delegate
         indexProxy
