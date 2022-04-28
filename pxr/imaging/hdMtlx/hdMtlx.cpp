@@ -233,9 +233,10 @@ _AddMaterialXNode(
     std::set<SdfPath> * hdPrimvarNodes)
 {
     // Get the mxNode information
-    mx::NodeDefPtr mxNodeDef = mxDoc->getNodeDef(hdNode.nodeTypeId.GetString());
+    TfToken hdNodeType = hdNode.nodeTypeId;
+    mx::NodeDefPtr mxNodeDef = mxDoc->getNodeDef(hdNodeType.GetString());
     if (!mxNodeDef){
-        TF_WARN("NodeDef not found for Node '%s'", hdNode.nodeTypeId.GetText());
+        TF_WARN("NodeDef not found for Node '%s'", hdNodeType.GetText());
         return mx::NodePtr();
     }
     const std::string & mxNodeCategory = mxNodeDef->getNodeString();
@@ -245,6 +246,16 @@ _AddMaterialXNode(
     // Add the mxNode to the mxNodeGraph
     mx::NodePtr mxNode = _AddNodeToNodeGraph(mxNodeName, mxNodeCategory, 
                                     mxNodeType, mxNodeGraph, addedNodeNames);
+
+    if(mxNode->getNodeDef()) {
+        // Sometimes mxNode->getNodeDef() starts failing.
+        // It seems to happen when there are connections with mismatched types.
+        // Explicitly setting the node def string appparently fixes the problem.
+        // If we don't do this code gen may fail.
+        if(mxNode->getNodeDefString().empty()) {
+            mxNode->setNodeDefString(hdNodeType.GetText());
+        }
+    }
 
     // For each of the HdNode parameters add the corresponding parameter/input 
     // to the mxNode
