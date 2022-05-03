@@ -1237,6 +1237,24 @@ UsdImagingDelegate::ApplyPendingUpdates()
     indexProxy._UniqueifyPathsToRepopulate();
     _Populate(&indexProxy);
     _ExecuteWorkForVariabilityUpdate(&worker);
+
+    // #nv begin #light-link-refresh
+    // Mark all dirty collection prims
+    const SdfPathSet& pathsDirtiedByCollections = _collectionCache.GetDirtyPaths();
+    if (!pathsDirtiedByCollections.empty()) {
+        TRACE_SCOPE("Mark dirty collection members");
+        for (const SdfPath& dirtyPath : pathsDirtiedByCollections) {
+            TF_DEBUG(USDIMAGING_CHANGES).Msg("[Update]: invalidate collection member prim %s\n", dirtyPath.GetText());
+            _HdPrimInfo* primInfo = _GetHdPrimInfo(dirtyPath);
+            if (primInfo && primInfo->usdPrim.IsValid() &&
+                TF_VERIFY(primInfo->adapter, "%s", dirtyPath.GetText())) {
+                UsdImagingPrimAdapterSharedPtr& adapter = primInfo->adapter;
+                adapter->MarkCollectionsDirty(primInfo->usdPrim, dirtyPath, &indexProxy);
+            }
+        }
+        _collectionCache.ClearDirtyPaths();
+    }
+    // #nv end
 }
 
 // #nv begin #omni-hydra
@@ -1526,35 +1544,10 @@ UsdImagingDelegate::_ResyncUsdPrim(SdfPath const& usdPath,
     // Otherwise, this is a totally new branch of the scene, so populate
     // from the resync target path. Note: we need to verify that usdPath exists,
     // since we can get resync notices for prims that were deleted.
-    // #nv begin #light-link-refresh-on-undo
-    UsdPrim usdPrim = _stage->GetPrimAtPath(usdPath);
-    if (usdPrim) {
+    if (_stage->GetPrimAtPath(usdPath)) {
         TF_DEBUG(USDIMAGING_CHANGES).Msg("  - affected new prim: <%s>\n",
             usdPath.GetText());
         proxy->Repopulate(usdPath);
-        if (usdPrim.IsA<UsdLuxLight>())
-        {
-            TRACE_SCOPE("Resync light/shadow link targets");
-            auto _MarkLinkPathsDirty = [&](const SdfPathSet& linkedPaths) {
-                for (SdfPath affectedCachePath : linkedPaths) {
-                    TF_DEBUG(USDIMAGING_CHANGES).Msg("[Refresh Object]: "
-                        "Light <%s> modified; invalidate linked prim %s\n", usdPath.GetText(), affectedCachePath.GetText());
-                    _HdPrimInfo* primInfo = _GetHdPrimInfo(affectedCachePath);
-                    if (primInfo && primInfo->usdPrim.IsValid() &&
-                        TF_VERIFY(primInfo->adapter, "%s", affectedCachePath.GetText())) {
-                        UsdImagingPrimAdapterSharedPtr& adapter = primInfo->adapter;
-                        adapter->MarkDirty(primInfo->usdPrim, affectedCachePath,
-                            HdChangeTracker::DirtyCategories, proxy);
-                    }
-                }
-            };
-            UsdLuxLight light(usdPrim);
-            UsdCollectionAPI lightLink{ light.GetLightLinkCollectionAPI() };
-            _MarkLinkPathsDirty(lightLink.ComputeIncludedPaths(lightLink.ComputeMembershipQuery(), _stage));
-            UsdCollectionAPI shadowLink{ light.GetShadowLinkCollectionAPI() };
-            _MarkLinkPathsDirty(shadowLink.ComputeIncludedPaths(shadowLink.ComputeMembershipQuery(), _stage));
-        }
-    // #nv end #light-link-refresh-on-undo
     } else {
         TF_DEBUG(USDIMAGING_CHANGES).Msg("  - affected deleted prim: <%s>\n",
             usdPath.GetText());

@@ -87,6 +87,9 @@ UsdImagingDomeLightAdapter::Populate(UsdPrim const& prim,
         }
     }
 // #nv end
+    // #nv begin #light-link-refresh
+    _RegisterLightCollections(prim);
+    // #nv end
 
     return prim.GetPath();
 }
@@ -95,6 +98,9 @@ void
 UsdImagingDomeLightAdapter::_RemovePrim(SdfPath const& cachePath,
                                          UsdImagingIndexProxy* index)
 {
+    // #nv begin #light-link-refresh
+    _UnregisterLightCollections(cachePath);
+    // #nv end
     index->RemoveSprim(HdPrimTypeTokens->domeLight, cachePath);
 }
 

@@ -116,12 +116,22 @@ public:
                                 UsdTimeCode time) const override;
 
 // #nv begin #light-link-refresh
-private:
+    USDIMAGING_API
+    virtual void MarkCollectionsDirty(UsdPrim const& prim,
+                                      SdfPath const& cachePath,
+                                      UsdImagingIndexProxy* index) override;
+protected:
+    USDIMAGING_API
+    void _UnregisterLightCollections(SdfPath const& cachePath);
 
-    // Cache to detect collection changes
-    mutable size_t _lightCollectionHash = 0;
-    mutable size_t _shadowCollectionHash = 0;
-// nv end
+    USDIMAGING_API
+    void _RegisterLightCollections(UsdPrim const& prim);
+
+private:
+    /// Updates the collection cache content
+    /// Checks for collection hash change and returns true if they are different
+    bool _UpdateCollectionsChanged(UsdPrim const& prim) const;
+// #nv end
 };
 
 
