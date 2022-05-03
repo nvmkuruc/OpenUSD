@@ -32,6 +32,10 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 
 #define USDIMAGING_TOKENS   \
+    /* #nv begin #light-link-refresh */ \
+    ((collectionLightLink, "collection:lightLink")) \
+    ((collectionShadowLink, "collection:shadowLink")) \
+    /* #nv end */ \
     ((infoSource, "info:source")) \
     (faceIndexPrimvar)      \
     (faceOffsetPrimvar)     \

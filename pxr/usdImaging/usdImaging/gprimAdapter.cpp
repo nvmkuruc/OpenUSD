@@ -574,6 +574,16 @@ UsdImagingGprimAdapter::MarkMaterialDirty(UsdPrim const& prim,
     index->MarkRprimDirty(cachePath, HdChangeTracker::DirtyMaterialId);
 }
 
+// #nv begin #light-link-refresh
+void
+UsdImagingGprimAdapter::MarkCollectionsDirty(UsdPrim const& prim,
+                                             SdfPath const& cachePath,
+                                             UsdImagingIndexProxy* index)
+{
+    index->MarkRprimDirty(cachePath, HdChangeTracker::DirtyCategories);
+}
+// #nv end
+
 /*virtual*/
 VtValue
 UsdImagingGprimAdapter::GetPoints(UsdPrim const& prim,

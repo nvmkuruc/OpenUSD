@@ -62,6 +62,40 @@ UsdImagingLightAdapter::~UsdImagingLightAdapter()
 {
 }
 
+// #nv begin #light-link-refresh
+void
+UsdImagingLightAdapter::MarkCollectionsDirty(UsdPrim const& prim,
+                                             SdfPath const& cachePath,
+                                             UsdImagingIndexProxy* index)
+{
+    index->MarkSprimDirty(cachePath, HdLight::DirtyCollection);
+}
+
+bool
+UsdImagingLightAdapter::_UpdateCollectionsChanged(UsdPrim const& prim) const {
+    UsdImaging_CollectionCache &collectionCache = _GetCollectionCache();
+    UsdLuxLight light(prim);
+    bool lightColChanged = collectionCache.UpdateCollection(light.GetLightLinkCollectionAPI());
+    bool shadowColChanged = collectionCache.UpdateCollection(light.GetShadowLinkCollectionAPI());
+    return lightColChanged || shadowColChanged;
+}
+
+void
+UsdImagingLightAdapter::_UnregisterLightCollections(SdfPath const& cachePath) {
+    UsdImaging_CollectionCache &collectionCache = _GetCollectionCache();
+    SdfPath lightLinkPath = cachePath.AppendProperty(UsdImagingTokens->collectionLightLink);
+    collectionCache.RemoveCollection(_GetStage(), lightLinkPath);
+    SdfPath shadowLinkPath = cachePath.AppendProperty(UsdImagingTokens->collectionShadowLink);
+    collectionCache.RemoveCollection(_GetStage(), shadowLinkPath);
+}
+
+void
+UsdImagingLightAdapter::_RegisterLightCollections(UsdPrim const& prim) {
+    _UpdateCollectionsChanged(prim);
+}
+
+// #nv end
+
 void 
 UsdImagingLightAdapter::TrackVariability(UsdPrim const& prim,
                                         SdfPath const& cachePath,
@@ -105,31 +139,6 @@ UsdImagingLightAdapter::TrackVariability(UsdPrim const& prim,
     // lights...
     valueCache->GetVisible(cachePath) = GetVisible(prim,
         _GetTimeWithOffset(0.0));
-
-    UsdLuxLight light(prim);
-    if (TF_VERIFY(light)) {
-        UsdImaging_CollectionCache &collectionCache = _GetCollectionCache();
-        // #nv begin #light-link-refresh
-        auto getCollectionHash = [&collectionCache] (const UsdCollectionAPI& api) -> size_t {
-            const TfToken id = collectionCache.UpdateCollection(api);
-            const UsdImaging_CollectionCache::Query* query = nullptr;
-            collectionCache.GetMembershipQuery(id, &query);
-            return query != nullptr ? query->GetHash() : 0;
-        };
-        const size_t newLightCollectionHash = getCollectionHash(light.GetLightLinkCollectionAPI());
-        const size_t newShadowCollectionHash = getCollectionHash(light.GetShadowLinkCollectionAPI());
-        if (newLightCollectionHash != _lightCollectionHash || newShadowCollectionHash != _shadowCollectionHash)
-        {
-            *timeVaryingBits |= HdLight::DirtyBits::DirtyCollection;
-            _lightCollectionHash = newLightCollectionHash;
-            _shadowCollectionHash = newShadowCollectionHash;
-        }
-        else
-        {
-            *timeVaryingBits &= ~HdLight::DirtyBits::DirtyCollection;
-        }
-        // nv end
-    }
 
     // XXX Cache primvars for lights.  Note that this does not yet support
     // animated lights, since we do not call UpdateForTime() for sprims.
@@ -198,6 +207,16 @@ UsdImagingLightAdapter::ProcessPropertyChange(UsdPrim const& prim,
     if (UsdGeomXformable::IsTransformationAffectedByAttrNamed(propertyName)) {
         return HdLight::DirtyBits::DirtyTransform;
     }
+
+    // #nv begin #light-link-refresh
+    if (TfStringStartsWith(propertyName.GetString(), UsdImagingTokens->collectionShadowLink.GetString()) || 
+        TfStringStartsWith(propertyName.GetString(), UsdImagingTokens->collectionLightLink.GetString())) {
+        if (_UpdateCollectionsChanged(prim)) {
+            return HdLight::DirtyBits::DirtyCollection;
+        }
+    }
+    // #nv end
+
     // "DirtyParam" is the catch-all bit for light params.
     return HdLight::DirtyBits::DirtyParams;
 }
