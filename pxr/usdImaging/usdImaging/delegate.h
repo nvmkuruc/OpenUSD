@@ -597,6 +597,7 @@ protected:
     friend class UsdImagingIndexProxy;
     friend class UsdImagingPrimAdapter;
 
+
     bool _ValidateRefineLevel(int level) {
         if (!(0 <= level && level <= 8)) {
             TF_CODING_ERROR("Invalid refinement level(%d), "

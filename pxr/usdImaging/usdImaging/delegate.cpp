@@ -1378,6 +1378,24 @@ UsdImagingDelegate::ApplyPendingUpdates()
     indexProxy._UniqueifyPathsToRepopulate();
     _Populate(&indexProxy);
     _ExecuteWorkForVariabilityUpdate(&worker);
+
+    // #nv begin #light-link-refresh
+    // Mark all dirty collection prims
+    const SdfPathSet& pathsDirtiedByCollections = _collectionCache.GetDirtyPaths();
+    if (!pathsDirtiedByCollections.empty()) {
+        TRACE_SCOPE("Mark dirty collection members");
+        for (const SdfPath& dirtyPath : pathsDirtiedByCollections) {
+            TF_DEBUG(USDIMAGING_CHANGES).Msg("[Update]: invalidate collection member prim %s\n", dirtyPath.GetText());
+            _HdPrimInfo* primInfo = _GetHdPrimInfo(dirtyPath);
+            if (primInfo && primInfo->usdPrim.IsValid() &&
+                TF_VERIFY(primInfo->adapter, "%s", dirtyPath.GetText())) {
+                UsdImagingPrimAdapterSharedPtr& adapter = primInfo->adapter;
+                adapter->MarkCollectionsDirty(primInfo->usdPrim, dirtyPath, &indexProxy);
+            }
+        }
+        _collectionCache.ClearDirtyPaths();
+    }
+    // #nv end
 }
 
 // #nv begin #omni-hydra
@@ -1719,12 +1737,11 @@ UsdImagingDelegate::_ResyncUsdPrim(SdfPath const& usdPath,
     // Otherwise, this is a totally new branch of the scene, so populate
     // from the resync target path. Note: we need to verify that usdPath exists,
     // since we can get resync notices for prims that were deleted.
-    // #nv begin #light-link-refresh-on-undo
-    UsdPrim usdPrim = _stage->GetPrimAtPath(usdPath);
-    if (usdPrim) {
+    if (_stage->GetPrimAtPath(usdPath)) {
         TF_DEBUG(USDIMAGING_CHANGES).Msg("  - affected new prim: <%s>\n",
             usdPath.GetText());
         proxy->Repopulate(usdPath);
+<<<<<<< HEAD
         if (usdPrim.HasAPI<UsdLuxLightAPI>())
         {
             TRACE_SCOPE("Resync light/shadow link targets");
@@ -1748,6 +1765,8 @@ UsdImagingDelegate::_ResyncUsdPrim(SdfPath const& usdPath,
             _MarkLinkPathsDirty(shadowLink.ComputeIncludedPaths(shadowLink.ComputeMembershipQuery(), _stage));
         }
     // #nv end #light-link-refresh-on-undo
+=======
+>>>>>>> origin/dev_omniverse
     } else {
         TF_DEBUG(USDIMAGING_CHANGES).Msg("  - affected deleted prim: <%s>\n",
             usdPath.GetText());

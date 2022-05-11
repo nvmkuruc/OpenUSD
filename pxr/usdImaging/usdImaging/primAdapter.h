@@ -288,6 +288,13 @@ public:
                                        SdfPath const& cachePath,
                                        UsdImagingIndexProxy* index);
 
+    // #nv begin #light-link-refresh
+    USDIMAGING_API
+    virtual void MarkCollectionsDirty(UsdPrim const& prim,
+                                      SdfPath const& cachePath,
+                                      UsdImagingIndexProxy* index);
+    // #nv end
+
     // ---------------------------------------------------------------------- //
     /// \name Computations 
     // ---------------------------------------------------------------------- //
@@ -828,6 +835,11 @@ protected:
 
     USDIMAGING_API
     UsdImaging_CollectionCache& _GetCollectionCache() const;
+
+    // #nv begin #light-link-refresh
+    USDIMAGING_API
+    UsdStageRefPtr _GetStage() const;
+    // #nv end
 
     USDIMAGING_API
     UsdImaging_CoordSysBindingStrategy::value_type
