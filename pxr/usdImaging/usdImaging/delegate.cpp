@@ -1741,32 +1741,6 @@ UsdImagingDelegate::_ResyncUsdPrim(SdfPath const& usdPath,
         TF_DEBUG(USDIMAGING_CHANGES).Msg("  - affected new prim: <%s>\n",
             usdPath.GetText());
         proxy->Repopulate(usdPath);
-<<<<<<< HEAD
-        if (usdPrim.HasAPI<UsdLuxLightAPI>())
-        {
-            TRACE_SCOPE("Resync light/shadow link targets");
-            auto _MarkLinkPathsDirty = [&](const SdfPathSet& linkedPaths) {
-                for (SdfPath affectedCachePath : linkedPaths) {
-                    TF_DEBUG(USDIMAGING_CHANGES).Msg("[Refresh Object]: "
-                        "Light <%s> modified; invalidate linked prim %s\n", usdPath.GetText(), affectedCachePath.GetText());
-                    _HdPrimInfo* primInfo = _GetHdPrimInfo(affectedCachePath);
-                    if (primInfo && primInfo->usdPrim.IsValid() &&
-                        TF_VERIFY(primInfo->adapter, "%s", affectedCachePath.GetText())) {
-                        UsdImagingPrimAdapterSharedPtr& adapter = primInfo->adapter;
-                        adapter->MarkDirty(primInfo->usdPrim, affectedCachePath,
-                            HdChangeTracker::DirtyCategories, proxy);
-                    }
-                }
-            };
-            UsdLuxLightAPI light(usdPrim);
-            UsdCollectionAPI lightLink{ light.GetLightLinkCollectionAPI() };
-            _MarkLinkPathsDirty(lightLink.ComputeIncludedPaths(lightLink.ComputeMembershipQuery(), _stage));
-            UsdCollectionAPI shadowLink{ light.GetShadowLinkCollectionAPI() };
-            _MarkLinkPathsDirty(shadowLink.ComputeIncludedPaths(shadowLink.ComputeMembershipQuery(), _stage));
-        }
-    // #nv end #light-link-refresh-on-undo
-=======
->>>>>>> origin/dev_omniverse
     } else {
         TF_DEBUG(USDIMAGING_CHANGES).Msg("  - affected deleted prim: <%s>\n",
             usdPath.GetText());

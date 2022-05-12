@@ -57,7 +57,6 @@ UsdImagingLightAdapter::~UsdImagingLightAdapter()
 {
 }
 
-<<<<<<< HEAD
 bool
 UsdImagingLightAdapter::IsSupported(UsdImagingIndexProxy const* index) const
 {
@@ -72,6 +71,9 @@ UsdImagingLightAdapter::Populate(UsdPrim const& prim,
 {
     index->InsertSprim(HdPrimTypeTokens->light, prim.GetPath(), prim);
     HD_PERF_COUNTER_INCR(UsdImagingTokens->usdPopulatedPrimCount);
+    // #nv begin #light-link-refresh
+    _RegisterLightCollections(prim);
+    // #nv end
 
     return prim.GetPath();
 }
@@ -80,10 +82,12 @@ void
 UsdImagingLightAdapter::_RemovePrim(SdfPath const& cachePath,
                                     UsdImagingIndexProxy* index)
 {
-    index->RemoveSprim(HdPrimTypeTokens->light, cachePath);
+    // #nv begin #light-link-refresh
+    _UnregisterLightCollections(cachePath);
+    // #nv end
+    index->RemoveSprim(HdPrimTypeTokens->domeLight, cachePath);
 }
 
-=======
 // #nv begin #light-link-refresh
 void
 UsdImagingLightAdapter::MarkCollectionsDirty(UsdPrim const& prim,
@@ -96,7 +100,7 @@ UsdImagingLightAdapter::MarkCollectionsDirty(UsdPrim const& prim,
 bool
 UsdImagingLightAdapter::_UpdateCollectionsChanged(UsdPrim const& prim) const {
     UsdImaging_CollectionCache &collectionCache = _GetCollectionCache();
-    UsdLuxLight light(prim);
+    UsdLuxLightAPI light(prim);
     bool lightColChanged = collectionCache.UpdateCollection(light.GetLightLinkCollectionAPI());
     bool shadowColChanged = collectionCache.UpdateCollection(light.GetShadowLinkCollectionAPI());
     return lightColChanged || shadowColChanged;
@@ -115,10 +119,8 @@ void
 UsdImagingLightAdapter::_RegisterLightCollections(UsdPrim const& prim) {
     _UpdateCollectionsChanged(prim);
 }
-
 // #nv end
 
->>>>>>> origin/dev_omniverse
 void 
 UsdImagingLightAdapter::TrackVariability(UsdPrim const& prim,
     SdfPath const& cachePath,
@@ -129,82 +131,51 @@ UsdImagingLightAdapter::TrackVariability(UsdPrim const& prim,
     bool checkVariability) const
     // nv end
 {
+    // #nv begin fast-updates
     if (checkVariability) {
-        // Discover time-varying transforms.
-        _IsTransformVarying(prim,
-            HdLight::DirtyBits::DirtyTransform,
-            UsdImagingTokens->usdVaryingXform,
-            timeVaryingBits);
+    // nv end
 
-        // Discover time-varying visibility.
-        _IsVarying(prim,
-            UsdGeomTokens->visibility,
-            HdLight::DirtyBits::DirtyParams,
-            UsdImagingTokens->usdVaryingVisibility,
-            timeVaryingBits,
-            true);
+    // Discover time-varying transforms.
+    _IsTransformVarying(prim,
+        HdLight::DirtyBits::DirtyTransform,
+        UsdImagingTokens->usdVaryingXform,
+        timeVaryingBits);
 
-        // Determine if the light material network is time varying.
-        if (UsdImagingIsHdMaterialNetworkTimeVarying(prim)) {
-            *timeVaryingBits |= HdLight::DirtyBits::DirtyResource;
-        }
+    // Discover time-varying visibility.
+    _IsVarying(prim,
+        UsdGeomTokens->visibility,
+        HdLight::DirtyBits::DirtyParams,
+        UsdImagingTokens->usdVaryingVisibility,
+        timeVaryingBits,
+        true);
+    
+    // Determine if the light material network is time varying.
+    if (UsdImagingIsHdMaterialNetworkTimeVarying(prim)) {
+        *timeVaryingBits |= HdLight::DirtyBits::DirtyResource;
+    }
 
-        // If any of the light attributes is time varying 
-        // we will assume all light params are time-varying.
-        const std::vector<UsdAttribute> &attrs = prim.GetAttributes();
-        for (UsdAttribute const& attr : attrs) {
-            // Don't double-count transform attrs.
-            if (UsdGeomXformable::IsTransformationAffectedByAttrNamed(
+    // If any of the light attributes is time varying 
+    // we will assume all light params are time-varying.
+    const std::vector<UsdAttribute> &attrs = prim.GetAttributes();
+    for (UsdAttribute const& attr : attrs) {
+        // Don't double-count transform attrs.
+        if (UsdGeomXformable::IsTransformationAffectedByAttrNamed(
                 attr.GetBaseName())) {
-                continue;
-            }
-            if (attr.GetNumTimeSamples() > 1) {
-                *timeVaryingBits |= HdLight::DirtyBits::DirtyParams;
-                break;
-            }
+            continue;
+        }
+        if (attr.GetNumTimeSamples()>1){
+            *timeVaryingBits |= HdLight::DirtyBits::DirtyParams;
+            break;
         }
     }
+
+    // #nv begin fast-updates
+    }
+    // nv end
 
     UsdImagingPrimvarDescCache* primvarDescCache = _GetPrimvarDescCache();
 
-<<<<<<< HEAD
-    UsdLuxLightAPI light(prim);
-    if (TF_VERIFY(light)) {
-        UsdImaging_CollectionCache &collectionCache = _GetCollectionCache();
-        // #nv begin #light-link-refresh
-        auto getCollectionHash = [&collectionCache] (const UsdCollectionAPI& api) -> size_t {
-            const TfToken id = collectionCache.UpdateCollection(api);
-            const UsdImaging_CollectionCache::Query* query = nullptr;
-            collectionCache.GetMembershipQuery(id, &query);
-            return query != nullptr ? query->GetHash() : 0;
-        };
-        const size_t newLightCollectionHash = getCollectionHash(light.GetLightLinkCollectionAPI());
-        const size_t newShadowCollectionHash = getCollectionHash(light.GetShadowLinkCollectionAPI());
-        if (newLightCollectionHash != _lightCollectionHash || newShadowCollectionHash != _shadowCollectionHash)
-        {
-            *timeVaryingBits |= HdLight::DirtyBits::DirtyCollection;
-            _lightCollectionHash = newLightCollectionHash;
-            _shadowCollectionHash = newShadowCollectionHash;
-        }
-        else
-        {
-            *timeVaryingBits &= ~HdLight::DirtyBits::DirtyCollection;
-        }
-        // nv end
-    }
-
     // XXX Cache primvars for lights.
-=======
-    // XXX: The usage of _GetTimeWithOffset here is super-sketch, but avoids
-    // blowing up the inherited visibility cache. This belongs in
-    // UpdateForTime, except that we don't currently call UpdateForTime on
-    // lights...
-    valueCache->GetVisible(cachePath) = GetVisible(prim,
-        _GetTimeWithOffset(0.0));
-
-    // XXX Cache primvars for lights.  Note that this does not yet support
-    // animated lights, since we do not call UpdateForTime() for sprims.
->>>>>>> origin/dev_omniverse
     {
         // Establish a primvar desc cache entry.
         HdPrimvarDescriptorVector& vPrimvars = 
@@ -226,7 +197,6 @@ UsdImagingLightAdapter::TrackVariability(UsdPrim const& prim,
         }
     }
 }
-
 
 // Thread safe.
 //  * Populate dirty bits for the given \p time.
