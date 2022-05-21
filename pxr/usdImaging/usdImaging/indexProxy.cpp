@@ -138,6 +138,9 @@ UsdImagingIndexProxy::_RemovePrimInfoDependency(SdfPath const& cachePath)
             TF_DEBUG(USDIMAGING_CHANGES).
                 Msg("[Revert dependency] <%s> -> <%s>\n",
                     it->first.GetText(), it->second.GetText());
+            //+NV_CHANGE FRZHANG: fix material binding switch problem on skelmesh
+            primInfo->extraDependencies.erase(it->first);
+            //-NV_CHANGE FRZHANG
             _delegate->_dependencyInfo.erase(it);
             break;
         }
