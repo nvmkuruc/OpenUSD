@@ -11,6 +11,7 @@ def "GLOBAL" (
     customData = {
         string libraryName      = "testUsdSchemaRegistry"
         string libraryPath      = "pxr/usd/usd"
+        bool skipCodeGeneration = true
     }
 )
 {

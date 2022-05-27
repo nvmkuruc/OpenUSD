@@ -147,13 +147,12 @@ def _GetLibMetadata(layer):
     globalPrim = layer.GetPrimAtPath('/GLOBAL')
     if not globalPrim:
         raise Exception("Code generation requires a \"/GLOBAL\" prim with "
-            "customData to define at least libraryName and libraryPath. "
-            "GLOBAL prim not found.")
+            "customData to define at least libraryName. GLOBAL prim not found.")
     
     if not globalPrim.customData:
         raise Exception("customData is either empty or not defined on /GLOBAL "
-            "prim. At least \"libraryName\" and \"libraryPath\" entries in "
-            "customData are required for code generation.")
+            "prim. At least \"libraryName\" entries in customData are required "
+            "for code generation.")
     
     # Return a copy of customData to avoid accessing an invalid map proxy during
     # template rendering.
@@ -174,11 +173,15 @@ def _GetLibName(layer):
 def _GetLibPath(layer):
     """ Return the libraryPath defined in layer."""
 
+    if _SkipCodeGenForLayer(layer):
+        return ""
+
     libData = _GetLibMetadata(layer)
-    if 'libraryPath' not in libData:
+    if 'libraryPath' not in libData: 
         raise Exception("Code generation requires that \"libraryPath\" be "
-            "defined in customData on /GLOBAL prim.  The format for "
-            "libraryPath is \"path/to/lib\".")
+            "defined in customData on /GLOBAL prim or the schema must be "
+            "declared codeless, by specifying skipCodeGeneration=true. "
+            "The format for libraryPath is \"path/to/lib\".")
 
     return libData['libraryPath']
 
@@ -208,6 +211,26 @@ def _GetUseExportAPI(layer):
 
     return _GetLibMetadata(layer).get('useExportAPI', True)
 
+def _SkipCodeGenForLayer(layer):
+    """ Return whether the layer specifies that code generation should 
+    be skipped for its schemas."""
+
+    # This can be called on sublayers which may not necessarily have lib 
+    # metadata so we can ignore exceptions and return false.
+    try:
+        return _GetLibMetadata(layer).get('skipCodeGeneration', False)
+    except:
+        return False
+
+def _SkipCodeGenForSchemaLib(stage):
+    """ Return whether the stage has a layer that specifies that code generation
+    should be skipped for its schemas and therefore for the the entire schema
+    library."""
+
+    for layer in stage.GetLayerStack():
+        if _SkipCodeGenForLayer(layer):
+            return True
+    return False
     
 def _UpperCase(aString):
     return aString.upper()
@@ -704,6 +727,7 @@ def ParseUsd(usdFilePath):
             _GetTokensPrefix(sdfLayer),
             _GetUseExportAPI(sdfLayer),
             _GetLibTokens(sdfLayer),
+            _SkipCodeGenForSchemaLib(stage),
             classes)
 
 
@@ -910,7 +934,6 @@ def GenerateCode(templatePath, codeGenPath, tokenData, classes, validate,
         tokensHTemplate = env.get_template('tokens.h')
         tokensCppTemplate = env.get_template('tokens.cpp')
         tokensWrapTemplate = env.get_template('wrapTokens.cpp')
-        plugInfoTemplate = env.get_template('plugInfo.json')
     except TemplateNotFound as tnf:
         raise RuntimeError("Template not found: {0}".format(str(tnf)))
     except TemplateSyntaxError as tse:
@@ -983,6 +1006,21 @@ def GenerateCode(templatePath, codeGenPath, tokenData, classes, validate,
         _WriteFile(clsWrapFilePath,
                    wrapTemplate.render(cls=cls) + customCode, validate)
 
+def GeneratePlugInfo(templatePath, codeGenPath, classes, validate, env,
+        skipCodeGen):
+
+    #
+    # Load Templates
+    #
+    Print('Loading Templates from {0}'.format(templatePath))
+    try:
+        plugInfoTemplate = env.get_template('plugInfo.json')
+    except TemplateNotFound as tnf:
+        raise RuntimeError("Template not found: {0}".format(str(tnf)))
+    except TemplateSyntaxError as tse:
+        raise RuntimeError("Syntax error in template {0} at line {1}: {2}"
+                           .format(tse.filename, tse.lineno, tse.message))
+
     #
     # Generate plugInfo.json.
     #
@@ -1009,6 +1047,14 @@ def GenerateCode(templatePath, codeGenPath, tokenData, classes, validate,
         # pull the types dictionary.
         if 'Plugins' in info:
             for pluginData in info.get('Plugins', {}):
+                # Plugin 'Type' should default to a "resource" type instead of a
+                # "library" if no code gen happens for this schema domain.
+                # Note that if any explicit cpp code is included for this schema
+                # domain, the plugin 'Type' needs to be manually updated in the 
+                # generated plugInfo.json to "library".
+                if skipCodeGen:
+                    pluginData["Type"] = "resource"
+
                 if pluginData.get('Name') == env.globals['libraryName']:
                     types = (pluginData
                              .setdefault('Info', {})
@@ -1323,8 +1369,8 @@ if __name__ == '__main__':
         tokensPrefix, \
         useExportAPI, \
         libTokens, \
+        skipCodeGen, \
         classes = ParseUsd(schemaPath)
-        tokenData = GatherTokens(classes, libName, libTokens)
         
         if args.validate:
             Print('Validation on, any diffs found will cause failure.')
@@ -1352,10 +1398,18 @@ if __name__ == '__main__':
                               libraryPrefix=libPrefix,
                               tokensPrefix=tokensPrefix,
                               useExportAPI=useExportAPI)
-        GenerateCode(templatePath, codeGenPath, tokenData, classes, 
-                     args.validate,
-                     namespaceOpen, namespaceClose, namespaceUsing,
-                     useExportAPI, j2_env, args.headerTerminatorString)
+
+        # Generate code for schema libraries that aren't specified as codeless.
+        if not skipCodeGen:
+            # Gathered tokens are only used for code-full schemas.
+            tokenData = GatherTokens(classes, libName, libTokens)
+            GenerateCode(templatePath, codeGenPath, tokenData, classes, 
+                         args.validate,
+                         namespaceOpen, namespaceClose, namespaceUsing,
+                         useExportAPI, j2_env, args.headerTerminatorString)
+        # We always generate plugInfo and generateSchema.
+        GeneratePlugInfo(templatePath, codeGenPath, classes, args.validate,
+                         j2_env, skipCodeGen)
         GenerateRegistry(codeGenPath, schemaPath, classes, 
                          args.validate, j2_env)
     
