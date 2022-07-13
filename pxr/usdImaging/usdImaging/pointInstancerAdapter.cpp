@@ -1460,6 +1460,12 @@ UsdImagingPointInstancerAdapter::GetScenePrimPath(
             instancerPath, it->second, _GetTimeWithOffset(0.0));
     VtIntArray const& indices = instanceMap[proto.protoRootPath];
     // instanceIndex = parentIndex * indices.size() + i.
+    // nv begin
+    if (indices.size() == 0)
+    {
+        return SdfPath();
+    }
+    // nv end
     int parentIndex = instanceIndex / indices.size();
     // indices[i] gives the offset into the index buffers (i.e. protoIndices).
     int localIndex = indices[instanceIndex % indices.size()];
