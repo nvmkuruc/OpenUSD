@@ -2826,8 +2826,12 @@ UsdImagingDelegate::Get(SdfPath const& id, TfToken const& key)
             // but should do the proper transformation.  Maybe we can use
             // the primInfo.usdPrim?
             UsdPrim prim = _GetUsdPrim(cachePath);
-            TF_VERIFY(prim && prim.GetAttribute(key).Get(&value, _time),
-                      "%s, %s\n", id.GetText(), key.GetText());
+            // nv-begin Don't spam excessive warnings. This check is no longer present in latest USD.
+            if (!prim || !prim.GetAttribute(key).Get(&value, _time))
+            {
+                TF_DEBUG(HD_SAFE_MODE).Msg("Failed verification: !prim || !prim.GetAttribute(key).Get(&value, _time) -- %s, %s\n", id.GetText(), key.GetText());
+            }
+            // nv-end
         }
     }
 
