@@ -2,7 +2,6 @@
  * Copyright 2019 NVIDIA Corporation. All rights reserved.
  *****************************************************************************/
 #pragma once
-#include <pxr/imaging/hd/material.h>
 #include <pxr/usd/usdShade/material.h>
 #include <pxr/usd/plugin/usdMdl/api.h>
 #include <string>
