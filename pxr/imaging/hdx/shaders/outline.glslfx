@@ -49,6 +49,7 @@
 #define LARGE 100000
 
 layout(location = 0) in vec2 uv;
+layout(location = 0) out vec4 hd_FragColor;
 
 // The color texture with the highlighted areas.
 layout (binding = 0) uniform sampler2D colorIn;
@@ -139,7 +140,7 @@ void testCircle(int r, inout float dist2, inout vec4 color) {
 
 void main()
 {
-    gl_FragColor = vec4(0, 0, 0, 1);
+    hd_FragColor = vec4(0, 0, 0, 1);
 
     // Check if the current texel is not black - meaning that we are inside an
     // area of colorId that has been highlighted.
@@ -149,7 +150,7 @@ void main()
     if (enableOutline==0) { 
         if (isInside) {
             // Inside the highlighted areas in colorIn : render colorIn.
-            gl_FragColor = color;
+            hd_FragColor = color;
         }
     } else {
         
@@ -169,8 +170,8 @@ void main()
                 float factor = (r2 - dist2 ) / r2;
                 factor *= factor;
                 
-                gl_FragColor = color * factor;
-                gl_FragColor.a = 1;
+                hd_FragColor = color * factor;
+                hd_FragColor.a = 1;
             }
         }
     }
