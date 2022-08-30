@@ -1110,12 +1110,26 @@ UsdImagingDelegate::_GatherDependencies(SdfPath const& subtree,
         return;
     }
 
-    // Binary search for the first path not in the subtree, starting at "start".
-    _DependencyMap::const_iterator end =
-        std::upper_bound(start, _dependencyInfo.cend(), subtree,
-            [](SdfPath const& lhs, _DependencyMap::value_type const& rhs) {
-                    return !rhs.first.HasPrefix(lhs);
-                });
+    // std::upper_bound makes O(N) iterator increments and O(log N) HasPrefix calls,
+    // because _DependencyMap::iterator is not a LegacyRandomAccessIterator. Test to
+    // see if there are any children at all before making this expensive call.
+    _DependencyMap::const_iterator end = start;
+    end++;
+    // #nv begin #gather-dep-opt
+    // In v20.08, _dependencyInfo may only contain a single element.
+    if (end == _dependencyInfo.end()) {
+        affectedCachePaths->push_back(start->second);
+        return;
+    }
+    // nv end
+    if (end->first.HasPrefix(subtree))
+    {
+        // Binary search for the first path not in the subtree, starting at "end".
+        end = std::upper_bound(end, _dependencyInfo.cend(), subtree,
+                               [](SdfPath const& lhs, _DependencyMap::value_type const& rhs) {
+                                   return !rhs.first.HasPrefix(lhs);
+                               });
+    }
 
     SdfPathVector affectedPaths;
     for (_DependencyMap::const_iterator it = start; it != end; ++it) {
