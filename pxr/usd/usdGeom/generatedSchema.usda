@@ -2642,7 +2642,22 @@ class NurbsCurves "NurbsCurves" (
     
     order and range, when representing a batched NurbsCurve should be
     authored one value per curve.  knots should be the concatentation of
-    all batched curves."""
+    all batched curves.
+
+    \\anchor UsdGeom_NurbsCurve_Form
+    <b> NurbsCurve Form </b>
+
+    <b>Form</b> is provided as an aid to interchange between modeling and
+    animation applications so that they can robustly identify the intent with
+    which the surface was modelled, and take measures (if they are able) to
+    preserve the continuity/concidence constraints as the surface may be rigged
+    or deformed.  
+    - An open-form NurbsCurve has no continuity constraints.
+    - A closed-form NurbsCurve expects the first and last control points
+    to overlap
+    - A periodic-form NurbsCurve expects the first and last
+    order - 1 control points to overlap.
+    """
 )
 {
     vector3f[] accelerations (
@@ -2691,6 +2706,13 @@ class NurbsCurves "NurbsCurves" (
         the extent of all children, as they will be pruned from BBox computation
         during traversal."""
     )
+    uniform token form = "open" (
+        allowedTokens = ["open", "closed", "periodic"]
+        doc = '''Interpret the control grid and knot vectors as representing
+        an open, geometrically closed, or geometrically closed and C2 continuous
+        curve.
+        \\sa "NurbsCurve Form" '''
+    )
     double[] knots (
         doc = """Knot vector providing curve parameterization.
         The length of the slice of the array for the ith curve 
@@ -2724,6 +2746,14 @@ class NurbsCurves "NurbsCurves" (
     point3f[] points (
         doc = """The primary geometry attribute for all PointBased
         primitives, describes points in (local) space."""
+    )
+    double[] pointWeights (
+        doc = """Optionally provides \"w\" components for each control point,
+        thus must be the same length as the points attribute.  If authored,
+        the patch will be rational.  If unauthored, the patch will be
+        polynomial, i.e. weight for all points is 1.0.
+        \\note Some DCC's pre-weight the points, but in this schema, 
+        points are not pre-weighted."""
     )
     color3f[] primvars:displayColor (
         doc = '''It is useful to have an "official" colorSet that can be used
