@@ -21,7 +21,6 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/imaging/glf/contextCaps.h"
 #include "pxr/imaging/hdSt/materialXShaderGen.h"
 #include "pxr/imaging/hdSt/materialXFilter.h"
 #include "pxr/base/tf/stringUtils.h"
@@ -30,7 +29,6 @@
 #include <MaterialXGenShader/Shader.h>
 #include <MaterialXGenShader/ShaderGenerator.h>
 #include <MaterialXGenShader/Syntax.h>
-#include <MaterialXGenShader/TypeDesc.h>
 
 namespace mx = MaterialX;
 
@@ -96,7 +94,8 @@ HdStMaterialXShaderGen::HdStMaterialXShaderGen(
     : GlslShaderGenerator(), 
       _mxHdTextureMap(mxHdInfo.textureMap),
       _mxHdPrimvarMap(mxHdInfo.primvarMap),
-      _materialTag(mxHdInfo.materialTag)
+      _materialTag(mxHdInfo.materialTag),
+      _bindlessTexturesEnabled(mxHdInfo.bindlessTexturesEnabled)
 {
     _defaultTexcoordName = (mxHdInfo.defaultTexcoordName == mx::EMPTY_STRING) ?
                             "st" : mxHdInfo.defaultTexcoordName;
@@ -204,6 +203,24 @@ HdStMaterialXShaderGen::_EmitGlslfxHeader(mx::ShaderStage& mxStage) const
     emitLineBreak(mxStage);
 }
 
+static bool 
+_IsHardcodedPublicUniform(const mx::TypeDesc& varType)
+{
+    // Most major types of public uniforms are set through 
+    // HdSt_MaterialParamVector in HdStMaterialXFilter's
+    // _AddMaterialXParams function, the rest are hardcoded 
+    // in the shader
+    if (varType.getBaseType() != mx::TypeDesc::BASETYPE_FLOAT &&
+        varType.getBaseType() != mx::TypeDesc::BASETYPE_INTEGER) {
+        return true;
+    }
+    if (varType.getSize() < 1 || varType.getSize() > 4) {
+        return true;
+    }
+
+    return false;
+}
+
 // Similar to GlslShaderGenerator::emitPixelStage() with alterations and 
 // additions to match Pxr's codeGen
 void
@@ -213,8 +230,8 @@ HdStMaterialXShaderGen::_EmitMxFunctions(
     mx::ShaderStage& mxStage) const
 {
     // Add global constants and type definitions
-    emitInclude("pbrlib/" + mx::GlslShaderGenerator::TARGET 
-                + "/lib/mx_defines.glsl", mxContext, mxStage);
+    emitLibraryInclude("stdlib/" + mx::GlslShaderGenerator::TARGET
+                       + "/lib/mx_math.glsl", mxContext, mxStage);
     emitLine("#if NUM_LIGHTS > 0", mxStage, false);
     emitLine("#define MAX_LIGHT_SOURCES NUM_LIGHTS", mxStage, false);
     emitLine("#else", mxStage, false);
@@ -248,34 +265,28 @@ HdStMaterialXShaderGen::_EmitMxFunctions(
         }
     }
 
-    GlfContextCaps const &caps = GlfContextCaps::GetInstance();
-    if (caps.bindlessTextureEnabled) {
-        // if we're using bindlessTextures, we can just use non-uniform
-        // samplers (which simply won't be assigned to if we're not using
-        // domeLightIrradiance)
-        emitLine("sampler2D u_envIrradiance", mxStage);
-        emitLine("sampler2D u_envRadiance", mxStage);
-    }
-    else {
-        // If we're not using bindless textures, we can't declare non-uniform
-        // sampler2D vars, but we still need to map the names that mx uses to our
-        // names - do that with #defines
+    // If bindlessTextures are not enabled, the above for loop skips 
+    // initializing textures. Initialize them here by defining mappings 
+    // to the appropriate HdGetSampler function. 
+    if (!_bindlessTexturesEnabled) {
 
+        // Define mappings for the DomeLight Textures
         emitLine("#ifdef HD_HAS_domeLightIrradiance", mxStage, false);
-        emitLine("#define u_envIrradiance HdGetSampler_domeLightIrradiance()", mxStage, false);
-        emitLine("#define u_envRadiance HdGetSampler_domeLightPrefilter()", mxStage, false);
+        emitLine("#define u_envRadiance HdGetSampler_domeLightPrefilter() ", mxStage, false);
+        emitLine("#define u_envIrradiance HdGetSampler_domeLightIrradiance() ", mxStage, false);
         emitLine("#else", mxStage, false);
-        // If HD isn't using domeLightIrradiance, we still need to define
-        // u_envRadiance / u_envIrradiance, because mx will use them - declare
-        // them as uniforms (which will likely never get set)
-        emitLine("uniform sampler2D u_envIrradiance", mxStage);
-        emitLine("uniform sampler2D u_envRadiance", mxStage);
+        emitLine("#define u_envRadiance HdGetSampler_domeLightFallback()", mxStage, false);
+        emitLine("#define u_envIrradiance HdGetSampler_domeLightFallback()", mxStage, false);
         emitLine("#endif", mxStage, false);
         emitLineBreak(mxStage);
 
+        // Define mappings for the MaterialX Textures
         if (!_mxHdTextureMap.empty()) {
-            emitComment("Define MaterialX->Hydra sampler name mappings", mxStage);
+            emitComment("Define MaterialX to Hydra Sampler mappings", mxStage);
             for (auto texturePair : _mxHdTextureMap) {
+                if (texturePair.first == "domeLightFallback") {
+                    continue;
+                }
                 emitLine(TfStringPrintf("#define %s_file HdGetSampler_%s()",
                                         texturePair.first.c_str(),
                                         texturePair.second.c_str()),
@@ -335,26 +346,21 @@ HdStMaterialXShaderGen::_EmitMxFunctions(
         _EmitMxInitFunction(vertexData, mxStage);
     }
 
-    // Emit common math functions
-    emitInclude("pbrlib/" + mx::GlslShaderGenerator::TARGET 
-                + "/lib/mx_math.glsl", mxContext, mxStage);
-    emitLineBreak(mxStage);
-
     // Emit lighting and shadowing code
     if (lighting) {
         emitSpecularEnvironment(mxContext, mxStage);
     }
     if (shadowing) {
-        emitInclude("pbrlib/" + mx::GlslShaderGenerator::TARGET 
-                    + "/lib/mx_shadow.glsl", mxContext, mxStage);
+        emitLibraryInclude("pbrlib/" + mx::GlslShaderGenerator::TARGET
+                           + "/lib/mx_shadow.glsl", mxContext, mxStage);
     }
 
     // Emit directional albedo table code.
     if (mxContext.getOptions().hwDirectionalAlbedoMethod == 
             mx::HwDirectionalAlbedoMethod::DIRECTIONAL_ALBEDO_TABLE ||
         mxContext.getOptions().hwWriteAlbedoTable) {
-        emitInclude("pbrlib/" + mx::GlslShaderGenerator::TARGET 
-                    + "/lib/mx_table.glsl", mxContext, mxStage);
+        emitLibraryInclude("pbrlib/" + mx::GlslShaderGenerator::TARGET
+                           + "/lib/mx_table.glsl", mxContext, mxStage);
         emitLineBreak(mxStage);
     }
 
@@ -362,19 +368,37 @@ HdStMaterialXShaderGen::_EmitMxFunctions(
     // depending on the vertical flip flag.
     if (mxContext.getOptions().fileTextureVerticalFlip) {
         _tokenSubstitutions[mx::ShaderGenerator::T_FILE_TRANSFORM_UV] = 
-            "stdlib/" + mx::GlslShaderGenerator::TARGET +
-            "/lib/mx_transform_uv_vflip.glsl";
+            "mx_transform_uv_vflip.glsl";
     }
     else {
         _tokenSubstitutions[mx::ShaderGenerator::T_FILE_TRANSFORM_UV] = 
-            "stdlib/" + mx::GlslShaderGenerator::TARGET + 
-            "/lib/mx_transform_uv.glsl";
+            "mx_transform_uv.glsl";
     }
 
     // Emit uv transform code globally if needed.
     if (mxContext.getOptions().hwAmbientOcclusion) {
-        emitInclude(ShaderGenerator::T_FILE_TRANSFORM_UV, mxContext, mxStage);
+        emitLibraryInclude(
+            "stdlib/" + mx::GlslShaderGenerator::TARGET + "/lib/" +
+            _tokenSubstitutions[ShaderGenerator::T_FILE_TRANSFORM_UV],
+            mxContext, mxStage);
     }
+
+    // Prior to MaterialX 1.38.5 the token substitutions need to
+    // include the full path to the .glsl files, so we prepend that
+    // here.
+#if MATERIALX_MAJOR_VERSION == 1 &&  \
+    MATERIALX_MINOR_VERSION == 38
+    #if MATERIALX_BUILD_VERSION < 4
+        _tokenSubstitutions[ShaderGenerator::T_FILE_TRANSFORM_UV].insert(
+            0, "stdlib/" + mx::GlslShaderGenerator::TARGET + "/lib/");
+    #elif MATERIALX_BUILD_VERSION == 4
+        _tokenSubstitutions[ShaderGenerator::T_FILE_TRANSFORM_UV].insert(
+            0, "libraries/stdlib/" + mx::GlslShaderGenerator::TARGET + "/lib/");
+    #endif
+#endif
+
+    // Add light sampling functions
+    emitLightFunctionDefinitions(mxGraph, mxContext, mxStage);
 
     // Add all functions for node implementations
     emitFunctionDefinitions(mxGraph, mxContext, mxStage);
@@ -397,7 +421,8 @@ HdStMaterialXShaderGen::_EmitMxSurfaceShader(
     emitLine("mxInit(Peye, Neye)", mxStage);
 
     const mx::ShaderGraphOutputSocket* outputSocket = mxGraph.getOutputSocket();
-    if (mxGraph.hasClassification(mx::ShaderNode::Classification::CLOSURE)) {
+    if (mxGraph.hasClassification(mx::ShaderNode::Classification::CLOSURE) &&
+        !mxGraph.hasClassification(mx::ShaderNode::Classification::SHADER)) {
         // Handle the case where the mxGraph is a direct closure.
         // We don't support rendering closures without attaching 
         // to a surface shader, so just output black.
@@ -414,8 +439,25 @@ HdStMaterialXShaderGen::_EmitMxSurfaceShader(
                 mxStage);
     }
     else {
-        // Add all function calls
-        emitFunctionCalls(mxGraph, mxContext, mxStage);
+        // Surface shaders need special handling.
+        if (mxGraph.hasClassification(mx::ShaderNode::Classification::SHADER | 
+                                      mx::ShaderNode::Classification::SURFACE))
+        {
+            // Emit all texturing nodes. These are inputs to any
+            // closure/shader nodes and need to be emitted first.
+            emitFunctionCalls(mxGraph, mxContext, mxStage, mx::ShaderNode::Classification::TEXTURE);
+
+            // Emit function calls for all surface shader nodes.
+            // These will internally emit their closure function calls.
+            emitFunctionCalls(mxGraph, mxContext, mxStage, mx::ShaderNode::Classification::SHADER | 
+                                                           mx::ShaderNode::Classification::SURFACE);
+        }
+        else
+        {
+            // No surface shader graph so just generate all
+            // function calls in order.
+            emitFunctionCalls(mxGraph, mxContext, mxStage);
+        }
 
         // Emit final output
         std::string finalOutputReturn = "vec4 mxOut = " ;
@@ -466,6 +508,9 @@ HdStMaterialXShaderGen::_EmitMxSurfaceShader(
                 emitLine(finalOutputReturn + outputValue, mxStage);
             }
         }
+
+        // Emit color overrides (mainly for selection highlighting)
+        emitLine("mxOut = ApplyColorOverrides(mxOut)", mxStage);
     }
     emitLine("return mxOut", mxStage);
 
@@ -500,26 +545,44 @@ HdStMaterialXShaderGen::_EmitMxInitFunction(
                                   mx::Syntax::COMMA, mxStage);
     emitLineBreak(mxStage);
 
-    // Initialize the Indirect Light Textures
-
-    GlfContextCaps const &caps = GlfContextCaps::GetInstance();
-
-    // Initialize MaterialX Texture samplers with HdGetSampler equivalents
-    // ...not needed if we're not using bindless textures, because then all
-    // sampler "variables" are actually just #defines at top-level
-
-    emitLine("#ifdef HD_HAS_domeLightIrradiance", mxStage, false);
-    if (caps.bindlessTextureEnabled) {
-        emitLine("u_envIrradiance = HdGetSampler_domeLightIrradiance()", mxStage);
-        emitLine("u_envRadiance = HdGetSampler_domeLightPrefilter()", mxStage);
+    // Initialize MaterialX parameters with HdGet_ equivalents
+    emitComment("Initialize Material Parameters", mxStage);
+    const mx::VariableBlock& paramsBlock =
+        mxStage.getUniformBlock(mx::HW::PUBLIC_UNIFORMS);
+    for (size_t i = 0; i < paramsBlock.size(); ++i) {
+        const auto variable = paramsBlock[i];
+        const auto variableType = variable->getType();
+        if (!_IsHardcodedPublicUniform(*variableType)) {
+            emitLine(variable->getVariable() + " = HdGet_" +
+                variable->getVariable() + "()", mxStage);
+        }
     }
-    emitLine("u_envRadianceMips = textureQueryLevels(u_envRadiance)", mxStage);
-    emitLine("#endif", mxStage, false);
     emitLineBreak(mxStage);
 
-    if (!_mxHdTextureMap.empty() && caps.bindlessTextureEnabled) {
+    // Initialize the Indirect Light Textures
+    // Note: only need to initialize textures when bindlessTextures are enabled,
+    // when bindlessTextures are not enabled, mappings are defined in 
+    // HdStMaterialXShaderGen::_EmitMxFunctions
+    emitComment("Initialize Indirect Light Textures and values", mxStage);
+    if (_bindlessTexturesEnabled) {
+        emitLine("#ifdef HD_HAS_domeLightIrradiance", mxStage, false);
+        emitLine("u_envIrradiance = HdGetSampler_domeLightIrradiance()", mxStage);
+        emitLine("u_envRadiance = HdGetSampler_domeLightPrefilter()", mxStage);
+        emitLine("#else", mxStage, false);
+        emitLine("u_envIrradiance = HdGetSampler_domeLightFallback()", mxStage);
+        emitLine("u_envRadiance = HdGetSampler_domeLightFallback()", mxStage);
+        emitLine("#endif", mxStage, false);
+    }
+    emitLine("u_envRadianceMips = textureQueryLevels(u_envRadiance)", mxStage);
+    emitLineBreak(mxStage);
+
+    // Initialize MaterialX Texture samplers with HdGetSampler equivalents
+    if (_bindlessTexturesEnabled && !_mxHdTextureMap.empty()) {
         emitComment("Initialize Material Textures", mxStage);
         for (auto texturePair : _mxHdTextureMap) {
+            if (texturePair.first == "domeLightFallback") {
+                continue;
+            }
             emitLine(texturePair.first + "_file = "
                     "HdGetSampler_" + texturePair.second + "()", mxStage);
         }
@@ -633,6 +696,25 @@ HdStMaterialXShaderGen::_EmitMxVertexDataLine(
     return hdVariableDef.empty() ? mx::EMPTY_STRING : hdVariableDef;
 }
 
+#if MATERIALX_MAJOR_VERSION <= 1 &&  \
+    MATERIALX_MINOR_VERSION <= 38 && \
+    MATERIALX_BUILD_VERSION <= 4
+void
+HdStMaterialXShaderGen::emitLibraryInclude(
+    const mx::FilePath& filename,
+    mx::GenContext& context,
+    mx::ShaderStage& stage) const
+{
+#if MATERIALX_MAJOR_VERSION == 1 && \
+    MATERIALX_MINOR_VERSION == 38 && \
+    MATERIALX_BUILD_VERSION == 3
+    emitInclude(filename, context, stage);
+#else
+    // Starting from MaterialX 1.38.4 at PR 877, we must add the "libraries" part:
+    emitInclude(mx::FilePath("libraries") / filename, context, stage);
+#endif
+}
+#endif
 
 void
 HdStMaterialXShaderGen::emitVariableDeclarations(
@@ -653,40 +735,30 @@ HdStMaterialXShaderGen::emitVariableDeclarations(
         mx::HW::T_ALBEDO_TABLE      // BRDF texture
     };
 
-    GlfContextCaps const &caps = GlfContextCaps::GetInstance();
+    // Most public uniforms are set from outside the shader
+    const bool isPublicUniform = block.getName() == mx::HW::PUBLIC_UNIFORMS;
 
     for (size_t i = 0; i < block.size(); ++i)
     {
         emitLineBegin(stage);
+        const auto variable = block[i];
+        const auto varType = variable->getType();
 
-        if (!caps.bindlessTextureEnabled &&
-            block[i]->getType() == mx::Type::FILENAME) {
-            // If we're not using bindless textures, we can only have uniform
-            // sampler2D variables - otherwise, we get this:
-            //     error C7554: OpenGL requires sampler variables to be
-            //     explicitly declared as uniform
-            // In that case, the mx sampler names are mapped to the hydra
-            // names elsewhere... skip...
+        // If bindlessTextures are not enabled the Mx Smpler names are mapped 
+        // to the Hydra equivalents in HdStMaterialXShaderGen::_EmitMxFunctions
+        if (!_bindlessTexturesEnabled && varType == mx::Type::FILENAME) {
             continue;
         }
 
         // Only declare the variables that we need to initialize with Hd Data
-        if (MxHdVariables.count(block[i]->getName())) {
-            emitVariableDeclaration(block[i],
-                                    // Ensure sampler2D variables are declared
-                                    // uniform, or else get this error:
-                                    //    error C7554: OpenGL requires sampler
-                                    //    variables to be explicitly declared as
-                                    //    uniform
-                                    // mx::Type::FILENAME in glsl = "sampler2D"
-                                    block[i]->getType() == mx::Type::FILENAME
-                                        ? _syntax->getUniformQualifier()
-                                        : mx::EMPTY_STRING,
+        if ( (isPublicUniform && !_IsHardcodedPublicUniform(*varType))
+            || MxHdVariables.count(variable->getName()) ) {
+            emitVariableDeclaration(variable, mx::EMPTY_STRING,
                                     context, stage, false);
         }
         // Otherwise assign the value from MaterialX
         else {
-            emitVariableDeclaration(block[i], qualifier, 
+            emitVariableDeclaration(variable, qualifier,
                                     context, stage, assignValue);
         }
         emitString(separator, stage);

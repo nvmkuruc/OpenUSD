@@ -25,16 +25,19 @@
 #define PXR_IMAGING_HD_MTLX_HDMTLX_H
 
 #include "pxr/pxr.h"
+#include "pxr/base/tf/token.h"
 #include "pxr/imaging/hdMtlx/api.h"
 #include <memory>
 #include <set>
 #include <unordered_map>
 
-namespace MaterialX {
+#include <MaterialXCore/Library.h>
+
+MATERIALX_NAMESPACE_BEGIN
     class FileSearchPath;
     using DocumentPtr = std::shared_ptr<class Document>;
     using StringMap = std::unordered_map<std::string, std::string>;
-}
+MATERIALX_NAMESPACE_END
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -62,8 +65,9 @@ HdMtlxConvertToString(VtValue const& hdParameterValue);
 HDMTLX_API
 MaterialX::DocumentPtr
 HdMtlxCreateMtlxDocumentFromHdNetwork(
-    HdMaterialNetwork2 const& hdNetwork,
+    HdMaterialNetwork2 & hdNetwork,
     HdMaterialNode2 const& hdMaterialXNode,
+    SdfPath const& hdMaterialXNodePath,
     SdfPath const& materialPath,
     MaterialX::DocumentPtr const& libraries,
     std::set<SdfPath> * hdTextureNodes = nullptr,

@@ -30,6 +30,7 @@ pxr_library(usdImaging
         debugCodes
         delegate
         indexProxy
+        materialParamUtils
         resolvedAttributeCache
         instancerContext
         tokens
@@ -64,9 +65,6 @@ pxr_library(usdImaging
         sphereLightAdapter
         textureUtils
         volumeAdapter
-
-    PRIVATE_CLASSES
-        materialParamUtils
 
     PUBLIC_HEADERS
         api.h

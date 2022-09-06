@@ -268,7 +268,7 @@ UsdImagingLightAdapter::GetMaterialResource(UsdPrim const &prim,
 
     HdMaterialNetworkMap networkMap;
 
-    UsdImaging_BuildHdMaterialNetworkFromTerminal(
+    UsdImagingBuildHdMaterialNetworkFromTerminal(
         prim, 
         HdMaterialTerminalTokens->light,
         _GetShaderSourceTypes(),

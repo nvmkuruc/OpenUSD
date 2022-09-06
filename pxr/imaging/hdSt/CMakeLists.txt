@@ -20,8 +20,14 @@ set(optionalLibs "")
 set(optionalIncludeDirs "")
 set(optionalPrivateClasses "")
 if (${PXR_ENABLE_MATERIALX_SUPPORT})
-    list(APPEND optionalLibs ${MATERIALX_LIBRARIES} hdMtlx)
-    list(APPEND optionalIncludeDirs ${MATERIALX_INCLUDE_DIRS})
+    list(APPEND optionalLibs
+        MaterialXGenShader
+        MaterialXRender
+        MaterialXCore
+        MaterialXFormat
+        MaterialXGenGlsl
+        hdMtlx
+    )
     list(APPEND optionalPrivateClasses
          materialXFilter
          materialXShaderGen
@@ -177,6 +183,7 @@ pxr_library(hdSt
         shaders/terminals.glslfx
         shaders/visibility.glslfx
         shaders/volume.glslfx
+        textures/fallbackBlackDomeLight.png
 )
 
 if (X11_FOUND OR APPLE)

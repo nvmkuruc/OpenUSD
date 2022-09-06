@@ -34,6 +34,7 @@
 
 #include "pxr/imaging/hd/material.h"
 
+#include "pxr/imaging/glf/contextCaps.h"
 #include "pxr/imaging/glf/udimTexture.h"
 
 #include "pxr/imaging/hio/glslfx.h"
@@ -1140,8 +1141,12 @@ HdStMaterialNetwork::ProcessMaterialNetwork(
 
 #ifdef PXR_MATERIALX_SUPPORT_ENABLED
         if (!isVolume) {
+            const bool bindlessTexturesEnabled =
+                GlfContextCaps::GetInstance().bindlessTextureEnabled;
             HdSt_ApplyMaterialXFilter(&surfaceNetwork, materialId,
-                                      *surfTerminal, surfTerminalPath);
+                                      *surfTerminal, surfTerminalPath,
+                                      &_materialParams,
+                                      bindlessTexturesEnabled);
         }
 #endif
         // Extract the glslfx and metadata for surface/volume.
