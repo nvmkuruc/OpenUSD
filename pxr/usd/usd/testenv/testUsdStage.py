@@ -29,6 +29,12 @@ from pxr import Sdf,Usd,Tf
 allFormats = ['usd' + c for c in 'ac']
 
 class TestUsdStage(unittest.TestCase):
+    # nv begin #url-encoded-layer-ids
+    def test_URLEncodedIdentifiers(self):
+        stage = Usd.Stage.Open("Libeccio%20LowFBX.usda")
+        assert stage
+    # nv end
+
     def test_Repr(self):
         stage = Usd.Stage.CreateInMemory()
 
