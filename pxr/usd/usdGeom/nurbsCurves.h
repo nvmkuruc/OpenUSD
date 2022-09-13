@@ -73,26 +73,6 @@ class SdfAssetPath;
 /// \em order and \em range, when representing a batched NurbsCurve should be
 /// authored one value per curve.  \em knots should be the concatentation of
 /// all batched curves.
-/// 
-/// \anchor UsdGeom_NurbsCurve_Form
-/// <b> NurbsCurve Form </b>
-/// 
-/// <b>Form</b> is provided as an aid to interchange between modeling and
-/// animation applications so that they can robustly identify the intent with
-/// which the surface was modelled, and take measures (if they are able) to
-/// preserve the continuity/concidence constraints as the surface may be rigged
-/// or deformed.  
-/// \li An \em open-form NurbsCurve has no continuity constraints.
-/// \li A \em closed-form NurbsCurve expects the first and last control points
-/// to overlap
-/// \li A \em periodic-form NurbsCurve expects the first and last
-/// \em order - 1 control points to overlap.
-/// 
-///
-/// For any described attribute \em Fallback \em Value or \em Allowed \em Values below
-/// that are text/tokens, the actual token is published and defined in \ref UsdGeomTokens.
-/// So to set an attribute to the value "rightHanded", use UsdGeomTokens->rightHanded
-/// as the value.
 ///
 class UsdGeomNurbsCurves : public UsdGeomCurves
 {
@@ -264,60 +244,6 @@ public:
     /// the default for \p writeSparsely is \c false.
     USDGEOM_API
     UsdAttribute CreateRangesAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
-
-public:
-    // --------------------------------------------------------------------- //
-    // POINTWEIGHTS 
-    // --------------------------------------------------------------------- //
-    /// Optionally provides "w" components for each control point,
-    /// thus must be the same length as the points attribute.  If authored,
-    /// the patch will be rational.  If unauthored, the patch will be
-    /// polynomial, i.e. weight for all points is 1.0.
-    /// \note Some DCC's pre-weight the \em points, but in this schema, 
-    /// \em points are not pre-weighted.
-    ///
-    /// | ||
-    /// | -- | -- |
-    /// | Declaration | `double[] pointWeights` |
-    /// | C++ Type | VtArray<double> |
-    /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->DoubleArray |
-    USDGEOM_API
-    UsdAttribute GetPointWeightsAttr() const;
-
-    /// See GetPointWeightsAttr(), and also 
-    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
-    /// If specified, author \p defaultValue as the attribute's default,
-    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
-    /// the default for \p writeSparsely is \c false.
-    USDGEOM_API
-    UsdAttribute CreatePointWeightsAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
-
-public:
-    // --------------------------------------------------------------------- //
-    // FORM 
-    // --------------------------------------------------------------------- //
-    /// Interpret the control grid and knot vectors as representing
-    /// an open, geometrically closed, or geometrically closed and C2 continuous
-    /// curve.
-    /// \sa \ref UsdGeom_NurbsCurve_Form "NurbsCurve Form" 
-    ///
-    /// | ||
-    /// | -- | -- |
-    /// | Declaration | `uniform token form = "open"` |
-    /// | C++ Type | TfToken |
-    /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Token |
-    /// | \ref SdfVariability "Variability" | SdfVariabilityUniform |
-    /// | \ref UsdGeomTokens "Allowed Values" | open, closed, periodic |
-    USDGEOM_API
-    UsdAttribute GetFormAttr() const;
-
-    /// See GetFormAttr(), and also 
-    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
-    /// If specified, author \p defaultValue as the attribute's default,
-    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
-    /// the default for \p writeSparsely is \c false.
-    USDGEOM_API
-    UsdAttribute CreateFormAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
     // ===================================================================== //
