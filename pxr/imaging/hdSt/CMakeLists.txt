@@ -182,6 +182,7 @@ pxr_library(hdSt
         shaders/terminals.glslfx
         shaders/visibility.glslfx
         shaders/volume.glslfx
+        textures/fallbackBlackDomeLight.png
 
     DOXYGEN_FILES
         overview.dox
