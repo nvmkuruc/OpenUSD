@@ -71,7 +71,7 @@ void wrapUsdLuxDiskLight()
 {
     typedef UsdLuxDiskLight This;
 
-    class_<This, bases<UsdLuxBoundableLightBase> >
+    class_<This, bases<UsdLuxLight> >
         cls("DiskLight");
 
     cls

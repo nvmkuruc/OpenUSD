@@ -75,9 +75,8 @@ UsdGeomCapsule::Define(
 }
 
 /* virtual */
-UsdSchemaKind UsdGeomCapsule::_GetSchemaKind() const
-{
-    return UsdGeomCapsule::schemaKind;
+UsdSchemaType UsdGeomCapsule::_GetSchemaType() const {
+    return UsdGeomCapsule::schemaType;
 }
 
 /* static */
@@ -292,17 +291,17 @@ _ComputeExtentForCapsule(
     }
 
     double height;
-    if (!capsuleSchema.GetHeightAttr().Get(&height, time)) {
+    if (!capsuleSchema.GetHeightAttr().Get(&height)) {
         return false;
     }
 
     double radius;
-    if (!capsuleSchema.GetRadiusAttr().Get(&radius, time)) {
+    if (!capsuleSchema.GetRadiusAttr().Get(&radius)) {
         return false;
     }
 
     TfToken axis;
-    if (!capsuleSchema.GetAxisAttr().Get(&axis, time)) {
+    if (!capsuleSchema.GetAxisAttr().Get(&axis)) {
         return false;
     }
 

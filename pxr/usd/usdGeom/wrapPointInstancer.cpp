@@ -397,8 +397,6 @@ WRAP_CUSTOM {
              &_ComputeExtentAtTimes,
              (arg("times"), arg("baseTime")))
 
-        .def("GetInstanceCount", &UsdGeomPointInstancer::GetInstanceCount,
-            arg("timeCode")=UsdTimeCode::Default()) 
         ;
     TfPyRegisterStlSequencesFromPython<UsdTimeCode>();
     to_python_converter<std::vector<VtArray<GfMatrix4d>>,

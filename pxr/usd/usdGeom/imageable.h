@@ -76,8 +76,8 @@ class UsdGeomImageable : public UsdTyped
 public:
     /// Compile time constant representing what kind of schema this class is.
     ///
-    /// \sa UsdSchemaKind
-    static const UsdSchemaKind schemaKind = UsdSchemaKind::AbstractTyped;
+    /// \sa UsdSchemaType
+    static const UsdSchemaType schemaType = UsdSchemaType::AbstractTyped;
 
     /// Construct a UsdGeomImageable on UsdPrim \p prim .
     /// Equivalent to UsdGeomImageable::Get(prim.GetStage(), prim.GetPath())
@@ -122,11 +122,11 @@ public:
 
 
 protected:
-    /// Returns the kind of schema this class belongs to.
+    /// Returns the type of schema this class belongs to.
     ///
-    /// \sa UsdSchemaKind
+    /// \sa UsdSchemaType
     USDGEOM_API
-    UsdSchemaKind _GetSchemaKind() const override;
+    UsdSchemaType _GetSchemaType() const override;
 
 private:
     // needs to invoke _GetStaticTfType.
@@ -373,50 +373,14 @@ public:
     USDGEOM_API
     TfToken ComputeVisibility(UsdTimeCode const &time = UsdTimeCode::Default()) const;
 
-    /// Return the attribute that is used for expressing visibility opinions
-    /// for the given \p purpose.
-    ///
-    /// For "default" purpose, return the overall *visibility* attribute.
-    /// Otherwise, return *guideVisibility*, *proxyVisibility*, or
-    /// *renderVisibility*.
-    ///
-    /// \sa UsdGeomVisibilityAPI
+    /// \overload 
+    /// Calculates the effective visibility of this prim, given the computed 
+    /// visibility of its parent prim at the given \p time.
+    /// 
+    /// \sa GetVisibilityAttr()
     USDGEOM_API
-    UsdAttribute GetPurposeVisibilityAttr(
-        const TfToken &purpose = UsdGeomTokens->default_) const;
-
-    /// Calculate the effective purpose visibility of this prim for the
-    /// given \p purpose, taking into account opinions for the corresponding
-    /// purpose attribute, along with overall visibility opinions.
-    ///
-    /// If ComputeVisibility() returns "invisible", then
-    /// ComputeEffectiveVisibility() is "invisible" for all purpose
-    /// values. Otherwise, ComputeEffectiveVisibility() returns the value of
-    /// the nearest ancestral authored opinion for the corresponding purpose
-    /// visibility attribute, as retured by
-    /// GetPurposeVisibilityAttr(purpose).
-    ///
-    /// Note that the value returned here can be "invisible" (indicating the
-    /// prim is invisible for the given purpose), "visible" (indicating that
-    /// it's visible), or "inherited" (indicating that the purpose visibility
-    /// is context-dependent and the fallback behavior must be determined by
-    /// the caller.
-    ///
-    /// This function should be considered a reference implementation for
-    /// correctness. <b>If called on each prim in the context of a traversal
-    /// we will perform massive overcomputation, because sibling prims share
-    /// sub-problems in the query that can be efficiently cached, but are not
-    /// (cannot be) by this simple implementation.</b> If you have control of
-    /// your traversal, it will be far more efficient to manage visibility
-    /// on a stack as you traverse.
-    ///
-    /// \sa UsdGeomVisibilityAPI
-    /// \sa GetPurposeVisibilityAttr()
-    /// \sa ComputeVisibility()
-    USDGEOM_API
-    TfToken ComputeEffectiveVisibility(
-        const TfToken &purpose = UsdGeomTokens->default_,
-        const UsdTimeCode &time = UsdTimeCode::Default()) const;
+    TfToken ComputeVisibility(const TfToken &parentVisibility,
+                              UsdTimeCode const &time = UsdTimeCode::Default()) const;
 
     /// Value type containing information about a prim's computed effective
     /// purpose as well as storing whether the prim's purpose value can be
@@ -523,8 +487,8 @@ public:
     /// on a stack as you traverse.
     ///
     /// \note Currently the returned prim will not contain any instancing
-    /// context if it is inside a prototype - its path will be relative to the
-    /// prototype's root.  Once UsdPrim is instancing-aware in the core, we can
+    /// context if it is inside a master - its path will be relative to the
+    /// master's root.  Once UsdPrim is instancing-aware in the core, we can
     /// change this method to return a context-aware result.
     ///
     /// \sa SetProxyPrim(), GetProxyPrimRel()
@@ -536,7 +500,7 @@ public:
     ///
     /// To facilitate authoring on sparse or unloaded stages, we do not
     /// perform any validation of this prim's purpose or the type or
-    /// purpose of the specified prim.
+    /// purpoes of the specified prim.
     ///
     /// \sa ComputeProxyPrim(), GetProxyPrimRel()
     USDGEOM_API

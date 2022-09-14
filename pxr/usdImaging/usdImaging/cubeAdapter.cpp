@@ -101,25 +101,32 @@ UsdImagingCubeAdapter::TrackVariability(UsdPrim const& prim,
     }
 }
 
-HdDirtyBits
-UsdImagingCubeAdapter::ProcessPropertyChange(UsdPrim const& prim,
-                                             SdfPath const& cachePath,
-                                             TfToken const& propertyName)
+void 
+UsdImagingCubeAdapter::UpdateForTime(UsdPrim const& prim,
+                                     SdfPath const& cachePath, 
+                                     UsdTimeCode time,
+                                     HdDirtyBits requestedBits,
+                                     UsdImagingInstancerContext const* 
+                                         instancerContext) const
 {
-    if (propertyName == UsdGeomTokens->size) {
-        return HdChangeTracker::DirtyPoints;
-    }
+    BaseAdapter::UpdateForTime(
+        prim, cachePath, time, requestedBits, instancerContext);
 
-    // Allow base class to handle change processing.
-    return BaseAdapter::ProcessPropertyChange(prim, cachePath, propertyName);
+    UsdImagingValueCache* valueCache = _GetValueCache();
+
+    if (requestedBits & HdChangeTracker::DirtyTopology) {
+        valueCache->GetTopology(cachePath) = GetMeshTopology();
+    }
 }
 
 /*virtual*/
 VtValue
 UsdImagingCubeAdapter::GetPoints(UsdPrim const& prim,
+                                 SdfPath const& cachePath,
                                  UsdTimeCode time) const
 {
-    return GetMeshPoints(prim, time);
+    TF_UNUSED(cachePath);
+    return GetMeshPoints(prim, time);   
 }
 
 static GfMatrix4d
@@ -159,17 +166,21 @@ UsdImagingCubeAdapter::GetMeshTopology()
     return VtValue(HdMeshTopology(UsdImagingGetUnitCubeMeshTopology()));
 }
 
-/*virtual*/ 
-VtValue
-UsdImagingCubeAdapter::GetTopology(UsdPrim const& prim,
-                                   SdfPath const& cachePath,
-                                   UsdTimeCode time) const
+// #nv begin #clean-property-invalidation
+/*virtual*/
+HdDirtyBits
+UsdImagingCubeAdapter::ProcessPropertyChange(
+    UsdPrim const& prim,
+    SdfPath const& cachePath,
+    TfToken const& propertyName)
 {
-    TRACE_FUNCTION();
-    HF_MALLOC_TAG_FUNCTION();
+    if (propertyName == UsdGeomTokens->size)
+        return HdChangeTracker::DirtyPoints;
 
-    return GetMeshTopology();
+    // Allow base class to handle change processing.
+    return BaseAdapter::ProcessPropertyChange(prim, cachePath, propertyName);
 }
+// nv end
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

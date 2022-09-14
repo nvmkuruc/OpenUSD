@@ -187,10 +187,6 @@ Pcp_ComputeRelocationsForLayerStack(
     std::map<SdfPath, SdfRelocatesMap> relocatesPerPrim;
     static const TfToken field = SdfFieldKeys->Relocates;
     TF_REVERSE_FOR_ALL(layer, layers) {
-        if (!(*layer)->GetHints().mightHaveRelocates) {
-            continue;
-        }
-
         // Check for relocation arcs in this layer.
         SdfPrimSpecHandleVector stack;
         stack.push_back( (*layer)->GetPseudoRoot() );
@@ -430,7 +426,8 @@ PcpLayerStack::~PcpLayerStack()
     // Update layer-stack-to-layer maps in the registry.
     _BlowLayers();
     if (_registry) {
-        _registry->_SetLayersAndRemove(_identifier, this);
+        _registry->_SetLayers(this);
+        _registry->_Remove(_identifier, this);
     }
 }
 
@@ -870,19 +867,16 @@ PcpLayerStack::_BuildLayerStack(
         }
 
         // Resolve and open sublayer.
+        string sublayerPath(sublayers[i]);
         TfErrorMark m;
 
         SdfLayer::FileFormatArguments localArgs;
         const SdfLayer::FileFormatArguments& layerArgs = 
             Pcp_GetArgumentsForFileFormatTarget(
-                sublayers[i], &defaultLayerArgs, &localArgs);
+                sublayerPath, &defaultLayerArgs, &localArgs);
 
-        // This is equivalent to SdfLayer::FindOrOpenRelativeToLayer, but we
-        // want to keep track of the final sublayer path after anchoring it
-        // to the layer.
-        string sublayerPath = SdfComputeAssetPathRelativeToLayer(
-            layer, sublayers[i]);
-        SdfLayerRefPtr sublayer = SdfLayer::FindOrOpen(sublayerPath, layerArgs);
+        SdfLayerRefPtr sublayer = SdfFindOrOpenRelativeToLayer(
+            layer, &sublayerPath, layerArgs);
 
         _sublayerSourceInfo.emplace_back(layer, sublayers[i], sublayerPath);
 
@@ -890,8 +884,8 @@ PcpLayerStack::_BuildLayerStack(
             PcpErrorInvalidSublayerPathPtr err = 
                 PcpErrorInvalidSublayerPath::New();
             err->rootSite = PcpSite(_identifier, SdfPath::AbsoluteRootPath());
-            err->layer = layer;
-            err->sublayerPath = sublayerPath;
+            err->layer           = layer;
+            err->sublayerPath    = sublayerPath;
             if (!m.IsClean()) {
                 vector<string> commentary;
                 for (auto const &err: m) {

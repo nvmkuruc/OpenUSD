@@ -25,9 +25,9 @@
 #include "pxr/pxr.h"
 #include "pxr/usd/pcp/layerPrefetchRequest.h"
 #include "pxr/usd/pcp/layerStackRegistry.h"
-#include "pxr/base/work/dispatcher.h"
+#include "pxr/usd/sdf/layerUtils.h"
+#include "pxr/base/work/arenaDispatcher.h"
 #include "pxr/base/work/threadLimits.h"
-#include "pxr/base/work/withScopedParallelism.h"
 
 #include <tbb/spin_mutex.h>
 
@@ -61,10 +61,10 @@ private:
         }
 
         // Open this specific sublayer path.
-        // The call to SdfLayer::FindOrOpenRelativeToLayer() may take some
-        // time, potentially multiple seconds.
+        // The call to SdfFindOrOpenRelativeToLayer() may take some time,
+        // potentially multiple seconds.
         if (SdfLayerRefPtr sublayer =
-            SdfLayer::FindOrOpenRelativeToLayer(anchorLayer, path, layerArgs)) {
+            SdfFindOrOpenRelativeToLayer(anchorLayer, &path, layerArgs)) {
             // Retain this sublayer.
             bool didInsert;
             {
@@ -78,7 +78,7 @@ private:
         }
     }
 
-    WorkDispatcher _dispatcher;
+    WorkArenaDispatcher _dispatcher;
     const Pcp_MutedLayers& _mutedLayers;
     std::set<SdfLayerRefPtr> *_retainedLayers;
     mutable tbb::spin_mutex _retainedLayersMutex;
@@ -97,7 +97,7 @@ PcpLayerPrefetchRequest::RequestSublayerStack(
 void
 PcpLayerPrefetchRequest::Run(const Pcp_MutedLayers& mutedLayers)
 {
-    if (!WorkHasConcurrency()) {
+    if (WorkGetConcurrencyLimit() <= 1) {
         // Do not bother pre-fetching if we do not have extra threads
         // available.
         return;
@@ -112,11 +112,9 @@ PcpLayerPrefetchRequest::Run(const Pcp_MutedLayers& mutedLayers)
     requests.swap(_sublayerRequests);
 
     // Open all the sublayers in the request.
-    WorkWithScopedParallelism([&]() {
-            _Opener opener(mutedLayers, &_retainedLayers);
-            TF_FOR_ALL(req, requests)
-                opener.OpenSublayers(req->first, req->second);
-        });
+    _Opener opener(mutedLayers, &_retainedLayers);
+    TF_FOR_ALL(req, requests)
+        opener.OpenSublayers(req->first, req->second);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

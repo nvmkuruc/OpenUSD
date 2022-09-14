@@ -871,10 +871,7 @@ bool UsdToMdlConverter::ConvertValue(
                 UsdShadeAttributeType sourceType;
                 if (input.GetConnectedSource(&source, &sourceName, &sourceType))
                 {
-                    // XXX:aluk
-                    // IsShader() deprecated in v21.05
-                    // https://github.com/PixarAnimationStudios/USD/commit/900356c54cf9b711f8520e1aa7d1888a5e310cc5
-                    if (true) //source.IsShader())
+                    if (source.IsShader())
                     {
                         UsdPrim prim(source.GetPrim());
                         UsdShadeShader shader(prim);
@@ -1589,7 +1586,7 @@ std::map<RETURN_CODE, std::string> g_returnMessages =
     , { CanNotGetMaterialInstance, "Can not get material instance" }
 };
 
-int ConvertUsdMaterialToMdl(const UsdShadeMaterial & usdMaterial, mi::neuraylib::INeuray * neuray, const char * mdlMaterialInstanceName)
+USDMDL_API int ConvertUsdMaterialToMdl(const UsdShadeMaterial & usdMaterial, mi::neuraylib::INeuray * neuray, const char * mdlMaterialInstanceName)
 {
     if (!mdlMaterialInstanceName)
     {

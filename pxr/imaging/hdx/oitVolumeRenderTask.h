@@ -45,23 +45,23 @@ public:
     HdxOitVolumeRenderTask(HdSceneDelegate* delegate, SdfPath const& id);
 
     HDX_API
-    ~HdxOitVolumeRenderTask() override;
+    virtual ~HdxOitVolumeRenderTask();
 
     /// Prepare the tasks resources
     HDX_API
-    void Prepare(HdTaskContext* ctx, 
-                 HdRenderIndex* renderIndex) override;
+    virtual void Prepare(HdTaskContext* ctx, 
+                         HdRenderIndex* renderIndex) override;
 
     /// Execute render pass task
     HDX_API
-    void Execute(HdTaskContext* ctx) override;
+    virtual void Execute(HdTaskContext* ctx) override;
 
 protected:
     /// Sync the render pass resources
     HDX_API
-    void _Sync(HdSceneDelegate* delegate,
-               HdTaskContext* ctx,
-               HdDirtyBits* dirtyBits) override;
+    virtual void _Sync(HdSceneDelegate* delegate,
+                       HdTaskContext* ctx,
+                       HdDirtyBits* dirtyBits) override;
 
 private:
     HdxOitVolumeRenderTask() = delete;

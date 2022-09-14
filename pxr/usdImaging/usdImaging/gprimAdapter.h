@@ -45,17 +45,16 @@ class UsdGeomGprim;
 /// Gprim data support, such as visibility, doubleSided, extent, displayColor,
 /// displayOpacity, purpose, and transform.
 ///
-class UsdImagingGprimAdapter : public UsdImagingPrimAdapter
-{
+class UsdImagingGprimAdapter : public UsdImagingPrimAdapter {
 public:
-    using BaseAdapter = UsdImagingPrimAdapter;
+    typedef UsdImagingPrimAdapter BaseAdapter;
 
     UsdImagingGprimAdapter()
         : UsdImagingPrimAdapter()
     {}
 
     USDIMAGING_API
-    ~UsdImagingGprimAdapter() override;
+    virtual ~UsdImagingGprimAdapter();
 
     // ---------------------------------------------------------------------- //
     /// \name Parallel Setup and Resolve
@@ -64,24 +63,24 @@ public:
     /// Thread Safe.
     USDIMAGING_API
     virtual void TrackVariability(UsdPrim const& prim,
-                          SdfPath const& cachePath,
-                          HdDirtyBits* timeVaryingBits,
-                          UsdImagingInstancerContext const* 
-                              instancerContext = NULL,
-                          // #nv begin fast-updates
-                          // If checkVariabilty is false, this method
-                          // only populates the value cache with initial values.
-                          bool checkVariability = true) const override;
-                          // nv end
+                                  SdfPath const& cachePath,
+                                  HdDirtyBits* timeVaryingBits,
+                                  UsdImagingInstancerContext const* 
+                                      instancerContext = NULL,
+                                  // #nv begin fast-updates
+                                  // If checkVariabilty is false, this method
+                                  // only populates the value cache with initial values.
+                                  bool checkVariability = true) const override;
+                                  // nv end
 
     /// Thread Safe.
     USDIMAGING_API
-    void UpdateForTime(UsdPrim const& prim,
-                       SdfPath const& cachePath, 
-                       UsdTimeCode time,
-                       HdDirtyBits requestedBits,
-                       UsdImagingInstancerContext const* 
-                           instancerContext = nullptr) const override;
+    virtual void UpdateForTime(UsdPrim const& prim,
+                               SdfPath const& cachePath, 
+                               UsdTimeCode time,
+                               HdDirtyBits requestedBits,
+                               UsdImagingInstancerContext const* 
+                                   instancerContext = NULL) const override;
 
     // ---------------------------------------------------------------------- //
     /// \name Change Processing 
@@ -147,31 +146,26 @@ public:
     /// a prim. This is useful for implicit primitives.
     USDIMAGING_API
     virtual VtValue GetPoints(UsdPrim const& prim,
+                              SdfPath const& cachePath,
                               UsdTimeCode time) const;
 
-    /// Returns color, Usd interpolation token, and optionally color indices for
-    /// a given prim, taking into account surface shader colors and explicitly 
-    /// authored color on the prim. If indices is not nullptr and the color 
-    /// value has indices, color will be set to the unflattened color value and 
-    /// indices set to the color value's indices.
+    /// Returns color and Usd interpolation token for a given
+    /// prim, taking into account surface shader colors and explicitly
+    /// authored color on the prim.
     USDIMAGING_API
     static bool GetColor(UsdPrim const& prim, 
                          UsdTimeCode time,
                          TfToken *interpolation,
-                         VtValue *color,
-                         VtIntArray *indices);
+                         VtValue *color);
 
-    /// Returns opacity, Usd interpolation token, and optionally opacity indices
-    /// for a given prim, taking into account surface shader opacity and 
-    /// explicitly authored opacity on the prim. If indices is not nullptr and 
-    /// the opacity value has indices, opacity will be set to the unflattened 
-    /// opacity value and indices set to the opacity value's indices.
+    /// Returns opacity and Usd interpolation token for a given
+    /// prim, taking into account surface shader opacity and explicitly
+    /// authored opacity on the prim.
     USDIMAGING_API
     static bool GetOpacity(UsdPrim const& prim, 
                            UsdTimeCode time,
                            TfToken *interpolation,
-                           VtValue *opacity,
-                           VtIntArray *indices);
+                           VtValue *opacity);
 
     // Helper function: add a given type of rprim, potentially with instancer
     // name mangling, and add any bound shader.
@@ -187,34 +181,6 @@ public:
     USDIMAGING_API
     static SdfPath _ResolveCachePath(SdfPath const& usdPath,
             UsdImagingInstancerContext const* instancerContext);
-
-    /// Reads the extent from the given prim. If the extent is not authored,
-    /// an empty GfRange3d is returned, the extent will not be computed.
-    USDIMAGING_API
-    GfRange3d GetExtent(UsdPrim const& prim, 
-                        SdfPath const& cachePath, 
-                        UsdTimeCode time) const override;
-
-    /// Reads double-sided from the given prim. If not authored, returns false
-    USDIMAGING_API
-    bool GetDoubleSided(UsdPrim const& prim, 
-                        SdfPath const& cachePath, 
-                        UsdTimeCode time) const override;
-
-    USDIMAGING_API
-    SdfPath GetMaterialId(UsdPrim const& prim, 
-                          SdfPath const& cachePath, 
-                          UsdTimeCode time) const override;
-    /// Gets the value of the parameter named key for the given prim (which
-    /// has the given cache path) and given time. If outIndices is not nullptr 
-    /// and the value has indices, it will return the unflattened value and set 
-    /// outIndices to the value's associated indices.
-    USDIMAGING_API
-    VtValue Get(UsdPrim const& prim,
-                SdfPath const& cachePath,
-                TfToken const& key,
-                UsdTimeCode time,
-                VtIntArray *outIndices) const override;
 
 protected:
 
@@ -232,18 +198,14 @@ protected:
     UsdGeomPrimvar _GetInheritedPrimvar(UsdPrim const& prim,
                                         TfToken const& primvarName) const;
 
-    // Utility for gathering the names of primvars used by the gprim's 
-    // materials, used in primvar filtering.
-    USDIMAGING_API 
-    virtual TfTokenVector _CollectMaterialPrimvars(
-        SdfPathVector const& materialUsdPaths, 
-        UsdTimeCode time) const;
+private:
 
-    /// Returns the primvar names known to be supported for the rprims 
-    /// this adapter produces.  These primvar names are excepted from primvar
-    /// filtering.
-    USDIMAGING_API
-    virtual TfTokenVector const& _GetRprimPrimvarNames() const;
+    /// Reads the extent from the given prim. If the extent is not authored,
+    /// an empty GfRange3d is returned, the extent will not be computed.
+    GfRange3d _GetExtent(UsdPrim const& prim, UsdTimeCode time) const;
+
+    /// Returns the doubleSided state for a given prim.
+    bool _GetDoubleSided(UsdPrim const& prim) const;
 };
 
 

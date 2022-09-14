@@ -75,9 +75,8 @@ UsdVolOpenVDBAsset::Define(
 }
 
 /* virtual */
-UsdSchemaKind UsdVolOpenVDBAsset::_GetSchemaKind() const
-{
-    return UsdVolOpenVDBAsset::schemaKind;
+UsdSchemaType UsdVolOpenVDBAsset::_GetSchemaType() const {
+    return UsdVolOpenVDBAsset::schemaType;
 }
 
 /* static */
@@ -104,32 +103,15 @@ UsdVolOpenVDBAsset::_GetTfType() const
 }
 
 UsdAttribute
-UsdVolOpenVDBAsset::GetFieldDataTypeAttr() const
+UsdVolOpenVDBAsset::GetFieldNameAttr() const
 {
-    return GetPrim().GetAttribute(UsdVolTokens->fieldDataType);
+    return GetPrim().GetAttribute(UsdVolTokens->fieldName);
 }
 
 UsdAttribute
-UsdVolOpenVDBAsset::CreateFieldDataTypeAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdVolOpenVDBAsset::CreateFieldNameAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdVolTokens->fieldDataType,
-                       SdfValueTypeNames->Token,
-                       /* custom = */ false,
-                       SdfVariabilityVarying,
-                       defaultValue,
-                       writeSparsely);
-}
-
-UsdAttribute
-UsdVolOpenVDBAsset::GetFieldClassAttr() const
-{
-    return GetPrim().GetAttribute(UsdVolTokens->fieldClass);
-}
-
-UsdAttribute
-UsdVolOpenVDBAsset::CreateFieldClassAttr(VtValue const &defaultValue, bool writeSparsely) const
-{
-    return UsdSchemaBase::_CreateAttr(UsdVolTokens->fieldClass,
+    return UsdSchemaBase::_CreateAttr(UsdVolTokens->fieldName,
                        SdfValueTypeNames->Token,
                        /* custom = */ false,
                        SdfVariabilityVarying,
@@ -154,8 +136,7 @@ const TfTokenVector&
 UsdVolOpenVDBAsset::GetSchemaAttributeNames(bool includeInherited)
 {
     static TfTokenVector localNames = {
-        UsdVolTokens->fieldDataType,
-        UsdVolTokens->fieldClass,
+        UsdVolTokens->fieldName,
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(

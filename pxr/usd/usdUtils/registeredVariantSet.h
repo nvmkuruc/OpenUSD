@@ -53,14 +53,14 @@ public:
     /// Note, in the plugInfo.json, the values for these enum's are
     /// lowerCamelCase.
     enum class SelectionExportPolicy {
-        /// Never `"never"`
+        /// Never
         ///
         /// This variantSet selection is meant to remain entirely within an
         /// application.  This typically represents a "session" variantSelection
         /// that should not be transmitted down the pipeline.
         Never,
 
-        /// IfAuthored `"ifAuthored"`
+        /// IfAuthored
         ///
         /// This variantSet selection should be exported if there is an authored
         /// opinion in the application.  This is only relevant if the
@@ -68,16 +68,11 @@ public:
         /// opinions.
         IfAuthored,
 
-        /// Authored `"authored"`
+        /// Authored
         ///
         /// This variantSet selection should always be exported.
         Always,
     };
-
-    /// Returns the export policy from the string.
-    static bool GetSelectionExportPolicyFromString(
-        const std::string& selectionExportPolicyStr,
-        SelectionExportPolicy* selectionExportPolicy);
 
     /// Specifies how to export a variant selection.
     const SelectionExportPolicy selectionExportPolicy;

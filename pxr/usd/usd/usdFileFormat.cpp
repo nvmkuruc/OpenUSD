@@ -27,7 +27,6 @@
 #include "pxr/usd/usd/usdaFileFormat.h"
 #include "pxr/usd/usd/usdcFileFormat.h"
 
-#include "pxr/usd/ar/resolver.h"
 #include "pxr/usd/sdf/layer.h"
 
 #include "pxr/base/trace/trace.h"
@@ -63,27 +62,26 @@ _GetFileFormat(const TfToken& formatId)
     return fileFormat;
 }
 
-static
-const UsdUsdcFileFormatConstPtr&
-_GetUsdcFileFormat()
-{
-    static const auto usdcFormat = TfDynamic_cast<UsdUsdcFileFormatConstPtr>(
-        _GetFileFormat(UsdUsdcFileFormatTokens->Id));
-    return usdcFormat;
-}
-
-static
-const UsdUsdaFileFormatConstPtr&
-_GetUsdaFileFormat()
-{
-    static const auto usdaFormat = TfDynamic_cast<UsdUsdaFileFormatConstPtr>(
-        _GetFileFormat(UsdUsdaFileFormatTokens->Id));
-    return usdaFormat;
-}
-
 // A .usd file may actually be either a text .usda file or a binary crate 
-// .usdc file. This function returns the appropriate file format for a
-// given data object.
+// .usdc file. These functions returns the appropriate file format for a
+// given file or data object.
+static
+SdfFileFormatConstPtr
+_GetUnderlyingFileFormat(const string& filePath)
+{
+    auto usdcFormat = _GetFileFormat(UsdUsdcFileFormatTokens->Id);
+    if (usdcFormat->CanRead(filePath)) {
+        return usdcFormat;
+    }
+
+    auto usdaFormat = _GetFileFormat(UsdUsdaFileFormatTokens->Id);
+    if (usdaFormat->CanRead(filePath)) {
+        return usdaFormat;
+    }
+
+    return SdfFileFormatConstPtr();
+}
+
 static
 SdfFileFormatConstPtr
 _GetUnderlyingFileFormat(const SdfAbstractDataConstPtr& data)
@@ -193,10 +191,7 @@ UsdUsdFileFormat::InitData(const FileFormatArguments& args) const
 bool
 UsdUsdFileFormat::CanRead(const string& filePath) const
 {
-    auto asset = ArGetResolver().OpenAsset(ArResolvedPath(filePath));
-    return asset &&
-        (_GetUsdcFileFormat()->_CanReadFromAsset(filePath, asset) ||
-         _GetUsdaFileFormat()->_CanReadFromAsset(filePath, asset));
+    return _GetUnderlyingFileFormat(filePath) != SdfFileFormatConstPtr();
 }
 
 bool
@@ -207,48 +202,26 @@ UsdUsdFileFormat::Read(
 {
     TRACE_FUNCTION();
 
-    // Fetch the asset from Ar.
-    auto asset = ArGetResolver().OpenAsset(ArResolvedPath(resolvedPath));
-    if (!asset) {
-        return false;
-    }
-
-    const auto& usdcFileFormat = _GetUsdcFileFormat();
-    const auto& usdaFileFormat = _GetUsdaFileFormat();
+    // Try binary usdc format first, since that's most common, then usda text.
+    static auto formats = {
+        _GetFileFormat(UsdUsdcFileFormatTokens->Id),
+        _GetFileFormat(UsdUsdaFileFormatTokens->Id),
+    };
 
     // Network-friendly path -- just try to read the file and if we get one that
     // works we're good.
-    //
-    // Try binary usdc format first, since that's most common, then usda text.
-    {
+    for (auto const &fmt: formats) {
         TfErrorMark m;
-        if (usdcFileFormat->_ReadFromAsset(
-                layer, resolvedPath, asset, metadataOnly)) {
+        if (fmt && fmt->Read(layer, resolvedPath, metadataOnly))
             return true;
-        }
-        m.Clear();
-
-        if (usdaFileFormat->_ReadFromAsset(
-                layer, resolvedPath, asset, metadataOnly)) {
-            return true;
-        }
         m.Clear();
     }
 
     // Failed to load.  Do the slower (for the network) version where we attempt
-    // to determine the underlying format first, and then load using it. This
-    // gives us better diagnostic messages.
-    if (usdcFileFormat->_CanReadFromAsset(resolvedPath, asset)) {
-        return usdcFileFormat->_ReadFromAsset(
-            layer, resolvedPath, asset, metadataOnly);
-    }
-
-    if (usdaFileFormat->_CanReadFromAsset(resolvedPath, asset)) {
-        return usdaFileFormat->_ReadFromAsset(
-            layer, resolvedPath, asset, metadataOnly);
-    }
-
-    return false;
+    // to determine the underlying format first, and then load using it.
+    auto underlyingFormat = _GetUnderlyingFileFormat(resolvedPath);
+    return underlyingFormat &&
+        underlyingFormat->Read(layer, resolvedPath, metadataOnly);
 }
 
 SdfFileFormatConstPtr 

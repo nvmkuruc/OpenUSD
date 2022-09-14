@@ -21,9 +21,11 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 
-#include "pxr/imaging/garch/glApi.h"
+#include "pxr/imaging/glf/glew.h"
 
+#include "pxr/imaging/glf/contextCaps.h"
 #include "pxr/imaging/glf/glContext.h"
 #include "pxr/imaging/glf/testGLContext.h"
 
@@ -82,7 +84,9 @@ public:
 
     virtual void Execute(HdTaskContext* ctx) override
     {
+        _renderPassState->Bind();
         _renderPass->Execute(_renderPassState, GetRenderTags());
+        _renderPassState->Unbind();
     }
 
 private:
@@ -138,8 +142,8 @@ static void CameraAndLightTest()
 
     // Update camera matrix
     delegate->SetCamera(camera, GfMatrix4d(2), GfMatrix4d(2));
-    tracker.MarkSprimDirty(camera, HdCamera::DirtyTransform);
-    tracker.MarkSprimDirty(camera, HdCamera::DirtyParams);
+    tracker.MarkSprimDirty(camera, HdCamera::DirtyViewMatrix);
+    tracker.MarkSprimDirty(camera, HdCamera::DirtyProjMatrix);
 
     engine.Execute(index.get(), &tasks);
 
@@ -173,9 +177,11 @@ int main()
 {
     TfErrorMark mark;
 
+    // Test uses ContextCaps, so need to create a GL instance.
     GlfTestGLContext::RegisterGLContextCallbacks();
-    GarchGLApiLoad();
+    GlfGlewInit();
     GlfSharedGLContextScopeHolder sharedContext;
+    GlfContextCaps::InitInstance();
 
     CameraAndLightTest();
 

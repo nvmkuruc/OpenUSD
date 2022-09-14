@@ -37,30 +37,6 @@ set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads REQUIRED)
 set(PXR_THREAD_LIBS "${CMAKE_THREAD_LIBS_INIT}")
 
-# Set up a version string for comparisons. This is available
-# as Boost_VERSION_STRING in CMake 3.14+
-# Find Boost package before getting any boost specific components as we need to
-# disable boost-provided cmake config, based on the boost version found.
-find_package(Boost REQUIRED)
-set(boost_version_string "${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}")
-
-# Boost provided cmake files (introduced in boost version 1.70) result in 
-# inconsistent build failures on different platforms, when trying to find boost 
-# component dependencies like python, program options, etc. Refer some related 
-# discussions:
-# https://github.com/boostorg/python/issues/262#issuecomment-483069294
-# https://github.com/boostorg/boost_install/issues/12#issuecomment-508683006
-#
-# Hence to avoid issues with Boost provided cmake config, Boost_NO_BOOST_CMAKE
-# is enabled by default for boost version 1.70 and above. If a user explicitly 
-# set Boost_NO_BOOST_CMAKE to Off, following will be a no-op.
-if (${boost_version_string} VERSION_GREATER_EQUAL "1.70")
-    option(Boost_NO_BOOST_CMAKE "Disable boost-provided cmake config" ON)
-    if (Boost_NO_BOOST_CMAKE)
-        message(STATUS "Disabling boost-provided cmake config")
-    endif()
-endif()
-
 if(PXR_ENABLE_PYTHON_SUPPORT)
     # --Python.
     if(PXR_USE_PYTHON_3)
@@ -71,23 +47,26 @@ if(PXR_ENABLE_PYTHON_SUPPORT)
         find_package(PythonLibs 2.7 REQUIRED)
     endif()
 
-    if(WIN32 AND PXR_USE_DEBUG_PYTHON)
-        set(Boost_USE_DEBUG_PYTHON ON)
-    endif()
+    find_package(Boost
+        COMPONENTS
+            program_options
+        REQUIRED
+    )
 
-    # This option indicates that we don't want to explicitly link to the python
-    # libraries. See BUILDING.md for details.
-    if(PXR_PY_UNDEFINED_DYNAMIC_LOOKUP AND NOT WIN32 )
-        set(PYTHON_LIBRARIES "")
-    endif()
+    # Set up a version string for comparisons. This is available
+    # as Boost_VERSION_STRING in CMake 3.14+
+    set(boost_version_string "${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}")
 
-    if (${boost_version_string} VERSION_GREATER_EQUAL "1.67")
+    if (((${boost_version_string} VERSION_GREATER_EQUAL "1.67") AND
+         (${boost_version_string} VERSION_LESS "1.70")) OR
+        ((${boost_version_string} VERSION_GREATER_EQUAL "1.70") AND
+          Boost_NO_BOOST_CMAKE))
         # As of boost 1.67 the boost_python component name includes the
-        # associated Python version (e.g. python27, python36). 
-        # XXX: After boost 1.73, boost provided config files should be able to 
-        # work without specifying a python version!
-        # https://github.com/boostorg/boost_install/blob/master/BoostConfig.cmake
-
+        # associated Python version (e.g. python27, python36). After boost 1.70
+        # the built-in cmake files will deal with this. If we are using boost
+        # that does not have working cmake files, or we are using a new boost
+        # and not using cmake's boost files, we need to do the below.
+        #
         # Find the component under the versioned name and then set the generic
         # Boost_PYTHON_LIBRARY variable so that we don't have to duplicate this
         # logic in each library's CMakeLists.txt.
@@ -120,14 +99,12 @@ else()
             find_package(PythonInterp 2.7 REQUIRED)
         endif()
     endif()
-endif()
-
-# --USD tools
-if(PXR_BUILD_USD_TOOLS OR PXR_BUILD_TESTS)
+ 
+    # --Boost
     find_package(Boost
-    COMPONENTS
-        program_options
-    REQUIRED
+        COMPONENTS
+            program_options
+        REQUIRED
     )
 endif()
 
@@ -190,9 +167,6 @@ if (PXR_BUILD_IMAGING)
         find_package(OpenEXR REQUIRED)
         find_package(OpenImageIO REQUIRED)
         add_definitions(-DPXR_OIIO_PLUGIN_ENABLED)
-        if (OIIO_idiff_BINARY)
-            set(IMAGE_DIFF_TOOL ${OIIO_idiff_BINARY} CACHE STRING "Uses idiff for image diffing")
-        endif()
     endif()
     # --OpenColorIO
     if (PXR_BUILD_OPENCOLORIO_PLUGIN)
@@ -207,44 +181,11 @@ if (PXR_BUILD_IMAGING)
             cmake_policy(SET CMP0072 OLD)
         endif()
         find_package(OpenGL REQUIRED)
+        find_package(GLEW REQUIRED)
     endif()
     # --Metal
     if (PXR_ENABLE_METAL_SUPPORT)
         add_definitions(-DPXR_METAL_SUPPORT_ENABLED)
-    endif()
-    if (PXR_ENABLE_VULKAN_SUPPORT)
-        if (EXISTS $ENV{VULKAN_SDK})
-            # Prioritize the VULKAN_SDK includes and packages before any system
-            # installed headers. This is to prevent linking against older SDKs 
-            # that may be installed by the OS.
-            # XXX This is fixed in cmake 3.18+
-            include_directories(BEFORE SYSTEM $ENV{VULKAN_SDK} $ENV{VULKAN_SDK}/include $ENV{VULKAN_SDK}/lib)
-            set(ENV{PATH} "$ENV{VULKAN_SDK}:$ENV{VULKAN_SDK}/include:$ENV{VULKAN_SDK}/lib:$ENV{PATH}")
-            find_package(Vulkan REQUIRED)
-            list(APPEND VULKAN_LIBS Vulkan::Vulkan)
-
-            # Find the extra vulkan libraries we need
-            set(EXTRA_VULKAN_LIBS shaderc_combined)
-            foreach(EXTRA_LIBRARY ${EXTRA_VULKAN_LIBS})
-                find_library("${EXTRA_LIBRARY}_PATH" NAMES "${EXTRA_LIBRARY}" PATHS $ENV{VULKAN_SDK}/lib)
-                list(APPEND VULKAN_LIBS "${${EXTRA_LIBRARY}_PATH}")
-            endforeach()
-
-            # Find the OS specific libs we need
-            if (APPLE)
-                find_library(MVK_LIBRARIES NAMES MoltenVK PATHS $ENV{VULKAN_SDK}/lib)
-                list(APPEND VULKAN_LIBS ${MVK_LIBRARIES})
-            elseif (UNIX AND NOT APPLE)
-                find_package(X11 REQUIRED)
-                list(APPEND VULKAN_LIBS ${X11_LIBRARIES})
-            elseif (WIN32)
-                # No extra libs required
-            endif()
-
-            add_definitions(-DPXR_VULKAN_SUPPORT_ENABLED)
-        else()
-            message(FATAL_ERROR "VULKAN_SDK not valid")
-        endif()
     endif()
     # --Opensubdiv
     set(OPENSUBDIV_USE_GPU ${PXR_ENABLE_GL_SUPPORT})

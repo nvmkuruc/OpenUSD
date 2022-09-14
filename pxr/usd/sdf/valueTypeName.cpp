@@ -27,7 +27,7 @@
 #include "pxr/usd/sdf/valueTypePrivate.h"
 
 #include <boost/functional/hash.hpp>
-#include <ostream>
+#include <iostream>
 
 PXR_NAMESPACE_OPEN_SCOPE
 

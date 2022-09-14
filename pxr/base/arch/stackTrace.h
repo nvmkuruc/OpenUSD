@@ -38,7 +38,6 @@
 #include <vector>
 #include <string>
 #include <iosfwd>
-#include <ctime>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -280,8 +279,7 @@ void ArchGetStackFrames(size_t maxDepth, size_t numFramesToSkipAtTop,
 /// Print stack frames to the given ostream.
 ARCH_API
 void ArchPrintStackFrames(std::ostream& out,
-                          const std::vector<uintptr_t> &frames,
-                          bool skipUnknownFrames = false);
+                          const std::vector<uintptr_t> &frames);
 
 /// Callback for handling crashes.
 /// \see ArchCrashHandlerSystemv

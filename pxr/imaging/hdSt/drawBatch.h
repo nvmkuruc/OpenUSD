@@ -30,7 +30,7 @@
 
 #include "pxr/imaging/hdSt/resourceBinder.h"
 #include "pxr/imaging/hd/repr.h"
-#include "pxr/imaging/hdSt/materialNetworkShader.h"
+#include "pxr/imaging/hdSt/shaderCode.h"
 
 #include <memory>
 #include <vector>
@@ -39,7 +39,6 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 class HdStDrawItem;
 class HdStDrawItemInstance;
-class HgiGraphicsCmds;
 
 using HdSt_DrawBatchSharedPtr = std::shared_ptr<class HdSt_DrawBatch>;
 using HdSt_DrawBatchSharedPtrVector = std::vector<HdSt_DrawBatchSharedPtr>;
@@ -79,15 +78,9 @@ public:
     HDST_API
     bool Rebuild();
 
-    enum class ValidationResult {
-        ValidBatch = 0,
-        RebuildBatch,
-        RebuildAllBatches
-    };
-
-    /// Validates whether the  batch can be reused (i.e., submitted) as-is, or
-    /// if it needs to be rebuilt, or if all batches need to be rebuilt.
-    virtual ValidationResult Validate(bool deepValidation) = 0;
+    /// Validates that all batches are referring up to date bufferarrays.
+    /// If not, returns false
+    virtual bool Validate(bool deepValidation) = 0;
 
     /// Prepare draw commands and apply view frustum culling for this batch.
     virtual void PrepareDraw(
@@ -96,7 +89,6 @@ public:
 
     /// Executes the drawing commands for this batch.
     virtual void ExecuteDraw(
-        HgiGraphicsCmds *gfxCmds,
         HdStRenderPassStateSharedPtr const &renderPassState,
         HdStResourceRegistrySharedPtr const & resourceRegistry) = 0;
 
@@ -124,11 +116,9 @@ protected:
         _DrawingProgram() {}
 
         HDST_API
-        bool IsValid() const;
-
-        HDST_API
         bool CompileShader(
                 HdStDrawItem const *drawItem,
+                bool indirect,
                 HdStResourceRegistrySharedPtr const &resourceRegistry);
 
         HdStGLSLProgramSharedPtr GetGLSLProgram() const {
@@ -143,27 +133,25 @@ protected:
 
         void Reset() {
             _glslProgram.reset();
-            _materialNetworkShader.reset();
+            _surfaceShader.reset();
             _geometricShader.reset();
             _resourceBinder = HdSt_ResourceBinder();
             _shaders.clear();
         }
         
-        void SetMaterialNetworkShader(
-                HdSt_MaterialNetworkShaderSharedPtr const &shader) {
-            _materialNetworkShader = shader;
+        void SetSurfaceShader(HdStShaderCodeSharedPtr shader) {
+            _surfaceShader = shader;
         }
 
-        const HdSt_MaterialNetworkShaderSharedPtr &
-        GetMaterialNetworkShader() const {
-            return _materialNetworkShader; 
+        const HdStShaderCodeSharedPtr &GetSurfaceShader() {
+            return _surfaceShader; 
         }
 
         void SetGeometricShader(HdSt_GeometricShaderSharedPtr shader) {
             _geometricShader = shader;
         }
 
-        const HdSt_GeometricShaderSharedPtr &GetGeometricShader() const { 
+        const HdSt_GeometricShaderSharedPtr &GetGeometricShader() { 
             return _geometricShader; 
         }
 
@@ -173,19 +161,18 @@ protected:
             _shaders = shaders; 
         }
 
-        /// Returns array of shaders, this will not include the
-        /// material network shader passed via SetMaterialNetworkShader
-        /// (or the geometric shader).
+        /// Returns array of shaders, this will not include the surface shader
+        /// passed via SetSurfaceShader (or the geometric shader).
         const HdStShaderCodeSharedPtrVector &GetShaders() const {
             return _shaders; 
         }
 
         /// Returns array of composed shaders, this include the shaders passed
-        /// via SetShaders and the shader passed to SetMaterialNetworkShader.
+        /// via SetShaders and the shader passed to SetSurfaceShader.
         HdStShaderCodeSharedPtrVector GetComposedShaders() const {
             HdStShaderCodeSharedPtrVector shaders = _shaders;
-            if (_materialNetworkShader) {
-                shaders.push_back(_materialNetworkShader);
+            if (_surfaceShader) {
+                shaders.push_back(_surfaceShader);
             }
             return shaders;
         }
@@ -207,12 +194,13 @@ protected:
         HdSt_ResourceBinder _resourceBinder;
         HdStShaderCodeSharedPtrVector _shaders;
         HdSt_GeometricShaderSharedPtr _geometricShader;
-        HdSt_MaterialNetworkShaderSharedPtr _materialNetworkShader;
+        HdStShaderCodeSharedPtr _surfaceShader;
     };
 
     HDST_API
     _DrawingProgram & _GetDrawingProgram(
         HdStRenderPassStateSharedPtr const &state, 
+        bool indirect,
         HdStResourceRegistrySharedPtr const &resourceRegistry);
 
 protected:

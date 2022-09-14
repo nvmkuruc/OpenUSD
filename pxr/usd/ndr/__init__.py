@@ -24,6 +24,14 @@
 
 """Python bindings for libNdr"""
 
+from . import _ndr
 from pxr import Tf
-Tf.PreparePythonModule()
-del Tf
+Tf.PrepareModule(_ndr, locals())
+del _ndr, Tf
+
+try:
+    from . import __DOC
+    __DOC.Execute(locals())
+    del __DOC
+except Exception:
+    pass

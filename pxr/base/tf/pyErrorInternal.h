@@ -47,20 +47,15 @@ TF_API void Tf_PySetErrorExceptionClass(boost::python::object const &cls);
 class TfPyExceptionStateScope {
 public:
     // Save the current exception state but don't unset it.
-    TF_API TfPyExceptionStateScope();
+    TfPyExceptionStateScope();
     TfPyExceptionStateScope(const TfPyExceptionStateScope&) = delete;
     TfPyExceptionStateScope& operator=(const TfPyExceptionStateScope&) = delete;
 
     // Restore the exception state as it was in the c'tor.
-    TF_API ~TfPyExceptionStateScope();
-
-    // Return a reference to the held TfPyExceptionState.
-    TfPyExceptionState const &Get() const {
-        return _state;
-    }
+    ~TfPyExceptionStateScope();
 
     // Restore the exception state as it was in the c'tor.
-    TF_API void Restore();
+    void Restore();
 
 private:
     TfPyExceptionState _state;

@@ -31,8 +31,6 @@
 # free to do whatever they want with mainwindow for testing.
 
 import pxr.Usdviewq as Usdviewq
-from pxr.Usdviewq import AppController
-from pxr.Usdviewq.qt import QtWidgets
 
 import sys, os, inspect, argparse
 
@@ -90,19 +88,16 @@ class TestUsdView(Usdviewq.Launcher):
     # launching Usdview and doing the initial load pass
     def _ValidateTestFile(self, filePath):
         if not os.path.exists(filePath):
-            sys.stderr.write('Invalid file supplied, does not exist: {}\n'
-                .format(filePath))
+            sys.stderr.write('Invalid file supplied, does not exist')
             sys.exit(1)
 
         if not os.access(filePath, os.R_OK):
-            sys.stderr.write('Invalid file supplied, must be readable: {}\n'
-                .format(filePath))
+            sys.stderr.write('Invalid file supplied, must be readable')
 
         # Ensure that we are passed a valid python file
         _, ext = os.path.splitext(filePath)
         if ext != '.py':
-            sys.stderr.write('Invalid file supplied, must be a python file: '
-                '{}\n'.format(filePath))
+            sys.stderr.write('Invalid file supplied, must be a python file')
             sys.exit(1)
 
         # Grab the function from the input python file
@@ -115,12 +110,12 @@ class TestUsdView(Usdviewq.Launcher):
         if not callBack:
             sys.stderr.write('Invalid file supplied, must contain a function of '
                              'the signature' + TEST_USD_VIEW_CALLBACK_IDENT +
-                             '(appController): {}\n'.format(filePath))
+                             '(appController) ')
             sys.exit(1)
 
-        errorMsg = ('Invalid function signature, must be of the form: \n ' +
+        errorMsg = ('Invalid function signature, '
+                    'Must be of the form: \n ' +
                     TEST_USD_VIEW_CALLBACK_IDENT + ' (appController)\n'
-                    'File: ' + filePath + '\n'
                     'Error: %s')
 
         if sys.version_info.major >= 3:
@@ -135,38 +130,6 @@ class TestUsdView(Usdviewq.Launcher):
         assert len(args) == 1, errorMsg % 'Incorrect number of args (1 expected)'
 
         return callBack
-
-
-# Monkey patch AppController to add helper test interface methods
-
-def _processEvents(self, iterations=10, waitForConvergence=False):
-    # Qt does not guarantee that a single call to processEvents() will
-    # process all events in the event queue, and in some builds, on
-    # some platforms, we sporadically or even repeatably see test failures
-    # in which the selection does not change, presumably because the
-    # events were not all getting processed, when we simply called
-    # processEvents once.  So we do it a handful of times whenever we
-    # generate an event, to increase our odds of success.
-    for x in range(iterations):
-        QtWidgets.QApplication.processEvents()
-
-    # Need to wait extra for progressive rendering images to converge
-    if (waitForConvergence):
-        # Wait until the image is converged
-        while not self._stageView._renderer.IsConverged():
-            QtWidgets.QApplication.processEvents()
-
-AppController._processEvents = _processEvents
-
-# Take a shot of the viewport and save it to a file.
-def _takeShot(self, fileName, iterations=10, waitForConvergence=False,
-              cropToAspectRatio=False):
-    self._processEvents(iterations, waitForConvergence)
-    viewportShot = self.GrabViewportShot(cropToAspectRatio=cropToAspectRatio)
-    viewportShot.save(fileName, "PNG")
-
-AppController._takeShot = _takeShot
-
 
 if __name__ == '__main__':
     TestUsdView().Run()

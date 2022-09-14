@@ -25,16 +25,16 @@ def Mesh "Cube"
     point3f[] points.timeSamples = {
         0: [(-1, -1, 1), (-1, 1, 1), (-1, -1, -1), (-1, 1, -1), (1, -1, 1), (1, 1, 1), (1, -1, -1), (1, 1, -1)],
     }
-    texCoord2f[] primvars:st (
+    float2[] primvars:uv (
         interpolation = "faceVarying"
     )
-    texCoord2f[] primvars:st.timeSamples = {
+    float2[] primvars:uv.timeSamples = {
         0: [(0.9999134, 0.25004348), (0.7499567, 0.2500434), (0.74995667, 0.50000006), (0.9999133, 0.5000001), (0.25004333, 0.25004333), (0.25004333, 0.000086587555), (0.000086587555, 0.000086587555), (0.000086587555, 0.25004333), (0.25004333, 0.50000006), (0.5, 0.50000006), (0.50000006, 0.25004336), (0.000086587555, 0.50000006), (0.000086587555, 0.7499568), (0.25004333, 0.7499568)],
     }
-    int[] primvars:st:indices (
+    int[] primvars:uv:indices (
         interpolation = "faceVarying"
     )
-    int[] primvars:st:indices.timeSamples = {
+    int[] primvars:uv:indices.timeSamples = {
         0: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 4, 11, 12, 13, 8, 11, 8, 4, 7, 9, 2, 1, 10],
     }
     uniform token subdivisionScheme = "none"
@@ -45,10 +45,6 @@ def Mesh "Cube"
     token visibility.timeSamples = {
         0: "inherited",
     }
-    custom matrix4d xform
-    matrix4d xform.timeSamples = {
-        0: ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) ),
-    }
     custom bool xform:inherits
     bool xform:inherits.timeSamples = {
         0: 0,
@@ -56,6 +52,10 @@ def Mesh "Cube"
     custom uchar xform:ops
     uchar xform:ops.timeSamples = {
         0: 48,
+    }
+    custom matrix4d xform:vals
+    matrix4d xform:vals.timeSamples = {
+        0: ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) ),
     }
 }
 

@@ -38,6 +38,8 @@ HdEmbreeRenderPass::HdEmbreeRenderPass(HdRenderIndex *index,
     , _sceneVersion(sceneVersion)
     , _lastSceneVersion(0)
     , _lastSettingsVersion(0)
+    , _width(0)
+    , _height(0)
     , _viewMatrix(1.0f) // == identity
     , _projMatrix(1.0f) // == identity
     , _aovBindings()
@@ -72,21 +74,6 @@ HdEmbreeRenderPass::IsConverged() const
         }
     }
     return true;
-}
-
-static
-GfRect2i
-_GetDataWindow(HdRenderPassStateSharedPtr const& renderPassState)
-{
-    const CameraUtilFraming &framing = renderPassState->GetFraming();
-    if (framing.IsValid()) {
-        return framing.dataWindow;
-    } else {
-        // For applications that use the old viewport API instead of
-        // the new camera framing API.
-        const GfVec4f vp = renderPassState->GetViewport();
-        return GfRect2i(GfVec2i(0), int(vp[2]), int(vp[3]));        
-    }
 }
 
 void
@@ -133,9 +120,11 @@ HdEmbreeRenderPass::_Execute(HdRenderPassStateSharedPtr const& renderPassState,
         needStartRender = true;
     }
 
+    GfVec4f vp = renderPassState->GetViewport();
+
     // Determine whether we need to update the renderer camera.
-    const GfMatrix4d view = renderPassState->GetWorldToViewMatrix();
-    const GfMatrix4d proj = renderPassState->GetProjectionMatrix();
+    GfMatrix4d view = renderPassState->GetWorldToViewMatrix();
+    GfMatrix4d proj = renderPassState->GetProjectionMatrix();
     if (_viewMatrix != view || _projMatrix != proj) {
         _viewMatrix = view;
         _projMatrix = proj;
@@ -145,36 +134,17 @@ HdEmbreeRenderPass::_Execute(HdRenderPassStateSharedPtr const& renderPassState,
         needStartRender = true;
     }
 
-    const GfRect2i dataWindow = _GetDataWindow(renderPassState);
-
-    if (_dataWindow != dataWindow) {
-        _dataWindow = dataWindow;
+    // Determine whether we need to update the renderer viewport.
+    if (_width != vp[2] || _height != vp[3]) {
+        _width = vp[2];
+        _height = vp[3];
 
         _renderThread->StopRender();
-        _renderer->SetDataWindow(dataWindow);
-
-        if (!renderPassState->GetFraming().IsValid()) {
-            // Support clients that do not use the new framing API
-            // and do not use AOVs.
-            //
-            // Note that we do not support the case of using the
-            // new camera framing API without using AOVs.
-            //
-            const GfVec3i dimensions(_dataWindow.GetWidth(),
-                                     _dataWindow.GetHeight(),
-                                     1);
-
-            _colorBuffer.Allocate(
-                dimensions,
-                HdFormatUNorm8Vec4,
-                /*multiSampled=*/true);
-            
-            _depthBuffer.Allocate(
-                dimensions,
-                HdFormatFloat32,
-                /*multiSampled=*/false);
-        }
-
+        _renderer->SetViewport(_width, _height);
+        _colorBuffer.Allocate(GfVec3i(_width, _height, 1), HdFormatUNorm8Vec4,
+                              /*multiSampled=*/true);
+        _depthBuffer.Allocate(GfVec3i(_width, _height, 1), HdFormatFloat32,
+                              /*multiSampled=*/false);
         needStartRender = true;
     }
 
@@ -192,7 +162,7 @@ HdEmbreeRenderPass::_Execute(HdRenderPassStateSharedPtr const& renderPassState,
         _aovBindings = aovBindings;
 
         _renderThread->StopRender();
-        if (aovBindings.empty()) {
+        if (aovBindings.size() == 0) {
             HdRenderPassAovBinding colorAov;
             colorAov.aovName = HdAovTokens->color;
             colorAov.renderBuffer = &_colorBuffer;

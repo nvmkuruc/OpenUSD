@@ -21,10 +21,12 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/pxr.h"
 
-#include "pxr/imaging/garch/glApi.h"
-
+#include "pxr/imaging/glf/glew.h"
+#include "pxr/imaging/glf/contextCaps.h"
 #include "pxr/imaging/glf/diagnostic.h"
+#include "pxr/imaging/glf/drawTarget.h"
 #include "pxr/imaging/glf/testGLContext.h"
 #include "pxr/base/gf/frustum.h"
 
@@ -37,6 +39,7 @@
 #include "pxr/imaging/hdSt/renderDelegate.h"
 
 #include "pxr/imaging/hdx/drawTargetTask.h"
+#include "pxr/imaging/hdx/drawTargetResolveTask.h"
 #include "pxr/imaging/hdx/simpleLightTask.h"
 #include "pxr/imaging/hdx/renderSetupTask.h"
 #include "pxr/imaging/hdx/renderTask.h"
@@ -64,8 +67,20 @@ int main(int argc, char *argv[])
 
     // prepare GL context
     GlfTestGLContext::RegisterGLContextCallbacks();
-    GarchGLApiLoad();
+    GlfGlewInit();
     GlfSharedGLContextScopeHolder sharedContext;
+    GlfContextCaps::InitInstance();
+
+    // prep draw target
+    GlfDrawTargetRefPtr drawTarget = GlfDrawTarget::New(GfVec2i(512, 512));
+    drawTarget->Bind();
+    drawTarget->AddAttachment("color", GL_RGBA, GL_FLOAT, GL_RGBA);
+    drawTarget->AddAttachment("depth", GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8,
+                              GL_DEPTH24_STENCIL8);
+    drawTarget->Unbind();
+
+    GLfloat clearColor[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
+    GLfloat clearDepth[1] = { 1.0f };
 
     // Hgi and HdDriver should be constructed before HdEngine to ensure they
     // are destructed last. Hgi may be used during engine/delegate destruction.
@@ -76,42 +91,27 @@ int main(int argc, char *argv[])
     std::unique_ptr<HdRenderIndex> index(
         HdRenderIndex::New(&renderDelegate, {&driver}));
     TF_VERIFY(index);
-    std::unique_ptr<Hdx_UnitTestDelegate> delegate =
-        std::make_unique<Hdx_UnitTestDelegate>(index.get());
+    std::unique_ptr<Hdx_UnitTestDelegate> delegate(
+                                         new Hdx_UnitTestDelegate(index.get()));
     HdEngine engine;
 
     // --------------------------------------------------------------------
-
-    // AOVs
-    SdfPath colorBuffer("/colorBuffer");
-    {
-        HdRenderBufferDescriptor desc;
-        desc.dimensions = GfVec3i(512, 512, 1);
-        desc.format = HdFormatUNorm8Vec4;
-        desc.multiSampled = false;
-        delegate->AddRenderBuffer(colorBuffer, desc);
-    }
-    SdfPath depthBuffer("/depthBuffer");
-    {
-        HdRenderBufferDescriptor desc;
-        desc.dimensions = GfVec3i(512, 512, 1);
-        desc.format = HdFormatFloat32UInt8;
-        desc.multiSampled = false;
-        delegate->AddRenderBuffer(depthBuffer, desc);
-    }
 
     // prep render task and drawtarget task
     SdfPath drawTargetTask("/drawTargetTask");
     SdfPath simpleLightTask("/simpleLightTask");
     SdfPath renderSetupTask("/renderSetupTask");
     SdfPath renderTask("/renderTask");
+    SdfPath drawTargetResolveTask("/drawTargetResolveTask");
     delegate->AddSimpleLightTask(simpleLightTask);
     delegate->AddDrawTargetTask(drawTargetTask);
+    delegate->AddDrawTargetResolveTask(drawTargetResolveTask);
     delegate->AddRenderSetupTask(renderSetupTask);
     delegate->AddRenderTask(renderTask);
     HdTaskSharedPtrVector tasks;
     tasks.push_back(index->GetTask(simpleLightTask));
     tasks.push_back(index->GetTask(drawTargetTask));
+    tasks.push_back(index->GetTask(drawTargetResolveTask));
     tasks.push_back(index->GetTask(renderSetupTask));
     tasks.push_back(index->GetTask(renderTask));
 
@@ -178,12 +178,14 @@ int main(int argc, char *argv[])
     textureNode.identifier = TfToken("UsdUVTexture");
     textureNode.parameters[TfToken("fallback")] = VtValue(GfVec3f(1));
 
-    // A texture associated with a render buffer can be used by setting
-    // the file parameter to an SdfPath (instead of SdfAssetPath) that
-    // contains the prim path of the render buffer.
+    // For the file path, HdSt doesn't really care what it is since it is going
+    // to do a lookup of the prim via GetTextureResource on the sceneDelegate.
+    // The file path cannot be empty though, because if it is empty HdSt will
+    // use the fallback value of the texture node.
     //
-    // We point to the render buffer that serves as color attachment of
-    // the draw target.
+    // Note that we do not author an SdfPath or std::string here so that
+    // the HdSceneDelegate::GetTextureResource API is used rather than the
+    // storm texture system.
     textureNode.parameters[TfToken("file")] = 
         VtValue(drawTargetAttachmentId);
     textureNode.parameters[TfToken("wrapS")] =
@@ -252,21 +254,6 @@ int main(int argc, char *argv[])
         VtValue vParam = delegate->GetTaskParam(renderSetupTask, HdTokens->params);
         HdxRenderTaskParams param = vParam.Get<HdxRenderTaskParams>();
         param.enableLighting = true;
-        param.framing = CameraUtilFraming(GfRect2i(GfVec2i(0,0), 512, 512));
-        param.depthFunc = HdCmpFuncLess;
-
-        HdRenderPassAovBinding colorBinding;
-        colorBinding.aovName = TfToken("color");
-        colorBinding.renderBufferId = colorBuffer;
-        colorBinding.clearValue = VtValue(
-            GfVec4f(0.1f, 0.1f, 0.1f, 1.0f));
-
-        HdRenderPassAovBinding depthBinding;
-        depthBinding.aovName = TfToken("depth");
-        depthBinding.renderBufferId = depthBuffer;
-        depthBinding.clearValue = VtValue(1.0f);
-        
-        param.aovBindings = { colorBinding, depthBinding };
         delegate->SetTaskParam(renderSetupTask, HdTokens->params, VtValue(param));
     }
 
@@ -281,10 +268,16 @@ int main(int argc, char *argv[])
 
     // --------------------------------------------------------------------
     // draw.
+    drawTarget->Bind();
+    glViewport(0, 0, 512, 512);
+    glEnable(GL_DEPTH_TEST);
+    glClearBufferfv(GL_COLOR, 0, clearColor);
+    glClearBufferfv(GL_DEPTH, 0, clearDepth);
 
     engine.Execute(index.get(), &tasks);
 
-    delegate->WriteRenderBufferToFile(colorBuffer, "color1.png");
+    drawTarget->Unbind();
+    drawTarget->WriteToFile("color", "color1.png");
 
     std::cout << "OK" << std::endl;
 }

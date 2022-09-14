@@ -8,7 +8,6 @@ pxr_library(cameraUtil
 
     PUBLIC_CLASSES
         conformWindow
-        framing
         screenWindowParameters
 
     PYTHON_CPPFILES
@@ -20,7 +19,6 @@ pxr_library(cameraUtil
     PYMODULE_CPPFILES
         module.cpp
         wrapConformWindow.cpp
-        wrapFraming.cpp
         wrapScreenWindowParameters.cpp
 
     PYMODULE_FILES

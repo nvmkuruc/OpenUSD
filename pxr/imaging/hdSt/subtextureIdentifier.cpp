@@ -23,7 +23,7 @@
 //
 #include "pxr/imaging/hdSt/subtextureIdentifier.h"
 
-#include "pxr/base/tf/hash.h"
+#include <boost/functional/hash.hpp>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -32,66 +32,71 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 HdStSubtextureIdentifier::~HdStSubtextureIdentifier() = default;
 
-size_t
-hash_value(const HdStSubtextureIdentifier &subId)
-{
-    return subId._Hash();
+HdStSubtextureIdentifier::ID
+HdStSubtextureIdentifier::Hash() const {
+    static ID result = TfToken().Hash();
+    return result;
 }
 
 ////////////////////////////////////////////////////////////////////////////
-// HdStFieldBaseSubtextureIdentifier
-HdStFieldBaseSubtextureIdentifier::HdStFieldBaseSubtextureIdentifier(
-    TfToken const &fieldName, const int fieldIndex)
-  : _fieldName(fieldName), _fieldIndex(fieldIndex)
+// HdStVdbSubtextureIdentifier
+
+HdStVdbSubtextureIdentifier::HdStVdbSubtextureIdentifier(
+    TfToken const &gridName)
+ : _gridName(gridName)
 {
 }
 
-HdStFieldBaseSubtextureIdentifier::~HdStFieldBaseSubtextureIdentifier()
-    = default;
+HdStVdbSubtextureIdentifier::~HdStVdbSubtextureIdentifier() = default;
+
+std::unique_ptr<HdStSubtextureIdentifier>
+HdStVdbSubtextureIdentifier::Clone() const
+{
+    return std::make_unique<HdStVdbSubtextureIdentifier>(GetGridName());
+}
 
 HdStSubtextureIdentifier::ID
-HdStFieldBaseSubtextureIdentifier::_Hash() const {
-    return TfHash::Combine(_fieldName, _fieldIndex);
+HdStVdbSubtextureIdentifier::Hash() const
+{
+    static ID typeHash = TfToken("vdb").Hash();
+
+    ID hash = typeHash;
+    boost::hash_combine(hash, _gridName.Hash());
+
+    return hash;
 }
 
 ////////////////////////////////////////////////////////////////////////////
-// HdStAssetUvSubtextureIdentifier
+// HdStUvOrientationSubtextureIdentifier
 
-HdStAssetUvSubtextureIdentifier::HdStAssetUvSubtextureIdentifier(
-    const bool flipVertically, 
-    const bool premultiplyAlpha, 
-    const TfToken& sourceColorSpace)
- : _flipVertically(flipVertically), 
-   _premultiplyAlpha(premultiplyAlpha), 
-   _sourceColorSpace(sourceColorSpace)
+HdStUvOrientationSubtextureIdentifier::HdStUvOrientationSubtextureIdentifier(
+    const bool flipVertically)
+ : _flipVertically(flipVertically)
 {
 }
 
-HdStAssetUvSubtextureIdentifier::~HdStAssetUvSubtextureIdentifier()
+HdStUvOrientationSubtextureIdentifier::~HdStUvOrientationSubtextureIdentifier()
     = default;
 
 std::unique_ptr<HdStSubtextureIdentifier>
-HdStAssetUvSubtextureIdentifier::Clone() const
+HdStUvOrientationSubtextureIdentifier::Clone() const
 {
-    return std::make_unique<HdStAssetUvSubtextureIdentifier>(
-        GetFlipVertically(), GetPremultiplyAlpha(), GetSourceColorSpace());
+    return std::make_unique<HdStUvOrientationSubtextureIdentifier>(
+        GetFlipVertically());
 }
 
 HdStSubtextureIdentifier::ID
-HdStAssetUvSubtextureIdentifier::_Hash() const
+HdStUvOrientationSubtextureIdentifier::Hash() const
 {
-    static ID typeHash =
-        TfHash()(std::string("HdStAssetUvSubtextureIdentifier"));
+    static ID vertFlipFalse = TfToken("notVerticallyFlipped").Hash();
+    static ID vertFlipTrue = TfToken("verticallyFlipped").Hash();
 
-    return TfHash::Combine(
-        typeHash,
-        GetFlipVertically(),
-        GetPremultiplyAlpha(),
-        GetSourceColorSpace());
+    if (GetFlipVertically()) {
+        return vertFlipTrue;
+    } else {
+        return vertFlipFalse;
+    }
 }
-
-////////////////////////////////////////////////////////////////////////////
-// HdStDynamicUvSubtextureIdentifier
 
 HdStDynamicUvSubtextureIdentifier::HdStDynamicUvSubtextureIdentifier()
     = default;
@@ -106,78 +111,10 @@ HdStDynamicUvSubtextureIdentifier::Clone() const
 }
 
 HdStSubtextureIdentifier::ID
-HdStDynamicUvSubtextureIdentifier::_Hash() const
+HdStDynamicUvSubtextureIdentifier::Hash() const
 {
-    static ID typeHash =
-        TfHash()(std::string("HdStDynamicUvSubtextureIdentifier"));
-    return typeHash;
-}
-
-HdStDynamicUvTextureImplementation *
-HdStDynamicUvSubtextureIdentifier::GetTextureImplementation() const
-{
-    return nullptr;
-}
-
-////////////////////////////////////////////////////////////////////////////
-// HdStUdimSubtextureIdentifier
-
-HdStUdimSubtextureIdentifier::HdStUdimSubtextureIdentifier(
-    const bool premultiplyAlpha, const TfToken &sourceColorSpace)
- : _premultiplyAlpha(premultiplyAlpha), _sourceColorSpace(sourceColorSpace)
-{
-}
-
-HdStUdimSubtextureIdentifier::~HdStUdimSubtextureIdentifier()
-    = default;
-
-std::unique_ptr<HdStSubtextureIdentifier>
-HdStUdimSubtextureIdentifier::Clone() const
-{
-    return std::make_unique<HdStUdimSubtextureIdentifier>(
-        GetPremultiplyAlpha(), GetSourceColorSpace());
-}
-
-HdStSubtextureIdentifier::ID
-HdStUdimSubtextureIdentifier::_Hash() const
-{
-    static ID typeHash =
-        TfHash()(std::string("HdStUdimSubtextureIdentifier"));
-
-    return TfHash::Combine(
-        typeHash,
-        GetPremultiplyAlpha(),
-        GetSourceColorSpace());
-}
-
-////////////////////////////////////////////////////////////////////////////
-// HdStPtexSubtextureIdentifier
-
-HdStPtexSubtextureIdentifier::HdStPtexSubtextureIdentifier(
-    const bool premultiplyAlpha)
- : _premultiplyAlpha(premultiplyAlpha)
-{
-}
-
-HdStPtexSubtextureIdentifier::~HdStPtexSubtextureIdentifier()
-    = default;
-
-std::unique_ptr<HdStSubtextureIdentifier>
-HdStPtexSubtextureIdentifier::Clone() const
-{
-    return std::make_unique<HdStPtexSubtextureIdentifier>(
-        GetPremultiplyAlpha());
-}
-
-HdStSubtextureIdentifier::ID
-HdStPtexSubtextureIdentifier::_Hash() const
-{
-    static ID typeHash =
-        TfHash()(std::string("HdStPtexSubtextureIdentifier"));
-
-    return TfHash::Combine(
-        typeHash,
-        GetPremultiplyAlpha());
+    static ID result = TfToken("dynamicTexture").Hash();
+    return result;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -55,17 +55,15 @@ PcpNodeRef::GetUniqueIdentifier() const
 
 PcpNodeRef
 PcpNodeRef::InsertChildSubgraph(
-    const PcpPrimIndex_GraphPtr& subgraph, const PcpArc& arc,
-    PcpErrorBasePtr *error)
+    const PcpPrimIndex_GraphPtr& subgraph, const PcpArc& arc)
 {
-    return _graph->InsertChildSubgraph(*this, subgraph, arc, error);
+    return _graph->InsertChildSubgraph(*this, subgraph, arc);
 }
 
 PcpNodeRef 
-PcpNodeRef::InsertChild(const PcpLayerStackSite& site, const PcpArc& arc,
-    PcpErrorBasePtr *error)
+PcpNodeRef::InsertChild(const PcpLayerStackSite& site, const PcpArc& arc)
 {
-    return _graph->InsertChildNode(*this, site, arc, error);
+    return _graph->InsertChildNode(*this, site, arc);
 }
 
 PcpNodeRef

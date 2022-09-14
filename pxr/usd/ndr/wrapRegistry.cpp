@@ -26,6 +26,7 @@
 #include "pxr/usd/ndr/discoveryPlugin.h"
 #include "pxr/usd/ndr/registry.h"
 #include "pxr/base/tf/pyAnnotatedBoolResult.h"
+#include "pxr/base/tf/pySingleton.h"
 
 #include <boost/python.hpp>
 #include <boost/python/return_internal_reference.hpp>
@@ -110,6 +111,7 @@ void wrapRegistry()
     to_python_converter<NdrNodeConstPtr, ConstNodePtrToPython>();
 
     class_<This, ThisPtr, boost::noncopyable>("Registry", no_init)
+        .def(TfPySingleton())
         .def("SetExtraDiscoveryPlugins", &_SetExtraDiscoveryPlugins)
         .def("SetExtraParserPlugins", &This::SetExtraParserPlugins)
         .def("GetSearchURIs", &This::GetSearchURIs)

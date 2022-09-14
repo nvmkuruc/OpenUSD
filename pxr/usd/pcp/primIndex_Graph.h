@@ -106,23 +106,17 @@ public:
     /// Inserts a new node with site \p site as a child of \p parentNode,
     /// connected via \p arc.
     /// Returns the newly-added child node.
-    /// If the new node would exceeed the graph capacity, an invalid
-    /// PcpNodeRef is returned.
     PcpNodeRef InsertChildNode(
         const PcpNodeRef& parentNode,
-        const PcpLayerStackSite& site, const PcpArc& arc,
-        PcpErrorBasePtr *error);
+        const PcpLayerStackSite& site, const PcpArc& arc);
 
     /// Inserts \p subgraph as a child of \p parentNode. The root node of 
     /// \p subgraph will be an immediate child of \p parentNode, connected via
     /// \p arc.
     /// Returns the root node of the newly-added subgraph.
-    /// If the new nodes would exceeed the graph capacity, an invalid
-    /// PcpNodeRef is returned.
     PcpNodeRef InsertChildSubgraph(
         const PcpNodeRef& parentNode,
-        const PcpPrimIndex_GraphPtr& subgraph, const PcpArc& arc,
-        PcpErrorBasePtr *error);
+        const PcpPrimIndex_GraphPtr& subgraph, const PcpArc& arc);
 
     /// Finalizes the graph. This optimizes internal data structures and
     /// should be called once the graph is fully generated.
@@ -150,7 +144,7 @@ public:
     /// Get a node from compressed site \p site.
     PcpNodeRef GetNode(const Pcp_CompressedSdSite& site)
     {
-        TF_DEV_AXIOM(site.nodeIndex < _GetNumNodes());
+        TF_VERIFY(site.nodeIndex < _GetNumNodes());
         return PcpNodeRef(this, site.nodeIndex);
     }
 
@@ -233,7 +227,7 @@ private:
 
     const _Node& _GetNode(size_t idx) const
     {
-        TF_DEV_AXIOM(idx < _GetNumNodes());
+        TF_VERIFY(idx < _GetNumNodes());
         return _data->nodes[idx];
     }
     const _Node& _GetNode(const PcpNodeRef& node) const
@@ -258,7 +252,7 @@ private:
         // Index used to represent an invalid node.
         static const size_t _invalidNodeIndex = (1lu << _nodeIndexSize) - 1lu;
 
-        _Node() noexcept
+        _Node()
             /* The equivalent initializations to the memset().
             , permission(SdfPermissionPublic)
             , hasSymmetry(false)
@@ -281,7 +275,7 @@ private:
             smallInts.nextSiblingIndex = _invalidNodeIndex;
         }
 
-        void Swap(_Node& rhs) noexcept
+        void Swap(_Node& rhs)
         {
             std::swap(layerStack, rhs.layerStack);
             mapToRoot.Swap(rhs.mapToRoot);

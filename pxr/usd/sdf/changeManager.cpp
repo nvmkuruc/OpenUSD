@@ -24,7 +24,6 @@
 
 #include "pxr/pxr.h"
 #include "pxr/usd/sdf/changeManager.h"
-#include "pxr/usd/sdf/changeBlock.h"
 #include "pxr/usd/sdf/debugCodes.h"
 #include "pxr/usd/sdf/layer.h"
 #include "pxr/usd/sdf/notice.h"
@@ -44,7 +43,10 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_INSTANTIATE_SINGLETON(Sdf_ChangeManager);
 
 Sdf_ChangeManager::_Data::_Data()
-    : outermostBlock(nullptr)
+    : changeBlockDepth(0),
+    // #nv begin #fast-updates
+    highestFastUpdateDepth(0)
+    // nv end
 {
 }
 
@@ -88,54 +90,73 @@ Sdf_ChangeManager::_SendNoticesForChangeList( const SdfLayerHandle & layer,
     }
 }
 
-void const *
-Sdf_ChangeManager::_OpenChangeBlock(SdfChangeBlock const *block)
+void
+Sdf_ChangeManager::OpenChangeBlock(bool fastUpdates)
 {
-    _Data &data = _data.local();
-    if (!data.outermostBlock) {
-        data.outermostBlock = block;
-        return static_cast<void const *>(&data);
+    ++_data.local().changeBlockDepth;
+    if (fastUpdates && _data.local().highestFastUpdateDepth == 0) {
+        _data.local().highestFastUpdateDepth = _data.local().changeBlockDepth;
     }
-    return nullptr;
 }
 
 void
-Sdf_ChangeManager::_CloseChangeBlock(
-    SdfChangeBlock const *block, void const *key)
+Sdf_ChangeManager::CloseChangeBlock()
 {
-    _Data &data = *static_cast<_Data *>(const_cast<void *>(key));
-    TF_VERIFY(data.outermostBlock == block,
-              "Improperly nested SdfChangeBlocks!");
+    int &changeBlockDepth = _data.local().changeBlockDepth;
+    if (changeBlockDepth == 1) {
+        // Closing outermost (last) change block.  Process removes while
+        // the change block is still open.
+        _ProcessRemoveIfInert();
 
-    // Closing outermost (last) change block.  Process removes while the change
-    // block is still open.
-    _ProcessRemoveIfInert(&data);
-
-    // Send notices with no change block open.
-    data.outermostBlock = nullptr;
-    _SendNotices(&data);
+        // Send notices with no change block open.
+        --changeBlockDepth;
+        TF_VERIFY(changeBlockDepth == 0);
+        // #nv begin #fast-updates
+        _data.local().highestFastUpdateDepth = 0;
+        // nv end
+        _SendNotices();
+    }
+    else {
+        // Not outermost.
+        TF_VERIFY(changeBlockDepth > 0);
+        --changeBlockDepth;
+        // #nv begin #fast-updates
+        if (changeBlockDepth < _data.local().highestFastUpdateDepth) {
+            _data.local().highestFastUpdateDepth = 0;
+        }
+        // nv end
+    }
 }
+
+// #nv begin #fast-updates
+bool Sdf_ChangeManager::IsFastUpdating()
+{
+    // Const methods can't seem to read _data?
+    return _data.local().changeBlockDepth > 0 &&
+        _data.local().highestFastUpdateDepth > 0;
+}
+// nv end
 
 void
 Sdf_ChangeManager::RemoveSpecIfInert(const SdfSpec& spec)
 {
     // Add spec.   Process remove if we're not in a change block.
-    SdfChangeBlock block;
+    OpenChangeBlock();
     _data.local().removeIfInert.push_back(spec);
+    CloseChangeBlock();
 }
 
 void
-Sdf_ChangeManager::_ProcessRemoveIfInert(_Data *data)
+Sdf_ChangeManager::_ProcessRemoveIfInert()
 {
-    // Note, \p data is never allowed to be null here.
-    
-    if (data->removeIfInert.empty()) {
-        return;
-    }
-    
+    _Data& data = _data.local();
+
+    // We expect to be in an outermost change block here.
+    TF_VERIFY(data.changeBlockDepth == 1);
+
     // Swap pending removes into a local variable.
     vector<SdfSpec> remove;
-    remove.swap(data->removeIfInert);
+    remove.swap(data.removeIfInert);
 
     // Remove inert stuff.
     TF_FOR_ALL(i, remove) {
@@ -143,10 +164,10 @@ Sdf_ChangeManager::_ProcessRemoveIfInert(_Data *data)
     }
 
     // We don't expect any deferred removes to have been added.
-    TF_VERIFY(data->removeIfInert.empty());
+    TF_VERIFY(data.removeIfInert.empty());
 
     // We should still be in an outermost change block.
-    TF_VERIFY(data->outermostBlock);
+    TF_VERIFY(data.changeBlockDepth == 1);
 }
 
 static tbb::atomic<size_t> &
@@ -157,15 +178,13 @@ _InitChangeSerialNumber() {
 }
 
 void
-Sdf_ChangeManager::_SendNotices(_Data *data)
+Sdf_ChangeManager::_SendNotices()
 {
-    // Note, \p data is never allowed to be null here.
-
     // Move aside the list of changes to deliver and clear the TLS so that
     // notice listeners can safely queue up more changes. We also need to filter
     // out any changes from layers that have since been destroyed, as the change
     // manager should only send notifications for existing layers.
-    SdfLayerChangeListVec &tlsChanges = data->changes;
+    SdfLayerChangeListVec &tlsChanges = _data.local().changes;
     SdfLayerChangeListVec changes = std::move(tlsChanges);
     tlsChanges.clear();
 
@@ -176,6 +195,48 @@ Sdf_ChangeManager::_SendNotices(_Data *data)
                        }),
         changes.end());
 
+    static tbb::atomic<size_t> &changeSerialNumber = _InitChangeSerialNumber();
+
+    // +nv #begin #fast-updates
+    SdfLayerFastUpdatesMap fastUpdates;
+    fastUpdates.swap(_data.local().fastUpdates);
+    if (fastUpdates.size() == 1 && changes.empty()) {
+        // Optimal case-- the change block contains only fast updates for a single layer.
+        TF_DEBUG(SDF_CHANGES).Msg("Sending only fast updates for layer %s\n",
+            fastUpdates.begin()->first->GetIdentifier().c_str());
+
+        // Obtain a serial number for this round of change processing.
+        size_t serialNumber = changeSerialNumber.fetch_and_increment();
+
+        SdfNotice::LayersDidChange(fastUpdates, serialNumber).Send();
+        SdfNotice::LayersDidChangeSentPerLayer(fastUpdates, serialNumber).Send(fastUpdates.begin()->first);
+        return;
+    } else {
+        // Otherwise make a dummy change entry for each fast update whose path does not already have a change entry.
+        // These will not have the normal infoChanged data or the flags set, but semantically has
+        // the desired effect of invalidating the data at these paths without triggering recomposition.
+        // This works as long as there are no notice listeners which need to respond specifically
+        // to changes in attribute defaults and timesamples.
+        TF_FOR_ALL(itr, fastUpdates) {
+            SdfLayerChangeListVec::iterator candidate = std::find_if(changes.begin(), changes.end(),
+                [&itr](std::pair<SdfLayerHandle, SdfChangeList> inpair) { return inpair.first == itr->first; });
+            TF_FOR_ALL(itr2, itr->second.fastUpdates) {
+                if (candidate == changes.end()) {
+                    SdfChangeList dummyList;
+                    dummyList.FastUpdateFallback(itr2->path);
+                    changes.push_back(std::make_pair(itr->first, dummyList));
+                } else {
+                    auto &entryList = candidate->second.GetEntryList();
+                    if (std::find_if(entryList.begin(), entryList.end(),
+                        [&itr2](std::pair<SdfPath, SdfChangeList::Entry> inpair) { return inpair.first == itr2->path; })
+                        == entryList.end()) {
+                        candidate->second.FastUpdateFallback(itr2->path);
+                    }
+                }
+            }
+        }
+    }
+    // nv end
     if (changes.empty())
         return;
 
@@ -190,7 +251,6 @@ Sdf_ChangeManager::_SendNotices(_Data *data)
     }
 
     // Obtain a serial number for this round of change processing.
-    static tbb::atomic<size_t> &changeSerialNumber = _InitChangeSerialNumber();
     size_t serialNumber = changeSerialNumber.fetch_and_increment();
 
     // Send global notice.
@@ -278,9 +338,7 @@ Sdf_ChangeManager::DidChangeField(const SdfLayerHandle &layer,
     if (!layer->_ShouldNotify())
         return;
 
-    auto FieldKeys = SdfFieldKeys.Get();
-    auto ChildrenKeys = SdfChildrenKeys.Get();
-    
+
     SdfLayerChangeListVec &changes = _data.local().changes;
 
     // Note:  We intend to change the SdfChangeList protocol to provide a
@@ -288,13 +346,13 @@ Sdf_ChangeManager::DidChangeField(const SdfLayerHandle &layer,
     // For now, this function adapts field-based changes into the
     // existing protocol.
 
-    if (field == FieldKeys->Default) {
+    if (field == SdfFieldKeys->Default) {
         // Special case default first, since it's a commonly set field.
         _GetListFor(changes, layer).DidChangeInfo(path, field, oldVal, newVal);
     }
-    else if (field == FieldKeys->Variability ||
-             field == FieldKeys->Custom ||
-             field == FieldKeys->Specifier) {
+    else if (field == SdfFieldKeys->Variability ||
+             field == SdfFieldKeys->Custom ||
+             field == SdfFieldKeys->Specifier) {
         
         // These are all required fields. We only want to send notification
         // that they are changing when both the old and new value are not
@@ -306,10 +364,10 @@ Sdf_ChangeManager::DidChangeField(const SdfLayerHandle &layer,
                 .DidChangeInfo(path, field, oldVal, newVal);
         }
     }
-    else if (field == FieldKeys->PrimOrder) {
+    else if (field == SdfFieldKeys->PrimOrder) {
         _GetListFor(changes, layer).DidReorderPrims(path);
     }
-    else if (field == ChildrenKeys->PrimChildren) {
+    else if (field == SdfChildrenKeys->PrimChildren) {
         // XXX:OrderNotification:
         // Sdf's change protocol does not have a "children changed"
         // message; instead it relies on a combination of "order changed"
@@ -322,38 +380,38 @@ Sdf_ChangeManager::DidChangeField(const SdfLayerHandle &layer,
             _GetListFor(changes, layer).DidReorderPrims(path);
         }
     }
-    else if (field == FieldKeys->PropertyOrder) {
+    else if (field == SdfFieldKeys->PropertyOrder) {
         _GetListFor(changes, layer).DidReorderProperties(path);
     }
-    else if (field == ChildrenKeys->PropertyChildren) {
+    else if (field == SdfChildrenKeys->PropertyChildren) {
         // XXX:OrderNotification: See above.
         if (_IsOrderChangeOnly(oldVal, newVal)) {
             _GetListFor(changes, layer).DidReorderProperties(path);
         }
     }
-    else if (field == FieldKeys->VariantSetNames ||
-             field == ChildrenKeys->VariantSetChildren) {
+    else if (field == SdfFieldKeys->VariantSetNames ||
+             field == SdfChildrenKeys->VariantSetChildren) {
         _GetListFor(changes, layer).DidChangePrimVariantSets(path);
     }
-    else if (field == FieldKeys->InheritPaths) {
+    else if (field == SdfFieldKeys->InheritPaths) {
         _GetListFor(changes, layer).DidChangePrimInheritPaths(path);
     }
-    else if (field == FieldKeys->Specializes) {
+    else if (field == SdfFieldKeys->Specializes) {
         _GetListFor(changes, layer).DidChangePrimSpecializes(path);
     }
-    else if (field == FieldKeys->References) {
+    else if (field == SdfFieldKeys->References) {
         _GetListFor(changes, layer).DidChangePrimReferences(path);
     }
-    else if (field == FieldKeys->TimeSamples) {
+    else if (field == SdfFieldKeys->TimeSamples) {
         _GetListFor(changes, layer).DidChangeAttributeTimeSamples(path);
     }
-    else if (field == FieldKeys->ConnectionPaths) {
+    else if (field == SdfFieldKeys->ConnectionPaths) {
         _GetListFor(changes, layer).DidChangeAttributeConnection(path);
     }
-    else if (field == FieldKeys->TargetPaths) {
+    else if (field == SdfFieldKeys->TargetPaths) {
         _GetListFor(changes, layer).DidChangeRelationshipTargets(path);
     }
-    else if (field == FieldKeys->SubLayers) {
+    else if (field == SdfFieldKeys->SubLayers) {
         std::vector<std::string> addedLayers, removedLayers;
         {        
             const vector<string> oldSubLayers = 
@@ -396,7 +454,7 @@ Sdf_ChangeManager::DidChangeField(const SdfLayerHandle &layer,
                 .DidChangeSublayerPaths(*it, SdfChangeList::SubLayerRemoved);
         }
     }
-    else if (field == FieldKeys->SubLayerOffsets) {
+    else if (field == SdfFieldKeys->SubLayerOffsets) {
         const SdfLayerOffsetVector oldOffsets = 
             oldVal.GetWithDefault<SdfLayerOffsetVector>();
         const SdfLayerOffsetVector newOffsets = 
@@ -419,7 +477,7 @@ Sdf_ChangeManager::DidChangeField(const SdfLayerHandle &layer,
             }
         }
     }
-    else if (field == FieldKeys->TypeName) {
+    else if (field == SdfFieldKeys->TypeName) {
         if (path.IsMapperPath() || path.IsExpressionPath()) {
             // Mapper and expression typename changes are treated as changes on
             // the owning attribute connection.
@@ -456,40 +514,40 @@ Sdf_ChangeManager::DidChangeField(const SdfLayerHandle &layer,
             }
         }
     } 
-    else if (field == FieldKeys->TimeCodesPerSecond &&
+    else if (field == SdfFieldKeys->TimeCodesPerSecond &&
             TF_VERIFY(path == SdfPath::AbsoluteRootPath())) {
         // Changing TCPS.  If the old or new value is empty, the effective old
         // or new value is the value of FPS, if there is one.  See
         // SdfLayer::GetTimeCodesPerSecond.
         const VtValue oldTcps = (
             !oldVal.IsEmpty() ? oldVal :
-            layer->GetField(path, FieldKeys->FramesPerSecond));
+            layer->GetField(path, SdfFieldKeys->FramesPerSecond));
         const VtValue newTcps = (
             !newVal.IsEmpty() ? newVal :
-            layer->GetField(path, FieldKeys->FramesPerSecond));
+            layer->GetField(path, SdfFieldKeys->FramesPerSecond));
 
         _GetListFor(changes, layer).DidChangeInfo(
-            path, FieldKeys->TimeCodesPerSecond, oldTcps, newTcps);
+            path, SdfFieldKeys->TimeCodesPerSecond, oldTcps, newTcps);
     }
-    else if (field == FieldKeys->FramesPerSecond &&
+    else if (field == SdfFieldKeys->FramesPerSecond &&
             TF_VERIFY(path == SdfPath::AbsoluteRootPath())) {
         // Announce the change to FPS itself.
         SdfChangeList &list = _GetListFor(changes, layer);
-        list.DidChangeInfo(path, FieldKeys->FramesPerSecond, oldVal, newVal);
+        list.DidChangeInfo(path, SdfFieldKeys->FramesPerSecond, oldVal, newVal);
 
         // If the layer doesn't have a value for TCPS, announce a change to TCPS
         // also, since FPS serves as a dynamic fallback for TCPS.  See
         // SdfLayer::GetTimeCodesPerSecond.
-        if (!layer->HasField(path, FieldKeys->TimeCodesPerSecond)) {
+        if (!layer->HasField(path, SdfFieldKeys->TimeCodesPerSecond)) {
             list.DidChangeInfo(
-                path, FieldKeys->TimeCodesPerSecond, oldVal, newVal);
+                path, SdfFieldKeys->TimeCodesPerSecond, oldVal, newVal);
         }
     }
-    else if (field == ChildrenKeys->ConnectionChildren       ||
-        field == ChildrenKeys->ExpressionChildren            ||
-        field == ChildrenKeys->RelationshipTargetChildren    ||
-        field == ChildrenKeys->VariantChildren               ||
-        field == ChildrenKeys->VariantSetChildren) {
+    else if (field == SdfChildrenKeys->ConnectionChildren       ||
+        field == SdfChildrenKeys->ExpressionChildren            ||
+        field == SdfChildrenKeys->RelationshipTargetChildren    ||
+        field == SdfChildrenKeys->VariantChildren               ||
+        field == SdfChildrenKeys->VariantSetChildren) {
         // These children fields are internal. We send notification that the
         // child spec was created/deleted, not that the children field
         // changed.
@@ -506,6 +564,21 @@ Sdf_ChangeManager::DidChangeField(const SdfLayerHandle &layer,
             .DidChangeInfo(path, field, oldVal, newVal);
     }
 }
+
+// +nv #begin #fast-updates
+void
+Sdf_ChangeManager::DidFastUpdate(const SdfLayerHandle &layer, const SdfPath &path, const VtValue &value,
+                                 bool hasCompositionDependents)
+{
+    if (!layer->_ShouldNotify())
+        return;
+
+    SdfLayerFastUpdatesMap &fastUpdates = _data.local().fastUpdates;
+    fastUpdates[layer].fastUpdates.push_back({ path, value });
+    if (hasCompositionDependents)
+        fastUpdates[layer].hasCompositionDependents = true;
+}
+// nv end
 
 void
 Sdf_ChangeManager::DidChangeAttributeTimeSamples(const SdfLayerHandle &layer,

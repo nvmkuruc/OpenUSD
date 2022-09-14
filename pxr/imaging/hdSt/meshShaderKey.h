@@ -42,29 +42,24 @@ struct HdSt_MeshShaderKey : public HdSt_ShaderKey
         NormalSourceSmooth,
         NormalSourceLimit,
         NormalSourceFlat,
-        NormalSourceFlatGeometric,
-        NormalSourceFlatScreenSpace,
+        NormalSourceGeometryShader
     };
 
     HdSt_MeshShaderKey(HdSt_GeometricShader::PrimitiveType primType,
                        TfToken shadingTerminal,
+                       bool useCustomDisplacement,
                        NormalSource normalsSource,
                        HdInterpolation normalsInterpolation,
-                       HdCullStyle cullStyle,
-                       HdMeshGeomStyle geomStyle,
-                       HdSt_GeometricShader::FvarPatchType fvarPatchType,
-                       float lineWidth,
                        bool doubleSided,
-                       bool hasBuiltinBarycentrics,
-                       bool hasMetalTessellation,
-                       bool hasCustomDisplacement,
-                       bool hasPerFaceInterpolation,
+                       bool forceGeometryShader,
                        bool hasTopologicalVisibility,
                        bool blendWireframeColor,
-                       bool hasMirroredTransform,
-                       bool hasInstancer,
+                       HdCullStyle cullStyle,
+                       HdMeshGeomStyle geomStyle,
+                       float lineWidth,
                        bool enableScalarOverride,
-                       bool pointsShadingEnabled);
+                       bool discardIfNotActiveSelected = false,
+                       bool discardIfNotRolloverSelected = false);
 
     // Note: it looks like gcc 4.8 has a problem issuing
     // a wrong warning as "array subscript is above array bounds"
@@ -74,55 +69,30 @@ struct HdSt_MeshShaderKey : public HdSt_ShaderKey
     ~HdSt_MeshShaderKey();
 
     HdCullStyle GetCullStyle() const override { return cullStyle; }
-    bool UseHardwareFaceCulling() const override {
-        return useHardwareFaceCulling;
-    }
-    bool HasMirroredTransform() const override {
-        return hasMirroredTransform;
-    }
-    bool IsDoubleSided() const override {
-        return doubleSided;
-    }
-    bool UseMetalTessellation() const override {
-        return useMetalTessellation;
-    }
-
     HdPolygonMode GetPolygonMode() const override { return polygonMode; }
     float GetLineWidth() const override { return lineWidth; }
     HdSt_GeometricShader::PrimitiveType GetPrimitiveType() const override {
         return primType; 
     }
-    HdSt_GeometricShader::FvarPatchType GetFvarPatchType() const override {
-        return fvarPatchType; 
-    }
 
     HdSt_GeometricShader::PrimitiveType primType;
     HdCullStyle cullStyle;
-    bool useHardwareFaceCulling;
-    bool hasMirroredTransform;
-    bool doubleSided;
-    bool useMetalTessellation;
     HdPolygonMode polygonMode;
     float lineWidth;
-    HdSt_GeometricShader::FvarPatchType fvarPatchType;
 
     TfToken const &GetGlslfxFilename() const override { return glslfx; }
     TfToken const *GetVS()  const override { return VS; }
     TfToken const *GetTCS() const override { return TCS; }
     TfToken const *GetTES() const override { return TES; }
-    TfToken const *GetPTCS()  const override { return PTCS; }
-    TfToken const *GetPTVS()  const override { return PTVS; }
     TfToken const *GetGS()  const override { return GS; }
     TfToken const *GetFS()  const override { return FS; }
 
     TfToken glslfx;
     TfToken VS[7];
     TfToken TCS[3];
-    TfToken TES[4];
-    TfToken PTCS[3];
-    TfToken PTVS[11];
-    TfToken GS[10];
-    TfToken FS[22];
+    TfToken TES[3];
+    TfToken GS[8];
+    TfToken FS[17];
 };
 
 

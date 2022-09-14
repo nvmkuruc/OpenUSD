@@ -111,14 +111,16 @@ HdTinyRenderDelegate::CreateRenderPass(
 
 HdRprim *
 HdTinyRenderDelegate::CreateRprim(TfToken const& typeId,
-                                    SdfPath const& rprimId)
+                                    SdfPath const& rprimId,
+                                    SdfPath const& instancerId)
 {
     std::cout << "Create Tiny Rprim type=" << typeId.GetText() 
         << " id=" << rprimId 
+        << " instancerId=" << instancerId 
         << std::endl;
 
     if (typeId == HdPrimTypeTokens->mesh) {
-        return new HdTinyMesh(rprimId);
+        return new HdTinyMesh(rprimId, instancerId);
     } else {
         TF_CODING_ERROR("Unknown Rprim type=%s id=%s", 
             typeId.GetText(), 
@@ -184,10 +186,11 @@ HdTinyRenderDelegate::DestroyBprim(HdBprim *bPrim)
 HdInstancer *
 HdTinyRenderDelegate::CreateInstancer(
     HdSceneDelegate *delegate,
-    SdfPath const& id)
+    SdfPath const& id,
+    SdfPath const& instancerId)
 {
-    TF_CODING_ERROR("Creating Instancer not supported id=%s", 
-        id.GetText());
+    TF_CODING_ERROR("Creating Instancer not supported id=%s instancerId=%s", 
+        id.GetText(), instancerId.GetText());
     return nullptr;
 }
 

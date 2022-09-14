@@ -75,9 +75,8 @@ UsdRenderVar::Define(
 }
 
 /* virtual */
-UsdSchemaKind UsdRenderVar::_GetSchemaKind() const
-{
-    return UsdRenderVar::schemaKind;
+UsdSchemaType UsdRenderVar::_GetSchemaType() const {
+    return UsdRenderVar::schemaType;
 }
 
 /* static */

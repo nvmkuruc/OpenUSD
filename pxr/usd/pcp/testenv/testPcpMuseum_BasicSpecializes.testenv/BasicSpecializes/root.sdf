@@ -80,9 +80,3 @@ def "NonExistentSpecializes" (
 )
 {
 }
-
-def "MultipleRefsAndSpecializes" (
-    references = @./ref.sdf@</Ref_1>
-)
-{
-}

@@ -80,14 +80,15 @@ void wrapShaderNode()
             return_internal_reference<>())
         .def("GetLabel", &This::GetLabel, copyRefPolicy)
         .def("GetCategory", &This::GetCategory, copyRefPolicy)
-        .def("GetHelp", &This::GetHelp)
+        .def("GetHelp", &This::GetHelp, copyRefPolicy)
         .def("GetDepartments", &This::GetDepartments, copyRefPolicy)
         .def("GetPages", &This::GetPages, copyRefPolicy)
         .def("GetPrimvars", &This::GetPrimvars, copyRefPolicy)
         .def("GetAdditionalPrimvarProperties",
             &This::GetAdditionalPrimvarProperties, copyRefPolicy)
-        .def("GetImplementationName", &This::GetImplementationName)
-        .def("GetRole", &This::GetRole)
+        .def("GetImplementationName",
+            &This::GetImplementationName, copyRefPolicy)
+        .def("GetRole", &This::GetRole, copyRefPolicy)
         .def("GetPropertyNamesForPage", &This::GetPropertyNamesForPage)
         .def("GetAllVstructNames", &This::GetAllVstructNames)
         ;

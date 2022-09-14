@@ -24,7 +24,8 @@
 // Diagnostic.cpp
 //
 
-#include "pxr/imaging/garch/glApi.h"
+
+#include <GL/glew.h>
 
 #include "pxr/imaging/hgiGL/diagnostic.h"
 
@@ -50,8 +51,8 @@ TF_REGISTRY_FUNCTION(TfDebug)
         "HgiGL dump stack trace on GL error");
 }
 
-bool
-HgiGLDebugEnabled()
+static bool
+_HgiGLDebugEnabled()
 {
 #if defined(GL_KHR_debug)
     static bool _v = TfGetEnvSetting(HGIGL_DEBUG) == 1;
@@ -121,7 +122,7 @@ _HgiGLGL4DbgCallback(GLenum src, GLenum type, GLuint id, GLenum severity,
 void
 HgiGLSetupGL4Debug()
 {
-    if (!HgiGLDebugEnabled()) return;
+    if (!_HgiGLDebugEnabled()) return;
 
     glEnable(GL_DEBUG_OUTPUT);
     glDebugMessageCallback((GLDEBUGPROC)_HgiGLGL4DbgCallback, 0);
@@ -152,23 +153,6 @@ HgiGLMeetsMinimumRequirements()
 
     return (glVersion >= 450);
 }
-
-void HgiGLObjectLabel(
-    const uint32_t identifier,
-    const uint32_t name,
-    const std::string &label)
-{
-    GLint maxLength;
-    glGetIntegerv(GL_MAX_LABEL_LENGTH, &maxLength);
-
-    glObjectLabel(
-        identifier, name,
-        std::min(
-            label.size(),
-            size_t(maxLength - 1)), // Account for 0-terminator.
-        label.c_str());
-}
-
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

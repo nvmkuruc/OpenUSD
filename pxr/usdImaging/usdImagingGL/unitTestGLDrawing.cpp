@@ -22,8 +22,7 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/pxr.h"
-
-#include "pxr/imaging/garch/glApi.h"
+#include "pxr/imaging/glf/glew.h"
 
 #include "pxr/usdImaging/usdImagingGL/unitTestGLDrawing.h"
 #include "pxr/imaging/glf/contextCaps.h"
@@ -104,7 +103,7 @@ UsdImagingGL_UnitTestWindow::~UsdImagingGL_UnitTestWindow()
 void
 UsdImagingGL_UnitTestWindow::OnInitializeGL()
 {
-    GarchGLApiLoad();
+    GlfGlewInit();
     GlfRegisterDefaultDebugOutputMessageCallback();
     GlfContextCaps::InitInstance();
 
@@ -237,17 +236,14 @@ UsdImagingGL_UnitTestGLDrawing::UsdImagingGL_UnitTestGLDrawing()
     , _sceneLights(false)
     , _cameraLight(false)
     , _testIdRender(false)
-    , _enableSceneMaterials(true)
-    , _unloadedAsBounds(false)
     , _complexity(1.0f)
     , _drawMode(UsdImagingGLDrawMode::DRAW_SHADED_SMOOTH)
     , _shouldFrameAll(false)
-    , _cullStyle(UsdImagingGLCullStyle::CULL_STYLE_NOTHING)
+    , _cullBackfaces(false)
     , _showGuides(UsdImagingGLRenderParams().showGuides)
     , _showRender(UsdImagingGLRenderParams().showRender)
     , _showProxy(UsdImagingGLRenderParams().showProxy)
     , _clearOnce(false)
-    , _presentDisabled(false)
 {
 }
 
@@ -275,29 +271,24 @@ UsdImagingGL_UnitTestGLDrawing::WriteToFile(std::string const & attachment,
 }
 
 struct UsdImagingGL_UnitTestGLDrawing::_Args {
-    _Args()
-      : offscreen(false)
-      , clearColor{1.0f, 0.5f, 0.1f, 1.0f}
-      , translate{0.0f, -1000.0f, -2500.0f}
-      , widgetSize{640, 480}
-      , pixelAspectRatio(1.0f)
-      , dataWindow{0, 0, 0, 0}
-      , displayWindow{0.0f, 0.0f, 0.0f, 0.0f}
-    {
+    _Args() : offscreen(false) {
+        clearColor[0] = 1.0f;
+        clearColor[1] = 0.5f;
+        clearColor[2] = 0.1f;
+        clearColor[3] = 1.0f;
+
+        translate[0] = 0.0;
+        translate[1] = -1000.0;
+        translate[2] = -2500.0;
     }
 
     std::string unresolvedStageFilePath;
     bool offscreen;
     std::string shading;
-    std::string cullStyle;
     std::vector<double> clipPlaneCoords;
     std::vector<double> complexities;
     float clearColor[4];
     float translate[3];
-    int widgetSize[2];
-    float pixelAspectRatio;
-    int dataWindow[4];
-    float displayWindow[4];
 };
 
 static void Die(const char* fmt, ...) ARCH_PRINTF_FUNCTION(1, 2);
@@ -331,15 +322,14 @@ static void Usage(int argc, char *argv[])
     static const char usage[] =
 "%s [-stage filePath] [-write filePath]\n"
 "                           [-offscreen] [-lighting] [-idRender]\n"
-"                           [-disableSceneMaterials]\n"
 "                           [-camera pathToCamera]\n"
 "                           [-complexity complexity]\n"
 "                           [-renderer rendererName]\n"
-"                           [-shading [flat|smooth|wire|wireOnSurface|points]]\n"
+"                           [-shading [flat|smooth|wire|wireOnSurface]]\n"
 "                           [-frameAll]\n"
 "                           [-clipPlane clipPlane1 ... clipPlane4]\n"
 "                           [-complexities complexities1 complexities2 ...]\n"
-"                           [-times times1 times2 ...] [-cullStyle cullStyle]\n"
+"                           [-times times1 times2 ...] [-cullBackfaces]\n"
 "                           [-clear r g b a] [-clearOnce] [-translate x y z]\n"
 "                           [-renderSetting name type value]\n"
 "                           [-rendererAov name]\n"
@@ -357,15 +347,13 @@ static void Usage(int argc, char *argv[])
 "                      defined in the scene\n"
 "  -camLight           use a single camera light\n"
 "  -idRender           ID rendering\n"
-"  -disableSceneMaterials\n"
-"                      Disable scene materials\n"
 "  -complexity complexity\n"
 "                      Set the fallback complexity [1]\n"
 "  -renderer rendererName\n"
 "                      use the specified renderer plugin []\n"
 "  -shading [flat|smooth|wire|wireOnSurface]\n"
 "                      force specific type of shading\n"
-"                      [flat|smooth|wire|wireOnSurface|points] []\n"
+"                      [flat|smooth|wire|wireOnSurface] []\n"
 "  -frameAll           set the view to frame all root prims on the stage\n"
 "  -clipPlane clipPlane1 ... clipPlane4\n"
 "                      set an additional camera clipping plane [()]\n"
@@ -375,7 +363,7 @@ static void Usage(int argc, char *argv[])
 "  -times times1 times2 ...\n"
 "                      One or more time samples, each time will produce\n"
 "                      an image [()]\n"
-"  -cullStyle          Set face cull style\n"
+"  -cullBackfaces      enable backface culling\n"
 "  -clear r g b a      clear color\n"
 "  -clearOnce          Clear the framebuffer only once at the start \n"
 "                      instead of before each render.\n"
@@ -394,13 +382,6 @@ static void Usage(int argc, char *argv[])
 "                      force prims of purpose 'render' to be shown or hidden\n"
 "  -proxyPurpose [show|hide]\n"
 "                      force prims of purpose 'proxy' to be shown or hidden\n"
-"  -widgetSize w h     width and height of widget and render buffers\n"
-"  -pixelAspectRatio a\n"
-"                      width of pixel divided by height of pixel\n"
-"  -dataWindow x y width height\n"
-"                      Specifies data window for rendering\n"
-"  -displayWindow x y width height\n"
-"                      Specifies display window for rendering\n"
 ;
 
     Die(usage, TfGetBaseName(argv[0]).c_str());
@@ -523,9 +504,8 @@ UsdImagingGL_UnitTestGLDrawing::_Parse(int argc, char *argv[], _Args* args)
         else if (strcmp(argv[i], "-frameAll") == 0) {
             _shouldFrameAll = true;
         }
-        else if (strcmp(argv[i], "-cullStyle") == 0) {
-            CheckForMissingArguments(i, 1, argc, argv);
-            args->cullStyle = argv[++i];
+        else if (strcmp(argv[i], "-cullBackfaces") == 0) {
+            _cullBackfaces = true;
         }
         else if (strcmp(argv[i], "-offscreen") == 0) {
             args->offscreen = true;
@@ -545,12 +525,6 @@ UsdImagingGL_UnitTestGLDrawing::_Parse(int argc, char *argv[], _Args* args)
         }
         else if (strcmp(argv[i], "-idRender") == 0) {
             _testIdRender = true;
-        }
-        else if (strcmp(argv[i], "-disableSceneMaterials") == 0) {
-            _enableSceneMaterials = false;
-        }
-        else if (strcmp(argv[i], "-unloadedAsBounds") == 0) {
-            _unloadedAsBounds = true;
         }
         else if (strcmp(argv[i], "-stage") == 0) {
             CheckForMissingArguments(i, 1, argc, argv);
@@ -610,29 +584,6 @@ UsdImagingGL_UnitTestGLDrawing::_Parse(int argc, char *argv[], _Args* args)
             args->translate[1] = (float)ParseDouble(i, argc, argv);
             args->translate[2] = (float)ParseDouble(i, argc, argv);
         }
-        else if (strcmp(argv[i], "-widgetSize") == 0) {
-            CheckForMissingArguments(i, 2, argc, argv);
-            args->widgetSize[0] = (int)ParseDouble(i, argc, argv);
-            args->widgetSize[1] = (int)ParseDouble(i, argc, argv);
-        }
-        else if (strcmp(argv[i], "-pixelAspectRatio") == 0) {
-            CheckForMissingArguments(i, 1, argc, argv);
-            args->pixelAspectRatio = (float)ParseDouble(i, argc, argv);
-        }
-        else if (strcmp(argv[i], "-dataWindow") == 0) {
-            CheckForMissingArguments(i, 4, argc, argv);
-            args->dataWindow[0] = (int)ParseDouble(i, argc, argv);
-            args->dataWindow[1] = (int)ParseDouble(i, argc, argv);
-            args->dataWindow[2] = (int)ParseDouble(i, argc, argv);
-            args->dataWindow[3] = (int)ParseDouble(i, argc, argv);
-        }
-        else if (strcmp(argv[i], "-displayWindow") == 0) {
-            CheckForMissingArguments(i, 4, argc, argv);
-            args->displayWindow[0] = (float)ParseDouble(i, argc, argv);
-            args->displayWindow[1] = (float)ParseDouble(i, argc, argv);
-            args->displayWindow[2] = (float)ParseDouble(i, argc, argv);
-            args->displayWindow[3] = (float)ParseDouble(i, argc, argv);
-        }
         else if (strcmp(argv[i], "-renderSetting") == 0) {
             CheckForMissingArguments(i, 2, argc, argv);
             const char * const key = ParseString(i, argc, argv);
@@ -649,9 +600,6 @@ UsdImagingGL_UnitTestGLDrawing::_Parse(int argc, char *argv[], _Args* args)
         }
         else if (strcmp(argv[i], "-clearOnce") == 0) {
             _clearOnce = true;
-        }
-        else if (strcmp(argv[i], "-presentDisabled") == 0) {
-            _presentDisabled = true;
         }
         else {
             ParseError(argv[0], "unknown argument %s", argv[i]);
@@ -699,15 +647,6 @@ UsdImagingGL_UnitTestGLDrawing::RunTest(int argc, char *argv[])
     }
     _clearColor = GfVec4f(args.clearColor);
     _translate = GfVec3f(args.translate);
-    _pixelAspectRatio = args.pixelAspectRatio;
-    _displayWindow = GfRange2f(
-        GfVec2f(args.displayWindow[0],
-                args.displayWindow[1]),
-        GfVec2f(args.displayWindow[0] + args.displayWindow[2],
-                args.displayWindow[1] + args.displayWindow[3]));
-    _dataWindow = GfRect2i(
-        GfVec2i(args.dataWindow[0], args.dataWindow[1]),
-        args.dataWindow[2], args.dataWindow[3]);
 
     _drawMode = UsdImagingGLDrawMode::DRAW_SHADED_SMOOTH;
 
@@ -715,32 +654,15 @@ UsdImagingGL_UnitTestGLDrawing::RunTest(int argc, char *argv[])
         _drawMode = UsdImagingGLDrawMode::DRAW_WIREFRAME_ON_SURFACE;
     } else if (args.shading.compare("flat") == 0 ) {
         _drawMode = UsdImagingGLDrawMode::DRAW_SHADED_FLAT;
-    } else if (args.shading.compare("wire") == 0 ) {
+    }else if (args.shading.compare("wire") == 0 ) {
         _drawMode = UsdImagingGLDrawMode::DRAW_WIREFRAME;
-    } else if (args.shading.compare("points") == 0 ) {
-        _drawMode = UsdImagingGLDrawMode::DRAW_POINTS;
-    } else {
-        TF_WARN("Draw mode %s not supported!", args.shading.c_str());
-    }
-
-    _cullStyle = UsdImagingGLCullStyle::CULL_STYLE_NOTHING;
-
-    if (args.cullStyle.compare("back") == 0) {
-        _cullStyle = UsdImagingGLCullStyle::CULL_STYLE_BACK;
-    } else if (args.cullStyle.compare("backUnlessDoubleSided") == 0 ) {
-        _cullStyle = UsdImagingGLCullStyle::CULL_STYLE_BACK_UNLESS_DOUBLE_SIDED;
-    } else if (args.cullStyle.compare("front") == 0 ) {
-        _cullStyle = UsdImagingGLCullStyle::CULL_STYLE_FRONT;
-    } else {
-        TF_WARN("Cull style %s not supported!", args.cullStyle.c_str());
-    }
+    } 
 
     if (!args.unresolvedStageFilePath.empty()) {
         _stageFilePath = args.unresolvedStageFilePath;
     }
 
-    _widget = new UsdImagingGL_UnitTestWindow(
-        this, args.widgetSize[0], args.widgetSize[1]);
+    _widget = new UsdImagingGL_UnitTestWindow(this, 640, 480);
     _widget->Init();
 
     if (_times.empty()) {

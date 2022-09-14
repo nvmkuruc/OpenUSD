@@ -35,24 +35,6 @@ class TestUsdStage(unittest.TestCase):
         assert stage
     # nv end
 
-    def test_Repr(self):
-        stage = Usd.Stage.CreateInMemory()
-
-        # Test that we have a non-empty repr for a Usd.Stage. 
-        self.assertTrue(stage)
-        self.assertTrue(repr(stage))
-
-        # Test that we have a non-empty repr for an expired Usd.Stage.
-        # We insert our test stage into a Usd.StageCache, which takes
-        # ownership of the stage, then we clear it. This leaves us with
-        # a handle to an expired Usd.Stage in Python.
-        sc = Usd.StageCache()
-        sc.Insert(stage)
-        sc.Clear()
-
-        self.assertFalse(stage)
-        self.assertTrue(repr(stage))
-
     def test_UsedLayers(self):
         for fmt in allFormats:
             sMain = Usd.Stage.CreateInMemory('testUsedLayers.'+fmt)
@@ -252,7 +234,7 @@ class TestUsdStage(unittest.TestCase):
     def test_testUsdStageColorConfiguration(self):
         for fmt in allFormats:
             f = lambda base: base + '.' + fmt
-            rootLayer = Sdf.Layer.CreateNew(f("colorConf"))
+            rootLayer = Sdf.Layer.CreateNew(f("colorConf"), f("colorConf"))
             stage = Usd.Stage.Open(rootLayer)
             
             colorConfigFallbacks = Usd.Stage.GetColorConfigFallbacks()
@@ -307,9 +289,9 @@ class TestUsdStage(unittest.TestCase):
         for fmt in allFormats:
             f = lambda base: base + '.' + fmt
 
-            sessionLayer = Sdf.Layer.CreateNew(f('sessionLayer'))
-            rootLayer = Sdf.Layer.CreateNew(f("rootLayer"))
-            subLayer = Sdf.Layer.CreateNew(f("subLayer"))
+            sessionLayer = Sdf.Layer.CreateNew(f('sessionLayer'), f('sessionLayer'))
+            rootLayer = Sdf.Layer.CreateNew(f("rootLayer"), f("rootLayer"))
+            subLayer = Sdf.Layer.CreateNew(f("subLayer"), f("subLayer"))
 
             rootLayer.subLayerPaths = [f("./subLayer")]
             subLayer.Save()
@@ -533,11 +515,11 @@ class TestUsdStage(unittest.TestCase):
                          sessionAnonLayer, sessionRefLayer]])
             assert not any([l.dirty for l in [sessionLayer, sessionSubLayer]])
 
+#nv begin #win32-utf-8
             # Check saving with UTF-8 characters
             (rootLayer, rootSubLayer, rootAnonLayer, rootRefLayer) = \
                 _CreateLayers('root_utf8_umlaute_ß_3')
-            (sessionLayer, sessionSubLayer,
-             sessionAnonLayer, sessionRefLayer) = \
+            (sessionLayer, sessionSubLayer, sessionAnonLayer, sessionRefLayer) = \
                 _CreateLayers('session_utf8_bigA_Ä_3')
 
             stage = Usd.Stage.Open(rootLayer, sessionLayer)
@@ -550,6 +532,7 @@ class TestUsdStage(unittest.TestCase):
                         [rootLayer, rootSubLayer, rootAnonLayer, rootRefLayer,
                          sessionAnonLayer, sessionRefLayer]])
             assert not any([l.dirty for l in [sessionLayer, sessionSubLayer]])
+#nv end
 
 if __name__ == "__main__":
     unittest.main()

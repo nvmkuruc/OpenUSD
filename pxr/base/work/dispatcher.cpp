@@ -33,8 +33,6 @@ WorkDispatcher::WorkDispatcher()
         tbb::task_group_context::concurrent_wait | 
         tbb::task_group_context::default_traits)
 {
-    _waitCleanupFlag.clear();
-    
     // The concurrent_wait flag used with the task_group_context ensures
     // the ref count will remain at 1 after all predecessor tasks are
     // completed, so we don't need to keep resetting it in Wait().
@@ -51,23 +49,17 @@ WorkDispatcher::~WorkDispatcher()
 void
 WorkDispatcher::Wait()
 {
-    // Wait for tasks to complete.
     _rootTask->wait_for_all();
 
-    // If we take the flag from false -> true, we do the cleanup.
-    if (_waitCleanupFlag.test_and_set() == false) {
-        // Reset the context if canceled.
-        if (_context.is_group_execution_cancelled()) {
-            _context.reset();
-        }
-
-        // Post all diagnostics to this thread's list.
-        for (auto &et: _errors) {
-            et.Post();
-        }
-        _errors.clear();
-        _waitCleanupFlag.clear();
+    if (_context.is_group_execution_cancelled()) {
+        _context.reset();
     }
+        
+    // Post all diagnostics to this thread's list.
+    for (auto &et: _errors)
+        et.Post();
+
+    _errors.clear();
 }
 
 void

@@ -75,9 +75,8 @@ UsdShadeNodeGraph::Define(
 }
 
 /* virtual */
-UsdSchemaKind UsdShadeNodeGraph::_GetSchemaKind() const
-{
-    return UsdShadeNodeGraph::schemaKind;
+UsdSchemaType UsdShadeNodeGraph::_GetSchemaType() const {
+    return UsdShadeNodeGraph::schemaType;
 }
 
 /* static */
@@ -130,7 +129,6 @@ PXR_NAMESPACE_CLOSE_SCOPE
 
 #include "pxr/usd/usd/primRange.h"
 #include "pxr/usd/usdShade/connectableAPI.h"
-#include "pxr/usd/usdShade/utils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -159,48 +157,32 @@ UsdShadeNodeGraph::GetOutput(const TfToken &name) const
 }
 
 std::vector<UsdShadeOutput>
-UsdShadeNodeGraph::GetOutputs(bool onlyAuthored) const
+UsdShadeNodeGraph::GetOutputs() const
 {
-    return UsdShadeConnectableAPI(GetPrim()).GetOutputs(onlyAuthored);
+    return UsdShadeConnectableAPI(GetPrim()).GetOutputs();
 }
 
-UsdShadeShader
+UsdShadeShader 
 UsdShadeNodeGraph::ComputeOutputSource(
-    const TfToken &outputName,
-    TfToken *sourceName,
+    const TfToken &outputName, 
+    TfToken *sourceName, 
     UsdShadeAttributeType *sourceType) const
 {
-    // Check that we have a legit output
-    UsdShadeOutput output = GetOutput(outputName);
-    if (!output) {
+    UsdShadeOutput output = GetOutput(outputName); 
+    if (!output)
         return UsdShadeShader();
+
+    UsdShadeConnectableAPI source;
+    if (output.GetConnectedSource(&source, sourceName, sourceType)) {
+        // XXX: we're not doing anything to detect cycles here, which will lead
+        // to an infinite loop.
+        if (source.IsNodeGraph()) {
+            source = UsdShadeNodeGraph(source).ComputeOutputSource(*sourceName,
+                sourceName, sourceType);
+        }
     }
 
-    UsdShadeAttributeVector valueAttrs =
-        UsdShadeUtils::GetValueProducingAttributes(output);
-
-    if (valueAttrs.empty()) {
-        return UsdShadeShader();
-    }
-
-    if (valueAttrs.size() > 1) {
-        TF_WARN("Found multiple upstream attributes for output %s on NodeGraph "
-                "%s. ComputeOutputSource will only report the first upsteam "
-                "UsdShadeShader. Please use GetValueProducingAttributes to "
-                "retrieve all.", outputName.GetText(), GetPath().GetText());
-    }
-
-    UsdAttribute attr = valueAttrs[0];
-    std::tie(*sourceName, *sourceType) =
-        UsdShadeUtils::GetBaseNameAndType(attr.GetName());
-
-    UsdShadeShader shader(attr.GetPrim());
-
-    if (*sourceType != UsdShadeAttributeType::Output || !shader) {
-        return UsdShadeShader();
-    }
-
-    return shader;
+    return source;
 }
 
 UsdShadeInput
@@ -217,9 +199,9 @@ UsdShadeNodeGraph::GetInput(const TfToken &name) const
 }
 
 std::vector<UsdShadeInput>
-UsdShadeNodeGraph::GetInputs(bool onlyAuthored) const
+UsdShadeNodeGraph::GetInputs() const
 {
-    return UsdShadeConnectableAPI(GetPrim()).GetInputs(onlyAuthored);
+    return UsdShadeConnectableAPI(GetPrim()).GetInputs();
 }
 
 std::vector<UsdShadeInput> 
@@ -284,7 +266,7 @@ _RecursiveComputeNodeGraphInterfaceInputConsumers(
         const std::vector<UsdShadeInput> &consumers = inputAndConsumers.second;
         for (const UsdShadeInput &consumer: consumers) {
             UsdShadeConnectableAPI connectable(consumer.GetAttr().GetPrim());
-            if (connectable.GetPrim().IsA<UsdShadeNodeGraph>()) {
+            if (connectable.IsNodeGraph()) {
                 if (!nodeGraphInputConsumers->count(connectable)) {
 
                     const auto &irMap = _ComputeNonTransitiveInputConsumersMap(
@@ -373,34 +355,6 @@ UsdShadeNodeGraph::ComputeInterfaceInputConsumersMap(
     }
 
     return resolved;
-}
-
-class UsdShadeNodeGraph_ConnectableAPIBehavior : 
-    public UsdShadeConnectableAPIBehavior
-{
-public:
-    // By default all NodeGraph Connectable Behavior should be
-    // container (of nodes) and exhibit encapsulation behavior.
-    USDSHADE_API
-    UsdShadeNodeGraph_ConnectableAPIBehavior() 
-        : UsdShadeConnectableAPIBehavior(
-                true /*isContainer*/, true /*requiresEncapsulation*/) {}
-
-    USDSHADE_API
-    bool
-    CanConnectOutputToSource(const UsdShadeOutput &output,
-                             const UsdAttribute &source,
-                             std::string *reason) const override
-    {
-        return _CanConnectOutputToSource(output, source, reason);
-    }
-};
-
-TF_REGISTRY_FUNCTION(UsdShadeConnectableAPI)
-{
-    UsdShadeRegisterConnectableAPIBehavior<
-        UsdShadeNodeGraph,
-        UsdShadeNodeGraph_ConnectableAPIBehavior>();
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

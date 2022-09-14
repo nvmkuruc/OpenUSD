@@ -38,21 +38,23 @@
 
 #include <iostream>
 #include <string>
+#include <boost/assign/list_of.hpp>
+#include <boost/shared_ptr.hpp>
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
-static std::unique_ptr<PcpCache>
+static boost::shared_ptr<PcpCache>
 _CreateCacheForRootLayer(const std::string& rootLayerPath)
 {
     SdfLayerRefPtr rootLayer = SdfLayer::FindOrOpen(rootLayerPath);
 
     if (!rootLayer) {
-        return std::unique_ptr<PcpCache>();
+        return boost::shared_ptr<PcpCache>();
     }
 
     const PcpLayerStackIdentifier layerStackID(
         rootLayer, SdfLayerRefPtr(), ArResolverContext());
-    return std::make_unique<PcpCache>(layerStackID);
+    return boost::shared_ptr<PcpCache>(new PcpCache(layerStackID));
 }
 
 static void
@@ -107,7 +109,7 @@ TestReverseTranslation_1()
     std::cout << "========== TestReverseTranslation_1..."  << std::endl;
 
     const std::string rootLayer = "TestReverseTranslation_1/1.sdf";
-    std::unique_ptr<PcpCache> pcpCache = _CreateCacheForRootLayer(rootLayer);
+    boost::shared_ptr<PcpCache> pcpCache = _CreateCacheForRootLayer(rootLayer);
     if (!pcpCache) {
         TF_FATAL_ERROR("Unable to open @%s@", rootLayer.c_str());
     }
@@ -214,7 +216,7 @@ TestReverseTranslation_2()
               << std::endl;
 
     const std::string rootLayer = "TestReverseTranslation_1/1.sdf";
-    std::unique_ptr<PcpCache> pcpCache = _CreateCacheForRootLayer(rootLayer);
+    boost::shared_ptr<PcpCache> pcpCache = _CreateCacheForRootLayer(rootLayer);
     if (!pcpCache) {
         TF_FATAL_ERROR("Unable to open @%s@", rootLayer.c_str());
     }
@@ -272,7 +274,7 @@ TestReverseTranslation_3()
     std::cout << "========== TestReverseTranslation_3..." << std::endl;
 
     const std::string rootLayer = "TestReverseTranslation_3/root.sdf";
-    std::unique_ptr<PcpCache> pcpCache = _CreateCacheForRootLayer(rootLayer);
+    boost::shared_ptr<PcpCache> pcpCache = _CreateCacheForRootLayer(rootLayer);
     if (!pcpCache) {
         TF_FATAL_ERROR("Unable to open @%s@", rootLayer.c_str());
     }

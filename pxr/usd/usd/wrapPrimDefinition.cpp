@@ -24,7 +24,6 @@
 #include "pxr/pxr.h"
 #include "pxr/usd/usd/primDefinition.h"
 #include "pxr/usd/usd/pyConversions.h"
-#include "pxr/usd/usd/prim.h"
 
 #include "pxr/base/tf/pyResultConversions.h"
 #include <boost/python.hpp>
@@ -90,6 +89,7 @@ void wrapUsdPrimDefinition()
              return_value_policy<TfPySequenceToList>())
         .def("GetAppliedAPISchemas", &This::GetAppliedAPISchemas,
              return_value_policy<TfPySequenceToList>())
+        .def("GetSchemaPrimSpec", &This::GetSchemaPrimSpec)
         .def("GetSchemaPropertySpec", &This::GetSchemaPropertySpec,
              (arg("propName")))
         .def("GetSchemaAttributeSpec", &This::GetSchemaAttributeSpec,
@@ -115,22 +115,5 @@ void wrapUsdPrimDefinition()
              (arg("propName"), arg("key"), arg("keyPath")))
         .def("GetPropertyDocumentation", &This::GetPropertyDocumentation,
              (arg("propName")))
-        .def("FlattenTo", 
-             (UsdPrim (This::*)(const UsdPrim&, 
-                                SdfSpecifier) const) &This::FlattenTo,
-              (arg("prim"), 
-               arg("newSpecSpecifier")=SdfSpecifierOver))
-        .def("FlattenTo", 
-             (UsdPrim (This::*)(const UsdPrim&, const TfToken&,
-                                SdfSpecifier) const) &This::FlattenTo,
-              (arg("parent"), 
-               arg("name"), 
-               arg("newSpecSpecifier")=SdfSpecifierOver))
-        .def("FlattenTo", 
-             (bool (This::*)(const SdfLayerHandle&, const SdfPath&,
-                             SdfSpecifier) const) &This::FlattenTo,
-              (arg("layer"), 
-               arg("path"), 
-               arg("newSpecSpecifier")=SdfSpecifierOver))
         ;
 }

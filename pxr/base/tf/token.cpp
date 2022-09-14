@@ -44,7 +44,6 @@
 #include <vector>
 #include <cstring>
 #include <utility>
-#include <algorithm>
 
 using std::vector;
 using std::string;

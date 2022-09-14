@@ -28,7 +28,7 @@
 
 #include "pxr/pxr.h"
 #include "pxr/usd/usdLux/api.h"
-#include "pxr/usd/usdLux/nonboundableLightBase.h"
+#include "pxr/usd/usdLux/light.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
 #include "pxr/usd/usdLux/tokens.h"
@@ -82,20 +82,20 @@ class SdfAssetPath;
 /// So to set an attribute to the value "rightHanded", use UsdLuxTokens->rightHanded
 /// as the value.
 ///
-class UsdLuxDomeLight : public UsdLuxNonboundableLightBase
+class UsdLuxDomeLight : public UsdLuxLight
 {
 public:
     /// Compile time constant representing what kind of schema this class is.
     ///
-    /// \sa UsdSchemaKind
-    static const UsdSchemaKind schemaKind = UsdSchemaKind::ConcreteTyped;
+    /// \sa UsdSchemaType
+    static const UsdSchemaType schemaType = UsdSchemaType::ConcreteTyped;
 
     /// Construct a UsdLuxDomeLight on UsdPrim \p prim .
     /// Equivalent to UsdLuxDomeLight::Get(prim.GetStage(), prim.GetPath())
     /// for a \em valid \p prim, but will not immediately throw an error for
     /// an invalid \p prim
     explicit UsdLuxDomeLight(const UsdPrim& prim=UsdPrim())
-        : UsdLuxNonboundableLightBase(prim)
+        : UsdLuxLight(prim)
     {
     }
 
@@ -103,7 +103,7 @@ public:
     /// Should be preferred over UsdLuxDomeLight(schemaObj.GetPrim()),
     /// as it preserves SchemaBase state.
     explicit UsdLuxDomeLight(const UsdSchemaBase& schemaObj)
-        : UsdLuxNonboundableLightBase(schemaObj)
+        : UsdLuxLight(schemaObj)
     {
     }
 
@@ -158,11 +158,11 @@ public:
     Define(const UsdStagePtr &stage, const SdfPath &path);
 
 protected:
-    /// Returns the kind of schema this class belongs to.
+    /// Returns the type of schema this class belongs to.
     ///
-    /// \sa UsdSchemaKind
+    /// \sa UsdSchemaType
     USDLUX_API
-    UsdSchemaKind _GetSchemaKind() const override;
+    UsdSchemaType _GetSchemaType() const override;
 
 private:
     // needs to invoke _GetStaticTfType.
@@ -185,7 +185,7 @@ public:
     ///
     /// | ||
     /// | -- | -- |
-    /// | Declaration | `asset inputs:texture:file` |
+    /// | Declaration | `asset texture:file` |
     /// | C++ Type | SdfAssetPath |
     /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Asset |
     USDLUX_API
@@ -220,7 +220,7 @@ public:
     ///
     /// | ||
     /// | -- | -- |
-    /// | Declaration | `token inputs:texture:format = "automatic"` |
+    /// | Declaration | `token texture:format = "automatic"` |
     /// | C++ Type | TfToken |
     /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Token |
     /// | \ref UsdLuxTokens "Allowed Values" | automatic, latlong, mirroredBall, angular, cubeMapVerticalCross |
@@ -234,28 +234,6 @@ public:
     /// the default for \p writeSparsely is \c false.
     USDLUX_API
     UsdAttribute CreateTextureFormatAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
-
-public:
-    // --------------------------------------------------------------------- //
-    // GUIDERADIUS 
-    // --------------------------------------------------------------------- //
-    /// The radius of guide geometry to use to visualize the dome light.  The default is 1 km for scenes whose metersPerUnit is the USD default of 0.01 (i.e., 1 world unit is 1 cm).
-    ///
-    /// | ||
-    /// | -- | -- |
-    /// | Declaration | `float guideRadius = 100000` |
-    /// | C++ Type | float |
-    /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Float |
-    USDLUX_API
-    UsdAttribute GetGuideRadiusAttr() const;
-
-    /// See GetGuideRadiusAttr(), and also 
-    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
-    /// If specified, author \p defaultValue as the attribute's default,
-    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
-    /// the default for \p writeSparsely is \c false.
-    USDLUX_API
-    UsdAttribute CreateGuideRadiusAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
     // --------------------------------------------------------------------- //

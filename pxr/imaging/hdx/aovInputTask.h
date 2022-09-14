@@ -49,22 +49,22 @@ public:
     HdxAovInputTask(HdSceneDelegate* delegate, SdfPath const& id);
 
     HDX_API
-    ~HdxAovInputTask() override;
+    virtual ~HdxAovInputTask();
 
     /// Hooks for progressive rendering.
-    bool IsConverged() const override;
+    virtual bool IsConverged() const override;
 
     HDX_API
-    void Prepare(
+    virtual void Prepare(
         HdTaskContext* ctx,
         HdRenderIndex* renderIndex) override;
 
     HDX_API
-    void Execute(HdTaskContext* ctx) override;
+    virtual void Execute(HdTaskContext* ctx) override;
 
 protected:
     HDX_API
-    void _Sync(
+    virtual void _Sync(
         HdSceneDelegate* delegate,
         HdTaskContext* ctx,
         HdDirtyBits* dirtyBits) override;

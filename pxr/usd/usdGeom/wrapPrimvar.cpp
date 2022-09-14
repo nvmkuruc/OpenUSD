@@ -175,6 +175,9 @@ void wrapUsdGeomPrimvar()
         .def("IsValidPrimvarName", Primvar::IsValidPrimvarName, 
                 arg("name"))
         .staticmethod("IsValidPrimvarName")
+        .def("IsPrimvarRelatedPropertyName", 
+                Primvar::IsPrimvarRelatedPropertyName, arg("name"))
+        .staticmethod("IsPrimvarRelatedPropertyName")
         
         .def("StripPrimvarsName", Primvar::StripPrimvarsName, arg("name"))
         .staticmethod("StripPrimvarsName")

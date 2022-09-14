@@ -25,14 +25,12 @@
 #define PXR_IMAGING_HGIINTEROP_HGIINTEROPOPENGL_H
 
 #include "pxr/pxr.h"
-#include "pxr/base/gf/vec4i.h"
 #include "pxr/imaging/hgi/texture.h"
 #include "pxr/imaging/hgiInterop/api.h"
 
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-class VtValue;
 
 /// \class HgiInteropOpenGL
 ///
@@ -52,9 +50,7 @@ public:
     HGIINTEROP_API
     void CompositeToInterop(
         HgiTextureHandle const &color,
-        HgiTextureHandle const &depth,
-        VtValue const &framebuffer,
-        GfVec4i const& viewport);
+        HgiTextureHandle const &depth);
 
 private:
     uint32_t _vs;

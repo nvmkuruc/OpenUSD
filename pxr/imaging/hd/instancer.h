@@ -27,18 +27,17 @@
 #include "pxr/pxr.h"
 #include "pxr/imaging/hd/api.h"
 #include "pxr/imaging/hd/version.h"
-#include "pxr/imaging/hd/types.h"
-
 #include "pxr/usd/sdf/path.h"
 
-#include <mutex>
+// #nv begin #omni-hydra
+#include "pxr/imaging/hd/types.h"
+// nv end
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 class HdSceneDelegate;
 class HdRenderIndex;
 class HdRprim;
-class HdRenderParam;
 
 /// \class HdInstancer
 ///
@@ -118,17 +117,16 @@ class HdRenderParam;
 /// proto used by an instancer, and any provided primvar arrays. The
 /// implementation is in the renderer-specific instancers, like HdStInstancer.
 ///
-/// All data access (aside from local caches) is routed to the HdSceneDelegate.
+/// All data access (aside from local caches) is delegated to the HdSceneDelegate.
 ///
 
 class HdInstancer {
 public:
     /// Constructor.
     HD_API
-    HdInstancer(HdSceneDelegate* delegate, SdfPath const& id);
-
-    HD_API
-    virtual ~HdInstancer();
+    HdInstancer(HdSceneDelegate* delegate, SdfPath const& id,
+                SdfPath const &parentInstancerId);
+    virtual ~HdInstancer() {}
 
     /// Returns the identifier.
     SdfPath const& GetId() const { return _id; }
@@ -143,7 +141,7 @@ public:
                                      HdRprim const& rprim);
 
     HD_API
-    static TfTokenVector const & GetBuiltinPrimvarNames();
+    TfTokenVector const & GetBuiltinPrimvarNames() const;
 
     // #nv begin #omni-hydra
     // Allow instancers to be synchronized independently from rprims
@@ -152,35 +150,10 @@ public:
                       HdDirtyBits *dirtyBits) {}
     // nv end
 
-    HD_API
-    virtual void Sync(HdSceneDelegate *sceneDelegate,
-                      HdRenderParam   *renderParam,
-                      HdDirtyBits     *dirtyBits);
-
-    HD_API
-    virtual void Finalize(HdRenderParam *renderParam);
-
-    HD_API
-    virtual HdDirtyBits GetInitialDirtyBitsMask() const;
-
-    HD_API
-    static void _SyncInstancerAndParents(
-        HdRenderIndex &renderIndex,
-        SdfPath const& instancerId);
-
-protected:
-    HD_API
-    void _UpdateInstancer(HdSceneDelegate *delegate,
-                          HdDirtyBits *dirtyBits);
-
 private:
     HdSceneDelegate* _delegate;
     SdfPath _id;
     SdfPath _parentId;
-
-    // XXX: This mutex exists for _SyncInstancerAndParents, which will go
-    // away when the render index calls sync on instancers.
-    std::mutex _instanceLock;
 };
 
 

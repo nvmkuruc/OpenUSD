@@ -99,18 +99,9 @@ _GetJointOrder(const UsdSkelSkinningQuery& self)
     VtTokenArray jointOrder;
     if (self.GetJointOrder(&jointOrder))
         return object(jointOrder);
-    return {};
+    return object();
 }
 
-
-object
-_GetBlendShapeOrder(const UsdSkelSkinningQuery& self)
-{
-    VtTokenArray blendShapeOrder;
-    if (self.GetBlendShapeOrder(&blendShapeOrder))
-        return object(blendShapeOrder);
-    return {};
-}
 
 template <typename Matrix4>
 bool
@@ -198,8 +189,6 @@ void wrapUsdSkelSkinningQuery()
 
         .def("GetJointOrder", &_GetJointOrder)
 
-        .def("GetBlendShapeOrder", &_GetBlendShapeOrder)
-
         .def("GetTimeSamples", &_GetTimeSamples)
 
         .def("GetTimeSamplesInInterval", &_GetTimeSamplesInInterval)
@@ -226,7 +215,7 @@ void wrapUsdSkelSkinningQuery()
              (arg("xforms"),
               arg("time")=UsdTimeCode::Default()))
 
-        .def("ComputeExtentsPadding",
+        .def("ComputeExentsPadding",
              static_cast<float (UsdSkelSkinningQuery::*)(
                  const VtMatrix4dArray&,
                  const UsdGeomBoundable&) const>(
@@ -235,7 +224,7 @@ void wrapUsdSkelSkinningQuery()
               arg("boundable"),
               arg("time")=UsdTimeCode::Default()))
 
-        .def("ComputeExtentsPadding",
+        .def("ComputeExentsPadding",
              static_cast<float (UsdSkelSkinningQuery::*)(
                  const VtMatrix4fArray&,
                  const UsdGeomBoundable&) const>(

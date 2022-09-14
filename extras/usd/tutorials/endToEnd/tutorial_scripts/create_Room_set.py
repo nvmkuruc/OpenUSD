@@ -35,7 +35,6 @@ It will create a new "set" (aggregate) model, Room_set at
   models/Room_set
 
 '''
-from __future__ import division
 
 import os
 ASSET_BASE = os.path.join(os.getcwd(), 'models')

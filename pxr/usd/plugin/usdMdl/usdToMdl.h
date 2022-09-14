@@ -27,6 +27,6 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// -6: Can not create material instance
 /// -7: Can not get material instance
 ///
-USDMDLAPI_API int ConvertUsdMaterialToMdl(const UsdShadeMaterial & usdMaterial, mi::neuraylib::INeuray * neuray, const char * mdlMaterialInstanceName);
+USDMDL_API int ConvertUsdMaterialToMdl(const UsdShadeMaterial & usdMaterial, mi::neuraylib::INeuray * neuray, const char * mdlMaterialInstanceName);
 
 PXR_NAMESPACE_CLOSE_SCOPE

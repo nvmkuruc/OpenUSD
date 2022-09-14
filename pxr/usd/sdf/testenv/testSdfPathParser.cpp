@@ -59,17 +59,15 @@ void testPaths(char const *paths[], int expect) {
         // be different.
         if (result == 0) {
             std::string s = context.path.GetToken().GetString();
-            std::string expected = TfStringReplace(*paths, " ", "");
-            TF_VERIFY(s == expected,
-                      "mismatch: %s -> %s\n", *paths, s.c_str());
-            char const *debugText = Sdf_PathGetDebuggerPathText(context.path);
-            TF_VERIFY(std::string(debugText) == expected,
-                      "debug mismatch: %s -> %s\n",
-                      debugText, expected.c_str());
+            if (s != TfStringReplace(*paths, " ", "")) {
+                fprintf(stderr, "mismatch: %s -> %s\n", *paths, s.c_str());
+                TF_AXIOM(s == *paths);
+            }
         }
-        ++paths;
-    }
 
+        ++paths;
+
+    }
     // Clean up.
     SdfPathYylex_destroy(context.scanner);
 }
@@ -106,12 +104,6 @@ int main()
         ".bar:argle[targ].boom:bargle",
         "Foo.bar[targ.attr].boom",
         "Foo.bar:argle[targ.attr:baz].boom:bargle",
-        "/a.rel[/b.rel[/c.rel[/d.rel[/e.a1].a2].a3].a4]",
-        "/a.rel[/b.rel[/c.rel[/d.a1].a2].a3]",
-        "/a.rel[/b.rel[/c.a2].a3]",
-        "/a.rel[/b.rel[/c.rel[/d.rel[/e.a1].a2].a3].a4].a0",
-        "/a.rel[/b.rel[/c.rel[/d.a1].a2].a3].a0",
-        "/a.rel[/b.rel[/c.a2].a3].a0",
         "../../.radius",
         "../../.radius:bar:baz",
         "../..",

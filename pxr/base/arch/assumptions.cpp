@@ -31,15 +31,12 @@
 #include "pxr/base/arch/math.h"
 
 #include <cstdio>
-#include <cstdint>
-#include <cstring>
 #include <limits>
 
 #if defined(ARCH_OS_LINUX)
 #include <unistd.h>
 #elif defined(ARCH_OS_DARWIN)
 #include <sys/sysctl.h>
-#include <mach-o/arch.h>
 #elif defined(ARCH_OS_WINDOWS)
 #include <Windows.h>
 #include <memory>
@@ -123,50 +120,14 @@ Arch_ValidateAssumptions()
     if (ArchGetDemangled<int>() != "int") {
         ARCH_WARNING("C++ demangling appears badly broken.");
     }
-    
-    size_t cacheLineSize = Arch_ObtainCacheLineSize();
-
-#if defined(ARCH_OS_DARWIN) && defined(ARCH_CPU_INTEL)
-    /*
-     * On MacOS with Rosetta 2, we may be an Intel x86_64 binary running on
-     * an Apple Silicon arm64 cpu. macOS always returns the underlying
-     * HW's cache line size, so we explicitly approve this exception here
-     * by setting the detected cache line size to be what we expect.
-     * This won't align, but the impact is one of performance. 
-     * We don't really care about it because when this is happening, we're 
-     * emulating x64_64 on arm64 which has a far greater performance impact.
-     */
-    const size_t ROSETTA_WORKAROUND_CACHE_LINE_SIZE = 128;
-    NXArchInfo const* archInfo = NXGetLocalArchInfo();
-    if (archInfo && ((archInfo->cputype & ~CPU_ARCH_MASK) == CPU_TYPE_ARM)) {
-        if ((cacheLineSize != ROSETTA_WORKAROUND_CACHE_LINE_SIZE)) {
-            ARCH_WARNING(
-                "Cache-line size mismatch may negatively impact performance.");
-        }
-        cacheLineSize = ARCH_CACHE_LINE_SIZE;
-    }
-#endif
 
     /*
      * Make sure that the ARCH_CACHE_LINE_SIZE constant is set as expected
      * on the current hardware architecture.
      */ 
-    if (ARCH_CACHE_LINE_SIZE != cacheLineSize) {
+    if (ARCH_CACHE_LINE_SIZE != Arch_ObtainCacheLineSize()) {
         ARCH_WARNING("ARCH_CACHE_LINE_SIZE != Arch_ObtainCacheLineSize()");
     }
-
-    /*
-     * Make sure that the machine is little-endian.  We do not support
-     * big-endian machines.
-     */
-    {
-        uint32_t check;
-        char buf[] = { 1, 2, 3, 4 };
-        memcpy(&check, buf, sizeof(check));
-        if (check != 0x04030201) {
-            ARCH_ERROR("Big-endian byte order not supported.");
-        }
-    }    
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

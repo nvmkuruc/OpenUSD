@@ -32,11 +32,6 @@
 #include "pxr/base/arch/error.h"
 #include "pxr/base/arch/errno.h"
 #include "pxr/base/arch/export.h"
-#if defined(ARCH_OS_WINDOWS)
-// Need to include Winsock2.h BEFORE windows.h - which is included in
-// fileSystem.h
-#include <Winsock2.h>
-#endif
 #include "pxr/base/arch/fileSystem.h"
 #include "pxr/base/arch/inttypes.h"
 #include "pxr/base/arch/symbols.h"
@@ -44,6 +39,7 @@
 #if defined(ARCH_OS_WINDOWS)
 #include <io.h>
 #include <process.h>
+#include <Winsock2.h>
 #include <DbgHelp.h>
 #ifndef MAXHOSTNAMELEN
 #define MAXHOSTNAMELEN 64
@@ -279,7 +275,8 @@ Arch_LogInfo::EmitAnyExtraLogInfo(FILE *outFile, size_t max) const
         fputs(":\n", outFile);
         for (std::string const &line: *i->second) {
             if (max && n++ >= max) {
-                fputs("... see full diagnostics in crash report.\n", outFile);
+                fputs("... full diagnostics reported in the stack trace "
+                      "file.\n", outFile);
                 return;
             }
             fputs(line.c_str(), outFile);
@@ -586,6 +583,13 @@ nonLockingLinux__execve (const char *file,
                          char *const argv[],
                          char *const envp[])
 {
+// nv begin #aarch64-support
+#if defined(ARCH_BITS_64) && defined(ARCH_CPU_ARM)
+    execve(file, argv, envp);
+// nv end
+
+#elif defined(ARCH_BITS_64)
+
     /*
      * We make a direct system call here, because we can't find an
      * execve which corresponds with the non-locking fork we call
@@ -596,27 +600,7 @@ nonLockingLinux__execve (const char *file,
      * hangs in a threaded app.  (We use the non-locking fork to get
      * around problems with forking when we have had memory
      * corruption.)  whew.
-     */
-
-    unsigned long result;
-
-#if defined (ARCH_CPU_ARM)
-    {
-        register long __file_result asm ("x0") = (long)file;
-        register char* const* __argv asm ("x1") = argv;
-        register char* const* __envp asm ("x2") = envp;
-        register long __num_execve asm ("x8") = 221;
-        __asm__ __volatile__ (
-            "svc 0"
-            : "=r" (__file_result)
-            : "r"(__num_execve), "r" (__file_result), "r" (__argv), "r" (__envp)
-            : "memory"
-        );
-        result = __file_result;
-    }
-#elif defined(ARCH_CPU_INTEL) && defined(ARCH_BITS_64)
-
-    /*
+     *
      * %rdi, %rsi, %rdx, %rcx, %r8, %r9 are args 0-5
      * syscall clobbers %rcx and %r11
      *
@@ -625,6 +609,7 @@ nonLockingLinux__execve (const char *file,
      * constraints to gcc.
      */
 
+    unsigned long result;
     __asm__ __volatile__ (
         "mov    %0, %%rdi    \n\t"
         "mov    %%rcx, %%rsi \n\t"
@@ -635,9 +620,6 @@ nonLockingLinux__execve (const char *file,
         : "0" (file), "c" (argv), "d" (envp)
         : "memory", "cc", "r11"
     );
-#else
-#error Unknown architecture
-#endif
 
     if (result >= 0xfffffffffffff000) {
         errno = -result;
@@ -645,6 +627,9 @@ nonLockingLinux__execve (const char *file,
     }
 
     return result;
+#else
+#error Unknown architecture
+#endif
 }
 
 #endif
@@ -1049,30 +1034,10 @@ ArchLogPostMortem(const char* reason,
         hostname[0] = '\0';
     }
 
-    auto printNDashes = [](int nDashes) {
-        const char *dash64 =
-            "----------------------------------------------------------------";
-        int dividend = nDashes / 64;
-        int remainder = nDashes % 64;
-        while (dividend--) {
-            fputs(dash64, stderr);
-        }
-        fputs(dash64 + 64 - remainder, stderr);
-    };
-
-    const char *haltMsg = " terminated";
-    int labelSize = strlen(progname) + strlen(haltMsg);
-    int bannerSize = std::max<int>(80, labelSize + strlen("-- ") * 2);
-
     fputs("\n", stderr);
-    int numLeadingDashes = (bannerSize - labelSize) / 2 - 1;
-    printNDashes(numLeadingDashes);
-    fputs(" ", stderr);
+    fputs("------------------------ '", stderr);
     fputs(progname, stderr);
-    fputs(haltMsg, stderr);
-    fputs(" ", stderr);
-    printNDashes(bannerSize - numLeadingDashes - labelSize - 2);
-    fputs("\n", stderr);
+    fputs("' is dying ------------------------\n", stderr);
 
     // print out any registered program info
     {
@@ -1088,21 +1053,19 @@ ArchLogPostMortem(const char* reason,
         fputs(message, stderr);
         fputs("\n", stderr);
     }
-
-    fputs("writing crash report to [ ", stderr);
+    fputs("The stack can be found in ", stderr);
     fputs(hostname, stderr);
     fputs(":", stderr);
     fputs(logfile, stderr);
-    fputs(" ] ...", stderr);
-    fflush(stderr);
+    fputs("\n", stderr);
 
     int loggedStack = _LogStackTraceForPid(logfile);
-    fputs(" done.\n", stderr);
+    fputs("done.\n", stderr);
     // Additionally, print the first few lines of extra log information since
     // developers don't always think to look for it in the stack trace file.
     ArchStackTrace_GetLogInfo().EmitAnyExtraLogInfo(stderr, 3 /* max */);
-    printNDashes(bannerSize);
-    fputs("\n", stderr);
+    fputs("------------------------------------------------------------------\n",
+          stderr);
 
     if (loggedStack) {
         _FinishLoggingFatalStackTrace(progname, logfile, NULL /*session log*/, 
@@ -1337,7 +1300,6 @@ ArchGetStackFrames(size_t maxdepth, size_t skip, vector<uintptr_t> *frames)
     /* use the exception handling mechanism to unwind our stack.
      * note this is gcc >= 3.3.3 only.
      */
-    frames->reserve(maxdepth);
     Arch_UnwindContext context(maxdepth, skip, frames);
     _Unwind_Backtrace(Arch_unwindcb, (void*)&context);
 }
@@ -1348,10 +1310,10 @@ void
 ArchGetStackFrames(size_t maxdepth, size_t skip, vector<uintptr_t> *frames)
 {
     void* stack[MAX_STACK_DEPTH];
-    size_t frameCount = CaptureStackBackTrace(skip, MAX_STACK_DEPTH, stack, NULL);
+    size_t frameCount = CaptureStackBackTrace(0, MAX_STACK_DEPTH, stack, NULL);
     frameCount = std::min(frameCount, maxdepth);
     frames->reserve(frameCount);
-    for (size_t frame = 0; frame < frameCount; ++frame) {
+    for (size_t frame = skip; frame != frameCount; ++frame) {
         frames->push_back(reinterpret_cast<uintptr_t>(stack[frame]));
     }
 }
@@ -1365,7 +1327,7 @@ ArchGetStackFrames(size_t maxdepth, size_t skip, vector<uintptr_t> *frames)
     const size_t frameCount =
         backtrace(stack, std::max((size_t)MAX_STACK_DEPTH, maxdepth));
     frames->reserve(frameCount);
-    for (size_t frame = skip; frame < frameCount; ++frame) {
+    for (size_t frame = skip; frame != frameCount; ++frame) {
         frames->push_back(reinterpret_cast<uintptr_t>(stack[frame]));
     }
 }
@@ -1404,24 +1366,22 @@ Arch_DefaultStackTraceCallback(uintptr_t address)
         return ArchStringPrintf("%s+%#0lx", symbolName.c_str(), symbolOffset);
     }
     else {
-        return "<unknown>";
+        return ArchStringPrintf("%#016lx", address);
     }
 }
 
 static
 vector<string>
-Arch_GetStackTrace(const vector<uintptr_t> &frames,
-                   bool skipUnknownFrames=false);
+Arch_GetStackTrace(const vector<uintptr_t> &frames);
 
 /*
  * ArchPrintStackFrames
  *  print out stack frames to the given ostream.
  */
 void
-ArchPrintStackFrames(ostream& oss, const vector<uintptr_t> &frames,
-                     bool skipUnknownFrames)
+ArchPrintStackFrames(ostream& oss, const vector<uintptr_t> &frames)
 {
-    const vector<string> result = Arch_GetStackTrace(frames, skipUnknownFrames);
+    const vector<string> result = Arch_GetStackTrace(frames);
     for (size_t i = 0; i < result.size(); i++) {
         oss << result[i] << std::endl;
     }
@@ -1448,9 +1408,8 @@ Arch_GetStackTraceCallback()
     return &callback;
 }
 
-static vector<string>
-Arch_GetStackTrace(const vector<uintptr_t> &frames,
-                   bool skipUnknownFrames)
+vector<string>
+Arch_GetStackTrace(const vector<uintptr_t> &frames)
 {
     vector<string> rv;
 
@@ -1464,14 +1423,10 @@ Arch_GetStackTrace(const vector<uintptr_t> &frames,
     if (!callback) {
         callback = Arch_DefaultStackTraceCallback;
     }
-    int n = 0;
     for (size_t i = 0; i < frames.size(); i++) {
         const std::string symbolic = callback(frames[i]);
-        if (skipUnknownFrames && symbolic == "<unknown>") {
-            continue;
-        }
         rv.push_back(ArchStringPrintf(" #%-3i 0x%016lx in %s",
-                                      n++, frames[i], symbolic.c_str()));
+                                      (int)i, frames[i], symbolic.c_str()));
     }
 
     return rv;

@@ -61,7 +61,6 @@ public:
     void
     Insert(TextureSharedPtr const &texture,
            HandlePtr const &handle) {
-        _size++;
         _GetOrCreate(texture)->push_back(handle);
     }
 
@@ -88,15 +87,10 @@ public:
         return result;
     }
 
-    const Map &GetMap() const { return _map; }
-
-    size_t GetSize() const { return _size.load(); }
-
 private:
     // Remove all expired weak pointers from vector, return true
     // if no weak pointers left.
-    //
-    // Also update _size.
+    static
     bool
     _GarbageCollect(HandlePtrVector * const vec) {
         // Go from left to right, filling slots that became empty
@@ -105,7 +99,6 @@ private:
 
         for (size_t i = 0; i < last; i++) {
             if ((*vec)[i].expired()) {
-                _size--;
                 while(true) {
                     last--;
                     if (i == last) {
@@ -139,19 +132,14 @@ private:
         return result;
     }
 
-    std::atomic<size_t> _size;
-
     std::mutex _mutex;
     Map _map;
 };
 
-HdSt_TextureHandleRegistry::HdSt_TextureHandleRegistry(
-    HdStResourceRegistry * registry)
-    : _textureTypeToMemoryRequestChanged(false)
-    , _samplerObjectRegistry(
-        std::make_unique<HdSt_SamplerObjectRegistry>(registry))
-    , _textureObjectRegistry(
-        std::make_unique<HdSt_TextureObjectRegistry>(registry))
+HdSt_TextureHandleRegistry::HdSt_TextureHandleRegistry(Hgi * const hgi)
+    : _samplerGarbageCollectionNeeded(false)
+    , _samplerObjectRegistry(std::make_unique<HdSt_SamplerObjectRegistry>(hgi))
+    , _textureObjectRegistry(std::make_unique<HdSt_TextureObjectRegistry>(hgi))
     , _textureToHandlesMap(std::make_unique<_TextureToHandlesMap>())
 {
 }
@@ -164,6 +152,7 @@ HdSt_TextureHandleRegistry::AllocateTextureHandle(
         HdTextureType textureType,
         HdSamplerParameters const &samplerParams,
         size_t memoryRequest,
+        bool createBindlessHandle,
         HdStShaderCodePtr const &shaderCode)
 {
     TRACE_FUNCTION();
@@ -178,6 +167,7 @@ HdSt_TextureHandleRegistry::AllocateTextureHandle(
             textureObject,
             samplerParams,
             memoryRequest,
+            createBindlessHandle,
             shaderCode,
             this);
 
@@ -192,7 +182,7 @@ HdSt_TextureHandleRegistry::AllocateTextureHandle(
 void
 HdSt_TextureHandleRegistry::MarkSamplerGarbageCollectionNeeded()
 {
-    _samplerObjectRegistry->MarkGarbageCollectionNeeded();
+    _samplerGarbageCollectionNeeded = true;
 }
 
 void
@@ -233,15 +223,6 @@ HdSt_TextureHandleRegistry::_ComputeMemoryRequest(
         }
     }
 
-    if (maxRequest == 0) {
-        // If no handle had an opinion, use default memory request.
-        const auto it = _textureTypeToMemoryRequest.find(
-            texture->GetTextureType() );
-        if (it != _textureTypeToMemoryRequest.end()) {
-            maxRequest = it->second;
-        }
-    }
-
     if (hasHandle) {
         texture->SetTargetMemory(maxRequest);
     }
@@ -256,16 +237,6 @@ HdSt_TextureHandleRegistry::_ComputeMemoryRequests(
 
     for (HdStTextureObjectSharedPtr const & texture : textures) {
         _ComputeMemoryRequest(texture);
-    }
-}
-
-void
-HdSt_TextureHandleRegistry::_ComputeAllMemoryRequests()
-{
-    TRACE_FUNCTION();
-
-    for (const auto &it : _textureToHandlesMap->GetMap()) {
-        _ComputeMemoryRequest(it.first);
     }
 }
 
@@ -308,12 +279,7 @@ HdSt_TextureHandleRegistry::_GarbageCollectHandlesAndComputeTargetMemory()
         _textureToHandlesMap->GarbageCollect(dirtyTextures);
 
     // Compute target memory for dirty textures.
-    if (_textureTypeToMemoryRequestChanged) {
-        _ComputeAllMemoryRequests();
-        _textureTypeToMemoryRequestChanged = false;
-    } else {
-        _ComputeMemoryRequests(dirtyTextures);
-    }
+    _ComputeMemoryRequests(dirtyTextures);
 
     _dirtyTextures.clear();
 
@@ -417,26 +383,12 @@ HdSt_TextureHandleRegistry::Commit()
 
     // Updating the samplers in the above _Commit() could have
     // freed some, so we do sampler garbage collection last.
-    _samplerObjectRegistry->GarbageCollect();
+    if (_samplerGarbageCollectionNeeded) {
+        _samplerObjectRegistry->GarbageCollect();
+        _samplerGarbageCollectionNeeded = false;
+    }
 
     return result;
-}
-
-void
-HdSt_TextureHandleRegistry::SetMemoryRequestForTextureType(
-    const HdTextureType textureType, const size_t memoryRequest)
-{
-    size_t &val = _textureTypeToMemoryRequest[textureType];
-    if (val != memoryRequest) {
-        val = memoryRequest;
-        _textureTypeToMemoryRequestChanged = true;
-    }
-}
-
-size_t
-HdSt_TextureHandleRegistry::GetNumberOfTextureHandles() const
-{
-    return _textureToHandlesMap->GetSize();
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

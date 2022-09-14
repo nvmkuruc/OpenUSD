@@ -41,16 +41,11 @@ option(PXR_ENABLE_MATERIALX_SUPPORT "Enable MaterialX support" OFF)
 option(PXR_BUILD_DOCUMENTATION "Generate doxygen documentation" OFF)
 option(PXR_ENABLE_PYTHON_SUPPORT "Enable Python based components for USD" ON)
 option(PXR_USE_PYTHON_3 "Build Python bindings for Python 3" OFF)
-option(PXR_USE_DEBUG_PYTHON "Build with debug python" OFF)
 option(PXR_ENABLE_HDF5_SUPPORT "Enable HDF5 backend in the Alembic plugin for USD" ON)
 option(PXR_ENABLE_OSL_SUPPORT "Enable OSL (OpenShadingLanguage) based components" OFF)
 option(PXR_ENABLE_PTEX_SUPPORT "Enable Ptex support" ON)
 option(PXR_ENABLE_OPENVDB_SUPPORT "Enable OpenVDB support" OFF)
 option(PXR_ENABLE_NAMESPACES "Enable C++ namespaces." ON)
-option(PXR_PREFER_SAFETY_OVER_SPEED
-       "Enable certain checks designed to avoid crashes or out-of-bounds memory reads with malformed input files.  These checks may negatively impact performance."
-        ON)
-option(PXR_USE_AR_2 "Use Asset Resolver (Ar) 2.0" ON)
 
 # Determine GFX api
 # Metal only valid on Apple platforms
@@ -59,7 +54,6 @@ if(APPLE)
     set(pxr_enable_metal "ON")
 endif()
 option(PXR_ENABLE_METAL_SUPPORT "Enable Metal based components" "${pxr_enable_metal}")
-option(PXR_ENABLE_VULKAN_SUPPORT "Enable Vulkan based components" OFF)
 option(PXR_ENABLE_GL_SUPPORT "Enable OpenGL based components" ON)
 
 # Precompiled headers are a win on Windows, not on gcc.
@@ -107,7 +101,7 @@ set(PXR_OBJECT_LIBS ""
     "Aggregation of all core libraries built as OBJECT libraries."
 )
 
-set(PXR_LIB_PREFIX "${CMAKE_SHARED_LIBRARY_PREFIX}usd_"
+set(PXR_LIB_PREFIX ${CMAKE_SHARED_LIBRARY_PREFIX}
     CACHE
     STRING
     "Prefix for build library name"
@@ -134,15 +128,7 @@ if (${PXR_BUILD_USD_IMAGING} AND NOT ${PXR_BUILD_IMAGING})
     set(PXR_BUILD_USD_IMAGING "OFF" CACHE BOOL "" FORCE)
 endif()
 
-if (${PXR_ENABLE_METAL_SUPPORT})
-    if (NOT APPLE)
-        message(STATUS
-            "Setting PXR_ENABLE_METAL_SUPPORT=OFF because Metal is only supported on macOS")
-        set(PXR_ENABLE_METAL_SUPPORT "OFF" CACHE BOOL "" FORCE)
-    endif()
-endif()
-
-if (${PXR_ENABLE_GL_SUPPORT} OR ${PXR_ENABLE_METAL_SUPPORT} OR ${PXR_ENABLE_VULKAN_SUPPORT})
+if (${PXR_ENABLE_GL_SUPPORT} OR ${PXR_ENABLE_METAL_SUPPORT})
     set(PXR_BUILD_GPU_SUPPORT "ON")
 else()
     set(PXR_BUILD_GPU_SUPPORT "OFF")

@@ -28,7 +28,7 @@
 
 #include "pxr/pxr.h"
 #include "pxr/usd/usdLux/api.h"
-#include "pxr/usd/usdLux/boundableLightBase.h"
+#include "pxr/usd/usdLux/light.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
 #include "pxr/usd/usdLux/tokens.h"
@@ -58,25 +58,20 @@ class SdfAssetPath;
 /// position, a texture file's min coordinates should be at (+X, +Y) and 
 /// max coordinates at (-X, -Y).
 ///
-/// For any described attribute \em Fallback \em Value or \em Allowed \em Values below
-/// that are text/tokens, the actual token is published and defined in \ref UsdLuxTokens.
-/// So to set an attribute to the value "rightHanded", use UsdLuxTokens->rightHanded
-/// as the value.
-///
-class UsdLuxRectLight : public UsdLuxBoundableLightBase
+class UsdLuxRectLight : public UsdLuxLight
 {
 public:
     /// Compile time constant representing what kind of schema this class is.
     ///
-    /// \sa UsdSchemaKind
-    static const UsdSchemaKind schemaKind = UsdSchemaKind::ConcreteTyped;
+    /// \sa UsdSchemaType
+    static const UsdSchemaType schemaType = UsdSchemaType::ConcreteTyped;
 
     /// Construct a UsdLuxRectLight on UsdPrim \p prim .
     /// Equivalent to UsdLuxRectLight::Get(prim.GetStage(), prim.GetPath())
     /// for a \em valid \p prim, but will not immediately throw an error for
     /// an invalid \p prim
     explicit UsdLuxRectLight(const UsdPrim& prim=UsdPrim())
-        : UsdLuxBoundableLightBase(prim)
+        : UsdLuxLight(prim)
     {
     }
 
@@ -84,7 +79,7 @@ public:
     /// Should be preferred over UsdLuxRectLight(schemaObj.GetPrim()),
     /// as it preserves SchemaBase state.
     explicit UsdLuxRectLight(const UsdSchemaBase& schemaObj)
-        : UsdLuxBoundableLightBase(schemaObj)
+        : UsdLuxLight(schemaObj)
     {
     }
 
@@ -139,11 +134,11 @@ public:
     Define(const UsdStagePtr &stage, const SdfPath &path);
 
 protected:
-    /// Returns the kind of schema this class belongs to.
+    /// Returns the type of schema this class belongs to.
     ///
-    /// \sa UsdSchemaKind
+    /// \sa UsdSchemaType
     USDLUX_API
-    UsdSchemaKind _GetSchemaKind() const override;
+    UsdSchemaType _GetSchemaType() const override;
 
 private:
     // needs to invoke _GetStaticTfType.
@@ -165,7 +160,7 @@ public:
     ///
     /// | ||
     /// | -- | -- |
-    /// | Declaration | `float inputs:width = 1` |
+    /// | Declaration | `float width = 1` |
     /// | C++ Type | float |
     /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Float |
     USDLUX_API
@@ -187,7 +182,7 @@ public:
     ///
     /// | ||
     /// | -- | -- |
-    /// | Declaration | `float inputs:height = 1` |
+    /// | Declaration | `float height = 1` |
     /// | C++ Type | float |
     /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Float |
     USDLUX_API
@@ -209,7 +204,7 @@ public:
     ///
     /// | ||
     /// | -- | -- |
-    /// | Declaration | `asset inputs:texture:file` |
+    /// | Declaration | `asset texture:file` |
     /// | C++ Type | SdfAssetPath |
     /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Asset |
     USDLUX_API

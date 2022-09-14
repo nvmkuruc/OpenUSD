@@ -25,17 +25,40 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-HgiShaderFunctionDesc const&
-HgiShaderFunction::GetDescriptor() const
-{
-    return _descriptor;
-}
-
 HgiShaderFunction::HgiShaderFunction(HgiShaderFunctionDesc const& desc)
     : _descriptor(desc)
 {
 }
 
 HgiShaderFunction::~HgiShaderFunction() = default;
+
+HgiShaderFunctionDesc const&
+HgiShaderFunction::GetDescriptor() const
+{
+    return _descriptor;
+}
+
+HgiShaderFunctionDesc::HgiShaderFunctionDesc()
+    : shaderStage(0)
+    , shaderCode(nullptr)
+{
+}
+
+bool operator==(
+    const HgiShaderFunctionDesc& lhs,
+    const HgiShaderFunctionDesc& rhs)
+{
+    return lhs.debugName == rhs.debugName &&
+           lhs.shaderStage == rhs.shaderStage;
+           // Omitted. Only used tmp during shader compile
+           // lhs.shaderCode == rhs.shaderCode
+}
+
+bool operator!=(
+    const HgiShaderFunctionDesc& lhs,
+    const HgiShaderFunctionDesc& rhs)
+{
+    return !(lhs == rhs);
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE

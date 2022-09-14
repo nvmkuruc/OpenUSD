@@ -85,7 +85,6 @@ _ConvertGenerateClipTopologyName(const std::string& resultLayerName)
 bool
 _ConvertStitchClipTemplate(const SdfLayerHandle& resultLayer,
                            const SdfLayerHandle& topologyLayer,
-                           const SdfLayerHandle& manifestLayer,
                            const SdfPath& clipPath,
                            const std::string& templatePath,
                            const double startFrame,
@@ -103,7 +102,7 @@ _ConvertStitchClipTemplate(const SdfLayerHandle& resultLayer,
     const auto interpolateMissingClipValues
         = _ConvertWithDefault(pyInterpolateMissingClipValues, false);
     return UsdUtilsStitchClipsTemplate(
-        resultLayer, topologyLayer, manifestLayer,
+        resultLayer, topologyLayer,
         clipPath, templatePath, startFrame,
         endFrame, stride, activeOffset, interpolateMissingClipValues, clipSet);
 }
@@ -127,18 +126,10 @@ void wrapStitchClips()
         (arg("topologyLayer"),
          arg("clipLayerFiles")));
 
-    def("StitchClipsManifest",
-        UsdUtilsStitchClipsManifest,
-        (arg("manifestLayer"), 
-         arg("topologyLayer"), 
-         arg("clipPath"),
-         arg("clipLayerFiles")));
-
     def("StitchClipsTemplate",
         _ConvertStitchClipTemplate,
         (arg("resultLayer"),
          arg("topologyLayer"),
-         arg("manifestLayer"),
          arg("clipPath"),
          arg("templatePath"),
          arg("startTimeCode"),
@@ -150,9 +141,5 @@ void wrapStitchClips()
 
     def("GenerateClipTopologyName",
         _ConvertGenerateClipTopologyName,
-        (arg("rootLayerName")));
-
-    def("GenerateClipManifestName",
-        UsdUtilsGenerateClipManifestName,
         (arg("rootLayerName")));
 }

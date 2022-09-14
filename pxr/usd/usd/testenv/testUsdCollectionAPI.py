@@ -22,8 +22,6 @@
 # KIND, either express or implied. See the Apache License for the specific
 # language governing permissions and limitations under the Apache License.
 
-# pylint: disable=dict-keys-not-iterating
-
 from __future__ import print_function
 
 from pxr import Usd, Vt, Sdf, Tf
@@ -60,12 +58,9 @@ class TestUsdCollectionAPI(unittest.TestCase):
     def test_AuthorCollections(self):
         # ----------------------------------------------------------
         # Test an explicitOnly collection.
-        self.assertTrue(Usd.CollectionAPI.CanApply(testPrim, 
-                "test:Explicit:Collection"))
-        explicitColl = Usd.CollectionAPI.Apply(testPrim, 
-                "test:Explicit:Collection")
-        explicitColl.CreateExpansionRuleAttr(Usd.Tokens.explicitOnly)
-                
+        explicitColl = Usd.CollectionAPI.ApplyCollection(testPrim, 
+                "test:Explicit:Collection", Usd.Tokens.explicitOnly)
+        
         # The collection is initially empty.
         self.assertTrue(explicitColl.HasNoIncludedPaths())
         self.assertTrue('CollectionAPI:test:Explicit:Collection' in
@@ -117,10 +112,8 @@ class TestUsdCollectionAPI(unittest.TestCase):
 
         # ----------------------------------------------------------
         # Test an expandPrims collection.
-        self.assertTrue(Usd.CollectionAPI.CanApply(testPrim, 
-                "testExpandPrimsColl"))
-        expandPrimsColl = Usd.CollectionAPI.Apply(testPrim, 
-                "testExpandPrimsColl")
+        expandPrimsColl = Usd.CollectionAPI.ApplyCollection(testPrim, 
+                "testExpandPrimsColl", Usd.Tokens.expandPrims)
         expandPrimsColl.CreateIncludesRel().AddTarget(geom.GetPath())
         expandPrimsCollMquery = expandPrimsColl.ComputeMembershipQuery()
         
@@ -147,12 +140,9 @@ class TestUsdCollectionAPI(unittest.TestCase):
 
         # ----------------------------------------------------------
         # Test an expandPrimsAndProperties collection.
-        self.assertTrue(Usd.CollectionAPI.CanApply(testPrim, 
-                "testExpandPrimsAndPropertiesColl"))
-        expandPrimsAndPropertiesColl = Usd.CollectionAPI.Apply(
+        expandPrimsAndPropertiesColl = Usd.CollectionAPI.ApplyCollection(
                 testPrim, 
-                "testExpandPrimsAndPropertiesColl")
-        expandPrimsAndPropertiesColl.CreateExpansionRuleAttr(
+                "testExpandPrimsAndPropertiesColl",
                 Usd.Tokens.expandPrimsAndProperties)
         expandPrimsAndPropertiesColl.CreateIncludesRel().AddTarget(
                 shapes.GetPath())
@@ -169,9 +159,8 @@ class TestUsdCollectionAPI(unittest.TestCase):
         # 
         # Create a collection that combines the explicit collection and 
         # the expandPrimsAndProperties collection.
-        self.assertTrue(Usd.CollectionAPI.CanApply(testPrim, "combined"))
-        combinedColl = Usd.CollectionAPI.Apply(testPrim, "combined")
-        combinedColl.CreateExpansionRuleAttr(Usd.Tokens.explicitOnly)
+        combinedColl = Usd.CollectionAPI.ApplyCollection(testPrim, "combined", 
+                Usd.Tokens.explicitOnly)
         combinedColl.CreateIncludesRel().AddTarget(
             expandPrimsAndPropertiesColl.GetCollectionPath())
         combinedColl.CreateIncludesRel().AddTarget(
@@ -208,8 +197,7 @@ class TestUsdCollectionAPI(unittest.TestCase):
         self.assertTrue(explicitColl.HasNoIncludedPaths())
 
     def test_testIncludeAndExcludePath(self):
-        self.assertTrue(Usd.CollectionAPI.CanApply(geom, "geom"))
-        geomCollection = Usd.CollectionAPI.Apply(geom, 
+        geomCollection = Usd.CollectionAPI.ApplyCollection(geom, 
             "geom")
         self.assertTrue(geomCollection.IncludePath(shapes.GetPath()))
         self.assertTrue(geomCollection.ExcludePath(sphere.GetPath()))
@@ -248,8 +236,7 @@ class TestUsdCollectionAPI(unittest.TestCase):
         # Test includeRoot.
         # First create a collection that excludes /CollectionTest/Geom
         # but includes the root.
-        self.assertTrue(Usd.CollectionAPI.CanApply(testPrim, "includeRootTest"))
-        includeRootTest = Usd.CollectionAPI.Apply(testPrim,
+        includeRootTest = Usd.CollectionAPI.ApplyCollection(testPrim,
             "includeRootTest")
         includeRootTest.IncludePath('/')
         includeRootTest.ExcludePath(geom.GetPath())
@@ -282,9 +269,6 @@ class TestUsdCollectionAPI(unittest.TestCase):
 
         # Test GetName() API.
         self.assertEqual(leafGeom.GetName(), 'leafGeom')
-        self.assertFalse(Usd.CollectionAPI.CanContainPropertyName(
-            leafGeom.GetName()))
-        self.assertTrue(leafGeom.GetCollectionPath().name)
 
         # Test Get/IsCollectionAPIPath API.
         self.assertTrue(Usd.CollectionAPI.IsCollectionAPIPath(
@@ -298,25 +282,23 @@ class TestUsdCollectionAPI(unittest.TestCase):
             leafGeom.GetIncludesRel().GetPath()))
 
         leafGeomMquery = leafGeom.ComputeMembershipQuery()
-        self.assertEqual(leafGeomMquery.GetIncludedCollections(), [])
         self.assertEqual(
             len(Usd.CollectionAPI.ComputeIncludedObjects(leafGeomMquery,
                                                          stage)),
             2)
 
-        # Calling Apply on an already existing collection will not update
+        # Calling ApplyCollection on an already existing collection will update
         # the expansionRule.
         self.assertEqual(leafGeom.GetExpansionRuleAttr().Get(), 
                          Usd.Tokens.explicitOnly)
-        self.assertTrue(Usd.CollectionAPI.CanApply(testPrim, "leafGeom"))
-        leafGeom = Usd.CollectionAPI.Apply(testPrim, "leafGeom")
+        leafGeom = Usd.CollectionAPI.ApplyCollection(testPrim, "leafGrom", 
+            Usd.Tokens.expandPrims)
         self.assertEqual(leafGeom.GetExpansionRuleAttr().Get(), 
-                         Usd.Tokens.explicitOnly)
+                         Usd.Tokens.expandPrims)
 
         allGeom = Usd.CollectionAPI(testPrim, "allGeom")
         (valid, reason) = allGeom.Validate()
         allGeomMquery = allGeom.ComputeMembershipQuery()
-        self.assertEqual(allGeomMquery.GetIncludedCollections(), [])
         self.assertEqual(len(Usd.CollectionAPI.ComputeIncludedObjects(
                 allGeomMquery,stage)), 9)
 
@@ -328,15 +310,13 @@ class TestUsdCollectionAPI(unittest.TestCase):
         allGeomProperties = Usd.CollectionAPI(testPrim, "allGeomProperties")
         (valid, reason) = allGeomProperties.Validate()
         allGeomPropertiesMquery = allGeomProperties.ComputeMembershipQuery()
-        self.assertEqual(allGeomPropertiesMquery.GetIncludedCollections(), [])
         self.assertEqual(len(Usd.CollectionAPI.ComputeIncludedObjects(
-                allGeomPropertiesMquery, stage)), 29)
+                allGeomPropertiesMquery, stage)), 25)
 
         hasRels = Usd.CollectionAPI(testPrim, "hasRelationships")
         (valid, reason) = hasRels.Validate()
         self.assertTrue(valid)
         hasRelsMquery = hasRels.ComputeMembershipQuery()
-        self.assertEqual(hasRelsMquery.GetIncludedCollections(), [])
         incObjects = Usd.CollectionAPI.ComputeIncludedObjects(hasRelsMquery, stage)
         for obj in incObjects: 
             self.assertTrue(isinstance(obj, Usd.Property))
@@ -345,53 +325,37 @@ class TestUsdCollectionAPI(unittest.TestCase):
         (valid, reason) = hasInstanceProxy.Validate()
         self.assertTrue(valid)
         hasInstanceProxyMquery = hasInstanceProxy.ComputeMembershipQuery()
-        self.assertEqual(hasInstanceProxyMquery.GetIncludedCollections(), [])
         incObjects = Usd.CollectionAPI.ComputeIncludedObjects(
                 hasInstanceProxyMquery, stage)
         self.assertEqual(len(incObjects), 2)
         for obj in incObjects:
             self.assertTrue(obj.IsInstanceProxy())
-            self.assertFalse(obj.IsInPrototype())
+            self.assertFalse(obj.IsInMaster())
         
         coneProperties = Usd.CollectionAPI(testPrim, "coneProperties")
         (valid, reason) = coneProperties.Validate()
         self.assertTrue(valid)
         conePropertiesMquery = coneProperties.ComputeMembershipQuery()
-        self.assertEqual(conePropertiesMquery.GetIncludedCollections(), [])
         incObjects = Usd.CollectionAPI.ComputeIncludedObjects(
                 conePropertiesMquery, stage)
         self.assertEqual(len(incObjects), 2)
         for obj in incObjects:
             self.assertTrue(isinstance(obj, Usd.Property))
 
+
         includesCollection = Usd.CollectionAPI(testPrim, "includesCollection")
         (valid, reason) = includesCollection.Validate()
         self.assertTrue(valid)
         includesCollectionMquery = includesCollection.ComputeMembershipQuery()
-        self.assertEqual(
-            set(includesCollectionMquery.GetIncludedCollections()),
-            set([Sdf.Path("/CollectionTest/Geom/Shapes.collection:allShapes")]))
         incObjects = Usd.CollectionAPI.ComputeIncludedObjects(
                 includesCollectionMquery, stage)
         self.assertTrue(hemiSphere2 in incObjects)
         self.assertTrue(hemiSphere1 not in incObjects)
 
-        includesNestedCollection = Usd.CollectionAPI(
-            testPrim, "includesNestedCollection")
-        (valid, reason) = includesNestedCollection.Validate()
-        self.assertTrue(valid)
-        includesNestedCollectionMquery = \
-            includesNestedCollection.ComputeMembershipQuery()
-        self.assertEqual(
-            set(includesNestedCollectionMquery.GetIncludedCollections()),
-            set([Sdf.Path("/CollectionTest/Geom/Shapes.collection:allShapes"),
-                 Sdf.Path("/CollectionTest/Geom.collection:allGeom")]))
-
         excludeInstanceGeom = Usd.CollectionAPI(testPrim, "excludeInstanceGeom")
         (valid, reason) = excludeInstanceGeom.Validate()
         self.assertTrue(valid)
         excludeInstanceGeomMquery = excludeInstanceGeom.ComputeMembershipQuery()
-        self.assertEqual(excludeInstanceGeomMquery.GetIncludedCollections(), [])
         incObjects = Usd.CollectionAPI.ComputeIncludedObjects(
                 excludeInstanceGeomMquery, stage)
         self.assertEqual(len(incObjects), 1)
@@ -414,18 +378,14 @@ class TestUsdCollectionAPI(unittest.TestCase):
             self.assertTrue(len(reason) > 0)
 
     def test_CircularDependency(self):
-        self.assertTrue(Usd.CollectionAPI.CanApply(testPrim, "A"))
-        self.assertTrue(Usd.CollectionAPI.CanApply(testPrim, "B"))
-        self.assertTrue(Usd.CollectionAPI.CanApply(testPrim, "C"))
-        self.assertTrue(Usd.CollectionAPI.CanApply(testPrim, "D"))
-        collectionA = Usd.CollectionAPI.Apply(testPrim, "A")
-        collectionA.CreateExpansionRuleAttr(Usd.Tokens.explicitOnly)
-        collectionB = Usd.CollectionAPI.Apply(testPrim, 
+        collectionA = Usd.CollectionAPI.ApplyCollection(testPrim, 
+                "A", Usd.Tokens.explicitOnly)
+        collectionB = Usd.CollectionAPI.ApplyCollection(testPrim, 
                 "B")
-        collectionC = Usd.CollectionAPI.Apply(testPrim, 
+        collectionC = Usd.CollectionAPI.ApplyCollection(testPrim, 
                 "C")
 
-        collectionD = Usd.CollectionAPI.Apply(testPrim, 
+        collectionD = Usd.CollectionAPI.ApplyCollection(testPrim, 
                 "D")
                 
         collectionA.CreateIncludesRel().AddTarget(
@@ -445,27 +405,18 @@ class TestUsdCollectionAPI(unittest.TestCase):
         self.assertTrue('circular' in reason)
         mqueryA = collectionA.ComputeMembershipQuery()
         self.assertEqual(len(ComputeIncObjs(mqueryA, stage)), 0)
-        self.assertEqual(mqueryA.GetIncludedCollections(),
-                         [collectionB.GetCollectionPath(),
-                          collectionC.GetCollectionPath()])
 
         (valid, reason) = collectionB.Validate()
         self.assertFalse(valid)
         self.assertTrue('circular' in reason)
         mqueryB = collectionB.ComputeMembershipQuery()
         self.assertEqual(len(ComputeIncObjs(mqueryB, stage)), 0)
-        self.assertEqual(mqueryB.GetIncludedCollections(),
-                         [collectionA.GetCollectionPath(),
-                          collectionC.GetCollectionPath()])
 
         (valid, reason) = collectionC.Validate()
         self.assertFalse(valid)
         self.assertTrue('circular' in reason)
         mqueryC = collectionC.ComputeMembershipQuery()
         self.assertEqual(len(ComputeIncObjs(mqueryC, stage)), 0)
-        self.assertEqual(mqueryC.GetIncludedCollections(),
-                         [collectionA.GetCollectionPath(),
-                          collectionB.GetCollectionPath()])
 
         # Now, if A includes D, the warning about circular dependency should 
         # not prevent inclusion of D in A, B or C.
@@ -473,108 +424,20 @@ class TestUsdCollectionAPI(unittest.TestCase):
             collectionD.GetCollectionPath())
         mqueryA = collectionA.ComputeMembershipQuery()
         self.assertEqual(len(ComputeIncObjs(mqueryA, stage)), 9)
-        self.assertEqual(mqueryA.GetIncludedCollections(),
-                         [collectionB.GetCollectionPath(),
-                          collectionC.GetCollectionPath(),
-                          collectionD.GetCollectionPath()])
 
         mqueryB = collectionB.ComputeMembershipQuery()
         self.assertEqual(len(ComputeIncObjs(mqueryB, stage)), 9)
-        self.assertEqual(mqueryB.GetIncludedCollections(),
-                         [collectionA.GetCollectionPath(),
-                          collectionC.GetCollectionPath(),
-                          collectionD.GetCollectionPath()])
 
         mqueryC = collectionC.ComputeMembershipQuery()
         self.assertEqual(len(ComputeIncObjs(mqueryC, stage)), 9)
-        self.assertEqual(mqueryC.GetIncludedCollections(),
-                         [collectionA.GetCollectionPath(),
-                          collectionB.GetCollectionPath(),
-                          collectionD.GetCollectionPath()])
 
-        collectionA.CreateIncludesRel().RemoveTarget(
-            collectionD.GetCollectionPath())
-
-        # Test cycle detection where A includes B includes C includes B.
-        collectionC.CreateIncludesRel().ClearTargets(False)
-        collectionC.CreateIncludesRel().AddTarget(
-            collectionB.GetCollectionPath())
-
-        (valid, reason) = collectionA.Validate()
-        self.assertFalse(valid)
-        self.assertTrue('circular' in reason)
-        mqueryA = collectionA.ComputeMembershipQuery()
-        self.assertEqual(len(ComputeIncObjs(mqueryA, stage)), 0)
-        self.assertEqual(mqueryA.GetIncludedCollections(),
-                         [collectionB.GetCollectionPath(),
-                          collectionC.GetCollectionPath()])
-
-        (valid, reason) = collectionB.Validate()
-        self.assertFalse(valid)
-        self.assertTrue('circular' in reason)
-        mqueryB = collectionB.ComputeMembershipQuery()
-        self.assertEqual(len(ComputeIncObjs(mqueryB, stage)), 0)
-        self.assertEqual(mqueryB.GetIncludedCollections(),
-                         [collectionC.GetCollectionPath()])
-
-        (valid, reason) = collectionC.Validate()
-        self.assertFalse(valid)
-        self.assertTrue('circular' in reason)
-        mqueryC = collectionC.ComputeMembershipQuery()
-        self.assertEqual(len(ComputeIncObjs(mqueryC, stage)), 0)
-        self.assertEqual(mqueryC.GetIncludedCollections(),
-                         [collectionB.GetCollectionPath()])
-
-        # Test cycle detection where A includes B includes B
-        collectionB.CreateIncludesRel().ClearTargets(False)
-        collectionB.CreateIncludesRel().AddTarget(
-            collectionB.GetCollectionPath())
-
-        (valid, reason) = collectionA.Validate()
-        self.assertFalse(valid)
-        self.assertTrue('circular' in reason)
-        mqueryA = collectionA.ComputeMembershipQuery()
-        self.assertEqual(len(ComputeIncObjs(mqueryA, stage)), 0)
-        self.assertEqual(mqueryA.GetIncludedCollections(),
-                         [collectionB.GetCollectionPath()])
-
-        (valid, reason) = collectionB.Validate()
-        self.assertFalse(valid)
-        self.assertTrue('circular' in reason)
-        mqueryB = collectionB.ComputeMembershipQuery()
-        self.assertEqual(len(ComputeIncObjs(mqueryB, stage)), 0)
-        self.assertEqual(mqueryB.GetIncludedCollections(), 
-                         [])
-
-        # Test cycle detection where A includes A
-        collectionA.CreateIncludesRel().ClearTargets(False)
-        collectionA.CreateIncludesRel().AddTarget(
-            collectionA.GetCollectionPath())
-
-        (valid, reason) = collectionA.Validate()
-        self.assertFalse(valid)
-        self.assertTrue('circular' in reason)
-        mqueryA = collectionA.ComputeMembershipQuery()
-        self.assertEqual(len(ComputeIncObjs(mqueryA, stage)), 0)
-        self.assertEqual(mqueryA.GetIncludedCollections(),
-                         [])
-
-    def test_InvalidApply(self):
+    def test_InvalidApplyCollection(self):
         # ----------------------------------------------------------
-        # Test Apply when passed a string that doesn't tokenize to
+        # Test ApplyCollection when passed a string that doesn't tokenize to
         # make sure we don't crash in that case, but issue a coding error.
-        # Both CanApply and Apply raise coding errors in the instance name is 
-        # empty.
         with self.assertRaises(Tf.ErrorException):
-            self.assertFalse(Usd.CollectionAPI.CanApply(testPrim, ""))
-        with self.assertRaises(Tf.ErrorException):
-            Usd.CollectionAPI.Apply(testPrim, "")
-
-        # Test Apply when the instance name is invalid because it matches a
-        # property name. CanApply will return false, but the apply will still
-        # occur as we don't enforce CanApply during Apply.
-        self.assertFalse(Usd.CollectionAPI.CanApply(testPrim, "excludes"))
-        self.assertTrue(Usd.CollectionAPI.Apply(testPrim, "excludes"))
+            Usd.CollectionAPI.ApplyCollection(testPrim, "", 
+                    Usd.Tokens.explicitOnly)
 
     def test_CollectionEquivalence(self):
         # ----------------------------------------------------------
@@ -606,9 +469,11 @@ class TestUsdCollectionAPI(unittest.TestCase):
 
     def test_SchemaPropertyBaseNames(self):
         self.assertTrue(Usd.CollectionAPI.IsSchemaPropertyBaseName(
-                "includeRoot"))
+                Usd.Tokens.includeRoot))
         self.assertTrue(Usd.CollectionAPI.IsSchemaPropertyBaseName(
-                "expansionRule"))
+                Usd.Tokens.expansionRule))
+        # XXX:"includes" and "excludes" are not public tokens, but they probably 
+        # should be, since API for them will be auto-generated in the future.
         self.assertTrue(Usd.CollectionAPI.IsSchemaPropertyBaseName(
                 "includes"))
         self.assertTrue(Usd.CollectionAPI.IsSchemaPropertyBaseName(
@@ -616,29 +481,6 @@ class TestUsdCollectionAPI(unittest.TestCase):
         # "collection" is the prefix, not the base name.
         self.assertFalse(Usd.CollectionAPI.IsSchemaPropertyBaseName(
                 Usd.Tokens.collection))
-
-    def test_GetSchemaAttributeNames(self):
-        # Note that since CollectionAPI doesn't inherit from any API schemas,
-        # passing True vs False for includeInherited doesn't make a difference.
-        self.assertEqual(Usd.CollectionAPI.GetSchemaAttributeNames(),
-                         ['collection:__INSTANCE_NAME__:expansionRule', 
-                          'collection:__INSTANCE_NAME__:includeRoot'])
-
-        self.assertEqual(Usd.CollectionAPI.GetSchemaAttributeNames(False, ""),
-                         ['collection:__INSTANCE_NAME__:expansionRule', 
-                          'collection:__INSTANCE_NAME__:includeRoot'])
-
-        self.assertEqual(Usd.CollectionAPI.GetSchemaAttributeNames(True, ""),
-                         ['collection:__INSTANCE_NAME__:expansionRule', 
-                          'collection:__INSTANCE_NAME__:includeRoot'])
-
-        self.assertEqual(Usd.CollectionAPI.GetSchemaAttributeNames(False, "foo"),
-                         ['collection:foo:expansionRule', 
-                          'collection:foo:includeRoot'])
-
-        self.assertEqual(Usd.CollectionAPI.GetSchemaAttributeNames(True, "bar"),
-                         ['collection:bar:expansionRule', 
-                          'collection:bar:includeRoot'])
 
     def test_RelativePathIsPathIncluded(self):
         # ----------------------------------------------------------

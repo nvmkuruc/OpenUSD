@@ -704,11 +704,9 @@ int main()
 
     TestObjectsChanged();
 
-    // XXX:aluk
-    // TODO: Remove fast updates, except for skipping variability checks in UsdImaging.
     // #nv begin #fast-updates
-    //TestFastUpdates("usda");
-    //TestFastUpdates("usdc");
+    TestFastUpdates("usda");
+    TestFastUpdates("usdc");
     // nv end
 
     TF_AXIOM(m.IsClean());

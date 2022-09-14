@@ -207,38 +207,39 @@ class TraceScopeAuto {
 public:
     /// Constructor for TRACE_FUNCTION macro.
     ///
-    explicit TraceScopeAuto(const TraceStaticKeyData& key) noexcept
-        : _key(&key)
-        , _intervalTimer(/*start=*/TraceCollector::IsEnabled()) {
+    explicit TraceScopeAuto(const TraceStaticKeyData& key)
+        : _key(nullptr)
+        , _start(0) {
+
+        if (ARCH_UNLIKELY(TraceCollector::IsEnabled())) {
+            // Init the key if needed.
+            _key = &key;
+            _start = ArchGetTickTime();
+        }
+        
     }
 
     /// Constructor that also records scope arguments.
     ///
     template < typename... Args>
     TraceScopeAuto(const TraceStaticKeyData& key, Args&&... args)
-        : _key(&key)
-        , _intervalTimer(/*start=*/false) {
-        if (TraceCollector::IsEnabled()) {
-            _intervalTimer.Start();
-            TraceCollector
-                ::GetInstance().ScopeArgs(std::forward<Args>(args)...);
+        : TraceScopeAuto(key) {
+        if (ARCH_UNLIKELY(_key)) {
+            TraceCollector::GetInstance().ScopeArgs(std::forward<Args>(args)...);
         }
     }
 
     /// Destructor.
     ///
-    ~TraceScopeAuto() noexcept {
-        if (_intervalTimer.IsStarted()) {
-            TraceCollector::TimeStamp stopTicks =
-                _intervalTimer.GetCurrentTicks();
-            TraceCollector::Scope(
-                *_key, _intervalTimer.GetStartTicks(), stopTicks);
+    ~TraceScopeAuto() {
+        if (ARCH_UNLIKELY(_key)) {
+            TraceCollector::GetInstance().Scope(*_key, _start);
         }
     }
     
 private:
-    const TraceStaticKeyData* const _key;
-    ArchIntervalTimer _intervalTimer;
+    const TraceStaticKeyData* _key;
+    TraceEvent::TimeStamp _start;
 };
 
 ////////////////////////////////////////////////////////////////////////////////

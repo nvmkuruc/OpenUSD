@@ -46,26 +46,28 @@ public:
     HDST_API
     virtual ~HdSt_RenderPass();
 
-    /// Returns whether the render pass has draw items to be submitted
-    /// during _Execute. This may be queried during the Prepare and Execute
-    /// phases of the task owning the render pass.
-    /// This information is useful to prevent unnecessary resource allocation
-    /// and pipeline state changes.
+    /// Returns the number of draw items used by this render pass.
+    /// Will only return the correct value after Prepare() has been called on
+    /// HdRenderPass. Calling this during Sync() will return last frame's
+    /// drawItem count.
     HDST_API
-    bool HasDrawItems(TfTokenVector const &renderTags) const;
+    size_t GetDrawItemCount() const;
 
 protected:
+    virtual void _Prepare(TfTokenVector const &renderTags) override;
+
+    /// Execute the buckets corresponding to renderTags
     virtual void _Execute(HdRenderPassStateSharedPtr const &renderPassState,
                           TfTokenVector const &renderTags) override;
 
     virtual void _MarkCollectionDirty() override;
 
 private:
-    void _UpdateDrawItems(TfTokenVector const& renderTags);
-    void _UpdateCommandBuffer(TfTokenVector const& renderTags);
+    void _PrepareDrawItems(TfTokenVector const& renderTags);
+    void _PrepareCommandBuffer(TfTokenVector const& renderTags);
 
     // XXX: This should really be in HdSt_DrawBatch::PrepareDraw.
-    void _FrustumCullCPU(HdStRenderPassStateSharedPtr const &renderPassState);
+    void _Cull(HdStRenderPassStateSharedPtr const &renderPasssState);
 
     // -----------------------------------------------------------------------
     // Drawing state
@@ -76,25 +78,12 @@ private:
 
     // -----------------------------------------------------------------------
     // Change tracking state.
-    // XXX: This is necessary only when not using the draw items cache.
 
     // The version number of the currently held collection.
     int _collectionVersion;
 
-    // The version number of the render tag opinion of rprims
-    int _rprimRenderTagVersion;
-
-    // The version number of the render tags opinion of tasks.
-    int _taskRenderTagsVersion;
-    
-    // The renderTags passed to _Execute(), for comparison next _Execute().
-    TfTokenVector _prevRenderTags;
-
-    // The version number of the material tags (of the rprims).
-    unsigned int _materialTagsVersion;
-
-    // The version number of the geom subset draw items.
-    unsigned int _geomSubsetDrawItemsVersion;
+    // The version number of the currently active render tags
+    int _renderTagVersion;
 
     // A flag indicating that the held collection changed since this renderPass
     // was last drawn.
@@ -104,9 +93,8 @@ private:
     // previously held collection.
     bool _collectionChanged;
 
-    // -----------------------------------------------------------------------
     // DrawItems that are used to build the draw batches.
-    HdDrawItemConstPtrVectorSharedPtr _drawItems;
+    HdRenderIndex::HdDrawItemPtrVector _drawItems;
     size_t _drawItemCount;
     bool _drawItemsChanged;
 

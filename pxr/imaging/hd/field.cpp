@@ -32,6 +32,8 @@ HdField::HdField(SdfPath const &id)
 {
 }
 
-HdField::~HdField() = default;
+HdField::~HdField()
+{
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE

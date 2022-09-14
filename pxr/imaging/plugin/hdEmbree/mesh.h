@@ -68,7 +68,10 @@ public:
 
     /// HdEmbreeMesh constructor.
     ///   \param id The scene-graph path to this mesh.
-    HdEmbreeMesh(SdfPath const& id);
+    ///   \param instancerId If specified, the HdEmbreeInstancer at this id uses
+    ///                      this mesh as a prototype.
+    HdEmbreeMesh(SdfPath const& id,
+                 SdfPath const& instancerId = SdfPath());
 
     /// HdEmbreeMesh destructor.
     /// (Note: Embree resources are released in Finalize()).

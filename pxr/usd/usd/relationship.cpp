@@ -76,10 +76,10 @@ UsdRelationship::_GetTargetForAuthoring(const SdfPath &target,
     if (!target.IsEmpty()) {
         SdfPath absTarget =
             target.MakeAbsolutePath(GetPath().GetAbsoluteRootOrPrimPath());
-        if (Usd_InstanceCache::IsPathInPrototype(absTarget)) {
+        if (Usd_InstanceCache::IsPathInMaster(absTarget)) {
             if (whyNot) { 
-                *whyNot = "Cannot target a prototype or an object within a "
-                    "prototype.";
+                *whyNot = "Cannot target a master or an object within a "
+                    "master.";
             }
             return SdfPath();
         }
@@ -156,6 +156,25 @@ UsdRelationship::RemoveTarget(const SdfPath& target) const
 }
 
 bool
+UsdRelationship::BlockTargets() const
+{
+    // NOTE! Do not insert any code that modifies scene description between the
+    // changeblock and the call to _CreateSpec!  Explanation: _CreateSpec calls
+    // code that inspects the composition graph and then does some authoring.
+    // We want that authoring to be inside the change block, but if any scene
+    // description changes are made after the block is created but before we
+    // call _CreateSpec, the composition structure may be invalidated.
+    SdfChangeBlock block;
+    SdfRelationshipSpecHandle relSpec = _CreateSpec();
+
+    if (!relSpec)
+        return false;
+
+    relSpec->GetTargetPathList().ClearEditsAndMakeExplicit();
+    return true;
+}
+
+bool
 UsdRelationship::SetTargets(const SdfPathVector& targets) const
 {
     SdfPathVector mappedPaths;
@@ -223,27 +242,15 @@ UsdRelationship::GetTargets(SdfPathVector* targets) const
 }
 
 bool
-UsdRelationship::_GetForwardedTargetsImpl(SdfPathSet* visited,
-                                          SdfPathSet* uniqueTargets,
-                                          SdfPathVector* targets,
-                                          bool *foundAnyErrors,
-                                          bool includeForwardingRels) const
+UsdRelationship::_GetForwardedTargets(SdfPathSet* visited,
+                                      SdfPathSet* uniqueTargets,
+                                      SdfPathVector* targets,
+                                      bool includeForwardingRels) const
 {
+    // Track recursive composition errors, starting with the first batch of
+    // targets.
     SdfPathVector curTargets;
-    // Get the targets for this relationship first.
-    const bool foundTargets = 
-        _GetTargets(SdfSpecTypeRelationship, &curTargets, foundAnyErrors);
-    // If there are no targets we can just return the return value of 
-    // _GetTargets. Note that this may be true if there are explicit opinions 
-    // that make the targets empty.
-    if (curTargets.empty()) {
-        return foundTargets;
-    }
-
-    // We'll only return success if this relationship provides a target to the
-    // list or one of its forwarded relationships returns success (which could
-    // be because of a explicit empty opinion)
-    bool success = false;
+    bool success = GetTargets(&curTargets);
 
     // Process all targets at this relationship.
     for (SdfPath const &target: curTargets) {
@@ -252,27 +259,21 @@ UsdRelationship::_GetForwardedTargetsImpl(SdfPathSet* visited,
             if (UsdPrim prim = GetStage()->GetPrimAtPath(target.GetPrimPath())) {
                 if (UsdRelationship rel =
                     prim.GetRelationship(target.GetNameToken())) {
-                    // Only do this rel if we've not yet seen it.
                     if (visited->insert(rel.GetPath()).second) {
-                        success |= rel._GetForwardedTargetsImpl(
-                            visited, uniqueTargets, targets, foundAnyErrors,
+                        // Only do this rel if we've not yet seen it.
+                        success &= rel._GetForwardedTargets(
+                            visited, uniqueTargets, targets,
                             includeForwardingRels);
                     }
                     if (!includeForwardingRels)
                         continue;
-                } 
+                }
             }
-        }         
-        // If we're adding a target then this relationship is providing a 
-        // forwarded target opinion so we'll return success at the end.
-        success = true;
+        }            
         if (uniqueTargets->insert(target).second)
             targets->push_back(target);
     }
 
-    // foundAnyErrors is passed through every level of recursion so we don't 
-    // include it here; it will be accounted for before _GetForwardedTargets
-    // returns.
     return success;
 }
 
@@ -282,10 +283,8 @@ UsdRelationship::_GetForwardedTargets(
     bool includeForwardingRels) const
 {
     SdfPathSet visited, uniqueTargets;
-    bool foundAnyErrors = false;
-    return _GetForwardedTargetsImpl(&visited, &uniqueTargets, targets, 
-                                    &foundAnyErrors, includeForwardingRels)
-        && !foundAnyErrors;
+    return _GetForwardedTargets(&visited, &uniqueTargets, targets,
+                                includeForwardingRels);
 }
 
 bool

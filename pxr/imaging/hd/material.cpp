@@ -23,7 +23,6 @@
 //
 #include "pxr/imaging/hd/material.h"
 #include "pxr/imaging/hd/tokens.h"
-#include "pxr/imaging/hd/perfLog.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -33,15 +32,19 @@ HdMaterial::HdMaterial(SdfPath const& id)
     // NOTHING
 }
 
-HdMaterial::~HdMaterial() = default;
+HdMaterial::~HdMaterial()
+{
+    // NOTHING
+}
 
-HdMaterialNetwork2
-HdConvertToHdMaterialNetwork2(
+
+void
+HdMaterialNetwork2ConvertFromHdMaterialNetworkMap(
     const HdMaterialNetworkMap & hdNetworkMap,
+    HdMaterialNetwork2 *result,
     bool *isVolume)
 {
     HD_TRACE_FUNCTION();
-    HdMaterialNetwork2 result;
 
     for (auto const& iter: hdNetworkMap.map) {
         const TfToken & terminalName = iter.first;
@@ -60,22 +63,22 @@ HdConvertToHdMaterialNetwork2(
             continue;
         }
         for (const HdMaterialNode & node : hdNetwork.nodes) {
-            HdMaterialNode2 & materialNode2 = result.nodes[node.path];
+            HdMaterialNode2 & materialNode2 = result->nodes[node.path];
             materialNode2.nodeTypeId = node.identifier;
             materialNode2.parameters = node.parameters;
         }
         // Assume that the last entry is the terminal 
-        result.terminals[terminalName].upstreamNode = 
+        result->terminals[terminalName].upstreamNode = 
                 hdNetwork.nodes.back().path;
 
         // Transfer relationships to inputConnections on receiving/downstream nodes.
         for (const HdMaterialRelationship & rel : hdNetwork.relationships) {
             
             // outputId (in hdMaterial terms) is the input of the receiving node
-            auto iter = result.nodes.find(rel.outputId);
+            auto iter = result->nodes.find(rel.outputId);
 
             // skip connection if the destination node doesn't exist
-            if (iter == result.nodes.end()) {
+            if (iter == result->nodes.end()) {
                 continue;
             }
 
@@ -91,9 +94,8 @@ HdConvertToHdMaterialNetwork2(
         }
 
         // Transfer primvars:
-        result.primvars = hdNetwork.primvars;
+        result->primvars = hdNetwork.primvars;
     }
-    return result;
 }
 
 
@@ -116,14 +118,12 @@ bool operator==(const HdMaterialRelationship& lhs,
            lhs.inputName  == rhs.inputName;
 }
 
-
 bool operator==(const HdMaterialNode& lhs, const HdMaterialNode& rhs)
 {
     return lhs.path == rhs.path &&
            lhs.identifier == rhs.identifier &&
            lhs.parameters == rhs.parameters;
 }
-
 
 bool operator==(const HdMaterialNetwork& lhs, const HdMaterialNetwork& rhs) 
 {

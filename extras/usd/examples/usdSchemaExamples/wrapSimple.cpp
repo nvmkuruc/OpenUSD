@@ -56,15 +56,6 @@ _CreateIntAttrAttr(UsdSchemaExamplesSimple &self,
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Int), writeSparsely);
 }
 
-static std::string
-_Repr(const UsdSchemaExamplesSimple &self)
-{
-    std::string primRepr = TfPyRepr(self.GetPrim());
-    return TfStringPrintf(
-        "UsdSchemaExamples.Simple(%s)",
-        primRepr.c_str());
-}
-
 } // anonymous namespace
 
 void wrapUsdSchemaExamplesSimple()
@@ -107,7 +98,6 @@ void wrapUsdSchemaExamplesSimple()
              &This::GetTargetRel)
         .def("CreateTargetRel",
              &This::CreateTargetRel)
-        .def("__repr__", ::_Repr)
     ;
 
     _CustomWrapCode(cls);

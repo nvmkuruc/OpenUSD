@@ -65,6 +65,10 @@ public:
     HD_API
     void GarbageCollect();
 
+    /// cleanup all Bprim registries
+    HD_API
+    void GarbageCollectBprims();
+
     /// Globally unique id for texture, see HdRenderIndex::GetTextureKey() for
     /// details.
     typedef size_t TextureKey;
@@ -95,9 +99,12 @@ protected:
     virtual void _Commit();
 
     /// Hooks for derived registries to perform additional GC when
-    /// GarbageCollect() is invoked.
+    /// GarbageCollect() or GarbageCollectBprims() is invoked.
     HD_API
     virtual void _GarbageCollect();
+
+    HD_API
+    virtual void _GarbageCollectBprims();
 
 private:
     // Not copyable

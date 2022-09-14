@@ -154,25 +154,25 @@ class TestUsdAttributeConnections(unittest.TestCase):
             }
             ''')
 
-            prototype = s.GetPrimAtPath('/Root').GetPrototype()
-            self.assertTrue(prototype)
+            master = s.GetPrimAtPath('/Root').GetMaster()
+            self.assertTrue(master)
 
             # Simple source list with correct order
-            a = prototype.GetChild("Foo").GetAttribute("testAttr")
-            sol = [prototype.GetPath().AppendChild('Qux'), 
-                   prototype.GetPath().AppendChild('Bar'), 
-                   prototype.GetPath().AppendChild('Baz'), 
-                   prototype.GetPath().AppendPath(Sdf.Path('Foo.someAttr'))]
+            a = master.GetChild("Foo").GetAttribute("testAttr")
+            sol = [master.GetPath().AppendChild('Qux'), 
+                   master.GetPath().AppendChild('Bar'), 
+                   master.GetPath().AppendChild('Baz'), 
+                   master.GetPath().AppendPath(Sdf.Path('Foo.someAttr'))]
             self.assertEqual(a.GetConnections(), sol) 
 
             # Bogus source path
-            a = prototype.GetChild("Baz").GetAttribute("bogus")
-            sol = [prototype.GetPath().AppendChild("MissingConnectionPath")]
+            a = master.GetChild("Baz").GetAttribute("bogus")
+            sol = [master.GetPath().AppendChild("MissingConnectionPath")]
             self.assertEqual(a.GetConnections(), sol)
 
             # Path inside an instance that points to the instance root
-            a = prototype.GetChild("Baz").GetAttribute("root")
-            sol = [prototype.GetPath()]
+            a = master.GetChild("Baz").GetAttribute("root")
+            sol = [master.GetPath()]
             self.assertEqual(a.GetConnections(), sol)
 
     def test_ConnectionsToObjectsInInstances(self):
@@ -298,23 +298,23 @@ class TestUsdAttributeConnections(unittest.TestCase):
                 }
                 ''')
 
-        prototype = stage.GetPrimAtPath("/Root/Instance_1").GetPrototype()
-        nestedPrototype = prototype.GetChild("NestedInstance_1").GetPrototype()
+        master = stage.GetPrimAtPath("/Root/Instance_1").GetMaster()
+        nestedMaster = master.GetChild("NestedInstance_1").GetMaster()
 
         # Test retrieving connections that point to instances and prims within
         # instances.
         def _TestConnection(attr):
             self.assertTrue(attr)
 
-            # Connections to objects in prototypes cannot be authored.
-            primInPrototypePath = prototype.GetPath().AppendChild("A")
+            # Connections to objects in masters cannot be authored.
+            primInMasterPath = master.GetPath().AppendChild("A")
             with self.assertRaises(Tf.ErrorException):
-                self.assertFalse(attr.AddConnection(primInPrototypePath))
+                self.assertFalse(attr.AddConnection(primInMasterPath))
             with self.assertRaises(Tf.ErrorException):
-                self.assertFalse(attr.RemoveConnection(primInPrototypePath))
+                self.assertFalse(attr.RemoveConnection(primInMasterPath))
             with self.assertRaises(Tf.ErrorException):
                 self.assertFalse(attr.SetConnections(
-                    ["/Root/Instance_1", primInPrototypePath]))
+                    ["/Root/Instance_1", primInMasterPath]))
 
             connections = attr.GetConnections()
             expected = [
@@ -350,29 +350,29 @@ class TestUsdAttributeConnections(unittest.TestCase):
         attr = stage.GetPrimAtPath("/Root/Instance_1").GetAttribute("cattr")
         _TestConnection(attr)
 
-        def _TestConnectionInPrototype(attr):
+        def _TestConnectionInMaster(attr):
             self.assertTrue(attr)
-            self.assertTrue(attr.GetPrim().IsInPrototype())
+            self.assertTrue(attr.GetPrim().IsInMaster())
 
             connections = attr.GetConnections()
-            prototypePath = prototype.GetPath()
+            masterPath = master.GetPath()
             expected = [
-                prototypePath,
-                prototypePath.AppendPath(".attr"),
-                prototypePath.AppendPath("A"),
-                prototypePath.AppendPath("A.attr"),
-                prototypePath.AppendPath("NestedInstance_1"),
-                prototypePath.AppendPath("NestedInstance_1.attr"),
-                prototypePath.AppendPath("NestedInstance_1/B"),
-                prototypePath.AppendPath("NestedInstance_1/B.attr"),
-                prototypePath.AppendPath("NestedInstance_2"),
-                prototypePath.AppendPath("NestedInstance_2.attr"),
-                prototypePath.AppendPath("NestedInstance_2/B"),
-                prototypePath.AppendPath("NestedInstance_2/B.attr")]
+                masterPath,
+                masterPath.AppendPath(".attr"),
+                masterPath.AppendPath("A"),
+                masterPath.AppendPath("A.attr"),
+                masterPath.AppendPath("NestedInstance_1"),
+                masterPath.AppendPath("NestedInstance_1.attr"),
+                masterPath.AppendPath("NestedInstance_1/B"),
+                masterPath.AppendPath("NestedInstance_1/B.attr"),
+                masterPath.AppendPath("NestedInstance_2"),
+                masterPath.AppendPath("NestedInstance_2.attr"),
+                masterPath.AppendPath("NestedInstance_2/B"),
+                masterPath.AppendPath("NestedInstance_2/B.attr")]
             self.assertEqual(connections, expected)
 
-        attr = prototype.GetChild("A").GetAttribute("cattr")
-        _TestConnectionInPrototype(attr)
+        attr = master.GetChild("A").GetAttribute("cattr")
+        _TestConnectionInMaster(attr)
 
     def test_AuthoringConnections(self):
         for fmt in allFormats:

@@ -23,6 +23,14 @@
 #
 """Python bindings for libKind"""
 
+from . import _kind
 from pxr import Tf
-Tf.PreparePythonModule()
-del Tf
+Tf.PrepareModule(_kind, locals())
+del _kind, Tf
+
+try:
+    from . import __DOC
+    __DOC.Execute(locals())
+    del __DOC
+except Exception:
+    pass

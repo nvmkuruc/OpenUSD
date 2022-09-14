@@ -26,7 +26,15 @@ Camera utilities.
 
 """
 
+from . import _cameraUtil
 from pxr import Tf
-Tf.PreparePythonModule()
-del Tf
+Tf.PrepareModule(_cameraUtil, locals())
+del _cameraUtil, Tf
+
+try:
+    import __DOC
+    __DOC.Execute(locals())
+    del __DOC
+except Exception:
+    pass
 

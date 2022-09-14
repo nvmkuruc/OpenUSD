@@ -187,9 +187,6 @@ WRAP_CUSTOM {
         .def("HasPossiblyInheritedPrimvar", 
              &UsdGeomPrimvarsAPI::HasPossiblyInheritedPrimvar,
              arg("name"))
-        .def("CanContainPropertyName", 
-             &UsdGeomPrimvarsAPI::CanContainPropertyName, arg("name"))
-        .staticmethod("CanContainPropertyName")
         ;
 }
 

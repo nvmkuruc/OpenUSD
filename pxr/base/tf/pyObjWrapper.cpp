@@ -26,7 +26,6 @@
 
 #include "pxr/base/tf/pyObjWrapper.h"
 
-#ifdef PXR_PYTHON_SUPPORT_ENABLED
 #include "pxr/base/tf/pyLock.h"
 #include "pxr/base/tf/pyUtils.h"
 #include "pxr/base/tf/type.h"
@@ -95,5 +94,3 @@ TfPyObjWrapper::operator!=(TfPyObjWrapper const &other) const
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
-
-#endif // PXR_PYTHON_SUPPORT_ENABLED

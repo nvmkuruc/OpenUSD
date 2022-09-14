@@ -72,10 +72,6 @@ struct HdSt_ShaderKey {
     HDST_API
     virtual TfToken const *GetTES() const;
     HDST_API
-    virtual TfToken const *GetPTCS() const;
-    HDST_API
-    virtual TfToken const *GetPTVS() const;
-    HDST_API
     virtual TfToken const *GetGS() const;
     HDST_API
     virtual TfToken const *GetFS() const; 
@@ -90,29 +86,14 @@ struct HdSt_ShaderKey {
     virtual HdSt_GeometricShader::PrimitiveType GetPrimitiveType() const = 0; 
     
     // Implementation details of the geometric shader that sets hardware
-    // pipeline state (cull face, polygon mode, line width) or queues upload of
-    // data (cullstyle) to the GPU.
+    // pipeline state (polygon mode, line width) or queues upload of data
+    // (cullstyle) to the GPU.
     HDST_API
     virtual HdCullStyle GetCullStyle() const;
-    HDST_API
-    virtual bool UseHardwareFaceCulling() const;
-    HDST_API
-    virtual bool HasMirroredTransform() const;
-    HDST_API
-    virtual bool IsDoubleSided() const;
-    HDST_API
-    virtual bool UseMetalTessellation() const;
     HDST_API
     virtual HdPolygonMode GetPolygonMode() const;
     HDST_API
     virtual float GetLineWidth() const;
-
-    // Returns the face-varying patch type used in code gen during creation
-    // of the face-varying primvar accessors. Only relevant for mesh prims with 
-    // face-varying primvars.
-    HDST_API
-    virtual HdSt_GeometricShader::FvarPatchType GetFvarPatchType() const; 
-
 };
 
 

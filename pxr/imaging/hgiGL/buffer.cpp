@@ -21,8 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/imaging/garch/glApi.h"
-
+#include <GL/glew.h>
 #include "pxr/imaging/hgiGL/diagnostic.h"
 #include "pxr/imaging/hgiGL/buffer.h"
 
@@ -33,8 +32,6 @@ HgiGLBuffer::HgiGLBuffer(HgiBufferDesc const & desc)
     : HgiBuffer(desc)
     , _bufferId(0)
     , _mapped(nullptr)
-    , _cpuStaging(nullptr)
-    , _bindlessGPUAddress(0)
 {
 
     if (desc.byteSize == 0) {
@@ -44,7 +41,7 @@ HgiGLBuffer::HgiGLBuffer(HgiBufferDesc const & desc)
     glCreateBuffers(1, &_bufferId);
 
     if (!_descriptor.debugName.empty()) {
-        HgiGLObjectLabel(GL_BUFFER, _bufferId,  _descriptor.debugName);
+        glObjectLabel(GL_BUFFER, _bufferId, -1, _descriptor.debugName.c_str());
     }
 
     if ((_descriptor.usage & HgiBufferUsageVertex)  ||
@@ -95,11 +92,6 @@ HgiGLBuffer::~HgiGLBuffer()
         _bufferId = 0;
     }
 
-    if (_cpuStaging) {
-        free(_cpuStaging);
-        _cpuStaging = nullptr;
-    }
-
     HGIGL_POST_PENDING_GL_ERRORS();
 }
 
@@ -113,36 +105,6 @@ uint64_t
 HgiGLBuffer::GetRawResource() const
 {
     return (uint64_t) _bufferId;
-}
-
-void*
-HgiGLBuffer::GetCPUStagingAddress()
-{
-    if (!_cpuStaging) {
-        _cpuStaging = malloc(_descriptor.byteSize);
-    }
-
-    // This lets the client code memcpy into the cpu staging buffer directly.
-    // The staging data must be explicitely copied to the GPU buffer
-    // via CopyBufferCpuToGpu cmd by the client.
-    return _cpuStaging;
-}
-
-uint64_t
-HgiGLBuffer::GetBindlessGPUAddress()
-{
-    // note: gpu address remains valid until the buffer object is deleted,
-    // or when the data store is respecified via BufferData/BufferStorage.
-    // It doesn't change even when we make the buffer resident or non-resident.
-    // https://www.opengl.org/registry/specs/NV/shader_buffer_load.txt
-    if (!_bindlessGPUAddress) {
-        glGetNamedBufferParameterui64vNV(
-            _bufferId, GL_BUFFER_GPU_ADDRESS_NV, &_bindlessGPUAddress);
-    }
-    if (!_bindlessGPUAddress) {
-        TF_CODING_ERROR("Failed to get bindless buffer GPU address");
-    }
-    return _bindlessGPUAddress;
 }
 
 

@@ -47,8 +47,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-class HgiCapabilities;
-
 using HgiUniquePtr = std::unique_ptr<class Hgi>;
 
 
@@ -123,9 +121,7 @@ public:
     /// the main thread so we can continue to support the OpenGL platform. 
     /// See notes above.
     HGI_API
-    void SubmitCmds(
-        HgiCmds* cmds, 
-        HgiSubmitWaitType wait = HgiSubmitWaitTypeNoWait);
+    void SubmitCmds(HgiCmds* cmds);
 
     /// *** DEPRECATED *** Please use: CreatePlatformDefaultHgi
     HGI_API
@@ -138,17 +134,6 @@ public:
     /// Thread safety: Not thread safe.
     HGI_API
     static HgiUniquePtr CreatePlatformDefaultHgi();
-
-    /// Determine if Hgi instance can run on current hardware.
-    /// Thread safety: This call is thread safe.
-    HGI_API
-    virtual bool IsBackendSupported() const = 0;
-
-    /// Constructs a temporary Hgi object for the current platform and calls
-    /// the object's IsBackendSupported() function.
-    /// Thread safety: Not thread safe.
-    HGI_API
-    static bool IsSupported();
 
     /// Returns a GraphicsCmds object (for temporary use) that is ready to
     /// record draw commands. GraphicsCmds is a lightweight object that
@@ -187,22 +172,6 @@ public:
     /// Thread safety: Destruction must happen on main thread. See notes above.
     HGI_API
     virtual void DestroyTexture(HgiTextureHandle* texHandle) = 0;
-
-    /// Create a texture view in rendering backend.
-    /// A texture view aliases another texture's data.
-    /// It is the responsibility of the client to ensure that the sourceTexture
-    /// is not destroyed while the texture view is in use.
-    /// Thread safety: Creation must happen on main thread. See notes above.
-    HGI_API
-    virtual HgiTextureViewHandle CreateTextureView(
-        HgiTextureViewDesc const & desc) = 0;
-
-    /// Destroy a texture view in rendering backend.
-    /// This will destroy the view's texture, but not the sourceTexture that
-    /// was aliased by the view. The sourceTexture data remains unchanged.
-    /// Thread safety: Destruction must happen on main thread. See notes above.
-    HGI_API
-    virtual void DestroyTextureView(HgiTextureViewHandle* viewHandle) = 0;
 
     /// Create a sampler in rendering backend.
     /// Thread safety: Creation must happen on main thread. See notes above.
@@ -290,11 +259,6 @@ public:
     HGI_API
     virtual TfToken const& GetAPIName() const = 0;
 
-    /// Returns the device-specific capabilities structure.
-    /// Thread safety: This call is thread safe.
-    HGI_API
-    virtual HgiCapabilities const* GetCapabilities() const = 0;
-
     /// Optionally called by client app at the start of a new rendering frame.
     /// We can't rely on StartFrame for anything important, because it is up to
     /// the external client to (optionally) call this and they may never do.
@@ -320,8 +284,7 @@ protected:
     // Derived classes can override this function if they need customize the
     // command submission. The default implementation calls cmds->_Submit().
     HGI_API
-    virtual bool _SubmitCmds(
-        HgiCmds* cmds, HgiSubmitWaitType wait);
+    virtual bool _SubmitCmds(HgiCmds* cmds);
 
 private:
     Hgi & operator=(const Hgi&) = delete;

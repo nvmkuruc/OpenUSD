@@ -84,8 +84,8 @@ class UsdGeomBoundable : public UsdGeomXformable
 public:
     /// Compile time constant representing what kind of schema this class is.
     ///
-    /// \sa UsdSchemaKind
-    static const UsdSchemaKind schemaKind = UsdSchemaKind::AbstractTyped;
+    /// \sa UsdSchemaType
+    static const UsdSchemaType schemaType = UsdSchemaType::AbstractTyped;
 
     /// Construct a UsdGeomBoundable on UsdPrim \p prim .
     /// Equivalent to UsdGeomBoundable::Get(prim.GetStage(), prim.GetPath())
@@ -130,11 +130,11 @@ public:
 
 
 protected:
-    /// Returns the kind of schema this class belongs to.
+    /// Returns the type of schema this class belongs to.
     ///
-    /// \sa UsdSchemaKind
+    /// \sa UsdSchemaType
     USDGEOM_API
-    UsdSchemaKind _GetSchemaKind() const override;
+    UsdSchemaType _GetSchemaType() const override;
 
 private:
     // needs to invoke _GetStaticTfType.
@@ -155,14 +155,9 @@ public:
     /// Extent is a three dimensional range measuring the geometric
     /// extent of the authored gprim in its own local space (i.e. its own
     /// transform not applied), \em without accounting for any shader-induced
-    /// displacement. If __any__ extent value has been authored for a given 
-    /// Boundable, then it should be authored at every timeSample at which 
-    /// geometry-affecting properties are authored, to ensure correct 
-    /// evaluation via ComputeExtent(). If __no__ extent value has been 
-    /// authored, then ComputeExtent() will call the Boundable's registered 
-    /// ComputeExtentFunction(), which may be expensive, which is why we 
-    /// strongly encourage proper authoring of extent.
-    /// \sa ComputeExtent()
+    /// displacement.  Whenever any geometry-affecting attribute is authored
+    /// for any gprim in a layer, extent must also be authored at the same
+    /// timesample; failure to do so will result in incorrect bounds-computation.
     /// \sa \ref UsdGeom_Boundable_Extent.
     /// 
     /// An authored extent on a prim which has children is expected to include
@@ -196,17 +191,6 @@ public:
     //  - Close the include guard with #endif
     // ===================================================================== //
     // --(BEGIN CUSTOM CODE)--
-    
-    /// If an extent is authored on this boundable, it queries the \p extent 
-    /// from the extent attribute, otherwise if ComputeExtentFunction is 
-    /// registered for the boundable's type, it computes the \p extent at 
-    /// \p time. Returns true when extent is successfully populated, false 
-    /// otherwise.
-    ///
-    /// \sa ComputeExtentFromPlugins
-    /// \sa UsdGeomRegisterComputeExtentFunction
-    USDGEOM_API
-    bool ComputeExtent(const UsdTimeCode &time, VtVec3fArray *extent);
     
     /// Compute the extent for the Boundable prim \p boundable at time
     /// \p time.  If successful, populates \p extent with the result and

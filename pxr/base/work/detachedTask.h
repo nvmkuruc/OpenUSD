@@ -29,7 +29,8 @@
 #include "pxr/pxr.h"
 #include "pxr/base/tf/errorMark.h"
 #include "pxr/base/work/api.h"
-#include "pxr/base/work/dispatcher.h"
+
+#include <tbb/task.h>
 
 #include <type_traits>
 #include <utility>
@@ -37,24 +38,20 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 template <class Fn>
-struct Work_DetachedTask
-{
-    explicit Work_DetachedTask(Fn &&fn) : _fn(std::move(fn)) {}
-    explicit Work_DetachedTask(Fn const &fn) : _fn(fn) {}
-    void operator()() {
+struct Work_DetachedInvoker : public tbb::task {
+    explicit Work_DetachedInvoker(Fn &&fn) : _fn(std::move(fn)) {}
+    explicit Work_DetachedInvoker(Fn const &fn) : _fn(fn) {}
+    virtual tbb::task *execute() {
         TfErrorMark m;
         _fn();
         m.Clear();
+        return nullptr;
     }
 private:
     Fn _fn;
 };
 
-WORK_API
-WorkDispatcher &Work_GetDetachedDispatcher();
-
-WORK_API
-void Work_EnsureDetachedTaskProgress();
+WORK_API tbb::task_group_context &Work_GetDetachedTaskGroupContext();
 
 /// Invoke \p fn asynchronously, discard any errors it produces, and provide
 /// no way to wait for it to complete.
@@ -62,14 +59,9 @@ template <class Fn>
 void WorkRunDetachedTask(Fn &&fn)
 {
     using FnType = typename std::remove_reference<Fn>::type;
-    Work_DetachedTask<FnType> task(std::forward<Fn>(fn));
-    if (WorkHasConcurrency()) {
-        Work_GetDetachedDispatcher().Run(std::move(task));
-        Work_EnsureDetachedTaskProgress();
-    }
-    else {
-        task();
-    }
+    tbb::task::enqueue(
+        *new (tbb::task::allocate_root(Work_GetDetachedTaskGroupContext()))
+        Work_DetachedInvoker<FnType>(std::forward<Fn>(fn)));
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -139,13 +139,6 @@ _CreateShutterCloseAttr(UsdGeomCamera &self,
     return self.CreateShutterCloseAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Double), writeSparsely);
 }
-        
-static UsdAttribute
-_CreateExposureAttr(UsdGeomCamera &self,
-                                      object defaultVal, bool writeSparsely) {
-    return self.CreateExposureAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float), writeSparsely);
-}
 
 static std::string
 _Repr(const UsdGeomCamera &self)
@@ -277,13 +270,6 @@ void wrapUsdGeomCamera()
              &This::GetShutterCloseAttr)
         .def("CreateShutterCloseAttr",
              &_CreateShutterCloseAttr,
-             (arg("defaultValue")=object(),
-              arg("writeSparsely")=false))
-        
-        .def("GetExposureAttr",
-             &This::GetExposureAttr)
-        .def("CreateExposureAttr",
-             &_CreateExposureAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
 

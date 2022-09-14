@@ -292,8 +292,7 @@ def testCase16():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers(dest='command')
-    subparsers.required = True
+    subparsers = parser.add_subparsers()
     
     case1 = subparsers.add_parser('case1', help = 'abort all string error')
     case1.set_defaults(func=testCase1)

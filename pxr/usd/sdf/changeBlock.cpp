@@ -26,17 +26,41 @@
 #include "pxr/usd/sdf/changeBlock.h"
 #include "pxr/usd/sdf/changeManager.h"
 
+// #nv begin #fast-updates
+#include "pxr/base/tf/envSetting.h"
+// nv end
+
 PXR_NAMESPACE_OPEN_SCOPE
 
-SdfChangeBlock::SdfChangeBlock()
-    : _key(Sdf_ChangeManager::Get()._OpenChangeBlock(this))
+// #nv begin #fast-updates
+TF_DEFINE_ENV_SETTING(SDF_CHANGEBLOCK_IMPLICIT_FAST_UPDATES, false,
+    "Enable Fast Updates in SdfChangeBlocks by default");
+// nv end
+
+SdfChangeBlock::SdfChangeBlock(bool fastUpdates)
 {
+    // #nv begin #omni-hydra
+    fastUpdates = false;
+    // nv end
+
+    Sdf_ChangeManager::Get().OpenChangeBlock(fastUpdates);
 }
 
-void
-SdfChangeBlock::_CloseChangeBlock(void const *key) const
+SdfChangeBlock::~SdfChangeBlock() 
 {
-    Sdf_ChangeManager::Get()._CloseChangeBlock(this, key);
+    Sdf_ChangeManager::Get().CloseChangeBlock();
 }
+
+// #nv begin #fast-updates
+SdfChangeBlock::SdfChangeBlock()
+{
+    Sdf_ChangeManager::Get().OpenChangeBlock(TfGetEnvSetting(SDF_CHANGEBLOCK_IMPLICIT_FAST_UPDATES));
+}
+
+bool SdfChangeBlock::IsFastUpdating()
+{
+    return Sdf_ChangeManager::Get().IsFastUpdating();
+}
+// nv end
 
 PXR_NAMESPACE_CLOSE_SCOPE

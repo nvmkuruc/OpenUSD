@@ -25,13 +25,9 @@
 #include "pxr/base/arch/defines.h"
 #include "pxr/base/plug/plugin.h"
 #include "pxr/base/plug/registry.h"
-#include "pxr/base/tf/envSetting.h"
 #include "pxr/base/trace/trace.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
-
-TF_DEFINE_ENV_SETTING(HGI_ENABLE_VULKAN, 0,
-                      "Enable Vulkan as platform default Hgi backend (WIP)");
 
 TF_REGISTRY_FUNCTION(TfType)
 {
@@ -46,14 +42,10 @@ Hgi::Hgi()
 Hgi::~Hgi() = default;
 
 void
-Hgi::SubmitCmds(HgiCmds* cmds, HgiSubmitWaitType wait)
+Hgi::SubmitCmds(HgiCmds* cmds)
 {
     TRACE_FUNCTION();
-
-    if (cmds && TF_VERIFY(!cmds->IsSubmitted())) {
-        _SubmitCmds(cmds, wait);
-        cmds->_SetSubmitted();
-    }
+    _SubmitCmds(cmds);
 }
 
 static Hgi*
@@ -64,29 +56,16 @@ _MakeNewPlatformDefaultHgi()
 
     PlugRegistry& plugReg = PlugRegistry::GetInstance();
 
-    const char* hgiType = 
-        #if defined(ARCH_OS_LINUX)
-            "HgiGL";
-        #elif defined(ARCH_OS_DARWIN)
-            "HgiMetal";
-        #elif defined(ARCH_OS_WINDOWS)
-            "HgiGL";
-        #else
-            ""; 
-            #error Unknown Platform
-            return nullptr;
-        #endif
-
-    if (TfGetEnvSetting(HGI_ENABLE_VULKAN)) {
-        #if defined(PXR_VULKAN_SUPPORT_ENABLED)
-            hgiType = "HgiVulkan";
-        #else
-            TF_CODING_ERROR(
-                "Build requires PXR_VULKAN_SUPPORT_ENABLED=true to use Vulkan");
-        #endif
-    }
-
-    const TfType plugType = plugReg.FindDerivedTypeByName<Hgi>(hgiType);
+    #if defined(ARCH_OS_LINUX)
+        const TfType plugType = plugReg.FindDerivedTypeByName<Hgi>("HgiGL");
+    #elif defined(ARCH_OS_DARWIN)
+        const TfType plugType = plugReg.FindDerivedTypeByName<Hgi>("HgiMetal");
+    #elif defined(ARCH_OS_WINDOWS)
+        const TfType plugType = plugReg.FindDerivedTypeByName<Hgi>("HgiGL");
+    #else
+        #error Unknown Platform
+        return nullptr;
+    #endif
 
     PlugPluginPtr plugin = plugReg.GetPluginForType(plugType);
     if (!plugin || !plugin->Load()) {
@@ -128,16 +107,6 @@ Hgi::CreatePlatformDefaultHgi()
     return HgiUniquePtr(_MakeNewPlatformDefaultHgi());
 }
 
-bool
-Hgi::IsSupported()
-{
-    if (HgiUniquePtr const instance = CreatePlatformDefaultHgi()) {
-        return instance->IsBackendSupported();
-    }
-
-    return false;
-}
-
 uint64_t
 Hgi::GetUniqueId()
 {
@@ -145,9 +114,9 @@ Hgi::GetUniqueId()
 }
 
 bool
-Hgi::_SubmitCmds(HgiCmds* cmds, HgiSubmitWaitType wait)
+Hgi::_SubmitCmds(HgiCmds* cmds)
 {
-    return cmds->_Submit(this, wait);
+    return cmds->_Submit(this);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

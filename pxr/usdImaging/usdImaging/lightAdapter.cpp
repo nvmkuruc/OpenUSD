@@ -31,7 +31,7 @@
 #include "pxr/imaging/hd/material.h"
 #include "pxr/usd/ar/resolverScopedCache.h"
 #include "pxr/usd/ar/resolverContextBinder.h"
-#include "pxr/usd/usdLux/lightAPI.h"
+#include "pxr/usd/usdLux/light.h"
 
 #include "pxr/base/tf/envSetting.h"
 
@@ -41,8 +41,8 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_REGISTRY_FUNCTION(TfType)
 {
     typedef UsdImagingLightAdapter Adapter;
-    TfType t = TfType::Define<Adapter, TfType::Bases<Adapter::BaseAdapter> >();
-    t.SetFactory< UsdImagingPrimAdapterFactory<Adapter> >();
+    TfType::Define<Adapter, TfType::Bases<Adapter::BaseAdapter> >();
+    // No factory here, UsdImagingLightAdapter is abstract.
 }
 
 TF_DEFINE_ENV_SETTING(USDIMAGING_ENABLE_SCENE_LIGHTS, 1, 
@@ -53,39 +53,13 @@ bool UsdImagingLightAdapter::IsEnabledSceneLights() {
     return _v;
 }
 
+// #nv begin #sparse-light-updates
+TF_DEFINE_ENV_SETTING(USDIMAGING_ENABLE_SPARSE_LIGHT_UPDATES, 0,
+                      "Enable sparse updates to scene lights.");
+// nv end
+
 UsdImagingLightAdapter::~UsdImagingLightAdapter() 
 {
-}
-
-bool
-UsdImagingLightAdapter::IsSupported(UsdImagingIndexProxy const* index) const
-{
-    return IsEnabledSceneLights() &&
-           index->IsSprimTypeSupported(HdPrimTypeTokens->light);
-}
-
-SdfPath
-UsdImagingLightAdapter::Populate(UsdPrim const& prim, 
-                            UsdImagingIndexProxy* index,
-                            UsdImagingInstancerContext const* instancerContext)
-{
-    index->InsertSprim(HdPrimTypeTokens->light, prim.GetPath(), prim);
-    HD_PERF_COUNTER_INCR(UsdImagingTokens->usdPopulatedPrimCount);
-    // #nv begin #light-link-refresh
-    _RegisterLightCollections(prim);
-    // #nv end
-
-    return prim.GetPath();
-}
-
-void
-UsdImagingLightAdapter::_RemovePrim(SdfPath const& cachePath,
-                                    UsdImagingIndexProxy* index)
-{
-    // #nv begin #light-link-refresh
-    _UnregisterLightCollections(cachePath);
-    // #nv end
-    index->RemoveSprim(HdPrimTypeTokens->domeLight, cachePath);
 }
 
 // #nv begin #light-link-refresh
@@ -100,7 +74,7 @@ UsdImagingLightAdapter::MarkCollectionsDirty(UsdPrim const& prim,
 bool
 UsdImagingLightAdapter::_UpdateCollectionsChanged(UsdPrim const& prim) const {
     UsdImaging_CollectionCache &collectionCache = _GetCollectionCache();
-    UsdLuxLightAPI light(prim);
+    UsdLuxLight light(prim);
     bool lightColChanged = collectionCache.UpdateCollection(light.GetLightLinkCollectionAPI());
     bool shadowColChanged = collectionCache.UpdateCollection(light.GetShadowLinkCollectionAPI());
     return lightColChanged || shadowColChanged;
@@ -119,68 +93,58 @@ void
 UsdImagingLightAdapter::_RegisterLightCollections(UsdPrim const& prim) {
     _UpdateCollectionsChanged(prim);
 }
+
 // #nv end
 
 void 
 UsdImagingLightAdapter::TrackVariability(UsdPrim const& prim,
-    SdfPath const& cachePath,
-    HdDirtyBits* timeVaryingBits,
-    UsdImagingInstancerContext const*
-    instancerContext,
-    // #nv begin fast-updates
-    bool checkVariability) const
-    // nv end
+                                        SdfPath const& cachePath,
+                                        HdDirtyBits* timeVaryingBits,
+                                        UsdImagingInstancerContext const* 
+                                            instancerContext,
+                                        // #nv begin fast-updates
+                                        bool checkVariability) const
+                                        // nv end
 {
     // #nv begin fast-updates
     if (checkVariability) {
-    // nv end
+        // nv end
+            // Discover time-varying transforms.
+        _IsTransformVarying(prim,
+            HdLight::DirtyBits::DirtyTransform,
+            UsdImagingTokens->usdVaryingXform,
+            timeVaryingBits);
 
-    // Discover time-varying transforms.
-    _IsTransformVarying(prim,
-        HdLight::DirtyBits::DirtyTransform,
-        UsdImagingTokens->usdVaryingXform,
-        timeVaryingBits);
-
-    // Discover time-varying visibility.
-    _IsVarying(prim,
-        UsdGeomTokens->visibility,
-        HdLight::DirtyBits::DirtyParams,
-        UsdImagingTokens->usdVaryingVisibility,
-        timeVaryingBits,
-        true);
-    
-    // Determine if the light material network is time varying.
-    if (UsdImagingIsHdMaterialNetworkTimeVarying(prim)) {
-        *timeVaryingBits |= HdLight::DirtyBits::DirtyResource;
-    }
-
-    // If any of the light attributes is time varying 
-    // we will assume all light params are time-varying.
-    const std::vector<UsdAttribute> &attrs = prim.GetAttributes();
-    for (UsdAttribute const& attr : attrs) {
-        // Don't double-count transform attrs.
-        if (UsdGeomXformable::IsTransformationAffectedByAttrNamed(
+        // If any of the light attributes is time varying 
+        // we will assume all light params are time-varying.
+        const std::vector<UsdAttribute> &attrs = prim.GetAttributes();
+        for (UsdAttribute const& attr : attrs) {
+            // Don't double-count transform attrs.
+            if (UsdGeomXformable::IsTransformationAffectedByAttrNamed(
                 attr.GetBaseName())) {
-            continue;
-        }
-        if (attr.GetNumTimeSamples()>1){
-            *timeVaryingBits |= HdLight::DirtyBits::DirtyParams;
-            break;
+                continue;
+            }
+            if (attr.GetNumTimeSamples() > 1) {
+                *timeVaryingBits |= HdLight::DirtyBits::DirtyParams;
+                break;
+            }
         }
     }
 
-    // #nv begin fast-updates
-    }
-    // nv end
+    UsdImagingValueCache* valueCache = _GetValueCache();
 
-    UsdImagingPrimvarDescCache* primvarDescCache = _GetPrimvarDescCache();
+    // XXX: The usage of _GetTimeWithOffset here is super-sketch, but avoids
+    // blowing up the inherited visibility cache. This belongs in
+    // UpdateForTime, except that we don't currently call UpdateForTime on
+    // lights...
+    valueCache->GetVisible(cachePath) = GetVisible(prim,
+        _GetTimeWithOffset(0.0));
 
-    // XXX Cache primvars for lights.
+    // XXX Cache primvars for lights.  Note that this does not yet support
+    // animated lights, since we do not call UpdateForTime() for sprims.
     {
-        // Establish a primvar desc cache entry.
-        HdPrimvarDescriptorVector& vPrimvars = 
-            primvarDescCache->GetPrimvars(cachePath);
-
+        // Establish a valueCache entry.
+        valueCache->GetPrimvars(cachePath);
         // Compile a list of primvars to check.
         std::vector<UsdGeomPrimvar> primvars;
         UsdImaging_InheritedPrimvarStrategy::value_type inheritedPrimvarRecord =
@@ -188,12 +152,12 @@ UsdImagingLightAdapter::TrackVariability(UsdPrim const& prim,
         if (inheritedPrimvarRecord) {
             primvars = inheritedPrimvarRecord->primvars;
         }
-
         UsdGeomPrimvarsAPI primvarsAPI(prim);
         std::vector<UsdGeomPrimvar> local = primvarsAPI.GetPrimvarsWithValues();
         primvars.insert(primvars.end(), local.begin(), local.end());
         for (auto const &pv : primvars) {
-            _ComputeAndMergePrimvar(prim, pv, UsdTimeCode(), &vPrimvars);
+            _ComputeAndMergePrimvar(prim, cachePath, pv, UsdTimeCode(),
+                                    valueCache);
         }
     }
 }
@@ -208,6 +172,31 @@ UsdImagingLightAdapter::UpdateForTime(UsdPrim const& prim,
                                UsdImagingInstancerContext const* 
                                    instancerContext) const
 {
+// #nv begin #bind-material-to-domelight
+    UsdImagingValueCache* valueCache = _GetValueCache();
+    
+    SdfPath materialUsdPath;
+    if (requestedBits & HdChangeTracker::DirtyMaterialId) {
+        materialUsdPath = GetMaterialUsdPath(prim);
+
+        // If we're processing this gprim on behalf of an instancer,
+        // use the material binding specified by the instancer if we
+        // aren't able to find a material binding for this prim itself.
+        if (instancerContext && materialUsdPath.IsEmpty()) {
+            materialUsdPath = instancerContext->instancerMaterialUsdPath;
+        }
+    }
+
+    if (requestedBits & HdChangeTracker::DirtyMaterialId){
+        // Although the material binding cache generally holds
+        // cachePaths, not usdPaths, we can use the usdPath
+        // directly here since we do not instance sprims.
+        valueCache->GetMaterialId(cachePath) = materialUsdPath;
+
+        TF_DEBUG(USDIMAGING_SHADERS).Msg("Shader for <%s> is <%s>\n",
+                prim.GetPath().GetText(), materialUsdPath.GetText());
+    }
+// #nv end
 }
 
 HdDirtyBits
@@ -255,29 +244,8 @@ UsdImagingLightAdapter::MarkVisibilityDirty(UsdPrim const& prim,
                                             SdfPath const& cachePath,
                                             UsdImagingIndexProxy* index)
 {
-    static const HdDirtyBits paramsDirty = HdLight::DirtyParams;
-    index->MarkSprimDirty(cachePath, paramsDirty);
+    // TBD
 }
-
-void
-UsdImagingLightAdapter::MarkLightParamsDirty(UsdPrim const& prim,
-                                             SdfPath const& cachePath,
-                                             UsdImagingIndexProxy* index)
-{
-    static const HdDirtyBits paramsDirty = HdLight::DirtyParams;
-    index->MarkSprimDirty(cachePath, paramsDirty);
-}
-
-// #nv begin #bind-material-to-domelight
-/*virtual*/
-SdfPath
-UsdImagingLightAdapter::GetMaterialId(UsdPrim const& prim,
-    SdfPath const& cachePath,
-    UsdTimeCode time) const
-{
-    return GetMaterialUsdPath(prim);
-}
-// nv end
 
 
 VtValue 
@@ -285,14 +253,12 @@ UsdImagingLightAdapter::GetMaterialResource(UsdPrim const &prim,
                                             SdfPath const& cachePath, 
                                             UsdTimeCode time) const
 {
-    if (!_GetSceneLightsEnabled()) {
-        return VtValue();
-    }
-
-    if (!prim.HasAPI<UsdLuxLightAPI>()) {
-        TF_RUNTIME_ERROR("Expected light prim at <%s> to have an applied API "
-                         "of type 'UsdLuxLightAPI'; ignoring",
-                         prim.GetPath().GetText());
+    UsdLuxLight light(prim);
+    if (!light) {
+        TF_RUNTIME_ERROR("Expected light prim at <%s> to be a subclass of type "
+                         "'UsdLuxLight', not type '%s'; ignoring",
+                         prim.GetPath().GetText(),
+                         prim.GetTypeName().GetText());
         return VtValue();
     }
 
@@ -306,7 +272,6 @@ UsdImagingLightAdapter::GetMaterialResource(UsdPrim const &prim,
         prim, 
         HdMaterialTerminalTokens->light,
         _GetShaderSourceTypes(),
-        _GetMaterialRenderContexts(),
         &networkMap,
         time);
 

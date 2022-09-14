@@ -116,27 +116,33 @@ UsdImagingCylinderAdapter::TrackVariability(UsdPrim const& prim,
     }
 }
 
-HdDirtyBits
-UsdImagingCylinderAdapter::ProcessPropertyChange(UsdPrim const& prim,
-                                                 SdfPath const& cachePath,
-                                                 TfToken const& propertyName)
-{
-    if (propertyName == UsdGeomTokens->height ||
-        propertyName == UsdGeomTokens->radius ||
-        propertyName == UsdGeomTokens->axis) {
-        return HdChangeTracker::DirtyPoints;
-    }
 
-    // Allow base class to handle change processing.
-    return BaseAdapter::ProcessPropertyChange(prim, cachePath, propertyName);
+// Thread safe.
+//  * Populate dirty bits for the given \p time.
+void 
+UsdImagingCylinderAdapter::UpdateForTime(UsdPrim const& prim,
+                               SdfPath const& cachePath, 
+                               UsdTimeCode time,
+                               HdDirtyBits requestedBits,
+                               UsdImagingInstancerContext const* 
+                                   instancerContext) const
+{
+    BaseAdapter::UpdateForTime(
+        prim, cachePath, time, requestedBits, instancerContext);
+    UsdImagingValueCache* valueCache = _GetValueCache();
+    if (requestedBits & HdChangeTracker::DirtyTopology) {
+        valueCache->GetTopology(cachePath) = GetMeshTopology();
+    }
 }
 
 /*virtual*/
 VtValue
 UsdImagingCylinderAdapter::GetPoints(UsdPrim const& prim,
+                                     SdfPath const& cachePath,
                                      UsdTimeCode time) const
 {
-    return GetMeshPoints(prim, time);
+    TF_UNUSED(cachePath);
+    return GetMeshPoints(prim, time);   
 }
 
 /*static*/
@@ -188,16 +194,22 @@ UsdImagingCylinderAdapter::GetMeshTopology()
     return VtValue(HdMeshTopology(UsdImagingGetUnitCylinderMeshTopology()));
 }
 
-/*virtual*/ 
-VtValue
-UsdImagingCylinderAdapter::GetTopology(UsdPrim const& prim,
-                                       SdfPath const& cachePath,
-                                       UsdTimeCode time) const
+// #nv begin #clean-property-invalidation
+/*virtual*/
+HdDirtyBits
+UsdImagingCylinderAdapter::ProcessPropertyChange(
+    UsdPrim const& prim,
+    SdfPath const& cachePath,
+    TfToken const& propertyName)
 {
-    TRACE_FUNCTION();
-    HF_MALLOC_TAG_FUNCTION();
-    return GetMeshTopology();
+    if ((propertyName == UsdGeomTokens->height) || (propertyName == UsdGeomTokens->radius) ||
+        (propertyName == UsdGeomTokens->axis))
+        return HdChangeTracker::DirtyPoints;
+
+    // Allow base class to handle change processing.
+    return BaseAdapter::ProcessPropertyChange(prim, cachePath, propertyName);
 }
+// nv end
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

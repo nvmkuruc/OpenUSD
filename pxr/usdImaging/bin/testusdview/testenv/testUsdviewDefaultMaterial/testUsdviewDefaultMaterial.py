@@ -46,25 +46,30 @@ def _setDefaultMaterial(appController, ambient, specular):
     appController._dataModel.viewSettings.defaultMaterialSpecular = specular
     appController._stageView.updateGL()
 
+# Take a shot of the viewport and save it to a file.
+def _takeShot(appController, fileName):
+    viewportShot = appController.GrabViewportShot()
+    viewportShot.save(fileName, "PNG")
+
 # Test with no ambient and no specular reflection.
 def _testNone(appController):
     _setDefaultMaterial(appController, 0, 0)
-    appController._takeShot("none.png")
+    _takeShot(appController, "none.png")
 
 # Test with high ambient and no specular reflection.
 def _testAmbient(appController):
     _setDefaultMaterial(appController, 1, 0)
-    appController._takeShot("ambient.png")
+    _takeShot(appController, "ambient.png")
 
 # Test with no ambient and high specular reflection.
 def _testSpecular(appController):
     _setDefaultMaterial(appController, 0, 1)
-    appController._takeShot("specular.png")
+    _takeShot(appController, "specular.png")
 
 # Test with high ambient and high specular reflection.
 def _testBoth(appController):
     _setDefaultMaterial(appController, 1, 1)
-    appController._takeShot("both.png")
+    _takeShot(appController, "both.png")
 
 # Test that default materials work properly in usdview.
 def testUsdviewInputFunction(appController):

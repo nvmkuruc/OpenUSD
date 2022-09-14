@@ -36,12 +36,14 @@
 
 #include "pxr/base/arch/hints.h"
 
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 
 UsdSkelCache::UsdSkelCache()
     : _impl(new UsdSkel_CacheImpl)
 {}
+
 
 void
 UsdSkelCache::Clear()
@@ -79,10 +81,9 @@ UsdSkelCache::GetSkelQuery(const UsdSkelSkeleton& skel) const
 
 
 bool
-UsdSkelCache::Populate(const UsdSkelRoot& root,
-                       Usd_PrimFlagsPredicate predicate) const
+UsdSkelCache::Populate(const UsdSkelRoot& root)
 {
-    return UsdSkel_CacheImpl::ReadScope(_impl.get()).Populate(root, predicate);
+    return UsdSkel_CacheImpl::ReadScope(_impl.get()).Populate(root);
 }
 
 
@@ -107,8 +108,7 @@ struct _CompareSkels
 
 bool
 UsdSkelCache::ComputeSkelBindings(const UsdSkelRoot& skelRoot,
-                                  std::vector<UsdSkelBinding>* bindings,
-                                  Usd_PrimFlagsPredicate predicate) const
+                                  std::vector<UsdSkelBinding>* bindings) const
 {
     TRACE_FUNCTION();
 
@@ -139,8 +139,10 @@ UsdSkelCache::ComputeSkelBindings(const UsdSkelRoot& skelRoot,
 
     std::vector<UsdSkelSkeleton> skelStack(1);
     
-    const auto range = UsdPrimRange::PreAndPostVisit(
-        skelRoot.GetPrim(), predicate);
+    // TODO: Consider traversing instance proxies at this point.
+    // But when doing so, must ensure that UsdSkelBakeSkinning, et.al.,
+    // take instancing into account.
+    const auto range = UsdPrimRange::PreAndPostVisit(skelRoot.GetPrim());
     for (auto it = range.begin(); it != range.end(); ++it) {
 
         if (ARCH_UNLIKELY(!it->IsA<UsdGeomImageable>())) {
@@ -204,8 +206,7 @@ UsdSkelCache::ComputeSkelBindings(const UsdSkelRoot& skelRoot,
 bool
 UsdSkelCache::ComputeSkelBinding(const UsdSkelRoot& skelRoot,
                                  const UsdSkelSkeleton& skel,
-                                 UsdSkelBinding* binding,
-                                 Usd_PrimFlagsPredicate predicate) const
+                                 UsdSkelBinding* binding) const
 {
     TRACE_FUNCTION();
 
@@ -224,16 +225,19 @@ UsdSkelCache::ComputeSkelBinding(const UsdSkelRoot& skelRoot,
         return false;
     }
 
+
     // Traverse over the prims beneath the skelRoot.
     // While traversing, we maintain a stack of 'bound' skeletons,
     // and map the last item on the stack to descendant prims.
-    // This is done to handle inherited skel bindings.
+    // This is done to handle inherited skel:skeleton bindings.
 
     std::vector<UsdSkelSkeleton> skelStack(1);
     VtArray<UsdSkelSkinningQuery> skinningQueries;
-
-    const auto range = UsdPrimRange::PreAndPostVisit(
-        skelRoot.GetPrim(), predicate);
+    
+    // TODO: Consider traversing instance proxies at this point.
+    // But when doing so, must ensure that UsdSkelBakeSkinning, et.al.,
+    // take instancing into account.
+    const auto range = UsdPrimRange::PreAndPostVisit(skelRoot.GetPrim());
     for (auto it = range.begin(); it != range.end(); ++it) {
 
         if (ARCH_UNLIKELY(!it->IsA<UsdGeomImageable>())) {

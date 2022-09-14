@@ -15,7 +15,6 @@ pxr_library(arch
         ${PLATFORM_LIBS}
 
     PUBLIC_CLASSES
-        align
         attributes
         daemon
         debugger
@@ -38,6 +37,7 @@ pxr_library(arch
         vsnprintf
 
     PUBLIC_HEADERS
+        align.h
         api.h
         buildMode.h
         defines.h
@@ -55,9 +55,6 @@ pxr_library(arch
     CPPFILES
         assumptions.cpp
         initConfig.cpp
-
-    DOXYGEN_FILES
-        overview.dox
 )
 
 pxr_build_test_shared_lib(testArchAbiPlugin
@@ -113,12 +110,6 @@ pxr_build_test(testArchMath
         arch
     CPPFILES
         testenv/testMath.cpp
-)
-pxr_build_test(testArchPRead
-    LIBRARIES
-        arch
-    CPPFILES
-        testenv/testArchPRead.cpp
 )
 pxr_build_test(testArchStackTrace
     LIBRARIES

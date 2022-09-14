@@ -164,6 +164,7 @@ UsdGeom_GetPositionsVelocitiesAndAccelerations(
     VtVec3fArray* velocities,
     UsdTimeCode* velocitiesSampleTime,
     VtVec3fArray* accelerations,
+    float* velocityScale,
     UsdPrim const &prim)
 {
     // Get positions attribute and check array size
@@ -291,6 +292,9 @@ UsdGeom_GetPositionsVelocitiesAndAccelerations(
         }
         accelerations->clear();
     }
+
+    *velocityScale = UsdGeomMotionAPI(prim).ComputeVelocityScale(
+        baseTime); 
 
     return true;
 }
@@ -430,13 +434,16 @@ UsdGeom_GetScales(
     return true;
 }
 
-double
+float
 UsdGeom_CalculateTimeDelta(
+    const float velocityScale,
     const UsdTimeCode time,
     const UsdTimeCode sampleTime,
     const double timeCodesPerSecond)
 {
-    return (time.GetValue() - sampleTime.GetValue()) / timeCodesPerSecond;
+    return velocityScale * static_cast<float>(
+            (time.GetValue() - sampleTime.GetValue())
+            / timeCodesPerSecond);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

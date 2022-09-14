@@ -26,7 +26,6 @@
 
 #include "pxr/pxr.h"
 #include "pxr/imaging/hgi/api.h"
-#include "pxr/imaging/hgi/enums.h"
 #include <memory>
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -47,10 +46,6 @@ public:
     HGI_API
     virtual ~HgiCmds();
 
-    /// Returns true if the HgiCmds object has been submitted to GPU.
-    HGI_API
-    bool IsSubmitted() const;
-
 protected:
     friend class Hgi;
 
@@ -61,17 +56,11 @@ protected:
     // command buffer to the GPU. Returns true if work was committed.
     // The default implementation returns false.
     HGI_API
-    virtual bool _Submit(Hgi* hgi, HgiSubmitWaitType wait);
-
-    // Flags the HgiCmds object as 'submitted' to GPU.
-    HGI_API
-    void _SetSubmitted();
+    virtual bool _Submit(Hgi* hgi);
 
 private:
     HgiCmds & operator=(const HgiCmds&) = delete;
     HgiCmds(const HgiCmds&) = delete;
-
-    bool _submitted;
 };
 
 

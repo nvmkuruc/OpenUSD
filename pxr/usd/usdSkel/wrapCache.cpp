@@ -51,11 +51,10 @@ namespace {
 
 std::vector<UsdSkelBinding>
 _ComputeSkelBindings(const UsdSkelCache& self,  
-                     const UsdSkelRoot& skelRoot,
-                     const Usd_PrimFlagsPredicate predicate)
+                     const UsdSkelRoot& skelRoot)
 {   
     std::vector<UsdSkelBinding> bindings;
-    self.ComputeSkelBindings(skelRoot, &bindings, predicate);
+    self.ComputeSkelBindings(skelRoot, &bindings);
     return bindings;
 }
 
@@ -63,13 +62,13 @@ _ComputeSkelBindings(const UsdSkelCache& self,
 UsdSkelBinding
 _ComputeSkelBinding(const UsdSkelCache& self,
                     const UsdSkelRoot& skelRoot,
-                    const UsdSkelSkeleton& skel,
-                    const Usd_PrimFlagsPredicate predicate)
+                    const UsdSkelSkeleton& skel)
 {
     UsdSkelBinding binding;
-    self.ComputeSkelBinding(skelRoot, skel, &binding, predicate);
+    self.ComputeSkelBinding(skelRoot, skel, &binding);
     return binding;
 }
+
 
 } // namespace
 
@@ -78,12 +77,10 @@ void wrapUsdSkelCache()
 {
     using This = UsdSkelCache;
 
-    class_<This>("Cache", init<>())
-
+    class_<This>("Cache")
         .def("Clear", &This::Clear)
 
-        .def("Populate", &This::Populate,
-             (arg("skelRoot"), arg("predicate")))
+        .def("Populate", &This::Populate)
 
         .def("GetSkelQuery", &This::GetSkelQuery)
         
@@ -100,10 +97,8 @@ void wrapUsdSkelCache()
              (arg("anim")))
 
         .def("ComputeSkelBindings", &_ComputeSkelBindings,
-             return_value_policy<TfPySequenceToList>(),
-             (arg("skelRoot"), arg("predicate")))
+             return_value_policy<TfPySequenceToList>())
 
-        .def("ComputeSkelBinding", &_ComputeSkelBinding,
-             (arg("skelRoot"), arg("skel"), arg("predicate")))
+        .def("ComputeSkelBinding", &_ComputeSkelBinding)
         ;
 }            

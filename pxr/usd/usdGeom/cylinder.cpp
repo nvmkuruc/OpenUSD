@@ -75,9 +75,8 @@ UsdGeomCylinder::Define(
 }
 
 /* virtual */
-UsdSchemaKind UsdGeomCylinder::_GetSchemaKind() const
-{
-    return UsdGeomCylinder::schemaKind;
+UsdSchemaType UsdGeomCylinder::_GetSchemaType() const {
+    return UsdGeomCylinder::schemaType;
 }
 
 /* static */
@@ -288,17 +287,17 @@ _ComputeExtentForCylinder(
     }
 
     double height;
-    if (!cylinderSchema.GetHeightAttr().Get(&height, time)) {
+    if (!cylinderSchema.GetHeightAttr().Get(&height)) {
         return false;
     }
 
     double radius;
-    if (!cylinderSchema.GetRadiusAttr().Get(&radius, time)) {
+    if (!cylinderSchema.GetRadiusAttr().Get(&radius)) {
         return false;
     }
 
     TfToken axis;
-    if (!cylinderSchema.GetAxisAttr().Get(&axis, time)) {
+    if (!cylinderSchema.GetAxisAttr().Get(&axis)) {
         return false;
     }
 

@@ -32,6 +32,7 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+
 #define USD_USDA_FILE_FORMAT_TOKENS \
     ((Id,      "usda"))             \
     ((Version, "1.0"))
@@ -50,10 +51,10 @@ private:
     SDF_FILE_FORMAT_FACTORY_ACCESS;
 
     UsdUsdaFileFormat();
-    virtual ~UsdUsdaFileFormat();
 
-    friend class UsdUsdFileFormat;
+    virtual ~UsdUsdaFileFormat();
 };
+
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

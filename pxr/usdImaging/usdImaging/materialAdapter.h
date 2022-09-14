@@ -36,25 +36,24 @@ struct HdMaterialNetworkMap;
 
 /// \class UsdImagingMaterialAdapter
 /// \brief Provides information that can be used to generate a material.
-class UsdImagingMaterialAdapter : public UsdImagingPrimAdapter
-{
+class UsdImagingMaterialAdapter : public UsdImagingPrimAdapter {
 public:
-    using BaseAdapter = UsdImagingPrimAdapter;
+    typedef UsdImagingPrimAdapter BaseAdapter;
 
     UsdImagingMaterialAdapter()
         : UsdImagingPrimAdapter()
     {}
 
     USDIMAGING_API
-    ~UsdImagingMaterialAdapter() override;
+    virtual ~UsdImagingMaterialAdapter();
 
     USDIMAGING_API
-    SdfPath Populate(UsdPrim const& prim,
+    virtual SdfPath Populate(UsdPrim const& prim,
                      UsdImagingIndexProxy* index,
-                     UsdImagingInstancerContext const* instancerContext = NULL) override;
+                     UsdImagingInstancerContext const* instancerContext = NULL);
 
     USDIMAGING_API
-    bool IsSupported(UsdImagingIndexProxy const* index) const override;
+    virtual bool IsSupported(UsdImagingIndexProxy const* index) const;
 
     // ---------------------------------------------------------------------- //
     /// \name Parallel Setup and Resolve
@@ -62,26 +61,26 @@ public:
 
     /// Thread Safe.
     USDIMAGING_API
-    void TrackVariability(UsdPrim const& prim,
-                          SdfPath const& cachePath,
-                          HdDirtyBits* timeVaryingBits,
-                          UsdImagingInstancerContext const* 
-                              instancerContext = NULL,
-                          // #nv begin fast-updates
-                          // If checkVariabilty is false, this method
-                          // only populates the value cache with initial values.
-                          bool checkVariability = true) const override;
-                          // nv end
+    virtual void TrackVariability(UsdPrim const& prim,
+                                  SdfPath const& cachePath,
+                                  HdDirtyBits* timeVaryingBits,
+                                  UsdImagingInstancerContext const* 
+                                      instancerContext = NULL,
+                                  // #nv begin fast-updates
+                                  // If checkVariabilty is false, this method
+                                  // only populates the value cache with initial values.
+                                  bool checkVariability = true) const;
+                                  // nv end
 
 
     /// Thread Safe.
     USDIMAGING_API
-    void UpdateForTime(UsdPrim const& prim,
-                       SdfPath const& cachePath, 
-                       UsdTimeCode time,
-                       HdDirtyBits requestedBits,
-                       UsdImagingInstancerContext const* 
-                           instancerContext = NULL) const override;
+    virtual void UpdateForTime(UsdPrim const& prim,
+                               SdfPath const& cachePath, 
+                               UsdTimeCode time,
+                               HdDirtyBits requestedBits,
+                               UsdImagingInstancerContext const* 
+                                   instancerContext = NULL) const;
 
     // ---------------------------------------------------------------------- //
     /// \name Change Processing 
@@ -90,55 +89,34 @@ public:
     /// Returns a bit mask of attributes to be updated, or
     /// HdChangeTracker::AllDirty if the entire prim must be resynchronized.
     USDIMAGING_API
-    HdDirtyBits ProcessPropertyChange(UsdPrim const& prim,
-                                      SdfPath const& cachePath,
-                                      TfToken const& propertyName) override;
+    virtual HdDirtyBits ProcessPropertyChange(UsdPrim const& prim,
+                                              SdfPath const& cachePath,
+                                              TfToken const& propertyName);
 
     USDIMAGING_API
-    void MarkDirty(UsdPrim const& prim,
-                   SdfPath const& cachePath,
-                   HdDirtyBits dirty,
-                   UsdImagingIndexProxy* index) override;
-
-    USDIMAGING_API
-    void MarkMaterialDirty(UsdPrim const& prim,
+    virtual void MarkDirty(UsdPrim const& prim,
                            SdfPath const& cachePath,
-                           UsdImagingIndexProxy* index) override;
+                           HdDirtyBits dirty,
+                           UsdImagingIndexProxy* index);
 
     USDIMAGING_API
-    void ProcessPrimResync(SdfPath const& cachePath,
-                           UsdImagingIndexProxy* index) override;
-
-    // ---------------------------------------------------------------------- //
-    /// \name Utilities 
-    // ---------------------------------------------------------------------- //
+    virtual void MarkMaterialDirty(UsdPrim const& prim,
+                                   SdfPath const& cachePath,
+                                   UsdImagingIndexProxy* index);
 
     // ---------------------------------------------------------------------- //
     /// \name Utilities 
     // ---------------------------------------------------------------------- //
 
     USDIMAGING_API
-    VtValue GetMaterialResource(UsdPrim const &prim,
-                                SdfPath const& cachePath, 
-                                UsdTimeCode time) const override;
+    virtual VtValue GetMaterialResource(UsdPrim const &prim,
+                                  SdfPath const& cachePath, 
+                                  UsdTimeCode time) const override;
 
 protected:
     USDIMAGING_API
     void _RemovePrim(SdfPath const& cachePath,
                      UsdImagingIndexProxy* index) final;
-
-// XXX:aluk
-// TODO: resolve merge conflict
-#if 0
-private:
-    void _GetMaterialNetworkMap(UsdPrim const &prim, 
-                                TfToken const& materialNetworkSelector,
-                                HdMaterialNetworkMap *materialNetworkMap,
-                                UsdTimeCode time,
-                                // #nv begin material-updates
-                                bool* timeVarying=nullptr) const;
-                                // nv end
-#endif
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

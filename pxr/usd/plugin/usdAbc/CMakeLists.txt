@@ -23,10 +23,8 @@ pxr_plugin(usdAbc
         usd
         usdGeom
         ${ALEMBIC_LIBRARIES}
-        ${OPENEXR_Half_LIBRARY} 
-        ${OPENEXR_Imath_LIBRARY} 
-        ${OPENEXR_Iex_LIBRARY} 
-        ${OPENEXR_IexMath_LIBRARY}
+        ${OPENEXR_Iex_LIBRARY}
+        ${OPENEXR_Half_LIBRARY}
         ${optionalLibs}
 
     INCLUDE_DIRS
@@ -57,9 +55,6 @@ pxr_plugin(usdAbc
 
     RESOURCE_FILES
         plugInfo.json
-
-    DOXYGEN_FILES
-        overview.dox
 )
 
 pxr_test_scripts(
@@ -111,11 +106,6 @@ pxr_install_test_dir(
 pxr_install_test_dir(
     SRC testenv/testUsdAbcIndexedProperties
     DEST testUsdAbcIndexedProperties
-)
-
-pxr_install_test_dir(
-    SRC testenv/testUsdAbcIndexedGeomArb
-    DEST testUsdAbcIndexedGeomArb
 )
 
 pxr_install_test_dir(
@@ -210,15 +200,6 @@ pxr_register_test(testUsdAbcIndexedProperties
         USD_ABC_TESTSUFFIX=def
 )
 
-pxr_register_test(testUsdAbcIndexedGeomArb
-    PYTHON
-    COMMAND "${CMAKE_INSTALL_PREFIX}/bin/usdcat hasColorSet.abc --out good_primvars_namespace_after_fix.usda"
-    DIFF_COMPARE good_primvars_namespace_after_fix.usda
-    EXPECTED_RETURN_CODE 0
-    ENV
-        USD_ABC_TESTSUFFIX=def
-)
-
 pxr_register_test(testUsdAbcInstancing
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdAbcInstancing"
@@ -276,6 +257,7 @@ pxr_register_test(testUsdAbcUvReadWrite
     EXPECTED_RETURN_CODE 0
     ENV
         USD_ABC_WRITE_UV_AS_ST_TEXCOORD2FARRAY=1
+        USD_ABC_READ_FLOAT2ARRAY_ST_PRIMVARS=0
 )
 
 pxr_register_test(testUsdAbcUvReadWrite_OldEncoding
@@ -284,6 +266,7 @@ pxr_register_test(testUsdAbcUvReadWrite_OldEncoding
     EXPECTED_RETURN_CODE 0
     ENV
         USD_ABC_WRITE_UV_AS_ST_TEXCOORD2FARRAY=0
+        USD_ABC_READ_FLOAT2ARRAY_ST_PRIMVARS=1
 )
 
 pxr_register_test(testUsdAbcSDFArguments

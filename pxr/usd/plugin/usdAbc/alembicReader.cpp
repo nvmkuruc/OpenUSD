@@ -75,13 +75,13 @@ TF_DEFINE_ENV_SETTING(
     "Issue warnings for all unsupported values encountered.");
 
 TF_DEFINE_ENV_SETTING(
-    USD_ABC_NUM_OGAWA_STREAMS, 1,
+    USD_ABC_NUM_OGAWA_STREAMS, 4,
     "The number of threads available for reading ogawa-backed files via UsdAbc.");
 
 TF_DEFINE_ENV_SETTING(
-    USD_ABC_WRITE_UV_AS_ST_TEXCOORD2FARRAY, true,
-    "Switch to false to disable writing Alembic uv sets as primvars:st with "
-    "type texCoord2fArray to USD");
+    USD_ABC_WRITE_UV_AS_ST_TEXCOORD2FARRAY, false,
+    "Switch to true to enable writing Alembic uv sets as primvars:st with type "
+    "texCoord2fArray to USD");
 
 
 TF_DEFINE_ENV_SETTING(
@@ -301,9 +301,6 @@ _CleanName(
         }
         name = attempt;
     }
-
-    if (name == "vals")
-        return "";
 
     return name;
 }
@@ -689,11 +686,11 @@ public:
         Ordering propertyOrdering;
         MetadataMap metadata;
         PropertyMap propertiesCache;
-        SdfPath prototype;           // Path to prototype; only set on instances
-        std::string instanceSource;  // Alembic path to instance source;
-                                     // only set on prototype.
-        bool instanceable;           // Instanceable; only set on prototype.
-        bool promoted;               // True if a promoted instance/prototype
+        SdfPath master;                 // Path to master; only set on instances
+        std::string instanceSource;     // Alembic path to instance source;
+                                        // only set on master.
+        bool instanceable;              // Instanceable; only set on master.
+        bool promoted;                  // True if a promoted instance/master
     };
 
     _ReaderContext();
@@ -846,18 +843,18 @@ private:
     const _ReaderSchema* _schema;
 
     // A map of the full names of known instance sources.  The mapped
-    // value has the Usd prototype path and whether we're using the actual
+    // value has the Usd master path and whether we're using the actual
     // instance source or its parent.  We use the parent in some cases
     // in order to get more sharing in the Usd world.
-    struct _PrototypeInfo {
+    struct _MasterInfo {
         SdfPath path;
         bool promoted;
     };
-    typedef std::map<std::string, _PrototypeInfo> _SourceToPrototypeMap;
-    _SourceToPrototypeMap _instanceSources;
+    typedef std::map<std::string, _MasterInfo> _SourceToMasterMap;
+    _SourceToMasterMap _instanceSources;
 
     // A map of full name of instance to full name of source.  If we're
-    // using the parent of the source as the prototype then the source path
+    // using the parent of the source as the master then the source path
     // is the parent of the actual source and the instance path is the
     // parent of the actual instance.
     typedef std::map<std::string, std::string> _InstanceToSourceMap;
@@ -999,7 +996,7 @@ _ReaderContext::Open(const std::string& filePath, std::string* errorLog,
         }
 
         // Save instancing info to lookup during main traversal, including
-        // choosing paths for the prototypes.
+        // choosing paths for the masters.
         _SetupInstancing(instances, promotable, &usedRootNames);
     }
 
@@ -1028,21 +1025,21 @@ _ReaderContext::Open(const std::string& filePath, std::string* errorLog,
     } else
         _ReadPrimChildren(*this, root, rootPath, *_pseudoRoot);
 
-    // Append the prototypes to the pseudo-root.  We use lexicographical order
+    // Append the masters to the pseudo-root.  We use lexicographical order
     // but the order doesn't really matter.  We also note here the Alembic
-    // source path for each prototype and whether it's instanceable or not
+    // source path for each master and whether it's instanceable or not
     // (which is chosen simply by the disableInstancing flag).
     if (!_instanceSources.empty()) {
         const bool instanceable =
             !IsFlagSet(UsdAbc_AlembicContextFlagNames->disableInstancing);
-        std::map<SdfPath, std::string> prototypes;
-        for (const _SourceToPrototypeMap::value_type& v: _instanceSources) {
-            prototypes[v.second.path] = v.first;
+        std::map<SdfPath, std::string> masters;
+        for (const _SourceToMasterMap::value_type& v: _instanceSources) {
+            masters[v.second.path] = v.first;
         }
-        for (const auto& prototype: prototypes) {
-            const SdfPath& name = prototype.first;
+        for (const auto& master: masters) {
+            const SdfPath& name = master.first;
             _pseudoRoot->children.push_back(name.GetNameToken());
-            _prims[name].instanceSource = prototype.second;
+            _prims[name].instanceSource = master.second;
             _prims[name].instanceable   = instanceable;
         }
     }
@@ -1140,11 +1137,11 @@ _ReaderContext::AddInstance(const SdfPath& path, const IObject& object)
     // An instance is just a prim...
     Prim& result = AddPrim(path);
 
-    // ...that also has its prototype member set.
+    // ...that also has its master member set.
     const auto i = _instances.find(object.getFullName());
     if (i != _instances.end()) {
-        const _PrototypeInfo& info = _instanceSources.find(i->second)->second;
-        result.prototype   = info.path;
+        const _MasterInfo& info = _instanceSources.find(i->second)->second;
+        result.master   = info.path;
         result.promoted = info.promoted;
     }
     return result;
@@ -1334,7 +1331,7 @@ _ReaderContext::List(const SdfPath& path) const
                 if (prim->propertyOrdering) {
                     result.push_back(SdfFieldKeys->PropertyOrder);
                 }
-                if (!prim->prototype.IsEmpty()) {
+                if (!prim->master.IsEmpty()) {
                     result.push_back(SdfFieldKeys->References);
                 }
                 if (!prim->instanceSource.empty()) {
@@ -1409,7 +1406,7 @@ _ReaderContext::_FindPromotable(
 {
     // We want to use the parent of the source (and the parents of the
     // corresponging instances) where possible.  Since Usd can't share
-    // the prototype prim but can share its descendants, we can get better
+    // the master prim but can share its descendants, we can get better
     // sharing when we can use the parent.  We can't do this if the
     // source or any instance has siblings and we won't do this unless
     // the source/instance is an IGeomBase and its parent is a transform.
@@ -1450,9 +1447,9 @@ _ReaderContext::_SetupInstancing(
     std::set<std::string>* usedNames)
 {
     // Now build the mapping of instances to sources and a mapping from the
-    // (possibly promoted) source full name to the corresponding Usd prototype
+    // (possibly promoted) source full name to the corresponding Usd master
     // prim path.  We can no longer use Alembic to answer these questions
-    // since it doesn't know about promoted prototypes/instances.
+    // since it doesn't know about promoted masters/instances.
     for (const auto& value: instances) {
         const _ObjectPtr& source = value.first;
         const bool promoted = (promotable.find(source) != promotable.end());
@@ -1474,27 +1471,27 @@ _ReaderContext::_SetupInstancing(
 
         // The Alembic instance source is just another instance as far
         // as Usd is concerned.  Unlike Alembic, Usd creates a separate
-        // prototype that has special treatment.
+        // master that has special treatment.
         _instances[sourceFullName] = sourceFullName;
 
         // Construct a unique name.  Start by getting the name
         // portion of the instance source's path.
         const std::string::size_type j = sourceFullName.rfind('/');
-        const std::string prototypeName =
+        const std::string masterName =
             (j != std::string::npos)
                 ? sourceFullName.substr(j + 1)
                 : sourceFullName;
 
         // Now mangle/uniquify the name and make a root prim path.
-        const SdfPath prototypePath =
+        const SdfPath masterPath =
                 SdfPath::AbsoluteRootPath().AppendChild(TfToken(
-                    _CleanName(prototypeName, " _", *usedNames,
+                    _CleanName(masterName, " _", *usedNames,
                                _AlembicFixName(),
                                &SdfPath::IsValidIdentifier)));
 
-        // Save the source/prototype info.
-        _PrototypeInfo prototypeInfo = { prototypePath, promoted };
-        _instanceSources.emplace(sourceFullName, std::move(prototypeInfo));
+        // Save the source/master info.
+        _MasterInfo masterInfo = { masterPath, promoted };
+        _instanceSources.emplace(sourceFullName, std::move(masterInfo));
     }
 }
 
@@ -1565,10 +1562,10 @@ _ReaderContext::_HasField(
             }
         }
         else if (fieldName == SdfFieldKeys->CustomData) {
-            // Provide the Alembic source path on prototype prims.  In Usd
-            // we copy the instance source to a new root prototype prim and
+            // Provide the Alembic source path on master prims.  In Usd
+            // we copy the instance source to a new root master prim and
             // the instance source becomes just another instance of the
-            // prototype.  This gives us a breadcrumb to follow back.
+            // master.  This gives us a breadcrumb to follow back.
             if (!prim->instanceSource.empty()) {
                 static const std::string key("abcInstanceSourcePath");
                 VtDictionary data;
@@ -1582,10 +1579,10 @@ _ReaderContext::_HasField(
             }
         }
         else if (fieldName == SdfFieldKeys->References) {
-            if (!prim->prototype.IsEmpty()) {
+            if (!prim->master.IsEmpty()) {
                 SdfReferenceListOp refs;
                 SdfReferenceVector items;
-                items.push_back(SdfReference(std::string(), prim->prototype));
+                items.push_back(SdfReference(std::string(), prim->master));
                 refs.SetExplicitItems(items);
                 return value.Set(refs);
             }
@@ -3741,36 +3738,36 @@ _ReadPrim(
     }
 
     // If this is an instance then we create a prim at the path and
-    // give it a reference to the prototype.  Then we change the path to
-    // be that of the prototype and continue traversal.  This puts the
-    // entire prototype hierarchy under the new path and puts a simple
+    // give it a reference to the master.  Then we change the path to
+    // be that of the master and continue traversal.  This puts the
+    // entire master hierarchy under the new path and puts a simple
     // prim with nothing but a reference at the old path.
     else {
         instance = &context.AddInstance(path, object);
-        if (!instance->prototype.IsEmpty()) {
-            path = instance->prototype;
+        if (!instance->master.IsEmpty()) {
+            path = instance->master;
         }
         else {
             instance = nullptr;
-            const std::string prototypePath =
+            const std::string masterPath =
                 object.isInstanceRoot()
                     ? IObject(object).instanceSourcePath()
                     : object.getFullName();
             TF_CODING_ERROR(
-                "Instance %s has no prototype at %s.",
+                "Instance %s has no master at %s.",
                 object.getFullName().c_str(),
-                prototypePath.c_str());
+                masterPath.c_str());
             // Continue and we'll simply expand the instance.
         }
     }
 
     // At this point if instance != nullptr then we're instancing,
-    // path points to the prototype, and instance points to the instance
+    // path points to the master, and instance points to the instance
     // prim's cache.
 
     // If the instance source was promoted then we need to copy the
     // prim's metadata and properties to the instance.  But we don't
-    // need quite everything because the prototype will supply some of it.
+    // need quite everything because the master will supply some of it.
     // For simplicity, we copy all data as usual then discard what we
     // don't want.
     if (instance && instance->promoted) {
@@ -3778,7 +3775,7 @@ _ReadPrim(
         _GetPrimMetadata(object.getMetaData(), *instance);
 
         // Read the properties.  Reconstruct the instance path since we've
-        // changed path to point at the prototype.
+        // changed path to point at the master.
         const SdfPath instancePath = parentPath.AppendChild(TfToken(name));
         _PrimReaderContext primContext(context, object, instancePath);
         for (const auto& reader : context.GetSchema().GetPrimReaders(schemaName)) {
@@ -3787,18 +3784,18 @@ _ReadPrim(
         }
 
         // Discard name children ordering since we don't have any name
-        // children (except via the prototype reference).
+        // children (except via the master reference).
         instance->primOrdering = boost::none;
     }
 
-    // Get the prim cache.  If instance is true then prim is the prototype,
-    // otherwise it's a non-instanced prim or a descendant of a prototype.
+    // Get the prim cache.  If instance is true then prim is the master,
+    // otherwise it's a non-instanced prim or a descendant of a master.
     _ReaderContext::Prim& prim = context.AddPrim(path);
 
-    // If we're instancing but the prototype prim cache already has a type
-    // name then we've already found a previous instance of this prototype
-    // and we've already traversed the prototype once.  Don't traverse a
-    // prototype again.
+    // If we're instancing but the master prim cache already has a type
+    // name then we've already found a previous instance of this master
+    // and we've already traversed the master once.  Don't traverse a
+    // master again.
     if (!instance || prim.typeName.IsEmpty()) {
         // Add prim metadata.
         _GetPrimMetadata(object.getMetaData(), prim);
@@ -3831,27 +3828,27 @@ _ReadPrim(
 #endif
 
         // If the instance source was promoted then we don't need or want
-        // any of the instance source's properties on the prototype since each
-        // Usd instance will have its own.  We also don't want the prototype
+        // any of the instance source's properties on the master since each
+        // Usd instance will have its own.  We also don't want the master
         // to have most metadata for the same reason.  For the sake of
         // simplicity of the code, we already copied all of that info so
         // we'll discard it now.
         if (instance && instance->promoted) {
-            // prim is the prototype.
+            // prim is the master.
             prim.properties.clear();
             prim.propertyOrdering = boost::none;
             prim.metadata.clear();
             prim.propertiesCache.clear();
         }
 
-        // If this is a prototype then make it an over.
+        // If this is a master then make it an over.
         if (instance) {
             prim.specifier = SdfSpecifierOver;
         }
     }
 
     // Modify the metadata for an instance.  We wait until now because we
-    // want to get the prototype's type name.
+    // want to get the master's type name.
     if (instance) {
         instance->typeName  = prim.typeName;
         instance->specifier = SdfSpecifierDef;

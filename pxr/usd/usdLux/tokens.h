@@ -58,10 +58,14 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// Use UsdLuxTokens like so:
 ///
 /// \code
-///     gprim.GetMyTokenValuedAttr().Set(UsdLuxTokens->angular);
+///     gprim.GetMyTokenValuedAttr().Set(UsdLuxTokens->angle);
 /// \endcode
 struct UsdLuxTokensType {
     USDLUX_API UsdLuxTokensType();
+    /// \brief "angle"
+    /// 
+    /// UsdLuxDistantLight
+    const TfToken angle;
     /// \brief "angular"
     /// 
     /// Possible value for UsdLuxDomeLight::GetTextureFormatAttr()
@@ -76,248 +80,172 @@ struct UsdLuxTokensType {
     const TfToken collectionFilterLinkIncludeRoot;
     /// \brief "collection:lightLink:includeRoot"
     /// 
-    /// UsdLuxLightAPI
+    /// UsdLuxLight
     const TfToken collectionLightLinkIncludeRoot;
     /// \brief "collection:shadowLink:includeRoot"
     /// 
-    /// UsdLuxLightAPI
+    /// UsdLuxLight
     const TfToken collectionShadowLinkIncludeRoot;
+    /// \brief "color"
+    /// 
+    /// UsdLuxLight
+    const TfToken color;
+    /// \brief "colorTemperature"
+    /// 
+    /// UsdLuxLight
+    const TfToken colorTemperature;
     /// \brief "consumeAndContinue"
     /// 
-    /// Possible value for UsdLuxListAPI::GetLightListCacheBehaviorAttr(), Possible value for UsdLuxLightListAPI::GetLightListCacheBehaviorAttr()
+    /// Possible value for UsdLuxListAPI::GetLightListCacheBehaviorAttr()
     const TfToken consumeAndContinue;
     /// \brief "consumeAndHalt"
     /// 
-    /// Possible value for UsdLuxListAPI::GetLightListCacheBehaviorAttr(), Possible value for UsdLuxLightListAPI::GetLightListCacheBehaviorAttr()
+    /// Possible value for UsdLuxListAPI::GetLightListCacheBehaviorAttr()
     const TfToken consumeAndHalt;
     /// \brief "cubeMapVerticalCross"
     /// 
     /// Possible value for UsdLuxDomeLight::GetTextureFormatAttr()
     const TfToken cubeMapVerticalCross;
-    /// \brief "CylinderLight"
+    /// \brief "diffuse"
     /// 
-    /// Default value for UsdLuxCylinderLight schema attribute light:shaderId
-    const TfToken cylinderLight;
-    /// \brief "DiskLight"
+    /// UsdLuxLight
+    const TfToken diffuse;
+    /// \brief "enableColorTemperature"
     /// 
-    /// Default value for UsdLuxDiskLight schema attribute light:shaderId
-    const TfToken diskLight;
-    /// \brief "DistantLight"
+    /// UsdLuxLight
+    const TfToken enableColorTemperature;
+    /// \brief "exposure"
     /// 
-    /// Default value for UsdLuxDistantLight schema attribute light:shaderId
-    const TfToken distantLight;
-    /// \brief "DomeLight"
-    /// 
-    /// Default value for UsdLuxDomeLight schema attribute light:shaderId
-    const TfToken domeLight;
-    /// \brief "extent"
-    /// 
-    /// UsdLuxPortalLight
-    const TfToken extent;
+    /// UsdLuxLight
+    const TfToken exposure;
     /// \brief "filterLink"
     /// 
     ///  This token represents the collection name to use with UsdCollectionAPI to represent filter-linking of a UsdLuxLightFilter prim. 
     const TfToken filterLink;
+    /// \brief "filters"
+    /// 
+    /// UsdLuxLight
+    const TfToken filters;
     /// \brief "geometry"
     /// 
     /// UsdLuxGeometryLight
     const TfToken geometry;
-    /// \brief "GeometryLight"
+    /// \brief "height"
     /// 
-    /// Default value for UsdLuxGeometryLight schema attribute light:shaderId
-    const TfToken geometryLight;
-    /// \brief "guideRadius"
-    /// 
-    /// UsdLuxDomeLight
-    const TfToken guideRadius;
+    /// UsdLuxRectLight
+    const TfToken height;
     /// \brief "ignore"
     /// 
-    /// Possible value for UsdLuxListAPI::GetLightListCacheBehaviorAttr(), Possible value for UsdLuxLightListAPI::GetLightListCacheBehaviorAttr()
+    /// Possible value for UsdLuxListAPI::GetLightListCacheBehaviorAttr()
     const TfToken ignore;
-    /// \brief "independent"
+    /// \brief "intensity"
     /// 
-    /// Possible value for UsdLuxLightAPI::GetMaterialSyncModeAttr()
-    const TfToken independent;
-    /// \brief "inputs:angle"
-    /// 
-    /// UsdLuxDistantLight
-    const TfToken inputsAngle;
-    /// \brief "inputs:color"
-    /// 
-    /// UsdLuxLightAPI
-    const TfToken inputsColor;
-    /// \brief "inputs:colorTemperature"
-    /// 
-    /// UsdLuxLightAPI
-    const TfToken inputsColorTemperature;
-    /// \brief "inputs:diffuse"
-    /// 
-    /// UsdLuxLightAPI
-    const TfToken inputsDiffuse;
-    /// \brief "inputs:enableColorTemperature"
-    /// 
-    /// UsdLuxLightAPI
-    const TfToken inputsEnableColorTemperature;
-    /// \brief "inputs:exposure"
-    /// 
-    /// UsdLuxLightAPI
-    const TfToken inputsExposure;
-    /// \brief "inputs:height"
-    /// 
-    /// UsdLuxRectLight
-    const TfToken inputsHeight;
-    /// \brief "inputs:intensity"
-    /// 
-    /// UsdLuxDistantLight, UsdLuxLightAPI
-    const TfToken inputsIntensity;
-    /// \brief "inputs:length"
-    /// 
-    /// UsdLuxCylinderLight
-    const TfToken inputsLength;
-    /// \brief "inputs:normalize"
-    /// 
-    /// UsdLuxLightAPI
-    const TfToken inputsNormalize;
-    /// \brief "inputs:radius"
-    /// 
-    /// UsdLuxCylinderLight, UsdLuxSphereLight, UsdLuxDiskLight
-    const TfToken inputsRadius;
-    /// \brief "inputs:shadow:color"
-    /// 
-    /// UsdLuxShadowAPI
-    const TfToken inputsShadowColor;
-    /// \brief "inputs:shadow:distance"
-    /// 
-    /// UsdLuxShadowAPI
-    const TfToken inputsShadowDistance;
-    /// \brief "inputs:shadow:enable"
-    /// 
-    /// UsdLuxShadowAPI
-    const TfToken inputsShadowEnable;
-    /// \brief "inputs:shadow:falloff"
-    /// 
-    /// UsdLuxShadowAPI
-    const TfToken inputsShadowFalloff;
-    /// \brief "inputs:shadow:falloffGamma"
-    /// 
-    /// UsdLuxShadowAPI
-    const TfToken inputsShadowFalloffGamma;
-    /// \brief "inputs:shaping:cone:angle"
-    /// 
-    /// UsdLuxShapingAPI
-    const TfToken inputsShapingConeAngle;
-    /// \brief "inputs:shaping:cone:softness"
-    /// 
-    /// UsdLuxShapingAPI
-    const TfToken inputsShapingConeSoftness;
-    /// \brief "inputs:shaping:focus"
-    /// 
-    /// UsdLuxShapingAPI
-    const TfToken inputsShapingFocus;
-    /// \brief "inputs:shaping:focusTint"
-    /// 
-    /// UsdLuxShapingAPI
-    const TfToken inputsShapingFocusTint;
-    /// \brief "inputs:shaping:ies:angleScale"
-    /// 
-    /// UsdLuxShapingAPI
-    const TfToken inputsShapingIesAngleScale;
-    /// \brief "inputs:shaping:ies:file"
-    /// 
-    /// UsdLuxShapingAPI
-    const TfToken inputsShapingIesFile;
-    /// \brief "inputs:shaping:ies:normalize"
-    /// 
-    /// UsdLuxShapingAPI
-    const TfToken inputsShapingIesNormalize;
-    /// \brief "inputs:specular"
-    /// 
-    /// UsdLuxLightAPI
-    const TfToken inputsSpecular;
-    /// \brief "inputs:texture:file"
-    /// 
-    /// UsdLuxDomeLight, UsdLuxRectLight
-    const TfToken inputsTextureFile;
-    /// \brief "inputs:texture:format"
-    /// 
-    /// UsdLuxDomeLight
-    const TfToken inputsTextureFormat;
-    /// \brief "inputs:width"
-    /// 
-    /// UsdLuxRectLight
-    const TfToken inputsWidth;
+    /// UsdLuxDistantLight, UsdLuxLight
+    const TfToken intensity;
     /// \brief "latlong"
     /// 
     /// Possible value for UsdLuxDomeLight::GetTextureFormatAttr()
     const TfToken latlong;
-    /// \brief "light:filters"
+    /// \brief "length"
     /// 
-    /// UsdLuxLightAPI
-    const TfToken lightFilters;
-    /// \brief "lightFilter:shaderId"
-    /// 
-    /// UsdLuxLightFilter
-    const TfToken lightFilterShaderId;
+    /// UsdLuxCylinderLight
+    const TfToken length;
     /// \brief "lightLink"
     /// 
-    ///  This token represents the collection name to use with UsdCollectionAPI to represent light-linking of a prim with an applied UsdLuxLightAPI. 
+    ///  This token represents the collection name to use with UsdCollectionAPI to represent light-linking of a UsdLuxLight prim. 
     const TfToken lightLink;
     /// \brief "lightList"
     /// 
-    /// UsdLuxListAPI, UsdLuxLightListAPI
+    /// UsdLuxListAPI
     const TfToken lightList;
     /// \brief "lightList:cacheBehavior"
     /// 
-    /// UsdLuxListAPI, UsdLuxLightListAPI
+    /// UsdLuxListAPI
     const TfToken lightListCacheBehavior;
-    /// \brief "light:materialSyncMode"
-    /// 
-    /// UsdLuxVolumeLightAPI, UsdLuxMeshLightAPI, UsdLuxLightAPI
-    const TfToken lightMaterialSyncMode;
-    /// \brief "light:shaderId"
-    /// 
-    /// UsdLuxPortalLight, UsdLuxDomeLight, UsdLuxGeometryLight, UsdLuxCylinderLight, UsdLuxSphereLight, UsdLuxRectLight, UsdLuxDiskLight, UsdLuxDistantLight, UsdLuxVolumeLightAPI, UsdLuxMeshLightAPI, UsdLuxLightAPI
-    const TfToken lightShaderId;
-    /// \brief "materialGlowTintsLight"
-    /// 
-    /// Default value for UsdLuxVolumeLightAPI schema attribute light:materialSyncMode, Default value for UsdLuxMeshLightAPI schema attribute light:materialSyncMode, Possible value for UsdLuxLightAPI::GetMaterialSyncModeAttr()
-    const TfToken materialGlowTintsLight;
-    /// \brief "MeshLight"
-    /// 
-    /// Default value for UsdLuxMeshLightAPI schema attribute light:shaderId
-    const TfToken meshLight;
     /// \brief "mirroredBall"
     /// 
     /// Possible value for UsdLuxDomeLight::GetTextureFormatAttr()
     const TfToken mirroredBall;
-    /// \brief "noMaterialResponse"
+    /// \brief "normalize"
     /// 
-    /// Possible value for UsdLuxLightAPI::GetMaterialSyncModeAttr(), Default value for UsdLuxLightAPI::GetMaterialSyncModeAttr()
-    const TfToken noMaterialResponse;
+    /// UsdLuxLight
+    const TfToken normalize;
     /// \brief "orientToStageUpAxis"
     /// 
     ///  This token represents the suffix for a UsdGeomXformOp used to orient a light with the stage's up axis. 
     const TfToken orientToStageUpAxis;
-    /// \brief "PortalLight"
-    /// 
-    /// Default value for UsdLuxPortalLight schema attribute light:shaderId
-    const TfToken portalLight;
     /// \brief "portals"
     /// 
     /// UsdLuxDomeLight
     const TfToken portals;
-    /// \brief "RectLight"
+    /// \brief "radius"
     /// 
-    /// Default value for UsdLuxRectLight schema attribute light:shaderId
-    const TfToken rectLight;
+    /// UsdLuxCylinderLight, UsdLuxSphereLight, UsdLuxDiskLight
+    const TfToken radius;
+    /// \brief "shadow:color"
+    /// 
+    /// UsdLuxShadowAPI
+    const TfToken shadowColor;
+    /// \brief "shadow:distance"
+    /// 
+    /// UsdLuxShadowAPI
+    const TfToken shadowDistance;
+    /// \brief "shadow:enable"
+    /// 
+    /// UsdLuxShadowAPI
+    const TfToken shadowEnable;
+    /// \brief "shadow:falloff"
+    /// 
+    /// UsdLuxShadowAPI
+    const TfToken shadowFalloff;
+    /// \brief "shadow:falloffGamma"
+    /// 
+    /// UsdLuxShadowAPI
+    const TfToken shadowFalloffGamma;
     /// \brief "shadowLink"
     /// 
-    ///  This token represents the collection name to use with UsdCollectionAPI to represent shadow-linking of a prim with an applied UsdLuxLightAPI. 
+    ///  This token represents the collection name to use with UsdCollectionAPI to represent shadow-linking of a UsdLuxLight prim. 
     const TfToken shadowLink;
-    /// \brief "SphereLight"
+    /// \brief "shaping:cone:angle"
     /// 
-    /// Default value for UsdLuxSphereLight schema attribute light:shaderId
-    const TfToken sphereLight;
+    /// UsdLuxShapingAPI
+    const TfToken shapingConeAngle;
+    /// \brief "shaping:cone:softness"
+    /// 
+    /// UsdLuxShapingAPI
+    const TfToken shapingConeSoftness;
+    /// \brief "shaping:focus"
+    /// 
+    /// UsdLuxShapingAPI
+    const TfToken shapingFocus;
+    /// \brief "shaping:focusTint"
+    /// 
+    /// UsdLuxShapingAPI
+    const TfToken shapingFocusTint;
+    /// \brief "shaping:ies:angleScale"
+    /// 
+    /// UsdLuxShapingAPI
+    const TfToken shapingIesAngleScale;
+    /// \brief "shaping:ies:file"
+    /// 
+    /// UsdLuxShapingAPI
+    const TfToken shapingIesFile;
+    /// \brief "shaping:ies:normalize"
+    /// 
+    /// UsdLuxShapingAPI
+    const TfToken shapingIesNormalize;
+    /// \brief "specular"
+    /// 
+    /// UsdLuxLight
+    const TfToken specular;
+    /// \brief "texture:file"
+    /// 
+    /// UsdLuxDomeLight, UsdLuxRectLight
+    const TfToken textureFile;
+    /// \brief "texture:format"
+    /// 
+    /// UsdLuxDomeLight
+    const TfToken textureFormat;
     /// \brief "treatAsLine"
     /// 
     /// UsdLuxCylinderLight
@@ -326,10 +254,10 @@ struct UsdLuxTokensType {
     /// 
     /// UsdLuxSphereLight
     const TfToken treatAsPoint;
-    /// \brief "VolumeLight"
+    /// \brief "width"
     /// 
-    /// Default value for UsdLuxVolumeLightAPI schema attribute light:shaderId
-    const TfToken volumeLight;
+    /// UsdLuxRectLight
+    const TfToken width;
     /// A vector of all of the tokens listed above.
     const std::vector<TfToken> allTokens;
 };

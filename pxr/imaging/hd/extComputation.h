@@ -28,6 +28,10 @@
 #include "pxr/imaging/hd/api.h"
 #include "pxr/imaging/hd/sceneDelegate.h"
 #include "pxr/imaging/hd/sprim.h"
+#include "pxr/imaging/hd/types.h"
+#include "pxr/usd/sdf/path.h"
+#include "pxr/base/vt/value.h"
+#include <vector>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -53,15 +57,14 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// ExtComputations use a pull model, so processing is only triggered if
 /// a downstream computation or prim pulls on one the computations outputs.
 ///
-class HdExtComputation : public HdSprim
-{
+class HdExtComputation : public HdSprim {
 public:
     /// Construct a new ExtComputation identified by id.
     HD_API
     HdExtComputation(SdfPath const &id);
 
     HD_API
-    ~HdExtComputation() override;
+    virtual ~HdExtComputation() = default;
 
     ///
     /// Change tracking
@@ -90,12 +93,12 @@ public:
     };
 
     HD_API
-    void Sync(HdSceneDelegate *sceneDelegate,
-              HdRenderParam   *renderParam,
-              HdDirtyBits     *dirtyBits) override;
+    virtual void Sync(HdSceneDelegate *sceneDelegate,
+                      HdRenderParam   *renderParam,
+                      HdDirtyBits     *dirtyBits) override;
 
     HD_API
-    HdDirtyBits GetInitialDirtyBitsMask() const override;
+    virtual HdDirtyBits GetInitialDirtyBitsMask() const override;
 
     HD_API
     size_t GetDispatchCount() const;

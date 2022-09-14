@@ -78,7 +78,7 @@ void wrapUsdLuxDistantLight()
 {
     typedef UsdLuxDistantLight This;
 
-    class_<This, bases<UsdLuxNonboundableLightBase> >
+    class_<This, bases<UsdLuxLight> >
         cls("DistantLight");
 
     cls

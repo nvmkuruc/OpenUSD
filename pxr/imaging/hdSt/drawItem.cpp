@@ -22,14 +22,12 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/imaging/hdSt/drawItem.h"
-#include "pxr/imaging/hdSt/materialNetworkShader.h"
+#include "pxr/imaging/hdSt/shaderCode.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 HdStDrawItem::HdStDrawItem(HdRprimSharedData const *sharedData)
     : HdDrawItem(sharedData)
-    , _materialIsFinal(false)
-
 {
     HF_MALLOC_TAG_FUNCTION();
 }
@@ -43,24 +41,10 @@ HdStDrawItem::~HdStDrawItem()
 size_t
 HdStDrawItem::_GetBufferArraysHash() const
 {
-    if (const HdStShaderCodeSharedPtr& shader = GetMaterialNetworkShader()) {
+    if (const HdStShaderCodeSharedPtr& shader = GetMaterialShader()) {
         if (const HdBufferArrayRangeSharedPtr& shaderBAR =
             shader->GetShaderData()) {
             return shaderBAR->GetVersion();
-        }
-    }
-    
-    return 0;
-}
-
-/*virtual*/
-size_t
-HdStDrawItem::_GetElementOffsetsHash() const
-{
-    if (const HdStShaderCodeSharedPtr& shader = GetMaterialNetworkShader()) {
-        if (const HdBufferArrayRangeSharedPtr& shaderBAR =
-                shader->GetShaderData()) {
-            return shaderBAR->GetElementOffset();
         }
     }
     

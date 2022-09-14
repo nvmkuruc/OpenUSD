@@ -54,10 +54,8 @@ def _SetupOpenGLContext(width=100, height=100):
 
     glWidget = QtOpenGL.QGLWidget(glFormat)
     glWidget.setFixedSize(width, height)
-    # note that we need to bind the gl context here, instead of explicitly
-    # showing the glWidget. Binding the gl context will make sure framebuffer is
-    # ready for gl operations.
-    glWidget.makeCurrent()
+    glWidget.show()
+    glWidget.setHidden(True)
 
     return glWidget
 
@@ -141,9 +139,7 @@ def main():
 
     frameRecorder = UsdAppUtils.FrameRecorder()
     if args.rendererPlugin:
-        frameRecorder.SetRendererPlugin(
-            UsdAppUtils.rendererArgs.GetPluginIdFromArgument(
-                args.rendererPlugin))
+        frameRecorder.SetRendererPlugin(args.rendererPlugin.id)
     frameRecorder.SetImageWidth(args.imageWidth)
     frameRecorder.SetComplexity(args.complexity.value)
     frameRecorder.SetColorCorrectionMode(args.colorCorrectionMode)

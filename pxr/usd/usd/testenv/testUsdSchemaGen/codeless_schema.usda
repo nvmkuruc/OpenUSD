@@ -34,22 +34,11 @@ class "NonAppliedAPI" (
 {
 }
 
-class "DerivedNonAppliedAPI" (
-    inherits = </NonAppliedAPI>
-    customData = {
-        token apiSchemaType = "nonApplied"
-    }
-)
-{
-}
-
 class "SingleApplyAPI" (
     inherits = </APISchemaBase>
-    prepend apiSchemas = ["BuiltinAPI"]
     customData = {
         token apiSchemaType = "singleApply"
         token[] apiSchemaAutoApplyTo = ["Derived", "ExternalPluginType"]
-        token[] apiSchemaCanOnlyApplyTo = ["Base", "ExternalPluginType"]
     }
 )
 {
@@ -64,26 +53,12 @@ class "EmptyMultipleApplyAPI" (
 {
 }
 
+
 class "MultipleApplyAPI" (
     inherits = </APISchemaBase>
     customData = {
         token apiSchemaType = "multipleApply"
         token propertyNamespacePrefix  = "test"
-        token[] apiSchemaAllowedInstanceNames = ["foo", "bar", "baz"]
-        token[] apiSchemaCanOnlyApplyTo = [
-            "Base", "ExternalPluginType"
-        ] 
-        dictionary apiSchemaInstances = {
-            dictionary foo = {
-                token[] apiSchemaCanOnlyApplyTo = ["Derived"] 
-            }
-            dictionary bar = {
-                token[] apiSchemaCanOnlyApplyTo = [
-                    "Derived", 
-                    "ExternalPluginType"
-                ] 
-            }
-        }
     }
 )
 {
@@ -91,9 +66,19 @@ class "MultipleApplyAPI" (
     double testAttrTwo
 }
 
+class "DerivedMultipleApplyAPI" (
+    inherits = </MultipleApplyAPI>
+    customData = {
+        token apiSchemaType = "multipleApply"
+        token propertyNamespacePrefix = "derived"
+    }
+)
+{
+    int testAttrThree
+}
+
 class "PublicMultipleApplyAPI" (
     inherits = </APISchemaBase>
-    prepend apiSchemas = ["MultiApplyAPI", "BuiltinMultiApplyAPI:builtin"]
     customData = {
         token apiSchemaType = "multipleApply"
         token propertyNamespacePrefix  = "testo"
@@ -106,7 +91,6 @@ class "PublicMultipleApplyAPI" (
 
 class "Base" (
     inherits = </Typed>
-    prepend apiSchemas = ["BuiltinAPI"]
     doc = "This doc should only exist on the \"Base\" class."
     customData = {
         dictionary schemaTokens = {
@@ -120,15 +104,13 @@ class "Base" (
 ) {
     
     token myVaryingToken = "VariableTokenDefault" (
-        allowedTokens = ["VariableTokenAllowed1", "VariableTokenAllowed2",
-        "VariableTokenAllowed<3>",""]
+        allowedTokens = ["VariableTokenAllowed1", "VariableTokenAllowed2", ""]
         doc = "VariableToken attribute docs.")
     
     uniform token[] myVaryingTokenArray = ["VariableTokenArrayAllowed1", ""] (
         allowedTokens = [
             "VariableTokenArrayAllowed1",
             "VariableTokenArrayAllowed2",
-            "VariableTokenArrayAllowed<3>",
             ""]
         doc = "VariableTokenArray attribute docs.")
     

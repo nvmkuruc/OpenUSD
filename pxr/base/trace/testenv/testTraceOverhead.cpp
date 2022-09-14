@@ -33,8 +33,6 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
-uint64_t observableValue;
-
 static void
 WriteStats(FILE *file, const char *name, const TfStopwatch &timer)
 {
@@ -83,10 +81,9 @@ int NOINLINE TestTick(int N)
     int i = 0;
     for (int x = 0; x < N; x++) {        
         // A TRACE_SCOPE has to do two of these, one for begin and one for end.
-        std::atomic_signal_fence(std::memory_order_seq_cst);
-        observableValue += ArchGetStartTickTime();
+        ArchGetTickTime();
         i = Add(i, x);
-        observableValue += ArchGetStopTickTime();
+        ArchGetTickTime();
     }
     return i;
 }
@@ -96,10 +93,9 @@ int NOINLINE TestPushBack(int N, std::vector<uint64_t>& tickVec)
     int i = 0;
     for (int x = 0; x < N; x++) {        
         // A TRACE_SCOPE has to do two of these, one for begin and one for end.
-        std::atomic_signal_fence(std::memory_order_seq_cst);
-        tickVec.push_back(ArchGetStartTickTime());
+        tickVec.push_back(ArchGetTickTime());
         i = Add(i, x);
-        tickVec.push_back(ArchGetStopTickTime());
+        tickVec.push_back(ArchGetTickTime());
     }
     return i;
 }
@@ -111,7 +107,7 @@ main(int argc, char *argv[])
 
     TfStopwatch watch;
     int i = 0;
-    int N = argc > 1 ? atoi(argv[1]) : 1e8;
+    int N = 1e8;
     double traceDisableTime, traceTime, noTraceTime, tickTime, pushTickTime;
     std::vector<uint64_t> tickVec;
 

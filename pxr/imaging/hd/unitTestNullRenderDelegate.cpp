@@ -23,28 +23,19 @@
 //
 #include "pxr/imaging/hd/unitTestNullRenderDelegate.h"
 #include "pxr/imaging/hd/bufferArray.h"
-#include "pxr/imaging/hd/camera.h"
 #include "pxr/imaging/hd/coordSys.h"
 #include "pxr/imaging/hd/material.h"
 #include "pxr/imaging/hd/mesh.h"
 #include "pxr/imaging/hd/basisCurves.h"
-#include "pxr/imaging/hd/bprim.h"
 #include "pxr/imaging/hd/points.h"
+#include "pxr/imaging/hd/texture.h"
 #include "pxr/imaging/hd/tokens.h"
 #include "pxr/imaging/hd/repr.h"
 #include "pxr/imaging/hd/resourceRegistry.h"
 #include "pxr/imaging/hd/strategyBase.h"
 #include "pxr/imaging/hd/unitTestNullRenderPass.h"
 
-#include <iostream>
-
 PXR_NAMESPACE_OPEN_SCOPE
-
-TF_DEFINE_PRIVATE_TOKENS(
-    _tokens,
-    (print)
-    (message)
-);
 
 
 ////////////////////////////////////////////////////////////////
@@ -53,8 +44,9 @@ TF_DEFINE_PRIVATE_TOKENS(
 class Hd_NullRprim final : public HdRprim {
 public:
     Hd_NullRprim(TfToken const& typeId,
-                 SdfPath const& id)
-     : HdRprim(id)
+                 SdfPath const& id,
+                 SdfPath const& instancerId)
+     : HdRprim(id, instancerId)
      , _typeId(typeId)
     {
 
@@ -229,6 +221,8 @@ public:
         return HdMaterial::AllDirty;
     }
 
+    virtual void Reload() override {};
+
 private:
     Hd_NullMaterial()                                  = delete;
     Hd_NullMaterial(const Hd_NullMaterial &)             = delete;
@@ -257,27 +251,28 @@ private:
     Hd_NullCoordSys &operator =(const Hd_NullCoordSys &) = delete;
 };
 
-class Hd_NullCamera final : public HdCamera {
+class Hd_NullTexture final : public HdTexture {
 public:
-    Hd_NullCamera(SdfPath const& id) : HdCamera(id) {}
-    virtual ~Hd_NullCamera() override = default;
+    Hd_NullTexture(SdfPath const& id) : HdTexture(id) {}
+    virtual ~Hd_NullTexture() = default;
 
     virtual void Sync(HdSceneDelegate *sceneDelegate,
                       HdRenderParam   *renderParam,
                       HdDirtyBits     *dirtyBits) override
     {
-        *dirtyBits = HdCamera::Clean;
+        *dirtyBits = HdTexture::Clean;
     };
 
     virtual HdDirtyBits GetInitialDirtyBitsMask() const override {
-        return HdCamera::AllDirty;
+        return HdMaterial::Clean;
     }
 
 private:
-    Hd_NullCamera()                                  = delete;
-    Hd_NullCamera(const Hd_NullCamera &)             = delete;
-    Hd_NullCamera &operator =(const Hd_NullCamera &) = delete;
+    Hd_NullTexture()                                  = delete;
+    Hd_NullTexture(const Hd_NullTexture &)             = delete;
+    Hd_NullTexture &operator =(const Hd_NullTexture &) = delete;
 };
+
 
 const TfTokenVector Hd_UnitTestNullRenderDelegate::SUPPORTED_RPRIM_TYPES =
 {
@@ -288,13 +283,13 @@ const TfTokenVector Hd_UnitTestNullRenderDelegate::SUPPORTED_RPRIM_TYPES =
 
 const TfTokenVector Hd_UnitTestNullRenderDelegate::SUPPORTED_SPRIM_TYPES =
 {
-    HdPrimTypeTokens->camera,
     HdPrimTypeTokens->coordSys,
     HdPrimTypeTokens->material
 };
 
 const TfTokenVector Hd_UnitTestNullRenderDelegate::SUPPORTED_BPRIM_TYPES =
 {
+    HdPrimTypeTokens->texture
 };
 
 const TfTokenVector &
@@ -338,9 +333,10 @@ Hd_UnitTestNullRenderDelegate::CreateRenderPass(HdRenderIndex *index,
 
 HdInstancer *
 Hd_UnitTestNullRenderDelegate::CreateInstancer(HdSceneDelegate *delegate,
-                                               SdfPath const& id)
+                                               SdfPath const& id,
+                                               SdfPath const& instancerId)
 {
-    return new HdInstancer(delegate, id);
+    return new HdInstancer(delegate, id, instancerId);
 }
 
 void
@@ -352,9 +348,10 @@ Hd_UnitTestNullRenderDelegate::DestroyInstancer(HdInstancer *instancer)
 
 HdRprim *
 Hd_UnitTestNullRenderDelegate::CreateRprim(TfToken const& typeId,
-                                    SdfPath const& rprimId)
+                                    SdfPath const& rprimId,
+                                    SdfPath const& instancerId)
 {
-    return new Hd_NullRprim(typeId, rprimId);
+    return new Hd_NullRprim(typeId, rprimId, instancerId);
 }
 
 void
@@ -371,11 +368,10 @@ Hd_UnitTestNullRenderDelegate::CreateSprim(TfToken const& typeId,
         return new Hd_NullMaterial(sprimId);
     } else if (typeId == HdPrimTypeTokens->coordSys) {
         return new Hd_NullCoordSys(sprimId);
-    } else if (typeId == HdPrimTypeTokens->camera) {
-        return new Hd_NullCamera(sprimId);
     } else {
         TF_CODING_ERROR("Unknown Sprim Type %s", typeId.GetText());
     }
+
     return nullptr;
 }
 
@@ -386,8 +382,6 @@ Hd_UnitTestNullRenderDelegate::CreateFallbackSprim(TfToken const& typeId)
         return new Hd_NullMaterial(SdfPath::EmptyPath());
     } else if (typeId == HdPrimTypeTokens->coordSys) {
         return new Hd_NullCoordSys(SdfPath::EmptyPath());
-    } else if (typeId == HdPrimTypeTokens->camera) {
-        return new Hd_NullCamera(SdfPath::EmptyPath());
     } else {
         TF_CODING_ERROR("Unknown Sprim Type %s", typeId.GetText());
     }
@@ -406,7 +400,12 @@ HdBprim *
 Hd_UnitTestNullRenderDelegate::CreateBprim(TfToken const& typeId,
                                     SdfPath const& bprimId)
 {
-    TF_CODING_ERROR("Unknown Bprim Type %s", typeId.GetText());
+    if (typeId == HdPrimTypeTokens->texture) {
+        return new Hd_NullTexture(bprimId);
+    } else  {
+        TF_CODING_ERROR("Unknown Bprim Type %s", typeId.GetText());
+    }
+
 
     return nullptr;
 }
@@ -414,7 +413,11 @@ Hd_UnitTestNullRenderDelegate::CreateBprim(TfToken const& typeId,
 HdBprim *
 Hd_UnitTestNullRenderDelegate::CreateFallbackBprim(TfToken const& typeId)
 {
-    TF_CODING_ERROR("Unknown Bprim Type %s", typeId.GetText());
+    if (typeId == HdPrimTypeTokens->texture) {
+        return new Hd_NullTexture(SdfPath::EmptyPath());
+    } else {
+        TF_CODING_ERROR("Unknown Bprim Type %s", typeId.GetText());
+    }
 
     return nullptr;
 }
@@ -428,37 +431,6 @@ Hd_UnitTestNullRenderDelegate::DestroyBprim(HdBprim *bPrim)
 void
 Hd_UnitTestNullRenderDelegate::CommitResources(HdChangeTracker *tracker)
 {
-}
-
-HdCommandDescriptors
-Hd_UnitTestNullRenderDelegate::GetCommandDescriptors() const
-{
-    HdCommandArgDescriptor printArgDesc{ _tokens->message, VtValue("") };
-    HdCommandArgDescriptors argDescs{ printArgDesc };
-
-    HdCommandDescriptor commandDesc(_tokens->print, "Print command", argDescs);
-
-    return { commandDesc };
-}
-
-bool
-Hd_UnitTestNullRenderDelegate::InvokeCommand(
-    const TfToken &command,
-    const HdCommandArgs &args)
-{
-    if (command == _tokens->print) {
-        HdCommandArgs::const_iterator it = args.find(_tokens->message);
-        if (it == args.end()) {
-            TF_WARN("No argument 'message' argument found.");
-            return false;
-        }
-        VtValue message = it->second;
-        std::cout << "Printing the message: " << message << std::endl;
-        return true;
-    }
-
-    TF_WARN("Unknown command '%s'", command.GetText());
-    return false;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

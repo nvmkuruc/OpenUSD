@@ -64,7 +64,7 @@ void wrapUsdLuxGeometryLight()
 {
     typedef UsdLuxGeometryLight This;
 
-    class_<This, bases<UsdLuxNonboundableLightBase> >
+    class_<This, bases<UsdLuxLight> >
         cls("GeometryLight");
 
     cls

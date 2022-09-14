@@ -70,9 +70,9 @@ _DecomposeRotation3(const GfMatrix4d &rot,
                                   &(angle[0]),
                                   &(angle[1]),
                                   &(angle[2]),
-                                  nullptr /* thetaSwHint */, 
+                                  NULL /* thetaSwHint */, 
                                   useHint,
-                                  nullptr /* swShift */);
+                                  NULL /* swShift */);
 
     return make_tuple(angle[0], angle[1], angle[2]);
 }
@@ -105,44 +105,12 @@ _DecomposeRotation(const GfMatrix4d &rot,
 
     GfRotation::DecomposeRotation(
         rot, TwAxis, FBAxis, LRAxis, handedness,
-        thetaTwHint.ptr() != Py_None ? &(angle[0]) : nullptr,
-        thetaFBHint.ptr() != Py_None ? &(angle[1]) : nullptr,
-        thetaLRHint.ptr() != Py_None ? &(angle[2]) : nullptr,
-        thetaSwHint.ptr() != Py_None ? &(angle[3]) : nullptr,
+        thetaTwHint.ptr() != Py_None ? &(angle[0]) : NULL,
+        thetaFBHint.ptr() != Py_None ? &(angle[1]) : NULL,
+        thetaLRHint.ptr() != Py_None ? &(angle[2]) : NULL,
+        thetaSwHint.ptr() != Py_None ? &(angle[3]) : NULL,
         useHint,
-        swShiftIn.ptr() != Py_None ? &swShift : nullptr);
-
-    return make_tuple(angle[0], angle[1], angle[2], angle[3]);
-}
-
-static tuple
-_MatchClosestEulerRotation(
-    const double targetTw,
-    const double targetFB,
-    const double targetLR,
-    const double targetSw,
-    const object &thetaTw,
-    const object &thetaFB,
-    const object &thetaLR,
-    const object &thetaSw)
-{
-    double angle[4] = {
-        thetaTw.ptr() != Py_None ?
-            boost::python::extract<double>(thetaTw) : 0.0,
-        thetaFB.ptr() != Py_None ?
-            boost::python::extract<double>(thetaFB) : 0.0,
-        thetaLR.ptr() != Py_None ?
-            boost::python::extract<double>(thetaLR) : 0.0,
-        thetaSw.ptr() != Py_None ?
-            boost::python::extract<double>(thetaSw) : 0.0
-        };
-
-    GfRotation::MatchClosestEulerRotation(
-        targetTw, targetFB, targetLR, targetSw,
-        thetaTw.ptr() != Py_None ? &(angle[0]) : nullptr,
-        thetaFB.ptr() != Py_None ? &(angle[1]) : nullptr,
-        thetaLR.ptr() != Py_None ? &(angle[2]) : nullptr,
-        thetaSw.ptr() != Py_None ? &(angle[3]) : nullptr);
+        swShiftIn.ptr() != Py_None ? &swShift : NULL);
 
     return make_tuple(angle[0], angle[1], angle[2], angle[3]);
 }
@@ -230,9 +198,6 @@ void wrapRotation()
              )
         .staticmethod("DecomposeRotation")
 
-        .def("MatchClosestEulerRotation", _MatchClosestEulerRotation)
-        .staticmethod("MatchClosestEulerRotation")
-
         .def("RotateOntoProjected", &This::RotateOntoProjected)
         .staticmethod("RotateOntoProjected")
 
@@ -262,4 +227,5 @@ void wrapRotation()
         ;
     to_python_converter<std::vector<This>,
         TfPySequenceToPython<std::vector<This> > >();
+    
 }

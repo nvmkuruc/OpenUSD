@@ -11,7 +11,7 @@ pxr_library(usdAppUtils
     LIBRARIES
         garch
         gf
-        hio
+        glf
         sdf
         tf
         usd
@@ -44,9 +44,6 @@ pxr_library(usdAppUtils
         complexityArgs.py
         framesArgs.py
         rendererArgs.py
-
-    DOXYGEN_FILES
-        overview.dox
 )
 
 pxr_test_scripts(

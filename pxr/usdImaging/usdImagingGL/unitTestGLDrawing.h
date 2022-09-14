@@ -31,7 +31,6 @@
 #include "pxr/base/tf/declarePtrs.h"
 
 #include "pxr/usdImaging/usdImagingGL/engine.h"
-#include "pxr/usdImaging/usdImaging/delegate.h"
 
 #include <string>
 #include <vector>
@@ -56,15 +55,13 @@ public:
     bool IsEnabledTestLighting() const { return _testLighting; }
     bool IsEnabledSceneLights() const { return _sceneLights; }
     bool IsEnabledCameraLight() const { return _cameraLight; }
+    bool IsEnabledCullBackfaces() const { return _cullBackfaces; }
     bool IsEnabledIdRender() const { return _testIdRender; }
-    bool IsEnabledSceneMaterials() const { return _enableSceneMaterials; }
-    bool IsEnabledUnloadedAsBounds() const { return _unloadedAsBounds; }
     
     bool IsShowGuides() const { return _showGuides; }
     bool IsShowRender() const { return _showRender; }
     bool IsShowProxy() const { return _showProxy; }
     bool ShouldClearOnce() const { return _clearOnce; }
-    bool PresentDisabled() const { return _presentDisabled; }
 
     UsdImagingGLDrawMode GetDrawMode() const { return _drawMode; }
 
@@ -79,10 +76,6 @@ public:
     VtDictionary const &GetRenderSettings() const { return _renderSettings; }
     TfToken const & GetRendererAov() const { return _rendererAov; }
     std::string const &GetPerfStatsFile() const { return _perfStatsFile; }
-    float GetPixelAspectRatio() const { return _pixelAspectRatio; }
-    GfRange2f const & GetDisplayWindow() const { return _displayWindow; }
-    GfRect2i const & GetDataWindow() const { return _dataWindow; }
-    UsdImagingGLCullStyle GetCullStyle() const { return _cullStyle; }
 
     void RunTest(int argc, char *argv[]);
 
@@ -112,11 +105,6 @@ protected:
         engine->RenderBatch(roots, params);
     }
 
-    void _SetDisplayUnloadedPrimsWithBounds(UsdImagingGLEngine *engine,
-                                            bool enable) {
-        engine->_sceneDelegate->SetDisplayUnloadedPrimsWithBounds(enable);
-    }
-
 private:
     struct _Args;
     void _Parse(int argc, char *argv[], _Args* args);
@@ -128,8 +116,6 @@ private:
     bool _cameraLight;
     std::string _cameraPath;
     bool _testIdRender;
-    bool _enableSceneMaterials;
-    bool _unloadedAsBounds;
 
     std::string _stageFilePath;
     std::string _outputFilePath;
@@ -143,12 +129,9 @@ private:
 
     UsdImagingGLDrawMode _drawMode;
     bool _shouldFrameAll;
-    UsdImagingGLCullStyle _cullStyle;
+    bool _cullBackfaces;
     GfVec4f _clearColor;
     GfVec3f _translate;
-    float _pixelAspectRatio;
-    GfRange2f _displayWindow;
-    GfRect2i _dataWindow;
     VtDictionary _renderSettings;
     TfToken _rendererAov;
     std::string _perfStatsFile;
@@ -158,7 +141,6 @@ private:
     bool _showRender;
     bool _showProxy;
     bool _clearOnce;
-    bool _presentDisabled;
 };
 
 

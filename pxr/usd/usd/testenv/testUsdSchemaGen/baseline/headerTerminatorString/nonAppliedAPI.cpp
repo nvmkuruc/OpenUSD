@@ -62,9 +62,8 @@ UsdContrivedNonAppliedAPI::Get(const UsdStagePtr &stage, const SdfPath &path)
 
 
 /* virtual */
-UsdSchemaKind UsdContrivedNonAppliedAPI::_GetSchemaKind() const
-{
-    return UsdContrivedNonAppliedAPI::schemaKind;
+UsdSchemaType UsdContrivedNonAppliedAPI::_GetSchemaType() const {
+    return UsdContrivedNonAppliedAPI::schemaType;
 }
 
 /* static */

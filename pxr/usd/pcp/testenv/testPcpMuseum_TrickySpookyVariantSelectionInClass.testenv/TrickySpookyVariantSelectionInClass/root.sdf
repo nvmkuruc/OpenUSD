@@ -10,7 +10,8 @@
     - CharRig relocates the Left/RightLegRig controls into its anim interface.
     - Back in Char, we override the default variant selection in SymLegRig.
       This should be enough to affect LeftLegRig, but it doesn't work today.
-    - By contrast, RightLegRig has a direct selection.
+    - By contrast, RightLegRig has a direct selection.  This works in
+      Pcp (thanks to the fix for bug 54719) but not in Pcp.
 
     This last aspect is what means the fix for TrickySpookyVariantSelection
     is insufficient to support this case.
@@ -18,6 +19,8 @@
     Also, it's important to note that relocates are not the issue here.
     Any kind of arc that requires ancestral opinions to be integrated
     can cause this issue.
+
+    See bug 69100.
     """
 )
 

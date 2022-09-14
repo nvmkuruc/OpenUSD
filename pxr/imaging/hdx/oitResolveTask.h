@@ -38,22 +38,9 @@ class HdSceneDelegate;
 
 using HdStRenderPassStateSharedPtr = std::shared_ptr<class HdStRenderPassState>;
 
-using HdSt_ImageShaderRenderPassSharedPtr =
-    std::shared_ptr<class HdSt_ImageShaderRenderPass>;
+using HdRenderPassSharedPtr = std::shared_ptr<class HdRenderPass>;
 using HdStRenderPassShaderSharedPtr =
     std::shared_ptr<class HdStRenderPassShader>;
-
-/// OIT resolve task params.
-struct HdxOitResolveTaskParams
-{
-    HdxOitResolveTaskParams()
-        : useAovMultiSample(true)
-        , resolveAovMultiSample(true)
-    {}
-
-    bool useAovMultiSample;
-    bool resolveAovMultiSample;
-};
 
 /// \class HdxOitResolveTask
 ///
@@ -74,26 +61,26 @@ public:
     HdxOitResolveTask(HdSceneDelegate* delegate, SdfPath const& id);
 
     HDX_API
-    ~HdxOitResolveTask() override;
+    virtual ~HdxOitResolveTask();
 
     /// Sync the resolve pass resources
     HDX_API
-    void Sync(HdSceneDelegate* delegate,
-              HdTaskContext* ctx,
-              HdDirtyBits* dirtyBits) override;
+    virtual void Sync(HdSceneDelegate* delegate,
+                      HdTaskContext* ctx,
+                      HdDirtyBits* dirtyBits) override;
 
     /// Prepare the tasks resources
     ///
     /// Allocates OIT buffers if requested by OIT render task
     HDX_API
-    void Prepare(HdTaskContext* ctx,
-                 HdRenderIndex* renderIndex) override;
+    virtual void Prepare(HdTaskContext* ctx,
+                         HdRenderIndex* renderIndex) override;
 
     /// Execute render pass task
     ///
     /// Resolves OIT buffers
     HDX_API
-    void Execute(HdTaskContext* ctx) override;
+    virtual void Execute(HdTaskContext* ctx) override;
 
 private:
     HdxOitResolveTask() = delete;
@@ -105,14 +92,11 @@ private:
         HdRenderIndex* renderIndex,
         GfVec2i const& screenSize);
 
-    GfVec2i _ComputeScreenSize(
-        HdTaskContext *ctx,
-        HdRenderIndex* renderIndex) const;
+    void _PrepareAovBindings(
+        HdTaskContext* ctx,
+        HdRenderIndex* renderIndex);
 
-    const HdRenderPassAovBindingVector &_GetAovBindings(
-        HdTaskContext *ctx) const;
-
-    HdSt_ImageShaderRenderPassSharedPtr _renderPass;
+    HdRenderPassSharedPtr _renderPass;
     HdStRenderPassStateSharedPtr _renderPassState;
     HdStRenderPassShaderSharedPtr _renderPassShader;
 
@@ -123,15 +107,6 @@ private:
     HdBufferArrayRangeSharedPtr _indexBar;
     HdBufferArrayRangeSharedPtr _uniformBar;
 };
-
-HDX_API
-bool operator==(const HdxOitResolveTaskParams& lhs,
-                const HdxOitResolveTaskParams& rhs);
-HDX_API
-bool operator!=(const HdxOitResolveTaskParams& lhs,
-                const HdxOitResolveTaskParams& rhs);
-HDX_API
-std::ostream& operator<<(std::ostream& out, const HdxOitResolveTaskParams& pv);
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

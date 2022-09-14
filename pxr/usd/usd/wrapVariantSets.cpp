@@ -83,7 +83,6 @@ void wrapUsdVariantSets()
         .def("SetVariantSelection", &UsdVariantSet::SetVariantSelection,
              arg("variantName"))
         .def("ClearVariantSelection", &UsdVariantSet::ClearVariantSelection)
-        .def("BlockVariantSelection", &UsdVariantSet::BlockVariantSelection)
         .def("GetVariantEditTarget", &UsdVariantSet::GetVariantEditTarget,
              arg("layer")=SdfLayerHandle())
         .def("GetVariantEditContext", _GetVariantEditContext,

@@ -31,7 +31,6 @@
 #include "pxr/usd/sdf/layer.h"
 
 #include "pxr/usd/ar/assetInfo.h"
-#include "pxr/usd/ar/resolvedPath.h"
 #include "pxr/usd/ar/resolverContext.h"
 #include "pxr/base/vt/value.h"
 
@@ -48,7 +47,7 @@ SDF_DECLARE_HANDLES(SdfLayer);
 struct Sdf_AssetInfo
 {
     std::string identifier;
-    ArResolvedPath resolvedPath;
+    std::string realPath;
     ArResolverContext resolverContext;
     ArAssetInfo assetInfo;
 };
@@ -64,24 +63,22 @@ bool Sdf_CanCreateNewLayerWithIdentifier(
     const std::string& identifier,
     std::string* whyNot);
 
-/// Returns the resolved path for \p layerPath if an asset exists at that
-/// path. Otherwise, returns an empty ArResolvedPath. Populates \p assetInfo
-/// if it's non-nullptr.
-ArResolvedPath Sdf_ResolvePath(
+/// If \p layerPath is relative, it is first resolved anchored to the
+/// current working directory. If the file is found this way, it is returned. 
+/// If the file is not found, or \p layerPath is not relative, 
+/// the path is resolved as-is.
+std::string Sdf_ResolvePath(
     const std::string& layerPath,
-    ArAssetInfo* assetInfo = nullptr);
+    ArAssetInfo* assetInfo = 0);
 
-/// Returns the resolved path for \p layerPath. If no asset exists at that
-/// path, returns a resolved path indicating where that asset should be
-/// created. Otherwise, returns an empty ArResolvedPath. Populates \p assetInfo
-/// if it's non-nullptr.
-ArResolvedPath Sdf_ComputeFilePath(
+/// Returns the resolved path for \p layerPath, or the local path if \p
+/// layerPath cannot be resolved.
+std::string Sdf_ComputeFilePath(
     const std::string& layerPath,
-    ArAssetInfo* assetInfo = nullptr);
+    ArAssetInfo* assetInfo = 0);
 
-/// Returns true if a layer can be written to \p resolvedPath.
-bool Sdf_CanWriteLayerToPath(
-    const ArResolvedPath& resolvedPath);
+/// Returns true if a layer can be written to \p layerPath.
+bool Sdf_CanWriteLayerToPath(const std::string& layerPath);
 
 /// Returns a newly allocated Sdf_AssetInfo struct with fields computed using
 /// the specified \p identifier and \p filePath. If \p fileVersion is
@@ -114,17 +111,9 @@ std::string Sdf_GetAnonLayerDisplayName(
 std::string Sdf_GetAnonLayerIdentifierTemplate(
     const std::string& tag);
 
-/// If \p identifier contains file format arguments
-/// (e.g. foo.sdf:SDF_FORMAT_ARGS:a=b), strip them, assign the resulting string
-/// to *strippedIdentifier and return true.  Otherwise just return false.
-bool Sdf_StripIdentifierArgumentsIfPresent(
-    const std::string &identifier,
-    std::string *strippedIdentifier);
-
-/// Splits the given \p identifier into two portions: the layer path and the
-/// arguments. For example, given the identifier foo.sdf:SDF_FORMAT_ARGS:a=b,
-/// this function will set \p layerPath to "foo.sdf" and \p arguments to
-/// ":SDF_FORMAT_ARGS:a=b".
+/// Splits the given \p identifier into two portions: the layer path
+/// and the arguments. For example, given the identifier foo.menva?a=b,
+/// this function returns ("foo.menva", "?a=b")
 bool Sdf_SplitIdentifier(
     const std::string& identifier,
     std::string* layerPath,

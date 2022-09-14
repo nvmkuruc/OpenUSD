@@ -35,6 +35,7 @@
 #include "pxr/usd/pcp/utils.h"
 #include "pxr/usd/sdf/changeList.h"
 #include "pxr/usd/sdf/layer.h"
+#include "pxr/usd/sdf/layerUtils.h"
 #include "pxr/usd/ar/resolverContextBinder.h"
 #include "pxr/base/trace/trace.h"
 
@@ -137,11 +138,6 @@ static
 Pcp_ChangesLayerStackChange
 Pcp_EntryRequiresLayerStackChange(const SdfChangeList::Entry& entry)
 {
-    // If a layer's content was entirely replaced, we must blow layer stacks.
-    if (entry.flags.didReplaceContent) {
-        return Pcp_ChangesLayerStackChangeSignificant;
-    }
-    
     // XXX: This only requires blowing the layer stacks using this
     //      identifier that haven't also been updated to use the new
     //      identifier.
@@ -1112,7 +1108,8 @@ PcpChanges::DidChange(const TfSpan<const PcpCache*>& caches,
             SdfPathVector depPaths;
 
             for (auto cache : caches) {
-                _PathEditMap& renameChanges = _GetRenameChanges(cache);
+                PcpCacheChanges::PathEditMap& renameChanges =
+                    _GetRenameChanges(cache);
 
                 // Do every path.
                 for (size_t i = 0, n = oldPaths.size(); i != n; ++i) {
@@ -1170,14 +1167,9 @@ PcpChanges::DidChange(const TfSpan<const PcpCache*>& caches,
         LayerStackChangeBitmask layerStackChanges = entry.second;
 
         if (layerStackChanges & LayerStackResolvedPathChange) {
-            const bool needToRecompute =
-                Pcp_NeedToRecomputeDueToAssetPathChange(layerStack);
-
-            _DidChangeLayerStackResolvedPath(
-                caches, layerStack, needToRecompute, debugSummary);
-            if (needToRecompute) {
-                layerStackChanges |= LayerStackLayersChange | 
-                                     LayerStackSignificantChange;
+            _DidChangeLayerStackResolvedPath(caches, layerStack, debugSummary);
+            if (Pcp_NeedToRecomputeDueToAssetPathChange(layerStack)) {
+                layerStackChanges |= LayerStackSignificantChange;
             }
         }
 
@@ -1186,7 +1178,6 @@ PcpChanges::DidChange(const TfSpan<const PcpCache*>& caches,
         }
 
         _DidChangeLayerStack(
-            caches,
             layerStack,
             layerStackChanges & LayerStackLayersChange,
             layerStackChanges & LayerStackOffsetsChange,
@@ -1309,11 +1300,10 @@ PcpChanges::_DidChangeSublayerAndLayerStacks(
     if (sublayer) {
         // Layer was loaded.  The layer stacks are changed.
         TF_FOR_ALL(layerStack, layerStacks) {
-            _DidChangeLayerStack(TfSpan<const PcpCache*>(&cache, 1),
-                                 *layerStack,
+            _DidChangeLayerStack(*layerStack,
                                  requiresLayerStackChange,
                                  requiresLayerStackOffsetsChange,
-                                 requiresSignificantChange);
+                                 requiresSignificantChange );
         }
     }
 }
@@ -1337,9 +1327,10 @@ PcpChanges::DidMaybeFixAsset(
     std::string* debugSummary = TfDebug::IsEnabled(PCP_CHANGES) ? &summary : 0;
 
     // Load the layer.
+    std::string resolvedAssetPath(assetPath);
     TfErrorMark m;
-    SdfLayerRefPtr layer = SdfLayer::FindOrOpenRelativeToLayer(
-        srcLayer, assetPath);
+    SdfLayerRefPtr layer = SdfFindOrOpenRelativeToLayer(
+        srcLayer, &resolvedAssetPath);
     m.Clear();
     
     PCP_APPEND_DEBUG("  Asset @%s@ %s\n",
@@ -1516,14 +1507,17 @@ PcpChanges::DidChangePaths(
     const SdfPath& oldPath,
     const SdfPath& newPath)
 {
+    // XXX: Do we need to handle rename chains?  I.e. A renamed to B
+    //      then renamed to C.  If so then we may need to handle one
+    //      oldPath appearing multiple times, e.g. A -> B -> C and
+    //      D -> B -> E, where B appears in two chains.
+
     TF_DEBUG(PCP_CHANGES).Msg("PcpChanges::DidChangePaths: @%s@<%s> to <%s>\n",
                               cache->GetLayerStackIdentifier().rootLayer->
                                   GetIdentifier().c_str(),
                               oldPath.GetText(), newPath.GetText());
 
-    // Changes are ordered. A chain of A -> B; B -> C is different than a 
-    // parallel move B -> C; A -> B
-    _GetCacheChanges(cache).didChangePath.emplace_back(oldPath, newPath);
+    _GetCacheChanges(cache).didChangePath[oldPath] = newPath;
 }
 
 void
@@ -1535,52 +1529,6 @@ PcpChanges::DidDestroyCache(const PcpCache* cache)
     // Note that a layer stack in _layerStackChanges may be expired.  We
     // just leave it there and let clients and Apply() check for expired
     // layer stacks.
-}
-
-void
-PcpChanges::DidChangeAssetResolver(const PcpCache* cache)
-{
-    TF_DEBUG(PCP_CHANGES).Msg(
-        "PcpChanges::DidChangeAssetResolver\n");
-
-    // Change debugging.
-    std::string summary;
-    std::string* debugSummary = TfDebug::IsEnabled(PCP_CHANGES) ? &summary : 0;
-
-    const ArResolverContextBinder binder(
-        cache->GetLayerStackIdentifier().pathResolverContext);
-
-    cache->ForEachPrimIndex(
-        [this, cache, debugSummary](const PcpPrimIndex& primIndex) {
-            if (Pcp_NeedToRecomputeDueToAssetPathChange(primIndex)) {
-                DidChangeSignificantly(cache, primIndex.GetPath());
-                PCP_APPEND_DEBUG("    %s\n", primIndex.GetPath().GetText());
-            }
-        }
-    );
-
-    cache->ForEachLayerStack(
-        [this, &cache, debugSummary](const PcpLayerStackPtr& layerStack) {
-            // This matches logic in _DidChange when processing changes
-            // to a layer's resolved path.
-            if (Pcp_NeedToRecomputeDueToAssetPathChange(layerStack)) {
-                _DidChangeLayerStack(
-                    TfSpan<const PcpCache*>(&cache, 1), layerStack, 
-                    /* requiresLayerStackChange = */ true, 
-                    /* requiresLayerStackOffsetChange = */ false, 
-                    /* requiresSignificantChange = */ true);
-            }
-        }
-    );
-
-    if (debugSummary && !debugSummary->empty()) {
-        TfDebug::Helper().Msg(
-            "   Resync following in @%s@ significant due to layer "
-            "resolved path change:\n%s",
-            cache->GetLayerStackIdentifier().rootLayer->
-                GetIdentifier().c_str(),
-            debugSummary->c_str());
-    }
 }
 
 void
@@ -1662,7 +1610,7 @@ PcpChanges::_GetCacheChanges(const PcpCache* cache)
     return _cacheChanges[const_cast<PcpCache*>(cache)];
 }
 
-PcpChanges::_PathEditMap&
+PcpCacheChanges::PathEditMap&
 PcpChanges::_GetRenameChanges(const PcpCache* cache)
 {
     return _renameChanges[const_cast<PcpCache*>(cache)];
@@ -1719,23 +1667,15 @@ void
 PcpChanges::_OptimizePathChanges(
     const PcpCache* cache,
     PcpCacheChanges* changes,
-    const _PathEditMap* pathChanges)
+    PcpCacheChanges::PathEditMap* pathChanges)
 {
-    // XXX: DidChangePaths handles rename chains. I.e. A renamed to B
-    //      then renamed to C. pathChanges is a map but we may need to handle 
-    //      one oldPath appearing multiple times in didChangePath, e.g. 
-    //      A -> B -> C and D -> B -> E, where B appears in two chains.
-
-    // Copy the path changes and discard any that are also in 
-    // changes->didChangePath.
-    _PathEditMap sdOnly(*pathChanges);
-    for (const auto &pathPair : changes->didChangePath) {
-        auto it = sdOnly.find(pathPair.first);
-        // Note that we check for exact matches of mapping oldPath to newPath.
-        if (it != sdOnly.end() && it->second == pathPair.second) {
-            sdOnly.erase(it);
-        }
-    }
+    // Discard any path change that's also in changes->didChangePath.
+    typedef std::pair<SdfPath, SdfPath> PathPair;
+    std::vector<PathPair> sdOnly;
+    std::set_difference(pathChanges->begin(), pathChanges->end(),
+                        changes->didChangePath.begin(),
+                        changes->didChangePath.end(),
+                        std::back_inserter(sdOnly));
 
     std::string summary;
     std::string* debugSummary = TfDebug::IsEnabled(PCP_CHANGES) ? &summary : 0;
@@ -1805,6 +1745,7 @@ PcpChanges::_LoadSublayerForChange(
         cache->GetLayerStackIdentifier().pathResolverContext);
 
     // Load the layer.
+    std::string resolvedAssetPath(sublayerPath);
     SdfLayerRefPtr sublayer;
 
     const SdfLayer::FileFormatArguments sublayerArgs = 
@@ -1812,8 +1753,8 @@ PcpChanges::_LoadSublayerForChange(
             sublayerPath, cache->GetFileFormatTarget());
 
     // Note the possible conversions from SdfLayerHandle to SdfLayerRefPtr below.
-    if (SdfLayer::IsAnonymousLayerIdentifier(sublayerPath)) {
-        sublayer = SdfLayer::Find(sublayerPath, sublayerArgs);
+    if (SdfLayer::IsAnonymousLayerIdentifier(resolvedAssetPath)) {
+        sublayer = SdfLayer::Find(resolvedAssetPath, sublayerArgs);
     }
     else {
         // Don't bother trying to open a sublayer if we're removing it;
@@ -1821,13 +1762,14 @@ PcpChanges::_LoadSublayerForChange(
         // it's invalid, which we'll deal with below.
         if (sublayerChange == _SublayerAdded) {
             TfErrorMark m;
-            sublayer = SdfLayer::FindOrOpenRelativeToLayer(
-                layer, sublayerPath, sublayerArgs);
+            sublayer = SdfFindOrOpenRelativeToLayer(
+                layer, &resolvedAssetPath, sublayerArgs);
             m.Clear();
         }
         else {
-            sublayer = SdfLayer::FindRelativeToLayer(
-                layer, sublayerPath, sublayerArgs);
+            resolvedAssetPath = SdfComputeAssetPathRelativeToLayer(
+                layer, sublayerPath);
+            sublayer = SdfLayer::Find(resolvedAssetPath, sublayerArgs);
         }
     }
     
@@ -1922,7 +1864,6 @@ PcpChanges::_DidChangeSublayer(
 
 void
 PcpChanges::_DidChangeLayerStack(
-    const TfSpan<const PcpCache*>& caches,
     const PcpLayerStackPtr& layerStack,
     bool requiresLayerStackChange,
     bool requiresLayerStackOffsetsChange,
@@ -1936,14 +1877,6 @@ PcpChanges::_DidChangeLayerStack(
     // didChangeLayers subsumes didChangeLayerOffsets.
     if (changes.didChangeLayers) {
         changes.didChangeLayerOffsets = false;
-    }
-
-    if (requiresLayerStackChange || requiresSignificantChange) {
-        for (const PcpCache *cache: caches) {
-            if (cache->UsesLayerStack(layerStack)) {
-                _GetCacheChanges(cache).didMaybeChangeLayers = true;
-            }
-        }
     }
 }
 
@@ -2063,59 +1996,32 @@ void
 PcpChanges::_DidChangeLayerStackResolvedPath(
     const TfSpan<const PcpCache*>& caches,
     const PcpLayerStackPtr& layerStack,
-    bool requiresLayerStackChange,
     std::string* debugSummary)
 {
     const ArResolverContextBinder binder(
         layerStack->GetIdentifier().pathResolverContext);
 
     for (const PcpCache* cache : caches) {
-        PcpDependencyVector deps;
-
-        if (requiresLayerStackChange) {
-            // If layerStack needs to be recomputed, any prim index that depends
-            // on any site in layerStack must be resynced since recomputing the
-            // layer stack may cause new opinions to be added or removed.
-            deps = cache->FindSiteDependencies(
+        PcpDependencyVector deps = 
+            cache->FindSiteDependencies(
                 layerStack, SdfPath::AbsoluteRootPath(),
                 PcpDependencyTypeAnyIncludingVirtual,
                 /* recurseOnSite */ true,
                 /* recurseOnIndex */ false,
                 /* filterForExisting */ true);
-        }
-        else {
-            // If layerStack does not need to be recomputed, it's still possible
-            // that prim indexes that use sites in layerStack need to be
-            // resynced because they have references to asset paths that now
-            // resolve to different assets. For example, if the resolved path
-            // for layer A in layerStack changed, any asset paths in that layer
-            // that were relative to layer A may now resolve differently.
-            //
-            // So, we grab all prim indexes that depend on any site in the layer
-            // stack, and all of the descendants of those prim indexes, and
-            // mark them as needing a resync if we detect the above.
-            deps = cache->FindSiteDependencies(
-                layerStack, SdfPath::AbsoluteRootPath(),
-                PcpDependencyTypeAnyIncludingVirtual,
-                /* recurseOnSite */ true,
-                /* recurseOnIndex */ true,
-                /* filterForExisting */ true);
 
-            auto noResyncNeeded = [cache](const PcpDependency& dep) {
-                if (!dep.indexPath.IsPrimPath()) {
-                    return true;
-                }
-                const PcpPrimIndex* primIndex = 
-                    cache->FindPrimIndex(dep.indexPath);
-                return (TF_VERIFY(primIndex) &&
-                        !Pcp_NeedToRecomputeDueToAssetPathChange(*primIndex));
-            };
+        auto noResyncNeeded = [cache](const PcpDependency& dep) {
+            if (!dep.indexPath.IsPrimPath()) { 
+                return true; 
+            }
+            const PcpPrimIndex* primIndex = cache->FindPrimIndex(dep.indexPath);
+            return (TF_VERIFY(primIndex) && 
+                    !Pcp_NeedToRecomputeDueToAssetPathChange(*primIndex));
+        };
 
-            deps.erase(
-                std::remove_if(deps.begin(), deps.end(), noResyncNeeded),
-                deps.end());
-        }
-
+        deps.erase(
+            std::remove_if(deps.begin(), deps.end(), noResyncNeeded),
+            deps.end());
         if (deps.empty()) {
             continue;
         }

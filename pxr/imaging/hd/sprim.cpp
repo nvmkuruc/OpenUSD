@@ -23,6 +23,9 @@
 //
 #include "pxr/imaging/hd/sprim.h"
 
+#include "pxr/imaging/hd/perfLog.h"
+#include "pxr/imaging/hd/sceneDelegate.h"
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 
@@ -31,7 +34,9 @@ HdSprim::HdSprim(SdfPath const &id)
 {
 }
 
-HdSprim::~HdSprim() = default;
+HdSprim::~HdSprim()
+{
+}
 
 void
 HdSprim::Finalize(HdRenderParam *renderParam)

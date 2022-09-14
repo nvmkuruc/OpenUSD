@@ -75,9 +75,8 @@ UsdGeomSphere::Define(
 }
 
 /* virtual */
-UsdSchemaKind UsdGeomSphere::_GetSchemaKind() const
-{
-    return UsdGeomSphere::schemaKind;
+UsdSchemaType UsdGeomSphere::_GetSchemaType() const {
+    return UsdGeomSphere::schemaType;
 }
 
 /* static */
@@ -225,7 +224,7 @@ _ComputeExtentForSphere(
     }
 
     double radius;
-    if (!sphereSchema.GetRadiusAttr().Get(&radius, time)) {
+    if (!sphereSchema.GetRadiusAttr().Get(&radius)) {
         return false;
     }
 

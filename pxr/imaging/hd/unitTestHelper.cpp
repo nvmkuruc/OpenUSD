@@ -27,7 +27,6 @@
 #include "pxr/imaging/hd/tokens.h"
 #include "pxr/imaging/hd/unitTestNullRenderPass.h"
 
-#include "pxr/base/gf/camera.h"
 #include "pxr/base/gf/matrix4d.h"
 #include "pxr/base/gf/frustum.h"
 #include "pxr/base/tf/getenv.h"
@@ -83,7 +82,9 @@ public:
 
     void Execute(HdTaskContext* ctx) override
     {
+        _renderPassState->Bind();
         _renderPass->Execute(_renderPassState, GetRenderTags());
+        _renderPassState->Unbind();
     }
 
     const TfTokenVector &GetRenderTags() const override
@@ -115,7 +116,6 @@ Hd_TestDriver::Hd_TestDriver()
  , _renderDelegate()
  , _renderIndex(nullptr)
  , _sceneDelegate(nullptr)
- , _cameraId(SdfPath("/__camera"))
  , _renderPass()
  , _renderPassState(_renderDelegate.CreateRenderPassState())
  , _collection(_tokens->testCollection, HdReprSelector())
@@ -133,7 +133,6 @@ Hd_TestDriver::Hd_TestDriver(HdReprSelector const &reprSelector)
  , _renderDelegate()
  , _renderIndex(nullptr)
  , _sceneDelegate(nullptr)
- , _cameraId(SdfPath("/__camera"))
  , _renderPass()
  , _renderPassState(_renderDelegate.CreateRenderPassState())
  , _collection(_tokens->testCollection, HdReprSelector())
@@ -165,11 +164,7 @@ Hd_TestDriver::_Init(HdReprSelector const &reprSelector)
     frustum.SetPerspective(45, true, 1, 1.0, 10000.0);
     GfMatrix4d projMatrix = frustum.ComputeProjectionMatrix();
 
-    SetCamera(
-        viewMatrix,
-        projMatrix,
-        CameraUtilFraming(
-            GfRect2i(GfVec2i(0, 0), 512, 512)));
+    SetCamera(viewMatrix, projMatrix, GfVec4d(0, 0, 512, 512));
 
     // set depthfunc to default
     _renderPassState->SetDepthFunc(HdCmpFuncLess);
@@ -195,80 +190,26 @@ Hd_TestDriver::Draw(HdRenderPassSharedPtr const &renderPass, bool withGuides)
     _engine.Execute(&_sceneDelegate->GetRenderIndex(), &tasks);
 }
 
-static
-HdCamera::Projection
-_ToHd(const GfCamera::Projection projection)
-{
-    switch(projection) {
-    case GfCamera::Perspective:
-        return HdCamera::Perspective;
-    case GfCamera::Orthographic:
-        return HdCamera::Orthographic;
-    }
-    TF_CODING_ERROR("Bad GfCamera::Projection value");
-    return HdCamera::Perspective;
-}
-
 void
-Hd_TestDriver::SetCamera(GfMatrix4d const &viewMatrix,
+Hd_TestDriver::SetCamera(GfMatrix4d const &modelViewMatrix,
                          GfMatrix4d const &projectionMatrix,
-                         CameraUtilFraming const &framing)
+                         GfVec4d const &viewport)
 {
-    GfCamera cam;
-    cam.SetFromViewAndProjectionMatrix(viewMatrix,
-                                       projectionMatrix);
-    
-    _sceneDelegate->UpdateTransform(
-        _cameraId,
-        GfMatrix4f(cam.GetTransform()));
     _sceneDelegate->UpdateCamera(
-        _cameraId,
-        HdCameraTokens->projection,
-        VtValue(_ToHd(cam.GetProjection())));
+        _cameraId, HdCameraTokens->worldToViewMatrix, VtValue(modelViewMatrix));
     _sceneDelegate->UpdateCamera(
-        _cameraId,
-        HdCameraTokens->focalLength,
-        VtValue(cam.GetFocalLength() *
-                float(GfCamera::FOCAL_LENGTH_UNIT)));
-    _sceneDelegate->UpdateCamera(
-        _cameraId,
-        HdCameraTokens->horizontalAperture,
-        VtValue(cam.GetHorizontalAperture() *
-                float(GfCamera::APERTURE_UNIT)));
-    _sceneDelegate->UpdateCamera(
-        _cameraId,
-        HdCameraTokens->verticalAperture,
-        VtValue(cam.GetVerticalAperture() *
-                float(GfCamera::APERTURE_UNIT)));
-    _sceneDelegate->UpdateCamera(
-        _cameraId,
-        HdCameraTokens->horizontalApertureOffset,
-        VtValue(cam.GetHorizontalApertureOffset() *
-                float(GfCamera::APERTURE_UNIT)));
-    _sceneDelegate->UpdateCamera(
-        _cameraId,
-        HdCameraTokens->verticalApertureOffset,
-        VtValue(cam.GetVerticalApertureOffset() *
-                float(GfCamera::APERTURE_UNIT)));
-    _sceneDelegate->UpdateCamera(
-        _cameraId,
-        HdCameraTokens->clippingRange,
-        VtValue(cam.GetClippingRange()));
-
+        _cameraId, HdCameraTokens->projectionMatrix, VtValue(projectionMatrix));
     // Baselines for tests were generated without constraining the view
     // frustum based on the viewport aspect ratio.
     _sceneDelegate->UpdateCamera(
         _cameraId, HdCameraTokens->windowPolicy,
         VtValue(CameraUtilDontConform));
     
-    const HdCamera * const camera =
-        dynamic_cast<HdCamera const *>(
-            _renderIndex->GetSprim(
-                HdPrimTypeTokens->camera,
-                _cameraId));
-    TF_VERIFY(camera);
-    _renderPassState->SetCameraAndFraming(
-        camera, framing, { false, CameraUtilFit });
+    HdSprim const *cam = _renderIndex->GetSprim(HdPrimTypeTokens->camera,
+                                                 _cameraId);
+    TF_VERIFY(cam);
+    _renderPassState->SetCameraAndViewport(
+        dynamic_cast<HdCamera const *>(cam), viewport);
 }
 
 void

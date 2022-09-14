@@ -34,7 +34,6 @@ pxr_library(garch
         ${Boost_INCLUDE_DIRS}
 
     PUBLIC_CLASSES
-        glApi
         glDebugWindow
         glPlatformDebugContext
 
@@ -42,7 +41,6 @@ pxr_library(garch
         api.h
         gl.h
         glPlatformContext.h
-        khrplatform.h
         ${GARCH_GLPLATFORMCONTEXT}.h
 
     PRIVATE_HEADERS

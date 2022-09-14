@@ -30,19 +30,23 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 void
-Sdf_VisitPathTableInParallel(void **entryStart, size_t numEntries,
-                             TfFunctionRef<void(void*&)> const visitFn)
+Sdf_ClearPathTableInParallel(void **entryStart, size_t numEntries,
+                             void (*delFn)(void *))
 {
-    // We must release the GIL here if we have it; otherwise, if visitFn
-    // attempted to take the GIL, the workers would deadlock.
+    // We must release the GIL here if we have it.  If the caller holds the GIL
+    // and enters this function and if the elements in the path might try to
+    // take the GIL when they're destroyed, then running the destruction in
+    // parallel can deadlock since the workers will try to acquire the lock
+    // while this thread holds it.
     TF_PY_ALLOW_THREADS_IN_SCOPE();
 
     WorkParallelForN(
         numEntries,
-        [&entryStart, visitFn](size_t i, size_t end) {
+        [&entryStart, delFn](size_t i, size_t end) {
             for (; i != end; ++i) {
                 if (entryStart[i]) {
-                    visitFn(entryStart[i]);
+                    delFn(entryStart[i]);
+                    entryStart[i] = nullptr;
                 }
             }
         });

@@ -41,6 +41,7 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+
 TF_REGISTRY_FUNCTION(TfType)
 {
     using Adapter = UsdSkelImagingSkelRootAdapter;
@@ -49,18 +50,8 @@ TF_REGISTRY_FUNCTION(TfType)
 }
 
 
-UsdSkelImagingSkelRootAdapter::~UsdSkelImagingSkelRootAdapter() = default;
-
-bool
-UsdSkelImagingSkelRootAdapter::ShouldIgnoreNativeInstanceSubtrees() const
-{
-    // XXX: Neither bind-state instancing or instancing of skinned prims
-    // is possible under the current architecture.
-    // For now, we instead ignore instancing beneath SkelRoot prims.
-    // This means we can benefit from native instancing for sharing parts
-    // of the scene graph, while still allowing USD imaging to work.
-    return true;
-}
+UsdSkelImagingSkelRootAdapter::~UsdSkelImagingSkelRootAdapter()
+{}
 
 /*virtual*/
 SdfPath
@@ -69,24 +60,21 @@ UsdSkelImagingSkelRootAdapter::Populate(
     UsdImagingIndexProxy* index,
     const UsdImagingInstancerContext* instancerContext)
 {
-    if (!TF_VERIFY(prim.IsA<UsdSkelRoot>())) {
-        return {};
+    if(!TF_VERIFY(prim.IsA<UsdSkelRoot>())) {
+        return SdfPath();
     }
-
-    const auto predicate =
-        UsdTraverseInstanceProxies(_GetDisplayPredicate());
 
     // Find skeletons and skinned prims under this skel root.
     UsdSkelRoot skelRoot(prim);
     UsdSkelCache skelCache;
-    skelCache.Populate(skelRoot, predicate);
+    skelCache.Populate(skelRoot);
     
     std::vector<UsdSkelBinding> bindings;
-    if (!skelCache.ComputeSkelBindings(skelRoot, &bindings, predicate)) {
-        return {};
+    if (!skelCache.ComputeSkelBindings(skelRoot, &bindings)) {
+        return SdfPath();
     }
     if (bindings.empty()) {
-        return {};
+        return SdfPath();
     }
 
     // Use the skeleton adapter to inject hydra computation prims for each
@@ -95,7 +83,7 @@ UsdSkelImagingSkelRootAdapter::Populate(
         const UsdSkelSkeleton& skel = binding.GetSkeleton();
 
         UsdImagingPrimAdapterSharedPtr adapter =
-            _GetPrimAdapter(skel.GetPrim(), /*ignoreInstancing*/ true);
+            _GetPrimAdapter(skel.GetPrim());
         TF_VERIFY(adapter);
 
         auto skelAdapter = std::dynamic_pointer_cast<
@@ -119,7 +107,7 @@ UsdSkelImagingSkelRootAdapter::Populate(
             // Register the SkeletonAdapter for each skinned prim, effectively
             // hijacking all processing to go via it.
             UsdImagingPrimAdapterSharedPtr skinnedPrimAdapter =
-                _GetPrimAdapter(skinnedPrim, /*ignoreInstancing*/ true);
+                _GetPrimAdapter(skinnedPrim);
             if (!skinnedPrimAdapter) {
                 // This prim is technically considered skinnable,
                 // but an adapter may not be registered for the prim type.

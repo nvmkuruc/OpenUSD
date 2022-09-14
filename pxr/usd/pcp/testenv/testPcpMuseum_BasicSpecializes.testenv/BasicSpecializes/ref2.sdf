@@ -15,14 +15,3 @@ def "Ref" (
 )
 {
 }
-
-class "Specializes_2"
-{
-}
-
-def "Ref_2" (
-    specializes = </Specializes_2>
-)
-{
-}
-    

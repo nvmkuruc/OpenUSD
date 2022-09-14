@@ -75,9 +75,8 @@ UsdGeomCube::Define(
 }
 
 /* virtual */
-UsdSchemaKind UsdGeomCube::_GetSchemaKind() const
-{
-    return UsdGeomCube::schemaKind;
+UsdSchemaType UsdGeomCube::_GetSchemaType() const {
+    return UsdGeomCube::schemaType;
 }
 
 /* static */
@@ -225,7 +224,7 @@ _ComputeExtentForCube(
     }
 
     double size;
-    if (!cubeSchema.GetSizeAttr().Get(&size, time)) {
+    if (!cubeSchema.GetSizeAttr().Get(&size)) {
         return false;
     }
 

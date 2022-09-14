@@ -46,9 +46,7 @@ def GetUsdLayerMetaData(filePath):
 
 def GetFlattenedUsdData(filePath, populationMaskPaths):
     from pxr import Ar, Usd
-
-    if hasattr(Ar.Resolver, "ConfigureResolverForAsset"):
-        Ar.GetResolver().ConfigureResolverForAsset(filePath)
+    Ar.GetResolver().ConfigureResolverForAsset(filePath)
     popMask = (None if populationMaskPaths is None
                else Usd.StagePopulationMask())
     if popMask:
@@ -60,9 +58,7 @@ def GetFlattenedUsdData(filePath, populationMaskPaths):
 
 def GetFlattenedLayerStack(filePath):
     from pxr import Ar, Sdf, Pcp, Usd, UsdUtils
-
-    if hasattr(Ar.Resolver, "ConfigureResolverForAsset"):
-        Ar.GetResolver().ConfigureResolverForAsset(filePath)
+    Ar.GetResolver().ConfigureResolverForAsset(filePath)
     stage = Usd.Stage.Open(filePath, Usd.Stage.LoadNone)
     return UsdUtils.FlattenLayerStack(stage)
 

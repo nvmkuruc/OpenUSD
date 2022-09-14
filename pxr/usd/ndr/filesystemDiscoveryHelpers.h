@@ -32,8 +32,6 @@
 #include "pxr/usd/ndr/declare.h"
 #include "pxr/usd/ndr/nodeDiscoveryResult.h"
 
-#include <functional>
-
 PXR_NAMESPACE_OPEN_SCOPE
 
 class NdrDiscoveryPluginContext;
@@ -45,66 +43,22 @@ class NdrDiscoveryPluginContext;
 /// in a large chunk of the functionality.
 ///
 
-/// Type of a function that can be used to parse a discovery result's identifier
-/// into its family, name, and version.
-using NdrParseIdentifierFn = std::function<
-    bool (const TfToken &identifier, 
-          TfToken *family,
-          TfToken *name,
-          NdrVersion *version)>;
-
-/// Given a shader's \p identifier token, computes the corresponding 
-/// NdrNode's family name, implementation name and shader version 
-/// (as NdrVersion).
-/// 
-/// * \p family is the prefix of \p identifier up to and not 
-/// including the first underscore. 
-/// * \p version is the suffix of \p identifier comprised of one or 
-/// two integers representing the major and minor version numbers.
-/// * \p name is the string we get by joining 
-/// <i>family</i> with everything that's in between <i>family</i> 
-/// and <i>version</i> with an underscore.
-/// 
-/// Returns true if \p identifier is valid and was successfully split 
-/// into the different components. 
-/// 
-/// \note The python version of this function returns a tuple containing
-/// (famiyName, implementationName, version).
-NDR_API 
-bool
-NdrFsHelpersSplitShaderIdentifier(
-    const TfToken &identifier, 
-    TfToken *family,
-    TfToken *name,
-    NdrVersion *version);
-
+/// Walks the specified search paths, optionally following symlinks. Paths
+/// are walked recursively, and each directory has `FsHelpersExamineFiles()`
+/// called on it. Only files that match one of the provided extensions (case
+/// insensitive) are candidates for being turned into `NdrDiscoveryResult`s.
 /// Returns a vector of discovery results that have been found while walking
-/// the given search paths.
-///
-/// Each path in \p searchPaths is walked recursively, optionally following 
-/// symlinks if \p followSymlinks is true, looking for files that match one of 
-/// the provided \p allowedExtensions. These files are represented in the 
-/// discovery results that are returned.
-///
-/// The identifier for each discovery result is the base name of the represented
-/// file with the extension removed. The \p parseIdentifierFn is used to parse 
-/// the family, name, and version from the identifier that will set in the 
-/// file's discovery result. By default, NdrFsHelpersSplitShaderIdentifier is 
-/// used to parse the identifier, but the family/name/version parsing behavior 
-/// can be changed by passing a custom parseIdentifierFn. Any identifiers that 
-/// cannot be parsed by whatever the parseIdentifierFn will be considered
-/// invalid and not added as a discovery result. Note that the version for 
-/// every discovery result returned by this function will be naively marked as 
-/// being default even if multiple versions with the same name are found.
+/// the search paths.  In each result the name and identifier will be the
+/// same, the version will be invalid and default, and the family will
+/// be empty.  The caller is expected to adjust these as appropriate.  A
+/// naive client with no versions and no family will work correctly.
 NDR_API
 NdrNodeDiscoveryResultVec
 NdrFsHelpersDiscoverNodes(
     const NdrStringVec& searchPaths,
     const NdrStringVec& allowedExtensions,
     bool followSymlinks = true,
-    const NdrDiscoveryPluginContext* context = nullptr,
-    const NdrParseIdentifierFn &parseIdentifierFn = 
-        NdrFsHelpersSplitShaderIdentifier
+    const NdrDiscoveryPluginContext* context = nullptr
 );
 
 /// Struct for holding a URI and its resolved URI for a file discovered

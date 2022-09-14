@@ -26,7 +26,6 @@
 
 #include "pxr/pxr.h"
 #include "pxr/usd/sdf/data.h"
-#include "pxr/usd/sdf/layerHints.h"
 #include "pxr/usd/sdf/layerOffset.h"
 #include "pxr/usd/sdf/listOp.h"
 #include "pxr/usd/sdf/parserValueContext.h"
@@ -49,7 +48,7 @@ typedef void *yyscan_t;
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-// This class contains the global state while parsing an sdf file.
+// This class contains the global state while parsing a menva file.
 // It contains the data structures that we use to create the scene description
 // from the file.
 
@@ -57,7 +56,11 @@ class Sdf_TextParserContext {
 public:
     // Constructor.
     Sdf_TextParserContext();
-    
+
+    // Destructor.
+    ~Sdf_TextParserContext() {
+    }
+
     std::string magicIdentifierToken;
     std::string versionString;
     std::string fileContext;
@@ -136,9 +139,6 @@ public:
     // Should we only read metadata from the file?
     bool metadataOnly;
 
-    // Hints to fill in about the layer's contents.
-    SdfLayerHints layerHints;
-
     // Stack for the child names of all the prims currently being parsed
     // For instance if we're currently parsing /A/B then this vector
     // will contain three elements:
@@ -156,7 +156,7 @@ public:
     // Stack of names of variants for the variant sets being built
     std::vector<std::vector<std::string> > currentVariantNames;
 
-    unsigned int sdfLineNo;
+    unsigned int menvaLineNo;
 
     // Used by flex for reentrant parsing
     yyscan_t scanner;

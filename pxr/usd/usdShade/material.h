@@ -113,8 +113,8 @@ class UsdShadeMaterial : public UsdShadeNodeGraph
 public:
     /// Compile time constant representing what kind of schema this class is.
     ///
-    /// \sa UsdSchemaKind
-    static const UsdSchemaKind schemaKind = UsdSchemaKind::ConcreteTyped;
+    /// \sa UsdSchemaType
+    static const UsdSchemaType schemaType = UsdSchemaType::ConcreteTyped;
 
     /// Construct a UsdShadeMaterial on UsdPrim \p prim .
     /// Equivalent to UsdShadeMaterial::Get(prim.GetStage(), prim.GetPath())
@@ -184,11 +184,11 @@ public:
     Define(const UsdStagePtr &stage, const SdfPath &path);
 
 protected:
-    /// Returns the kind of schema this class belongs to.
+    /// Returns the type of schema this class belongs to.
     ///
-    /// \sa UsdSchemaKind
+    /// \sa UsdSchemaType
     USDSHADE_API
-    UsdSchemaKind _GetSchemaKind() const override;
+    UsdSchemaType _GetSchemaType() const override;
 
 private:
     // needs to invoke _GetStaticTfType.
@@ -336,20 +336,10 @@ public:
     UsdShadeOutput GetSurfaceOutput(const TfToken &renderContext
             =UsdShadeTokens->universalRenderContext) const;
 
-    /// Returns the "surface" outputs of this material for all available
-    /// renderContexts.
-    ///
-    /// The returned vector will include all authored "surface" outputs with
-    /// the <i>universal</i> renderContext output first, if present. Outputs
-    /// are returned regardless of whether they are connected to a valid
-    /// source.
-    USDSHADE_API
-    std::vector<UsdShadeOutput> GetSurfaceOutputs() const;
-
     /// \deprecated Use the form that takes a TfTokenVector or renderContexts.
     USDSHADE_API
     UsdShadeShader ComputeSurfaceSource(
-        const TfToken &renderContext,
+        const TfToken &renderContext=UsdShadeTokens->universalRenderContext,
         TfToken *sourceName=nullptr, 
         UsdShadeAttributeType *sourceType=nullptr) const;
 
@@ -393,20 +383,10 @@ public:
     UsdShadeOutput GetDisplacementOutput(const TfToken &renderContext
             =UsdShadeTokens->universalRenderContext) const;
 
-    /// Returns the "displacement" outputs of this material for all available
-    /// renderContexts.
-    ///
-    /// The returned vector will include all authored "displacement" outputs
-    /// with the <i>universal</i> renderContext output first, if present.
-    /// Outputs are returned regardless of whether they are connected to a
-    /// valid source.
-    USDSHADE_API
-    std::vector<UsdShadeOutput> GetDisplacementOutputs() const;
-
     /// \deprecated Use the form that takes a TfTokenVector or renderContexts 
     USDSHADE_API
     UsdShadeShader ComputeDisplacementSource(
-        const TfToken &renderContext,
+        const TfToken &renderContext=UsdShadeTokens->universalRenderContext,
         TfToken *sourceName=nullptr, 
         UsdShadeAttributeType *sourceType=nullptr) const;
 
@@ -450,19 +430,10 @@ public:
     UsdShadeOutput GetVolumeOutput(const TfToken &renderContext
             =UsdShadeTokens->universalRenderContext) const;
 
-    /// Returns the "volume" outputs of this material for all available
-    /// renderContexts.
-    ///
-    /// The returned vector will include all authored "volume" outputs with the
-    /// <i>universal</i> renderContext output first, if present. Outputs are
-    /// returned regardless of whether they are connected to a valid source.
-    USDSHADE_API
-    std::vector<UsdShadeOutput> GetVolumeOutputs() const;
-
     /// \deprecated Use the form that takes a TfTokenVector or renderContexts 
     USDSHADE_API
     UsdShadeShader ComputeVolumeSource(
-        const TfToken &renderContext,
+        const TfToken &renderContext=UsdShadeTokens->universalRenderContext,
         TfToken *sourceName=nullptr, 
         UsdShadeAttributeType *sourceType=nullptr) const;
 
@@ -487,24 +458,22 @@ public:
     /// @}
 
 private:
-    // Helper method to compute the sources of a given output, identified by its 
+    // Helper method to compute the source of a given output, identified by its 
     // baseName, for the renderContexts in the specified contextVector.
-    UsdShadeAttributeVector _ComputeNamedOutputSources(
-        const TfToken &baseName,
-        const TfTokenVector &contextVector) const;
+    bool _ComputeNamedOutputSource(
+        const TfToken &baseName, 
+        const TfTokenVector &contextVector,
+        UsdShadeConnectableAPI *source,
+        TfToken *sourceName,
+        UsdShadeAttributeType *sourceType) const;
 
     // Helper method to compute the source shader of a given output, identified 
     // by its baseName, for the renderContexts in the specified contextVector.
     UsdShadeShader _ComputeNamedOutputShader(
         const TfToken &baseName,
         const TfTokenVector &contextVector,
-        TfToken *sourceName,
+        TfToken *sourceName, 
         UsdShadeAttributeType *sourceType) const;
-
-    // Helper method to retrieve outputs in all renderContexts that match the
-    // given terminalName.
-    std::vector<UsdShadeOutput> _GetOutputsForTerminalName(
-        const TfToken& terminalName) const;
 
 public:
     // --------------------------------------------------------------------- //

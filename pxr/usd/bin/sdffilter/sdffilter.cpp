@@ -676,7 +676,8 @@ void Process(SdfLayerHandle layer, ReportParams const &p)
                 formatArgs["format"] = p.outputFormat;
             }
             outputLayer = !p.outputFile.empty() ?
-                SdfLayer::CreateNew(p.outputFile, formatArgs) :
+                SdfLayer::CreateNew(
+                    p.outputFile, /*realPath=*/string(), formatArgs) :
                 SdfLayer::CreateAnonymous(
                     p.outputFormat.empty() ? string() :
                     TfStringPrintf(".%s", p.outputFormat.c_str()));

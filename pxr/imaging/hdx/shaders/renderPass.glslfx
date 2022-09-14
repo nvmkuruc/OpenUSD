@@ -29,17 +29,9 @@
 
 --- --------------------------------------------------------------------------
 
--- layout HdxRenderPass.RenderOitOpaquePixels
-
-[
-    ["out", "vec4", "colorOut"]
-]
-
 -- glsl HdxRenderPass.RenderOitOpaquePixels
 
-#ifndef HDST_ENABLE_GLSLFX_RESOURCE_LAYOUTS
 layout (location = 0) out vec4 colorOut;
-#endif
 
 void RenderOutput(vec4 Peye, vec3 Neye, vec4 color, vec4 patchCoord)
 {
@@ -50,45 +42,27 @@ void RenderOutput(vec4 Peye, vec3 Neye, vec4 color, vec4 patchCoord)
     }
 }
 
--- layout HdxRenderPass.WriteOitLayersToBufferCommon
-
-[
-    ["in", "early_fragment_tests"],
-    ["buffer readWrite", "CounterBuffer", "hdxOitCounterBuffer",
-        ["atomic_int", "hdxOitCounterBuffer"]
-    ]
-]
-
 -- glsl HdxRenderPass.WriteOitLayersToBufferCommon
 
-#ifndef HDST_ENABLE_GLSLFX_RESOURCE_LAYOUTS
 layout (early_fragment_tests) in;
-#endif
 
 void RenderOutputImpl(vec4 Peye, vec3 Neye, vec4 color, vec4 patchCoord)
 {
     #if defined(HD_HAS_hdxOitDataBuffer)
 
-    const int screenWidth = int(HdGet_oitScreenSize().x);
-    const int screenHeight = int(HdGet_oitScreenSize().y);
-    // Must match the per-pixel sample count used when creating the OIT buffers.
-    // (See HdxOitResolveTask::_PrepareOitBuffers)
-    const int numSamples = 8;
-        
-    const int dataBufferSize = screenWidth * screenHeight * numSamples;
-    const int counterBufferSize = screenWidth * screenHeight + 1;
+    int screenWidth = int(HdGet_oitScreenSize().x);
 
     // +1 because the counter buffer is cleared with -1, but we want the
     // first index to start at 0.
-    int writeIndex = ATOMIC_ADD(hdxOitCounterBuffer[0], 1) + 1;
+    int writeIndex = atomicAdd(hdxOitCounterBuffer[0], 1) + 1;
     
-    if (writeIndex < dataBufferSize) {
+    if (writeIndex < hdxOitDataBuffer.length()) {
         int screenIndex =
             int(gl_FragCoord.x) + int(gl_FragCoord.y) * screenWidth;
-
-        if (screenIndex < counterBufferSize) {
+        
+        if (screenIndex < hdxOitCounterBuffer.length()) {
             int prevIndex =
-                ATOMIC_EXCHANGE(hdxOitCounterBuffer[screenIndex+1], writeIndex);
+                atomicExchange(hdxOitCounterBuffer[screenIndex+1], writeIndex);
             hdxOitDataBuffer[writeIndex] = color;
 
             // Note that we have a choice here to either pick gl_FragCoord.z or
@@ -117,7 +91,7 @@ void RenderOutputImpl(vec4 Peye, vec3 Neye, vec4 color, vec4 patchCoord)
     } else {
         // We may overrun the counter buffer integer and wrap back to 0 if
         // we have a lot of OIT samples.
-        ATOMIC_ADD(hdxOitCounterBuffer[0], -1);
+        atomicAdd(hdxOitCounterBuffer[0], -1);
     }
 
     #endif
@@ -141,32 +115,19 @@ void RenderOutput(vec4 Peye, vec3 Neye, vec4 color, vec4 patchCoord)
 {
     // Unlike ordinary OIT geometry, volumes have only one render pass,
     // so insert into OIT buffers even if alpha is 1.
-    if (any(greaterThan(color, vec4(0.0001)))) {
+    if (color.a > 0.0001) {
         RenderOutputImpl(Peye, Neye, color, patchCoord);
     }
 }
 
--- layout HdxRenderPass.RenderPick
-
-[
-    ["out", "vec4", "primIdOut"],
-    ["out", "vec4", "instanceIdOut"],
-    ["out", "vec4", "elementIdOut"],
-    ["out", "vec4", "edgeIdOut"],
-    ["out", "vec4", "pointIdOut"],
-    ["out", "vec4", "neyeOut"]
-]
-
 -- glsl HdxRenderPass.RenderPick
 
-#ifndef HDST_ENABLE_GLSLFX_RESOURCE_LAYOUTS
 layout (location = 0) out vec4 primIdOut;
 layout (location = 1) out vec4 instanceIdOut;
 layout (location = 2) out vec4 elementIdOut;
 layout (location = 3) out vec4 edgeIdOut;
 layout (location = 4) out vec4 pointIdOut;
 layout (location = 5) out vec4 neyeOut;
-#endif
 
 vec4 IntToVec4(int id)
 {
@@ -177,9 +138,12 @@ vec4 IntToVec4(int id)
 }
 
 // Fwd declare necessary methods to determine the subprim id of a fragment.
-FORWARD_DECL(int GetElementID()); // generated via codeGen
-FORWARD_DECL(int GetPrimitiveEdgeId()); // defined in edgeId.glslfx, or generated via codeGen
-FORWARD_DECL(int GetPointId()); // defined in pointId.glslfx
+int GetElementID(); // generated via codeGen
+int GetAuthoredEdgeId(int); // generated via codeGen
+int GetPrimitiveEdgeId(); // defined in edgeId.glslfx, or generated via codeGen
+bool IsFragmentOnEdge(); // defined in edgeId.glslfx, or generated via codeGen
+int GetPointId(); // defined in pointId.glslfx
+bool IsFragmentOnPoint(); // defined in pointId.glslfx
 
 void RenderOutput(vec4 Peye, vec3 Neye, vec4 color, vec4 patchCoord)
 {
@@ -192,87 +156,22 @@ void RenderOutput(vec4 Peye, vec3 Neye, vec4 color, vec4 patchCoord)
     int instanceId = GetDrawingCoord().instanceIndex[0];
     instanceIdOut = IntToVec4(instanceId);
 
-    elementIdOut = IntToVec4(GetElementID());
-    edgeIdOut = IntToVec4(GetPrimitiveEdgeId());
-    pointIdOut = IntToVec4(GetPointId());
+    int elementId = GetElementID();
+    elementIdOut = IntToVec4(elementId);
+
+    // XXX: This block should be under an #ifdef
+    int edgeId = -1;
+    if (IsFragmentOnEdge()) {
+        edgeId = GetAuthoredEdgeId(GetPrimitiveEdgeId());
+    }
+    edgeIdOut = IntToVec4(edgeId);
+
+    // XXX: This block should be under an #ifdef
+    int pointId = -1;
+    if (IsFragmentOnPoint()) {
+        pointId = GetPointId();
+    }
+    pointIdOut = IntToVec4(pointId);
     
     neyeOut = IntToVec4(hd_vec4_2_10_10_10_set(vec4(Neye,0)));
-}
-
--- layout HdxRenderPass.RenderColorAndSelection
-
-[
-    ["out", "vec4", "colorOut"],
-    ["out", "float", "selectedOut"]
-]
-
--- glsl HdxRenderPass.RenderColorAndSelection
-
-#ifndef HDST_ENABLE_GLSLFX_RESOURCE_LAYOUTS
-layout (location = 0) out vec4 colorOut;
-layout (location = 1) out float selectedOut;
-#endif
-
-// Note: This mixin expects color and selected color attachments in the bound
-// FBO. It writes out the computed fragment color and whether it is selected
-// (as a float, so, 1.0 or 0.0).
-
-bool IsSelected(); // defined in selection.glslfx
-
-void RenderOutput(vec4 Peye, vec3 Neye, vec4 color, vec4 patchCoord)
-{
-    colorOut = color;
-    selectedOut = float(IsSelected());
-}
-
--- layout HdxRenderPass.RenderColorWithOccludedSelection
-
-[
-    ["out", "vec4", "colorOut"]
-]
-
--- glsl HdxRenderPass.RenderColorWithOccludedSelection
-
-#ifndef HDST_ENABLE_GLSLFX_RESOURCE_LAYOUTS
-layout (location = 0) out vec4 colorOut;
-#endif
-
-// Note: This mixin expects color and selected color attachments in the bound
-// FBO. The alpha component of the computed fragment color is adjusted to blend
-// the existing (destination) fragment color if it is selected.
-
-bool
-HasOccludedSelection(vec2 fragcoord)
-{
-#ifdef HD_HAS_selectedReadback
-    const float isSelected = texelFetch(HdGetSampler_selectedReadback(),
-                                        ivec2(fragcoord),
-                                        0).x;
-    return bool(isSelected);
-#endif
-    return false;
-}
-
-float
-GetShowThroughOpacity()
-{
-#ifdef HD_HAS_occludedSelectionOpacity
-    // Note: occludedSelectionOpacity flows in as a parameter to the selection
-    // setup task (HdxSelectionTask)
-    const float dstOpacity = HdGet_occludedSelectionOpacity();
-    // adjust source alpha used to blend source and dst colors.
-    return 1.0 - dstOpacity;
-#else
-    return 0.5;
-#endif
-}
-
-// Input AOV textures are provided by the task.
-void RenderOutput(vec4 Peye, vec3 Neye, vec4 color, vec4 patchCoord)
-{
-    if (HasOccludedSelection(gl_FragCoord.xy)) {
-        color.a = GetShowThroughOpacity();
-    }
-
-    colorOut = color;
 }

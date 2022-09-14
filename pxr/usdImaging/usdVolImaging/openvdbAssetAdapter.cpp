@@ -23,10 +23,7 @@
 //
 #include "pxr/usdImaging/usdVolImaging/openvdbAssetAdapter.h"
 
-#include "pxr/usdImaging/usdVolImaging/dataSourceFieldAsset.h"
 #include "pxr/usdImaging/usdVolImaging/tokens.h"
-
-#include "pxr/usd/usdVol/tokens.h"
 
 #include "pxr/base/tf/type.h"
 
@@ -39,78 +36,8 @@ TF_REGISTRY_FUNCTION(TfType)
     t.SetFactory< UsdImagingPrimAdapterFactory<Adapter> >();
 }
 
-UsdImagingOpenVDBAssetAdapter::~UsdImagingOpenVDBAssetAdapter() = default;
-
-TfTokenVector
-UsdImagingOpenVDBAssetAdapter::GetImagingSubprims()
+UsdImagingOpenVDBAssetAdapter::~UsdImagingOpenVDBAssetAdapter() 
 {
-    return { TfToken() };
-}
-
-TfToken
-UsdImagingOpenVDBAssetAdapter::GetImagingSubprimType(TfToken const& subprim)
-{
-    if (subprim.IsEmpty()) {
-        return UsdVolImagingTokens->openvdbAsset;
-    }
-    return TfToken();
-}
-
-HdContainerDataSourceHandle
-UsdImagingOpenVDBAssetAdapter::GetImagingSubprimData(
-        TfToken const& subprim,
-        UsdPrim const& prim,
-        const UsdImagingDataSourceStageGlobals &stageGlobals)
-{
-    if (subprim.IsEmpty()) {
-        return UsdImagingDataSourceFieldAssetPrim::New(
-            prim.GetPath(),
-            prim,
-            stageGlobals);
-    }
-    return nullptr;
-}
-
-VtValue
-UsdImagingOpenVDBAssetAdapter::Get(
-    UsdPrim const& prim,
-    SdfPath const& cachePath,
-    TfToken const& key,
-    UsdTimeCode time,
-    VtIntArray *outIndices) const
-{
-    if ( key == UsdVolTokens->filePath ||
-         key == UsdVolTokens->fieldName ||
-         key == UsdVolTokens->fieldIndex ||
-         key == UsdVolTokens->fieldDataType ||
-         key == UsdVolTokens->vectorDataRoleHint ||
-         key == UsdVolTokens->fieldClass) {
-        
-        if (UsdAttribute const &attr = prim.GetAttribute(key)) {
-            VtValue value;
-            if (attr.Get(&value, time)) {
-                return value;
-            }
-        }
-
-        if (key == UsdVolTokens->filePath) {
-            return VtValue(SdfAssetPath());
-        }
-        if (key == UsdVolTokens->fieldIndex) {
-            constexpr int def = 0;
-            return VtValue(def);
-        }
-
-        return VtValue(TfToken());
-    }
-    
-    return
-        BaseAdapter::Get(
-            prim,
-            cachePath,
-            key,
-            time,
-            outIndices);
 }
 
 TfToken

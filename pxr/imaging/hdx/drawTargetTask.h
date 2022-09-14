@@ -31,17 +31,14 @@
 #include "pxr/imaging/hd/task.h"
 
 #include "pxr/base/gf/vec4f.h"
-#include "pxr/base/tf/declarePtrs.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+using HdxDrawTargetRenderPassUniquePtr =
+    std::unique_ptr<class HdxDrawTargetRenderPass>;
+using HdStSimpleLightingShaderSharedPtr =
+    std::shared_ptr<class HdStSimpleLightingShader>;
 class HdStDrawTarget;
-class HdStDrawTargetRenderPassState;
-using HdStRenderPassStateSharedPtr
-    = std::shared_ptr<class HdStRenderPassState>;
-using HdStSimpleLightingShaderSharedPtr
-    = std::shared_ptr<class HdStSimpleLightingShader>;
-TF_DECLARE_REF_PTRS(GlfSimpleLightingContext);
 
 // Not strictly necessary here.
 // But without it, would require users of the class to include it anyway
@@ -76,30 +73,11 @@ public:
 
 private:
     struct _RenderPassInfo;
-    struct _CameraInfo;
-    using _RenderPassInfoVector = std::vector<_RenderPassInfo>;
-
-    static _RenderPassInfoVector _ComputeRenderPassInfos(
-        HdRenderIndex * renderIndex);
-
-    static _CameraInfo _ComputeCameraInfo(
-        const HdRenderIndex &renderIndex,
-        const HdStDrawTarget * drawTarget);
-    static void _UpdateLightingContext(
-        const _CameraInfo &cameraInfo,
-        GlfSimpleLightingContextConstRefPtr const &srcContext,
-        GlfSimpleLightingContextRefPtr const &ctx);
-    void _UpdateRenderPassState(
-        const HdRenderIndex &renderIndex,
-        const _CameraInfo &cameraInfo,
-        HdStSimpleLightingShaderSharedPtr const &lightingShader,
-        const HdStDrawTargetRenderPassState *srcState,
-        HdStRenderPassStateSharedPtr const &state) const;
-    static void _UpdateRenderPass(
-        _RenderPassInfo *info);
-
     unsigned _currentDrawTargetSetVersion;
+
+    using _RenderPassInfoVector = std::vector<_RenderPassInfo>;
     _RenderPassInfoVector _renderPassesInfo;
+    std::vector< HdxDrawTargetRenderPassUniquePtr > _renderPasses;
 
     // Raster State - close match to render task
     // but doesn't have enableHardwareShading
@@ -143,9 +121,6 @@ struct HdxDrawTargetTaskParams
         , depthBiasConstantFactor(0.0f)
         , depthBiasSlopeFactor(1.0f)
         , depthFunc(HdCmpFuncLEqual)
-        // XXX: When rendering draw targets we need alpha to coverage
-        // at least until we support a transparency pass
-        , enableAlphaToCoverage(true)
         , cullStyle(HdCullStyleBackUnlessDoubleSided)
         {}
 
@@ -167,8 +142,6 @@ struct HdxDrawTargetTaskParams
     float depthBiasSlopeFactor;
 
     HdCompareFunction depthFunc;
-
-    bool enableAlphaToCoverage;
 
     // Viewer's Render Style
     HdCullStyle cullStyle;

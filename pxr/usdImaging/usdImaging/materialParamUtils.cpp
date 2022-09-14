@@ -28,9 +28,7 @@
 
 #include "pxr/usdImaging/usdImaging/materialParamUtils.h"
 
-#include "pxr/base/tf/pathUtils.h"
 #include "pxr/imaging/hd/material.h"
-#include "pxr/usd/ar/packageUtils.h"
 #include "pxr/usd/ar/resolver.h"
 #include "pxr/usd/sdf/layerUtils.h"
 #include "pxr/usd/sdr/registry.h"
@@ -38,14 +36,9 @@
 #include "pxr/usd/sdr/shaderProperty.h"
 #include "pxr/usd/usd/attribute.h"
 #include "pxr/usd/usdShade/connectableAPI.h"
-#include "pxr/usd/usdShade/nodeDefAPI.h"
-#include "pxr/usd/usdLux/lightAPI.h"
-#include "pxr/usd/usdLux/lightFilter.h"
-
-// #nv begin #new-MDL-schema
+// #nv begin #materialx-backport
 #include "pxr/usd/usdShade/shader.h"
-#include "pxr/base/tf/envSetting.h"
-// nv end
+// #nv end
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -69,43 +62,7 @@ _FindLayerHandle(const UsdAttribute& attr, const UsdTimeCode& time) {
     return TfNullPtr;
 }
 
-// Resolve symlinks for string path.
-// Resolving symlinks can reduce the number of unique textures added into the
-// texture registry since it may use the asset path as hash.
-static bool
-_ResolveSymlinks(
-    const std::string& srcPath,
-    std::string* outPath)
-{
-    std::string error;
-    *outPath = TfRealPath(srcPath, false, &error);
-
-    if (outPath->empty() || !error.empty()) {
-        return false;
-    }
-
-    return true;
-}
-
-// Resolve symlinks for asset path.
-// Resolving symlinks can reduce the number of unique textures added into the
-// texture registry since it may use the asset path as hash.
-static SdfAssetPath
-_ResolveAssetSymlinks(const SdfAssetPath& assetPath)
-{
-    std::string p = assetPath.GetResolvedPath();
-    if (p.empty()) {
-        p = assetPath.GetAssetPath();
-    }
-
-    if (_ResolveSymlinks(p, &p)) {
-        return SdfAssetPath(assetPath.GetAssetPath(), p);
-    } else {
-        return assetPath;
-    }
-}
-
-// Given the prefix (e.g., /someDir/myImage.) and suffix (e.g., .exr),
+// Given the prefix (e.g., //SHOW/myImage.) and suffix (e.g., .exr),
 // add integer between them and try to resolve. Iterate until
 // resolution succeeded.
 static
@@ -126,14 +83,11 @@ _ResolvedPathForFirstTile(
             // Deal with layer-relative paths.
             path = SdfComputeAssetPathRelativeToLayer(layer, path);
         }
-        // Resolve. Unlike the non-UDIM case, we do not resolve symlinks
-        // here to handle the case where the symlinks follow the UDIM
-        // naming pattern but the files that are linked do not. We'll
-        // let whoever consumes the pattern determine if they want to
-        // resolve symlinks themselves.
+        // Resolve
         path = resolver.Resolve(path);
-        if (!path.empty())
+        if (!path.empty()) {
             return path;
+        }
     }
     return std::string();
 }
@@ -175,28 +129,18 @@ _ResolveAssetAttribute(
         splitPath = _SplitUdimPattern(assetPath.GetAssetPath());
 
     if (splitPath.first.empty() && splitPath.second.empty()) {
-        // Not a UDIM, resolve symlinks and exit.
-        return _ResolveAssetSymlinks(assetPath);
+        // Leave untouched.
+        return assetPath;
     }
 
     // Find first tile.
-    std::string firstTilePackage;
-    std::string firstTilePath =
+    const std::string firstTilePath =
         _ResolvedPathForFirstTile(splitPath, _FindLayerHandle(attr, time));
 
     if (firstTilePath.empty()) {
         return assetPath;
     }
-
-    // If the resolved path of the first tile is located in a packaged asset,
-    // like /foo/bar/baz.usdz[myImage.0001.exr], we need to separate the
-    // paths to restore the "<UDIM>" prefix to the image filename in the
-    // code below, then join the path back togther before we return.
-    if (ArIsPackageRelativePath(firstTilePath)) {
-        std::tie(firstTilePackage, firstTilePath) =
-            ArSplitPackageRelativePathInner(firstTilePath);
-    }
-
+    
     // Construct the file path /filePath/myImage.<UDIM>.exr by using
     // the first part from the first resolved tile, "<UDIM>" and the
     // suffix.
@@ -216,25 +160,11 @@ _ResolveAssetAttribute(
     const std::string::size_type prefixLength =
         firstTilePath.size() - suffix.size() - UDIM_TILE_NUMBER_LENGTH;
 
-    firstTilePath = 
-        firstTilePath.substr(0, prefixLength) + UDIM_PATTERN + suffix;
-
-    return SdfAssetPath( 
-        assetPath.GetAssetPath(),
-        firstTilePackage.empty() ? 
-            firstTilePath : 
-            ArJoinPackageRelativePath(firstTilePackage, firstTilePath));
+    return
+        SdfAssetPath( 
+            assetPath.GetAssetPath(),
+            firstTilePath.substr(0, prefixLength) + UDIM_PATTERN + suffix);
 }
-
-TF_DEFINE_ENV_SETTING(USDIMAGING_ALLOW_UNREGISTERED_SHADER_IDS, 0,
-    "Allows material networks to be defined under IDs which are not known to SdrRegistry.");
-static bool _UnregisteredShaderIDsAllowed() {
-    static bool _v = TfGetEnvSetting(USDIMAGING_ALLOW_UNREGISTERED_SHADER_IDS) == 1;
-    return _v;
-}
-
-// #nv end
-
 
 // Get the value from the usd attribute at given time. If it is an
 // SdfAssetPath containing a UDIM pattern, e.g., //SHOW/myImage.<UDIM>.exr,
@@ -310,7 +240,8 @@ _GetPrimvarNameAttributeValue(
 
 static void
 _ExtractPrimvarsFromNode(
-    HdMaterialNode const& node,
+    UsdShadeShader const & shadeNode,
+    HdMaterialNode const & node,
     HdMaterialNetwork *materialNetwork,
     TfTokenVector const & shaderSourceTypes)
 {
@@ -330,57 +261,6 @@ _ExtractPrimvarsFromNode(
             materialNetwork->primvars.push_back(name);
         }
     }
-}
-
-static
-TfToken _GetNodeId(UsdShadeConnectableAPI const &shadeNode,
-                   TfTokenVector const & shaderSourceTypes,
-                   TfTokenVector const& renderContexts)
-{
-    UsdShadeNodeDefAPI nodeDef(shadeNode.GetPrim());
-    if (nodeDef) {
-        // Extract the identifier of the node.
-        // GetShaderNodeForSourceType will try to find/create an Sdr node for 
-        // all three info cases: info:id, info:sourceAsset and info:sourceCode.
-        TfToken id;
-        if (!nodeDef.GetShaderId(&id)) {
-            for (auto const& sourceType : shaderSourceTypes) {
-                if (SdrShaderNodeConstPtr sdrNode = 
-                        nodeDef.GetShaderNodeForSourceType(sourceType)) {
-                    return sdrNode->GetIdentifier();
-                }
-            }
-        }
-        return id;
-    }
-
-    // If the node is a light filter that doesn't have a NodeDefAPI, then we 
-    // try to get the light shader ID from the light filter for the given 
-    // render contexts.
-    UsdLuxLightFilter lightFilter(shadeNode);
-    if (lightFilter) {
-        TfToken id = lightFilter.GetShaderId(renderContexts);
-        if (!id.IsEmpty()) {
-            return id;
-        }
-    } else {
-        // Otherwise, if the node is a light that doesn't have a NodeDefAPI, 
-        // then we try to get the light shader ID from the light for the given 
-        // render contexts.
-        UsdLuxLightAPI light(shadeNode);
-        if (light) {
-            TfToken id = light.GetShaderId(renderContexts);
-            if (!id.IsEmpty()) {
-                return id;
-            }
-        }
-    }
-
-    // Otherwise for connectable nodes that don't implement NodeDefAPI and we
-    // fail to get a light shader ID for, the type name of the prim is used as
-    // the node's identifier. This will currently always be the case for prims
-    // like light filters.
-    return shadeNode.GetPrim().GetTypeName();
 }
 
 // #nv begin #new-MDL-schema
@@ -446,6 +326,13 @@ _GetShaderNodeForSourceTypeFallbackNV(
     }  
 }
 
+TF_DEFINE_ENV_SETTING(USDIMAGING_ALLOW_UNREGISTERED_SHADER_IDS, 0,
+    "Allows material networks to be defined under IDs which are not known to SdrRegistry.");
+static bool _UnregisteredShaderIDsAllowed() {
+    static bool _v = TfGetEnvSetting(USDIMAGING_ALLOW_UNREGISTERED_SHADER_IDS) == 1;
+    return _v;
+}
+
 // #nv end
 
 // Walk the shader graph and emit nodes in topological order to avoid
@@ -463,8 +350,10 @@ void _WalkGraph(
     HdMaterialNetwork* materialNetwork,
     _PathSet* visitedNodes,
     TfTokenVector const & shaderSourceTypes,
-    TfTokenVector const & renderContexts,
-    UsdTimeCode time)
+    UsdTimeCode time,
+// #nv begin #materialx-backport
+    TfTokenVector const* contexts)
+// #nv end
 {
     // Store the path of the node
     HdMaterialNode node;
@@ -498,8 +387,10 @@ void _WalkGraph(
                 materialNetwork,
                 visitedNodes,
                 shaderSourceTypes,
-                renderContexts,
-                time);
+                time,
+// #nv begin #materialx-backport
+                contexts);
+// #nv end
 
             HdMaterialRelationship relationship;
             relationship.outputId = node.path;
@@ -513,26 +404,49 @@ void _WalkGraph(
             // If its type is asset and contains <UDIM>,
             // we resolve the asset path with the udim pattern to a file
             // path with a udim pattern, e.g.,
-            // /someDir/myImage.<UDIM>.exr to /filePath/myImage.<UDIM>.exr.
-            const VtValue value = _ResolveMaterialParamValue(attr, time);
+            // //SHOW/myImage.<UDIM>.exr to /filePath/myImage.<UDIM>.exr.
+
+             const VtValue value = _ResolveMaterialParamValue(attr, time);
             if (!value.IsEmpty()) {
                 node.parameters[inputName] = value;
             }
 
-            // #nv begin #parameter-colorSpace-to-hydra
+// #nv begin #parameter-colorSpace-to-hydra
             TfToken colorSpaceToken = attr.GetColorSpace();
             if (!colorSpaceToken.IsEmpty())
             {
                 node.paramColorSpace[inputName] = colorSpaceToken;
             }
-            // #nv end 
+// #nv end 
         }
     }
+
+// #nv begin #materialx-backport
+    UsdShadeShader shader = UsdShadeShader(shadeNode.GetPrim());
+// #nv end
 
     // Extract the identifier of the node.
     // GetShaderNodeForSourceType will try to find/create an Sdr node for all
     // three info cases: info:id, info:sourceAsset and info:sourceCode.
-    TfToken id = _GetNodeId(shadeNode, shaderSourceTypes, renderContexts);
+    TfToken id;
+// #nv begin #materialx-backport    
+    if (shader) {
+// #nv end
+        if (!shader.GetShaderId(&id)) {
+            for (auto const& sourceType : shaderSourceTypes) {
+                if (SdrShaderNodeConstPtr sdrNode = 
+                        shader.GetShaderNodeForSourceType(sourceType)) {
+                    id = sdrNode->GetIdentifier();
+                    break;
+                }
+            }
+        }
+// #nv begin #materialx-backport
+    } else {
+        // For lights
+        id = shadeNode.GetPrim().GetTypeName();
+    }
+// #nv end
 
     if (!id.IsEmpty()) {
         node.identifier = id;
@@ -542,18 +456,15 @@ void _WalkGraph(
         // primvar names from the material node to ensure these primvars are
         // not filtered-out by GprimAdapter.
         _ExtractPrimvarsFromNode(
-            node, materialNetwork, shaderSourceTypes);
+            shadeNode, node, materialNetwork, shaderSourceTypes);
     }
 
-    // #nv begin #new-MDL-schema
-    UsdShadeShader shader = UsdShadeShader(shadeNode.GetPrim());
-    // TODO: resolve merge conflict
-    if (/*timeVarying == nullptr && */node.identifier.IsEmpty() && shader) {
+ // #nv begin #new-MDL-schema   
+    if (node.identifier.IsEmpty() && shader && contexts) {
         _GetShaderNodeForSourceTypeFallbackNV(
-            shader, renderContexts, &node.identifier, &node.subIdentifier);
+            shader, *contexts, &node.identifier, &node.subIdentifier);
     }
-    // #nv end
-    
+// #nv end
     materialNetwork->nodes.push_back(node);
 }
 
@@ -562,9 +473,11 @@ UsdImagingBuildHdMaterialNetworkFromTerminal(
     UsdPrim const& usdTerminal,
     TfToken const& terminalIdentifier,
     TfTokenVector const& shaderSourceTypes,
-    TfTokenVector const& renderContexts,
     HdMaterialNetworkMap *materialNetworkMap,
-    UsdTimeCode time)
+    UsdTimeCode time,
+// #nv begin #materialx-backport
+    TfTokenVector const* contexts)
+// #nv end
 {
     HdMaterialNetwork& network = materialNetworkMap->map[terminalIdentifier];
     std::vector<HdMaterialNode>& nodes = network.nodes;
@@ -575,8 +488,10 @@ UsdImagingBuildHdMaterialNetworkFromTerminal(
         &network,
         &visitedNodes, 
         shaderSourceTypes,
-        renderContexts,
-        time);
+        time,
+// #nv begin #materialx-backport
+        contexts);
+// #nv end
 
     if (!TF_VERIFY(!nodes.empty())) return;
 
@@ -594,8 +509,8 @@ UsdImagingBuildHdMaterialNetworkFromTerminal(
         SdrRegistry &shaderReg = SdrRegistry::GetInstance();
         if (!shaderReg.GetNodeByIdentifier(terminalNode.identifier)) {
             TF_WARN("Invalid info:id %s node: %s", 
-                    terminalNode.identifier.GetText(),
-                    terminalNode.path.GetText());
+                terminalNode.identifier.GetText(),
+                terminalNode.path.GetText());
             *materialNetworkMap = HdMaterialNetworkMap();
         }
     // #nv begin #new-MDL-schema

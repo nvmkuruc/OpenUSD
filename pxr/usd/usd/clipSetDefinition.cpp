@@ -34,7 +34,6 @@
 #include "pxr/usd/pcp/layerStack.h"
 #include "pxr/usd/pcp/mapExpression.h"
 #include "pxr/usd/pcp/primIndex.h"
-#include "pxr/usd/sdf/layer.h"
 #include "pxr/usd/sdf/layerOffset.h"
 #include "pxr/usd/sdf/layerUtils.h"
 
@@ -175,12 +174,8 @@ _DeriveClipInfo(const std::string& templateAssetPath,
         return;
     }
 
-    std::string templateLayerPath;
-    SdfLayer::FileFormatArguments args;
-    SdfLayer::SplitIdentifier(templateAssetPath, &templateLayerPath, &args);
-
-    auto path = TfGetPathName(templateLayerPath);
-    auto basename = TfGetBaseName(templateLayerPath);
+    auto path = TfGetPathName(templateAssetPath);
+    auto basename = TfGetBaseName(templateAssetPath);
     auto tokenizedBasename = TfStringTokenize(basename, ".");
 
     size_t integerHashSectionIndex = std::numeric_limits<size_t>::max();
@@ -277,9 +272,7 @@ _DeriveClipInfo(const std::string& templateAssetPath,
             path + TfStringJoin(tokenizedBasename, "."));
 
         if (!resolver.Resolve(filePath).empty()) {
-            (*clipAssetPaths)->push_back(SdfAssetPath(
-                SdfLayer::CreateIdentifier(filePath, args)));
-
+            (*clipAssetPaths)->push_back(SdfAssetPath(filePath));
             (*clipTimes)->push_back(GfVec2d(clipTime, clipTime));
             if (activeOffsetProvided) {
                 const double offsetTime = (t + (activeOffset*(double)promotion))

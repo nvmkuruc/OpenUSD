@@ -28,15 +28,13 @@
 
 #include "pxr/imaging/hdx/api.h"
 #include "pxr/imaging/hd/types.h"
-#include "pxr/base/gf/vec4i.h"
+#include "pxr/imaging/garch/gl.h"
+#include "pxr/base/gf/vec2i.h"
 #include "pxr/imaging/hgi/buffer.h"
 #include "pxr/imaging/hgi/graphicsPipeline.h"
 #include "pxr/imaging/hgi/resourceBindings.h"
 #include "pxr/imaging/hgi/shaderProgram.h"
 #include "pxr/imaging/hgi/texture.h"
-
-#include <map>
-#include <vector>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -48,8 +46,7 @@ class Hgi;
 /// (color/depth) to a hgi texture. This lets callers composite results
 /// into existing scenes.
 ///
-class HdxFullscreenShader
-{
+class HdxFullscreenShader {
 public:
     /// Create a new fullscreen shader object.
     /// 'debugName' is assigned to the fullscreen pass as gpu debug group that
@@ -68,16 +65,9 @@ public:
     /// whatever textures or uniforms have been passed in by the caller.
     ///   \param glslfx The name of the glslfx file where the fragment shader
     ///                 is located.
-    ///   \param shaderName The (technique) name of the fragment shader.
-    ///   \param vertDesc Describes inputs, outputs and stage of vertex shader.
-    ///   \param fragDesc Describes inputs, outputs and stage of fragment shader.
+    ///   \param technique The technique name of the fragment shader.
     HDX_API
-    void SetProgram(
-        TfToken const& glslfx,
-        TfToken const& shaderName,
-        HgiShaderFunctionDesc &fragDesc,
-        HgiShaderFunctionDesc vertDesc = GetFullScreenVertexDesc()
-        );
+    void SetProgram(TfToken const& glslfx, TfToken const& technique);
 
     /// Bind a (externally managed) buffer to the shader program.
     /// This function can be used to bind buffers to a custom shader program.
@@ -116,26 +106,11 @@ public:
         HgiBlendFactor dstAlphaBlendFactor,
         HgiBlendOp alphaBlendOp);
 
-    /// Provide the shader constant values (uniforms).
-    /// The data values are copied, so you do not have to set them
-    /// each frame if they do not change in value.
-    HDX_API
-    void SetShaderConstants(
-        uint32_t byteSize,
-        const void* data);
-
     /// Draw the internal textures to the provided destination textures.
     /// `depth` is optional.
     HDX_API
     void Draw(HgiTextureHandle const& colorDst,
               HgiTextureHandle const& depthDst);
-
-    HDX_API
-    void Draw(HgiTextureHandle const& colorDst,
-              HgiTextureHandle const& colorResolveDst,
-              HgiTextureHandle const& depthDst,
-              HgiTextureHandle const& depthResolveDst,
-              GfVec4i const& viewport);
 
 private:
     HdxFullscreenShader() = delete;
@@ -161,20 +136,11 @@ private:
         HgiTextureHandle const& depthDst,
         bool depthWrite);
 
-    // Utility to create a texture sampler
-    bool _CreateSampler();
-
     // Internal draw method
-    void _Draw(
-        TextureMap const& textures, 
-        HgiTextureHandle const& colorDst,
-        HgiTextureHandle const& colorResolveDst,
-        HgiTextureHandle const& depthDst,
-        HgiTextureHandle const& depthResolveDst,
-        GfVec4i const &viewport,
-        bool depthWrite);
-    
-    static HgiShaderFunctionDesc GetFullScreenVertexDesc();
+    void _Draw(TextureMap const& textures, 
+              HgiTextureHandle const& colorDst,
+              HgiTextureHandle const& depthDst,
+              bool depthWrite);
 
     // Print shader compile errors.
     void _PrintCompileErrors();
@@ -194,7 +160,6 @@ private:
     HgiShaderProgramHandle _shaderProgram;
     HgiResourceBindingsHandle _resourceBindings;
     HgiGraphicsPipelineHandle _pipeline;
-    HgiSamplerHandle _sampler;
     HgiVertexBufferDesc _vboDesc;
 
     HgiDepthStencilState _depthState;
@@ -209,8 +174,6 @@ private:
 
     HgiAttachmentDesc _attachment0;
     HgiAttachmentDesc _depthAttachment;
-
-    std::vector<uint8_t> _constantsData;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

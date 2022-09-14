@@ -60,7 +60,7 @@ operator==(
     const Sdf_AssetInfo& rhs)
 {
     return (lhs.identifier == rhs.identifier)
-        && (lhs.resolvedPath == rhs.resolvedPath)
+        && (lhs.realPath == rhs.realPath)
         && (lhs.resolverContext == rhs.resolverContext)
         && (lhs.assetInfo == rhs.assetInfo);
 }
@@ -71,70 +71,47 @@ Sdf_CanCreateNewLayerWithIdentifier(
     string* whyNot)
 {
     if (identifier.empty()) {
-        if (whyNot) {
-            *whyNot = "cannot use empty identifier.";
-        }
-        return false;
-    }
-
-    if (Sdf_IsAnonLayerIdentifier(identifier)) {
-        if (whyNot) {
-            *whyNot = "cannot use anonymous layer identifier.";
-        }
+        if (whyNot)
+            *whyNot = "cannot create a new layer with an empty identifier.";
         return false;
     }
 
     if (Sdf_IdentifierContainsArguments(identifier)) {
-        if (whyNot) {
-            *whyNot = "cannot use arguments in the identifier.";
-        }
+        if (whyNot)
+            *whyNot = "cannot create a new layer with arguments in the "
+                "identifier";
         return false;
     }
 
-#if AR_VERSION == 1
     return ArGetResolver().CanCreateNewLayerWithIdentifier(identifier, whyNot);
-#else
-    return true;
-#endif
 }
 
-ArResolvedPath
+string
 Sdf_ResolvePath(
     const string& layerPath,
     ArAssetInfo* assetInfo)
 {
     TRACE_FUNCTION();
-#if AR_VERSION == 1
-    return ArResolvedPath(
-        ArGetResolver().ResolveWithAssetInfo(layerPath, assetInfo));
-#else
-    return ArGetResolver().Resolve(layerPath);
-#endif
+    return ArGetResolver().ResolveWithAssetInfo(layerPath, assetInfo);
 }
 
 bool
 Sdf_CanWriteLayerToPath(
-    const ArResolvedPath& resolvedPath)
+    const string& layerPath)
 {
-#if AR_VERSION == 1
     return ArGetResolver().CanWriteLayerToPath(
-        resolvedPath, /* whyNot = */ nullptr);
-#else
-    return ArGetResolver().CanWriteAssetToPath(
-        resolvedPath, /* whyNot = */ nullptr);
-#endif
+        layerPath, /* whyNot = */ nullptr);
 }
 
-ArResolvedPath
+string
 Sdf_ComputeFilePath(
     const string& layerPath,
     ArAssetInfo* assetInfo)
 {
     TRACE_FUNCTION();
 
-    ArResolvedPath resolvedPath = Sdf_ResolvePath(layerPath, assetInfo);  
+    string resolvedPath = Sdf_ResolvePath(layerPath, assetInfo);  
     if (resolvedPath.empty()) {
-#if AR_VERSION == 1
         // If we can't resolve layerPath, it means no layer currently
         // exists at that location. Compute the local path to figure
         // out where this layer would go if we were to create a new
@@ -147,16 +124,8 @@ Sdf_ComputeFilePath(
         // for these layers.
         ArResolver& resolver = ArGetResolver();
         if (!resolver.IsSearchPath(layerPath)) {
-            resolvedPath = ArResolvedPath(resolver.ComputeLocalPath(layerPath));
+            resolvedPath = resolver.ComputeLocalPath(layerPath);
         }
-#else
-        // If we can't resolve layerPath, it means no layer currently
-        // exists at that location. Use ResolveForNewAsset to figure
-        // out where this layer would go if we were to create a new
-        // one. 
-        ArResolver& resolver = ArGetResolver();
-        resolvedPath = resolver.ResolveForNewAsset(layerPath);
-#endif
     }
 
     return resolvedPath;
@@ -186,33 +155,20 @@ Sdf_ComputeAssetInfoFromIdentifier(
         // Anonymous layers do not have repository, overlay, or real paths.
         assetInfo->identifier = identifier;
     } else {
-#if AR_VERSION == 1
         assetInfo->identifier = ArGetResolver()
             .ComputeNormalizedPath(identifier);
-#else
-        assetInfo->identifier = identifier;
-#endif
 
-        string layerPath, arguments;
-        Sdf_SplitIdentifier(assetInfo->identifier, &layerPath, &arguments);
         if (filePath.empty()) {
-            assetInfo->resolvedPath = 
-                Sdf_ComputeFilePath(layerPath, &resolveInfo);
+            string layerPath, arguments;
+            Sdf_SplitIdentifier(assetInfo->identifier, &layerPath, &arguments);
+            assetInfo->realPath = Sdf_ComputeFilePath(layerPath, &resolveInfo);
         } else {
-            assetInfo->resolvedPath = ArResolvedPath(filePath);
+            assetInfo->realPath = filePath;
         }
 
-#if AR_VERSION == 1
-        assetInfo->resolvedPath = ArResolvedPath(
-            Sdf_CanonicalizeRealPath(assetInfo->resolvedPath));
-
         ArGetResolver().UpdateAssetInfo(
-            assetInfo->identifier, assetInfo->resolvedPath, fileVersion,
+            assetInfo->identifier, assetInfo->realPath, fileVersion,
             &resolveInfo);
-#else
-        resolveInfo = ArGetResolver().GetAssetInfo(
-            layerPath, assetInfo->resolvedPath);
-#endif
     }
 
     assetInfo->resolverContext = 
@@ -221,12 +177,12 @@ Sdf_ComputeAssetInfoFromIdentifier(
 
     TF_DEBUG(SDF_ASSET).Msg("Sdf_ComputeAssetInfoFromIdentifier:\n"
         "  assetInfo->identifier = '%s'\n"
-        "  assetInfo->resolvedPath = '%s'\n"
+        "  assetInfo->realPath = '%s'\n"
         "  assetInfo->repoPath = '%s'\n"
         "  assetInfo->assetName = '%s'\n"
         "  assetInfo->version = '%s'\n",
         assetInfo->identifier.c_str(),
-        assetInfo->resolvedPath.GetPathString().c_str(),
+        assetInfo->realPath.c_str(),
         resolveInfo.repoPath.c_str(),
         resolveInfo.assetName.c_str(),
         resolveInfo.version.c_str());
@@ -379,19 +335,6 @@ Sdf_CreateIdentifier(
     return layerPath + Sdf_EncodeArguments(arguments);
 }
 
-bool Sdf_StripIdentifierArgumentsIfPresent(
-    const std::string &identifier,
-    std::string *strippedIdentifier)
-{
-    size_t argPos = identifier.find(_Tokens->ArgsDelimiter.GetString());
-    if (argPos == string::npos) {
-        return false;
-    }
-    
-    *strippedIdentifier = string(identifier, 0, argPos);
-    return true;
-}
-
 bool
 Sdf_SplitIdentifier(
     const string& identifier,
@@ -466,32 +409,7 @@ string
 Sdf_GetExtension(
     const string& identifier)
 {
-    // Split the identifier to get the layer asset path without
-    // any file format arguments.
-    string strippedPath;
-    const string &assetPath =
-        Sdf_StripIdentifierArgumentsIfPresent(identifier, &strippedPath)
-        ? strippedPath
-        : identifier;
-
-    if (Sdf_IsAnonLayerIdentifier(assetPath)) {
-        // Strip off the "anon:0x...:" portion of the anonymous layer
-        // identifier and look for an extension in the remainder. This
-        // allows clients to create anonymous layers using tags that
-        // match their asset path scheme and retrieve the extension
-        // via ArResolver.
-        return Sdf_GetExtension(Sdf_GetAnonLayerDisplayName(assetPath));
-    }
-
-    // XXX: If the asset path is a dot file (e.g. ".sdf"), we append
-    // a temporary name so that the path we pass to Ar is not 
-    // interpreted as a directory name. This is legacy behavior that
-    // should be fixed.
-    if (!assetPath.empty() && assetPath[0] == '.') {
-        return Sdf_GetExtension("temp_file_name" + assetPath);
-    }
-
-    return ArGetResolver().GetExtension(assetPath);
+    return ArGetResolver().GetExtension(identifier);
 }
 
 bool

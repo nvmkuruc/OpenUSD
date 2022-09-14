@@ -40,7 +40,7 @@ HgiResourceBindings::GetDescriptor() const
 
 HgiBufferBindDesc::HgiBufferBindDesc()
     : bindingIndex(0)
-    , stageUsage(HgiShaderStageVertex | HgiShaderStagePostTessellationVertex)
+    , stageUsage(HgiShaderStageVertex)
 {
 }
 
@@ -51,7 +51,6 @@ bool operator==(
     return lhs.buffers == rhs.buffers &&
            lhs.resourceType == rhs.resourceType &&
            lhs.offsets == rhs.offsets &&
-           lhs.sizes == rhs.sizes &&
            lhs.bindingIndex == rhs.bindingIndex &&
            lhs.stageUsage == rhs.stageUsage;
 }
@@ -64,7 +63,7 @@ bool operator!=(
 }
 
 HgiTextureBindDesc::HgiTextureBindDesc()
-    : resourceType(HgiBindResourceTypeCombinedSamplerImage)
+    : resourceType(HgiBindResourceTypeCombinedImageSampler)
     , bindingIndex(0)
     , stageUsage(HgiShaderStageFragment)
 {
@@ -88,13 +87,17 @@ bool operator!=(
     return !(lhs == rhs);
 }
 
-HgiResourceBindingsDesc::HgiResourceBindingsDesc() = default;
+HgiResourceBindingsDesc::HgiResourceBindingsDesc()
+    : pipelineType(HgiPipelineTypeGraphics)
+{
+}
 
 bool operator==(
     const HgiResourceBindingsDesc& lhs,
     const HgiResourceBindingsDesc& rhs)
 {
     return lhs.debugName == rhs.debugName &&
+           lhs.pipelineType == rhs.pipelineType &&
            lhs.buffers == rhs.buffers &&
            lhs.textures == rhs.textures;
 }

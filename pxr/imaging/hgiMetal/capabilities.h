@@ -27,7 +27,8 @@
 #include <Metal/Metal.h>
 #include "pxr/pxr.h"
 #include "pxr/imaging/hgiMetal/api.h"
-#include "pxr/imaging/hgi/capabilities.h"
+#include "pxr/imaging/hgi/enums.h"
+#include "pxr/imaging/hgi/types.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -36,22 +37,16 @@ PXR_NAMESPACE_OPEN_SCOPE
 ///
 /// Reports the capabilities of the Metal device.
 ///
-class HgiMetalCapabilities final : public HgiCapabilities
+class HgiMetalCapabilities final
 {
 public:
-    HGIMETAL_API
-    ~HgiMetalCapabilities() override;
     
     HGIMETAL_API
-    int GetAPIVersion() const override;
-    
-    HGIMETAL_API
-    int GetShaderVersion() const override;
+    ~HgiMetalCapabilities();
 
     MTLResourceOptions defaultStorageMode;
-    bool hasVertexMemoryBarrier;
-    bool useParallelEncoder;
-    bool requiresIndirectDrawFix;
+    bool concurrentDispatchSupported;
+    bool unifiedMemory;
 
 protected:
     friend class HgiMetal;

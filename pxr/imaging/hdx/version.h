@@ -30,7 +30,6 @@
 // 4  -> 5 : move drawTarget to Hdx.
 // 5  -> 6 : change HdxShadowMatrixComputation signature.
 // 6  -> 7 : make HdxShadowMatrixComputationSharedPtr std::shared_ptr instead of boost::shared_ptr
-// 7  -> 8 : added another HdxShadowMatrixComputation signature.
-#define HDX_API_VERSION  8
+#define HDX_API_VERSION  7
 
 #endif // PXR_IMAGING_HDX_VERSION_H

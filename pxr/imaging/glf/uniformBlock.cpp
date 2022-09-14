@@ -24,7 +24,7 @@
 // uniformBlock.cpp
 //
 
-#include "pxr/imaging/garch/glApi.h"
+#include "pxr/imaging/glf/glew.h"
 
 #include "pxr/imaging/glf/diagnostic.h"
 #include "pxr/imaging/glf/uniformBlock.h"
@@ -50,9 +50,7 @@ GlfUniformBlock::~GlfUniformBlock()
 {
     GlfSharedGLContextScopeHolder sharedGLContextScopeHolder;
 
-    if (glIsBuffer(_buffer) == GL_TRUE) {
-        glDeleteBuffers(1, &_buffer);
-    }
+    if (_buffer) glDeleteBuffers(1, &_buffer);
 }
 
 GlfUniformBlockRefPtr

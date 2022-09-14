@@ -32,8 +32,6 @@
 #include "pxr/imaging/hd/enums.h"
 #include "pxr/imaging/hd/renderPassState.h"
 
-#include "pxr/imaging/cameraUtil/framing.h"
-
 #include "pxr/base/gf/vec2f.h"
 #include "pxr/base/gf/vec4f.h"
 #include "pxr/base/gf/vec4d.h"
@@ -65,14 +63,13 @@ class HdStRenderPassState;
 /// create a render setup task internally.  See the HdxRenderTask documentation
 /// for details.
 ///
-class HdxRenderSetupTask : public HdTask
-{
+class HdxRenderSetupTask : public HdTask {
 public:
     HDX_API
     HdxRenderSetupTask(HdSceneDelegate* delegate, SdfPath const& id);
 
     HDX_API
-    ~HdxRenderSetupTask() override;
+    virtual ~HdxRenderSetupTask();
 
 
     // APIs used from HdxRenderTask to manage the sync/prepare process.
@@ -88,35 +85,33 @@ public:
 
     /// Sync the render pass resources
     HDX_API
-    void Sync(HdSceneDelegate* delegate,
-              HdTaskContext* ctx,
-              HdDirtyBits* dirtyBits) override;
+    virtual void Sync(HdSceneDelegate* delegate,
+                      HdTaskContext* ctx,
+                      HdDirtyBits* dirtyBits) override;
 
     /// Prepare the tasks resources
     HDX_API
-    void Prepare(HdTaskContext* ctx,
-                 HdRenderIndex* renderIndex) override;
-    
+    virtual void Prepare(HdTaskContext* ctx,
+                         HdRenderIndex* renderIndex) override;
+
     /// Execute render pass task
     HDX_API
-    void Execute(HdTaskContext* ctx) override;
+    virtual void Execute(HdTaskContext* ctx) override;
 
 private:
     HdRenderPassStateSharedPtr _renderPassState;
     HdStRenderPassShaderSharedPtr _colorRenderPassShader;
     HdStRenderPassShaderSharedPtr _idRenderPassShader;
-    SdfPath _cameraId;
-    CameraUtilFraming _framing;
-    std::pair<bool, CameraUtilConformWindowPolicy> _overrideWindowPolicy;
-    // Used when client did not specify the camera framing (more expressive
-    // and preferred).
     GfVec4d _viewport;
+    SdfPath _cameraId;
     HdRenderPassAovBindingVector _aovBindings;
-    HdRenderPassAovBindingVector _aovInputBindings;
 
-    void _SetRenderpassShadersForStorm(
-        HdxRenderTaskParams const& params,
-        HdStRenderPassState *renderPassState);
+    static HdStShaderCodeSharedPtr _overrideShader;
+
+    static void _CreateOverrideShader();
+
+    void _SetHdStRenderPassState(HdxRenderTaskParams const& params,
+                                 HdStRenderPassState *renderPassState);
 
     HdRenderPassStateSharedPtr &_GetRenderPassState(HdRenderIndex* renderIndex);
 
@@ -135,22 +130,17 @@ private:
 struct HdxRenderTaskParams
 {
     HdxRenderTaskParams()
-        // Global Params
         : overrideColor(0.0)
         , wireframeColor(0.0)
+        , maskColor(1.0f, 0.0f, 0.0f, 1.0f)
+        , indicatorColor(0.0f, 1.0f, 0.0f, 1.0f)
         , pointColor(GfVec4f(0,0,0,1))
         , pointSize(3.0)
+        , pointSelectedSize(3.0)
         , enableLighting(false)
         , enableIdRender(false)
         , alphaThreshold(0.0)
         , enableSceneMaterials(true)
-        , enableSceneLights(true)
-        , enableClipping(true)
-        // Selection/Masking params
-        , maskColor(1.0f, 0.0f, 0.0f, 1.0f)
-        , indicatorColor(0.0f, 1.0f, 0.0f, 1.0f)
-        , pointSelectedSize(3.0)
-        // Storm render pipeline state
         , depthBiasUseDefault(true)
         , depthBiasEnable(false)
         , depthBiasConstantFactor(0.0f)
@@ -173,47 +163,31 @@ struct HdxRenderTaskParams
         , blendConstantColor(0.0f, 0.0f, 0.0f, 0.0f)
         , blendEnable(false)
         , enableAlphaToCoverage(true)
-        , useAovMultiSample(true)
-        , resolveAovMultiSample(true)
-        // Camera framing and viewer state
-        , viewport(0.0)
         , cullStyle(HdCullStyleBackUnlessDoubleSided)
-        , overrideWindowPolicy{false, CameraUtilFit}
+        , aovBindings()
+        , camera()
+        , viewport(0.0)
         {}
 
-    // ---------------------------------------------------------------------- //
-    // Application rendering state
-    // XXX: Several of the parameters below are specific to (or work only with)
-    // Storm and stem from its integration in Presto and usdview.
-    // ---------------------------------------------------------------------- //
-    // "Global" parameters while rendering.
+    // XXX: Several of the params below should move to global application state.
     GfVec4f overrideColor;
     GfVec4f wireframeColor;
+    GfVec4f maskColor;
+    GfVec4f indicatorColor;
     GfVec4f pointColor;
     float pointSize;
+    float pointSelectedSize;
     bool enableLighting;
     bool enableIdRender;
     float alphaThreshold;
     bool enableSceneMaterials;
-    bool enableSceneLights;
-    bool enableClipping;
 
-    // Selection/Masking params
-    GfVec4f maskColor;
-    GfVec4f indicatorColor;
-    float pointSelectedSize;
-
-    // AOVs to render to
-    // XXX: As a transitional API, if this is empty it indicates the renderer
-    // should write color and depth to the GL framebuffer.
-    HdRenderPassAovBindingVector aovBindings;
-    HdRenderPassAovBindingVector aovInputBindings;
-
-    // ---------------------------------------------------------------------- //
-    // Render pipeline state for rasterizers.
-    // XXX: These are relevant only for Storm.
-    // ---------------------------------------------------------------------- //
-    bool depthBiasUseDefault; // inherit application GL state
+    // Depth Bias Raster State
+    // When use default is true - state
+    // is inherited and onther values are
+    // ignored.  Otherwise the raster state
+    // is set using the values specified.
+    bool depthBiasUseDefault;
     bool depthBiasEnable;
     float depthBiasConstantFactor;
     float depthBiasSlopeFactor;
@@ -243,23 +217,17 @@ struct HdxRenderTaskParams
     // AlphaToCoverage
     bool enableAlphaToCoverage;
 
-    // If true (default), render into the multi-sampled AOVs (rather than
-    // the resolved AOVs).
-    bool useAovMultiSample;
-
-    // If true (default), multi-sampled AOVs will be resolved at the end of a
-    // render pass.
-    bool resolveAovMultiSample;
-
-    // ---------------------------------------------------------------------- //
-    // Viewer & Camera Framing state
-    // ---------------------------------------------------------------------- //
-    SdfPath camera;
-    CameraUtilFraming framing;
-    // Only used if framing is invalid.
-    GfVec4d viewport;
+    // Viewer's Render Style
     HdCullStyle cullStyle;
-    std::pair<bool, CameraUtilConformWindowPolicy> overrideWindowPolicy;
+
+    // AOV bindings.
+    // XXX: As a transitional API, if this is empty it indicates the renderer
+    // should write color and depth to the GL framebuffer.
+    HdRenderPassAovBindingVector aovBindings;
+
+    // RasterState index objects
+    SdfPath camera;
+    GfVec4d viewport;
 };
 
 // VtValue requirements

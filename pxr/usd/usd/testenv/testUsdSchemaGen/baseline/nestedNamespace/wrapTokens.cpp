@@ -85,6 +85,7 @@ void wrapUsdContrivedTokens()
     _AddToken(cls, "cornerIndices", UsdContrivedTokens->cornerIndices);
     _AddToken(cls, "cornerSharpnesses", UsdContrivedTokens->cornerSharpnesses);
     _AddToken(cls, "creaseLengths", UsdContrivedTokens->creaseLengths);
+    _AddToken(cls, "derived", UsdContrivedTokens->derived);
     _AddToken(cls, "double2", UsdContrivedTokens->double2);
     _AddToken(cls, "double2Array", UsdContrivedTokens->double2Array);
     _AddToken(cls, "double3", UsdContrivedTokens->double3);
@@ -165,12 +166,11 @@ void wrapUsdContrivedTokens()
     _AddToken(cls, "stringArray", UsdContrivedTokens->stringArray);
     _AddToken(cls, "temp", UsdContrivedTokens->temp);
     _AddToken(cls, "test", UsdContrivedTokens->test);
-    _AddToken(cls, "test_MultipleApplyTemplate_TestAttrOne", UsdContrivedTokens->test_MultipleApplyTemplate_TestAttrOne);
-    _AddToken(cls, "test_MultipleApplyTemplate_TestAttrTwo", UsdContrivedTokens->test_MultipleApplyTemplate_TestAttrTwo);
+    _AddToken(cls, "testAttrOne", UsdContrivedTokens->testAttrOne);
+    _AddToken(cls, "testAttrThree", UsdContrivedTokens->testAttrThree);
+    _AddToken(cls, "testAttrTwo", UsdContrivedTokens->testAttrTwo);
     _AddToken(cls, "testingAsset", UsdContrivedTokens->testingAsset);
     _AddToken(cls, "testo", UsdContrivedTokens->testo);
-    _AddToken(cls, "testo_MultipleApplyTemplate_TestAttrOne", UsdContrivedTokens->testo_MultipleApplyTemplate_TestAttrOne);
-    _AddToken(cls, "testo_MultipleApplyTemplate_TestAttrTwo", UsdContrivedTokens->testo_MultipleApplyTemplate_TestAttrTwo);
     _AddToken(cls, "token", UsdContrivedTokens->token);
     _AddToken(cls, "tokenArray", UsdContrivedTokens->tokenArray);
     _AddToken(cls, "transform", UsdContrivedTokens->transform);
@@ -182,10 +182,8 @@ void wrapUsdContrivedTokens()
     _AddToken(cls, "uintArray", UsdContrivedTokens->uintArray);
     _AddToken(cls, "variableTokenAllowed1", UsdContrivedTokens->variableTokenAllowed1);
     _AddToken(cls, "variableTokenAllowed2", UsdContrivedTokens->variableTokenAllowed2);
-    _AddToken(cls, "variableTokenAllowed3", UsdContrivedTokens->variableTokenAllowed3);
     _AddToken(cls, "variableTokenArrayAllowed1", UsdContrivedTokens->variableTokenArrayAllowed1);
     _AddToken(cls, "variableTokenArrayAllowed2", UsdContrivedTokens->variableTokenArrayAllowed2);
-    _AddToken(cls, "variableTokenArrayAllowed3", UsdContrivedTokens->variableTokenArrayAllowed3);
     _AddToken(cls, "variableTokenDefault", UsdContrivedTokens->variableTokenDefault);
     _AddToken(cls, "vector3d", UsdContrivedTokens->vector3d);
     _AddToken(cls, "vector3dArray", UsdContrivedTokens->vector3dArray);

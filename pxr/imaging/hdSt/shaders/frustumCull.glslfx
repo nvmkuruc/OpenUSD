@@ -30,18 +30,8 @@
 #import $TOOLS/hdSt/shaders/instancing.glslfx
 
 --- --------------------------------------------------------------------------
--- layout ViewFrustumCull.Counting
-
-[
-    ["buffer readWrite", "ResultData", "drawIndirectResult",
-        ["atomic_int", "numVisibleInstances"]
-    ]
-]
-
---- --------------------------------------------------------------------------
 -- glsl ViewFrustumCull.Counting
 
-#ifndef HDST_ENABLE_GLSLFX_RESOURCE_LAYOUTS
 layout (std430, binding = drawIndirectResult_Binding) buffer ResultData {
     int numVisibleInstances;
 };
@@ -49,15 +39,8 @@ layout (std430, binding = drawIndirectResult_Binding) buffer ResultData {
 void
 FrustumCullCountVisibleInstances(int resultInstanceCount)
 {
-    ATOMIC_ADD(numVisibleInstances, resultInstanceCount);
+    atomicAdd(numVisibleInstances, resultInstanceCount);
 }
-#else
-void
-FrustumCullCountVisibleInstances(int resultInstanceCount)
-{
-    ATOMIC_ADD(numVisibleInstances[0], resultInstanceCount);
-}
-#endif
 
 --- --------------------------------------------------------------------------
 -- glsl ViewFrustumCull.NoCounting
@@ -72,7 +55,7 @@ FrustumCullCountVisibleInstances(int resultInstanceCount)
 -- glsl ViewFrustumCull.NoTinyCull
 
 bool
-FrustumCullIsTinyPrim(vec4 bboxMin, vec4 bboxMax, vec2 drawRangeNDC)
+FrustumCullIsTinyPrim(vec4 bboxMin, vec4 bboxMax)
 {
     // do nothing
     return false;
@@ -81,8 +64,10 @@ FrustumCullIsTinyPrim(vec4 bboxMin, vec4 bboxMax, vec2 drawRangeNDC)
 --- --------------------------------------------------------------------------
 -- glsl ViewFrustumCull.TinyCull
 
+layout (location = ulocDrawRangeNDC_Binding) uniform vec2 drawRangeNDC;
+
 bool
-FrustumCullIsTinyPrim(vec4 bboxMin, vec4 bboxMax, vec2 drawRangeNDC)
+FrustumCullIsTinyPrim(vec4 bboxMin, vec4 bboxMax)
 {
     // Check the length of the min/max diagonal, could do something better here.
     vec2 ndcMin = (bboxMin.xy/max(.000001,bboxMin.w));
@@ -105,7 +90,7 @@ FrustumCullIsTinyPrim(vec4 bboxMin, vec4 bboxMax, vec2 drawRangeNDC)
 -- glsl ViewFrustumCull.IsVisible
 
 bool
-FrustumCullIsVisible(MAT4 toClip, vec4 localMin, vec4 localMax, vec2 drawRangeNDC)
+FrustumCullIsVisible(MAT4 toClip, vec4 localMin, vec4 localMax)
 {
     // Disable culling when:
     // (a) BBox is empty. An empty bbox defaults to [FLT_MAX, -FLT_MAX]), so
@@ -127,11 +112,8 @@ FrustumCullIsVisible(MAT4 toClip, vec4 localMin, vec4 localMax, vec2 drawRangeND
     // failed. Test two axes here because size is measured in screen space.
     // We front-load this test because it saves quite a bit of compute: in one
     // test the framerate went from 7.7 to 9.0 FPS.
-    if (FrustumCullIsTinyPrim(p[0], p[7], drawRangeNDC) &&
-        FrustumCullIsTinyPrim(p[2], p[5], drawRangeNDC))
-    {
+    if (FrustumCullIsTinyPrim(p[0], p[7]) && FrustumCullIsTinyPrim(p[2], p[5]))
         return false;
-    }
 
     // Finish computing points and perform frustum culling.
     p[1] = vec4(toClip * vec4(localMin.x, localMin.y, localMax.z, 1));
@@ -152,42 +134,20 @@ FrustumCullIsVisible(MAT4 toClip, vec4 localMin, vec4 localMax, vec2 drawRangeND
         clipFlags |= ivec3(clip0) /* bit 0 */ + 2*ivec3(clip1) /*bit 1*/;
     }
 
-    return all(equal(clipFlags, ivec3(3)));
+    return clipFlags == ivec3(3);
 }
-
---- --------------------------------------------------------------------------
--- layout ViewFrustumCull.Vertex
-
-[
-    ["in", "int", "instanceCountInput"],
-    ["in", "int", "drawCommandIndex"],
-    ["uniform block", "Uniforms", "ulocCullParams",
-        ["mat4", "cullMatrix"],
-        ["vec2", "drawRangeNDC"],
-        ["uint", "drawCommandNumUints"]
-    ],
-    ["buffer readWrite", "DispatchBuffer", "dispatchBuffer",
-        ["uint", "drawCommands", "[]"]
-    ]
-]
 
 --- --------------------------------------------------------------------------
 -- glsl ViewFrustumCull.Vertex
 
-#ifndef HDST_ENABLE_GLSLFX_RESOURCE_LAYOUTS
 layout (location = instanceCountInput_Binding) in int instanceCountInput;
 layout (location = drawCommandIndex_Binding) in int drawCommandIndex;
-
-layout(std140, binding=ulocCullParams_Binding) uniform Uniforms {
-    mat4 cullMatrix;
-    vec2 drawRangeNDC;
-    uint drawCommandNumUints;
-};
+layout (location = ulocDrawCommandNumUints_Binding) uniform uint drawCommandNumUints;
+layout (location = ulocCullMatrix_Binding) uniform mat4 cullMatrix;
 
 layout (std430, binding = dispatchBuffer_Binding) buffer DispatchBuffer {
     uint drawCommands[];
 };
-#endif
 
 MAT4 GetCullMatrix()
 {
@@ -206,12 +166,10 @@ void main()
     vec4 localMin = HdGet_bboxLocalMin();
     vec4 localMax = HdGet_bboxLocalMax();
 
-    bool isVisible = FrustumCullIsVisible(
-        toClip, localMin, localMax, drawRangeNDC);
+    bool isVisible = FrustumCullIsVisible(toClip, localMin, localMax);
 
     // Compute the index to the 'instanceCount' struct member in drawCommands.
-    uint index = uint(drawCommandIndex) * 
-        drawCommandNumUints + instanceCountOffset;
+    uint index = uint(drawCommandIndex) * drawCommandNumUints + instanceCountOffset;
 
     // Set the resulting instance count to 0 if the primitive is culled
     // otherwise pass through the original incoming instance count.
@@ -221,21 +179,6 @@ void main()
     FrustumCullCountVisibleInstances(int(resultInstanceCount));
 }
 
---- --------------------------------------------------------------------------
--- layout ViewFrustumCull.VertexInstancing
-
-[
-    ["in", "int", "drawCommandIndex"],
-    ["uniform block", "Uniforms", "ulocCullParams",
-        ["mat4", "cullMatrix"],
-        ["vec2", "drawRangeNDC"],
-        ["uint", "drawCommandNumUints"],
-        ["int",  "resetPass"]
-    ],
-    ["buffer readWrite", "DispatchBuffer", "dispatchBuffer",
-        ["atomic_uint", "drawCommands", "[]"]
-    ]
-]
 
 --- --------------------------------------------------------------------------
 -- glsl ViewFrustumCull.VertexInstancing
@@ -284,20 +227,14 @@ void main()
                             x:undefined value
 */
 
-#ifndef HDST_ENABLE_GLSLFX_RESOURCE_LAYOUTS
 layout (location = drawCommandIndex_Binding) in int drawCommandIndex;
-
-layout(std140, binding=ulocCullParams_Binding) uniform Uniforms {
-    mat4 cullMatrix;
-    vec2 drawRangeNDC;
-    uint drawCommandNumUints;
-    int resetPass;
-};
+layout (location = ulocDrawCommandNumUints_Binding) uniform uint drawCommandNumUints;
+layout (location = ulocResetPass_Binding) uniform int resetPass = 0;
+layout (location = ulocCullMatrix_Binding) uniform mat4 cullMatrix;
 
 layout (std430, binding = dispatchBuffer_Binding) buffer DispatchBuffer {
     uint drawCommands[];
 };
-#endif
 
 MAT4 GetCullMatrix()
 {
@@ -310,15 +247,11 @@ void main()
     // it's a second entry in both DrawArraysCommand and DrawElementsCommand.
     const uint instanceCountOffset = 1;
 
-    const uint instanceCountBufferOffset =
-        drawCommandIndex * drawCommandNumUints + instanceCountOffset;
-
     // reset pass
     if (resetPass == 1) {
-        // note: we expect all instance invocations of this draw command
-        // are clearing same field to zero, and and so might not guard this
-        // access as atomic.
-        ATOMIC_STORE(drawCommands[instanceCountBufferOffset], 0);
+        // note: we expect all instance invocations of this draw command is clearing
+        // same field to zero, and intentionally chosen to not guard this access as atomic.
+        drawCommands[drawCommandIndex * drawCommandNumUints + instanceCountOffset] = 0;
         return;
     }
 
@@ -331,14 +264,13 @@ void main()
 
     MAT4 toClip = GetCullMatrix() * ApplyInstanceTransform(HdGet_transform());
 
-    bool isVisible = FrustumCullIsVisible(
-        toClip, localMin, localMax, drawRangeNDC);
+    bool isVisible = FrustumCullIsVisible(toClip, localMin, localMax);
 
     if (isVisible) {
         // increment the instance count and store instanceIndex to culledInstanceIndices.
 
-        uint id = ATOMIC_ADD(drawCommands[instanceCountBufferOffset], 1);
-
+        uint id = atomicAdd(drawCommands[drawCommandIndex * drawCommandNumUints
+                                         + instanceCountOffset], 1);
         SetCulledInstanceIndex(id);
         FrustumCullCountVisibleInstances(1);
     }

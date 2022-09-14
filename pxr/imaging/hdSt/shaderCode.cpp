@@ -28,16 +28,9 @@
 
 #include "pxr/imaging/hd/tokens.h"
 
-#include "pxr/imaging/hio/glslfx.h"
-
-#include "pxr/base/tf/diagnostic.h"
 #include "pxr/base/tf/iterator.h"
 
-#include "pxr/base/vt/dictionary.h"
-
 #include <boost/functional/hash.hpp>
-
-#include <string>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -98,6 +91,13 @@ HdStShaderCode::GetShaderData() const
     return EMPTY;
 }
 
+/*virtual*/
+HdStShaderCode::TextureDescriptorVector
+HdStShaderCode::GetTextures() const
+{
+    return HdStShaderCode::TextureDescriptorVector();
+}
+
 /* virtual */
 HdStShaderCode::NamedTextureHandleVector const &
 HdStShaderCode::GetNamedTextureHandles() const
@@ -136,44 +136,15 @@ HdStShaderCode::ResourceContext::AddSources(
 void
 HdStShaderCode::ResourceContext::AddComputation(
     HdBufferArrayRangeSharedPtr const &range,
-    HdComputationSharedPtr const &computation,
-    HdStComputeQueue const queue)
+    HdComputationSharedPtr const &computation)
 {
-    _registry->AddComputation(range, computation, queue);
+    _registry->AddComputation(range, computation);
 }
 
 HdStShaderCode::ResourceContext::ResourceContext(
     HdStResourceRegistry * const registry)
   : _registry(registry)
 {
-}
-
-/* virtual */
-HioGlslfx const *
-HdStShaderCode::_GetGlslfx() const
-{
-    return nullptr;
-}
-
-VtDictionary
-HdStShaderCode::GetLayout(TfTokenVector const &shaderStageKeys) const
-{
-    HioGlslfx const *glslfx = _GetGlslfx();
-    if (!glslfx) {
-        VtDictionary static emptyLayoutDictionary;
-        return emptyLayoutDictionary;
-    }
-
-    std::string errorStr;
-    VtDictionary layoutAsDict =
-        glslfx->GetLayoutAsDictionary(shaderStageKeys, &errorStr);
-
-    if (!errorStr.empty()) {
-        TF_CODING_ERROR("Error parsing GLSLFX layout:\n%s\n",
-                        errorStr.c_str());
-    }
-
-    return layoutAsDict;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

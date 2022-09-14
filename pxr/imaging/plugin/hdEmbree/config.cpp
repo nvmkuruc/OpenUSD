@@ -26,7 +26,6 @@
 #include "pxr/base/tf/envSetting.h"
 #include "pxr/base/tf/instantiateSingleton.h"
 
-#include <algorithm>
 #include <iostream>
 
 PXR_NAMESPACE_OPEN_SCOPE

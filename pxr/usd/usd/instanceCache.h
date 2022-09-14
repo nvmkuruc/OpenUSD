@@ -37,9 +37,10 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+
 /// \class Usd_InstanceChanges
 ///
-/// List of changes to prototype prims due to the discovery of new
+/// List of changes to master prims due to the discovery of new
 /// or destroyed instanceable prim indexes.
 ///
 class Usd_InstanceChanges
@@ -47,78 +48,77 @@ class Usd_InstanceChanges
 public:
     void AppendChanges(const Usd_InstanceChanges& c)
     {
-        newPrototypePrims.insert(
-            newPrototypePrims.end(),
-            c.newPrototypePrims.begin(), 
-            c.newPrototypePrims.end());
+        newMasterPrims.insert(
+            newMasterPrims.end(),
+            c.newMasterPrims.begin(), 
+            c.newMasterPrims.end());
 
-        newPrototypePrimIndexes.insert(
-            newPrototypePrimIndexes.end(),
-            c.newPrototypePrimIndexes.begin(), 
-            c.newPrototypePrimIndexes.end());
+        newMasterPrimIndexes.insert(
+            newMasterPrimIndexes.end(),
+            c.newMasterPrimIndexes.begin(), 
+            c.newMasterPrimIndexes.end());
 
-        changedPrototypePrims.insert(
-            changedPrototypePrims.end(),
-            c.changedPrototypePrims.begin(), 
-            c.changedPrototypePrims.end());
+        changedMasterPrims.insert(
+            changedMasterPrims.end(),
+            c.changedMasterPrims.begin(), 
+            c.changedMasterPrims.end());
 
-        changedPrototypePrimIndexes.insert(
-            changedPrototypePrimIndexes.end(),
-            c.changedPrototypePrimIndexes.begin(), 
-            c.changedPrototypePrimIndexes.end());
+        changedMasterPrimIndexes.insert(
+            changedMasterPrimIndexes.end(),
+            c.changedMasterPrimIndexes.begin(), 
+            c.changedMasterPrimIndexes.end());
 
-        deadPrototypePrims.insert(
-            deadPrototypePrims.end(), 
-            c.deadPrototypePrims.begin(),
-            c.deadPrototypePrims.end());
+        deadMasterPrims.insert(
+            deadMasterPrims.end(), 
+            c.deadMasterPrims.begin(), c.deadMasterPrims.end());
     }
 
-    /// List of new prototype prims and their corresponding source
+    /// List of new master prims and their corresponding source
     /// prim indexes.
-    std::vector<SdfPath> newPrototypePrims;
-    std::vector<SdfPath> newPrototypePrimIndexes;
+    std::vector<SdfPath> newMasterPrims;
+    std::vector<SdfPath> newMasterPrimIndexes;
 
-    /// List of prototype prims that have been changed to use a new
+    /// List of master prims that have been changed to use a new
     /// source prim index.
-    std::vector<SdfPath> changedPrototypePrims;
-    std::vector<SdfPath> changedPrototypePrimIndexes;
+    std::vector<SdfPath> changedMasterPrims;
+    std::vector<SdfPath> changedMasterPrimIndexes;
 
-    /// List of prototype prims that no longer have any instances.
-    std::vector<SdfPath> deadPrototypePrims;
+    /// List of master prims that no longer have any instances.
+    std::vector<SdfPath> deadMasterPrims;
 };
 
 /// \class Usd_InstanceCache
 ///
 /// Private helper object for computing and caching instance information
 /// on a UsdStage.  This object is responsible for keeping track of the 
-/// instanceable prim indexes and their corresponding prototypes. 
+/// instanceable prim indexes and their corresponding masters. 
 /// This includes:
 ///
-///    - Tracking all instanceable prim indexes and prototype prims 
+///    - Tracking all instanceable prim indexes and master prims 
 ///      on the stage.
-///    - Determining when a new prototype must be created or an
-///      old prototype can be reused for a newly-discovered instanceable
+///    - Determining when a new master must be created or an
+///      old master can be reused for a newly-discovered instanceable
 ///      prim index.
-///    - Determining when a prototype can be removed due to it no longer
+///    - Determining when a master can be removed due to it no longer
 ///      having any instanceable prim indexes.
 ///
 /// During composition, UsdStage will discover instanceable prim indexes
 /// which will be registered with this cache. These prim indexes will
-/// then be assigned to the appropriate prototype prim. One of these prim
-/// indexes will be used as the "source" prim index for the prototype.
+/// then be assigned to the appropriate master prim. One of these prim
+/// indexes will be used as the "source" prim index for the master.
 /// This object keeps track of the dependencies formed between 
-/// prototypes and prim indexes by this process.
+/// masters and prim indexes by this process.
 ///
-/// API note: It can be confusing to reason about prototypes and instances,
+/// API note: It can be confusing to reason about masters and instances,
 /// especially with arbitrarily nested instancing.  To help clarify, the API
 /// below uses two idioms to describe the two main kinds of relationships
-/// involved in instancing: 1) instances to their prototype usd prims, and 2)
-/// prototype usd prims to the prim indexes they use.  For #1, we use phrasing
-/// like, "prototype for instance". For example 
-/// GetPathInPrototypeForInstancePath() finds the corresponding prototype prim
-/// for a given instance prim path.  For #2, we use phrasing like, "prototype
-/// using prim index".  For example GetPrototypeUsingPrimIndexPath() finds the
-/// prototype using the given prim index path as its source, if there is one.
+/// involved in instancing: 1) instances to their master usd prims, and 2)
+/// master usd prims to the prim indexes they use.  For #1, we use phrasing
+/// like, "master for instance".  For example GetPathInMasterForInstancePath() finds
+/// the corresponding master prim for a given instance prim path.  For #2, we
+/// use phrasing like, "master using prim index".  For example
+/// GetMasterUsingPrimIndexPath() finds the master using the given prim index
+/// path as its source, if there is one.
 ///
 class Usd_InstanceCache
 {
@@ -135,7 +135,7 @@ public:
     /// threads.
     ///
     /// Returns true if the given instance prim index requires a new 
-    /// prototype prim or is the source for an existing prototype prim, false
+    /// master prim or is the source for an existing master prim, false
     /// otherwise.
     bool RegisterInstancePrimIndex(const PcpPrimIndex& index,
                                    const UsdStagePopulationMask *mask,
@@ -148,71 +148,70 @@ public:
 
     /// Process all instance prim indexes that have been registered or
     /// unregistered since the last call to this function and return the
-    /// resulting list of prototype prim changes via \p changes.
+    /// resulting list of master prim changes via \p changes.
     void ProcessChanges(Usd_InstanceChanges* changes);
 
-    /// Return true if \p path identifies a prototype or a prototype descendant.
-    /// The \p path must be either an absolute path or empty.
-    static bool IsPathInPrototype(const SdfPath& path);
+    /// Return true if \p path identifies a master or a master descendant.  The
+    /// \p path must be either an absolute path or empty.
+    static bool IsPathInMaster(const SdfPath& path);
 
-    /// Return true if \p path identifies a prototype.  
-    static bool IsPrototypePath(const SdfPath& path);
+    /// Return true if \p path identifies a master.  
+    static bool IsMasterPath(const SdfPath& path);
 
-    /// Return instance prim indexes registered for \p prototypePath, an empty
+    /// Return instance prim indexes registered for \p masterPath, an empty
     /// vector otherwise
-    std::vector<SdfPath> GetInstancePrimIndexesForPrototype(
-            const SdfPath& prototype) const;
+    std::vector<SdfPath> GetInstancePrimIndexesForMaster(
+            const SdfPath& master) const;
 
-    /// Returns the paths of all prototype prims for instance prim 
+    /// Returns the paths of all master prims for instance prim 
     /// indexes registered with this cache.
-    std::vector<SdfPath> GetAllPrototypes() const;
+    std::vector<SdfPath> GetAllMasters() const;
 
-    /// Returns the number of prototype prims assigned to instance
+    /// Returns the number of master prims assigned to instance
     /// prim indexes registered with this cache.
-    size_t GetNumPrototypes() const;
+    size_t GetNumMasters() const;
 
-    /// Return the path of the prototype root prim using the prim index at
+    /// Return the path of the master root prim using the prim index at
     /// \p primIndexPath as its source prim index, or the empty path if no such
-    /// prototype exists.
+    /// master exists.
     ///
-    /// Unlike GetPrototypeForPrimIndexPath, this function will return a
-    /// prototype prim path only if the prototype prim is using the specified
+    /// Unlike GetMasterForPrimIndexPath, this function will return a
+    /// master prim path only if the master prim is using the specified
     /// prim index as its source.
-    SdfPath GetPrototypeUsingPrimIndexPath(const SdfPath& primIndexPath) const;
+    SdfPath GetMasterUsingPrimIndexPath(const SdfPath& primIndexPath) const;
 
-    /// Return the paths of all prims in prototypes using the prim index at
+    /// Return the paths of all prims in masters using the prim index at
     /// \p primIndexPath.
     ///
     /// There are at most two such paths.  Without nested instancing, there is
-    /// at most one: the prim in the prototype corresponding to the instance
+    /// at most one: the prim in the master corresponding to the instance
     /// identified by \p primIndexPath.  With nested instancing there will be
     /// two if the \p primIndexPath identifies an instanceable prim index
     /// descendant to another instancable prim index, and this \p primIndexPath
-    /// was selected for use by that nested instance's prototype.  In that case
+    /// was selected for use by that nested instance's master.  In that case
     /// this function will return the path of the nested instance under the
-    /// outer prototype, and also the prototype path corresponding to that
-    /// nested instance.
+    /// outer master, and also the master path corresponding to that nested
+    /// instance.
     std::vector<SdfPath> 
-    GetPrimsInPrototypesUsingPrimIndexPath(const SdfPath& primIndexPath) const;
+    GetPrimsInMastersUsingPrimIndexPath(const SdfPath& primIndexPath) const;
 
-    /// Return a vector of pair of prototype and respective source prim index
-    /// path for all prototypes using the prim index at \p primIndexPath or as 
+    /// Return a vector of pair of master and respective source prim index path 
+    /// for all masters using the prim index at \p primIndexPath or as 
     /// descendent of \p primIndexPath.
     std::vector<std::pair<SdfPath, SdfPath>> 
-    GetPrototypesUsingPrimIndexPathOrDescendents(
-        const SdfPath& primIndexPath) const;
+    GetMastersUsingPrimIndexPathOrDescendents(
+            const SdfPath& primIndexPath) const;
 
-    /// Return true if a prim in a prototype uses the prim index at
+    /// Return true if a prim in a master uses the prim index at
     /// \p primIndexPath.
-    bool PrototypeUsesPrimIndexPath(const SdfPath& primIndexPath) const;
+    bool MasterUsesPrimIndexPath(const SdfPath& primIndexPath) const;
 
-    /// Return the path of the prototype prim associated with the instanceable
+    /// Return the path of the master prim associated with the instanceable
     /// \p primIndexPath.  If \p primIndexPath is not instanceable, or if it
-    /// has no associated prototype because it lacks composition arcs, return
-    /// the empty path.
+    /// has no associated master because it lacks composition arcs, return the
+    /// empty path.
     SdfPath
-    GetPrototypeForInstanceablePrimIndexPath(
-        const SdfPath& primIndexPath) const;
+    GetMasterForInstanceablePrimIndexPath(const SdfPath& primIndexPath) const;
 
     /// Returns true if \p primPath is descendent to an instance.  That is,
     /// return true if a strict ancestor path of \p usdPrimPath identifies an
@@ -223,66 +222,66 @@ public:
     /// instanceable prim.  If there is no such ancestor, return the empty path.
     SdfPath GetMostAncestralInstancePath(const SdfPath &primPath) const;
 
-    /// Return the corresponding prototype prim path if \p primPath is
-    /// descendant to an instance (see IsPathDescendantToAnInstance()), 
-    /// otherwise the empty path.
-    SdfPath GetPathInPrototypeForInstancePath(const SdfPath& primPath) const;
+    /// Return the corresponding master prim path if \p primPath is descendant
+    /// to an instance (see IsPathDescendantToAnInstance()), otherwise the empty
+    /// path.
+    SdfPath GetPathInMasterForInstancePath(const SdfPath& primPath) const;
 
 private:
     typedef std::vector<SdfPath> _PrimIndexPaths;
 
-    void _CreateOrUpdatePrototypeForInstances(
+    void _CreateOrUpdateMasterForInstances(
         const Usd_InstanceKey& instanceKey,
         _PrimIndexPaths* primIndexPaths,
         Usd_InstanceChanges* changes,
         std::unordered_map<SdfPath, SdfPath, SdfPath::Hash> const &
-        prototypeToOldSourceIndexPath);
+        masterToOldSourceIndexPath);
 
     void _RemoveInstances(
         const Usd_InstanceKey& instanceKey,
         const _PrimIndexPaths& primIndexPaths,
         Usd_InstanceChanges* changes,
         std::unordered_map<SdfPath, SdfPath, SdfPath::Hash> *
-        prototypeToOldSourceIndexPath);
+        masterToOldSourceIndexPath);
 
-    void _RemovePrototypeIfNoInstances(
+    void _RemoveMasterIfNoInstances(
         const Usd_InstanceKey& instanceKey,
         Usd_InstanceChanges* changes);
 
-    bool _PrototypeUsesPrimIndexPath(
+    bool _MasterUsesPrimIndexPath(
         const SdfPath& primIndexPath,
-        std::vector<SdfPath>* prototypePaths = nullptr) const;
+        std::vector<SdfPath>* masterPaths = nullptr) const;
 
-    SdfPath _GetNextPrototypePath(const Usd_InstanceKey& key);
+    SdfPath _GetNextMasterPath(const Usd_InstanceKey& key);
     
 private:
     tbb::spin_mutex _mutex;
 
-    // Mapping from instance key <-> prototype prim path.
-    // This stores the path of the prototype prim that should be used
+    // Mapping from instance key <-> master prim path.
+    // This stores the path of the master prim that should be used
     // for all instanceable prim indexes with the given instance key.
     typedef TfHashMap<Usd_InstanceKey, SdfPath, boost::hash<Usd_InstanceKey> >
-        _InstanceKeyToPrototypeMap;
+        _InstanceKeyToMasterMap;
     typedef TfHashMap<SdfPath, Usd_InstanceKey, SdfPath::Hash>
-        _PrototypeToInstanceKeyMap;
-    _InstanceKeyToPrototypeMap _instanceKeyToPrototypeMap;
-    _PrototypeToInstanceKeyMap _prototypeToInstanceKeyMap;
+        _MasterToInstanceKeyMap;
+    _InstanceKeyToMasterMap _instanceKeyToMasterMap;
+    _MasterToInstanceKeyMap _masterToInstanceKeyMap;
 
-    // Mapping from instance prim index path <-> prototype prim path.
+    // Mapping from instance prim index path <-> master prim path.
     // This map stores which prim index serves as the source index
-    // for a given prototype prim.
-    typedef std::map<SdfPath, SdfPath> _SourcePrimIndexToPrototypeMap;
-    typedef std::map<SdfPath, SdfPath> _PrototypeToSourcePrimIndexMap;
-    _SourcePrimIndexToPrototypeMap _sourcePrimIndexToPrototypeMap;
-    _PrototypeToSourcePrimIndexMap _prototypeToSourcePrimIndexMap;
+    // for a given master prim.
+    typedef std::map<SdfPath, SdfPath> _SourcePrimIndexToMasterMap;
+    typedef std::map<SdfPath, SdfPath> _MasterToSourcePrimIndexMap;
+    _SourcePrimIndexToMasterMap _sourcePrimIndexToMasterMap;
+    _MasterToSourcePrimIndexMap _masterToSourcePrimIndexMap;
 
-    // Mapping from prototype prim path <-> list of instanceable prim indexes
+    // Mapping from master prim path <-> list of instanceable prim indexes
     // This map stores which instanceable prim indexes have been assigned to
-    // a prototype prim.
-    typedef std::map<SdfPath, _PrimIndexPaths> _PrototypeToPrimIndexesMap;
-    typedef std::map<SdfPath, SdfPath> _PrimIndexToPrototypeMap;
-    _PrototypeToPrimIndexesMap _prototypeToPrimIndexesMap;
-    _PrimIndexToPrototypeMap _primIndexToPrototypeMap;
+    // a master prim.
+    typedef std::map<SdfPath, _PrimIndexPaths> _MasterToPrimIndexesMap;
+    typedef std::map<SdfPath, SdfPath> _PrimIndexToMasterMap;
+    _MasterToPrimIndexesMap _masterToPrimIndexesMap;
+    _PrimIndexToMasterMap _primIndexToMasterMap;
 
     // Map from instance key -> list of prim index paths
     // These maps contain lists of pending changes and are the only containers 
@@ -293,10 +292,11 @@ private:
     _InstanceKeyToPrimIndexesMap _pendingAddedPrimIndexes;
     _InstanceKeyToPrimIndexesMap _pendingRemovedPrimIndexes;
 
-    // Index of last prototype prim created. Used to create
-    // prototype prim names.
-    size_t _lastPrototypeIndex;
+    // Index of last master prim created. Used to create
+    // master prim names.
+    size_t _lastMasterIndex;
 };
+
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

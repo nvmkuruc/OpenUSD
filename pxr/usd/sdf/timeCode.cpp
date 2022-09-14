@@ -30,7 +30,7 @@
 #include "pxr/base/vt/array.h"
 #include "pxr/base/vt/value.h"
 
-#include <ostream>
+#include <iostream>
 
 PXR_NAMESPACE_OPEN_SCOPE
 

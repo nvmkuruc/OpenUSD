@@ -36,7 +36,8 @@
 #include "pxr/base/tf/pathUtils.h"
 #include "pxr/base/tf/registryManager.h"
 #include "pxr/base/tf/staticData.h"
-#include <ostream>
+#include <boost/format.hpp>
+#include <iostream>
 
 using namespace boost::multi_index;
 using std::string;
@@ -181,8 +182,6 @@ Sdf_LayerRegistry::Find(
         foundLayer = FindByIdentifier(inputLayerPath);
     } else {
         ArResolver& resolver = ArGetResolver();
-
-#if AR_VERSION == 1
         const string layerPath = 
             resolver.ComputeNormalizedPath(inputLayerPath);
 
@@ -201,33 +200,17 @@ Sdf_LayerRegistry::Find(
         // yet, look up the layer using the normalized identifier.
         if (!foundLayer && !isRelativePath)
             foundLayer = FindByIdentifier(layerPath);
-#else
-        const string& layerPath = inputLayerPath;
-
-        // If the layer path depends on context there may be multiple
-        // layers with the same identifier but different resolved paths.
-        // In this case we need to look up the layer by resolved path.
-        string assetPath, args;
-        Sdf_SplitIdentifier(inputLayerPath, &assetPath, &args);
-        if (!resolver.IsContextDependentPath(assetPath)) {
-            foundLayer = FindByIdentifier(layerPath);
-        }
-#endif
 
         // If the layer path is in repository form and we haven't yet
         // found the layer via the identifier, attempt to look up the
         // layer by repository path.
-#if AR_VERSION == 1
         const bool isRepositoryPath = resolver.IsRepositoryPath(layerPath);
-#else
-        const bool isRepositoryPath = resolver.IsRepositoryPath(assetPath);
-#endif
         if (!foundLayer && isRepositoryPath)
             foundLayer = FindByRepositoryPath(layerPath);
 
-        // If the layer has not yet been found, this may be some other
-        // form of path that requires path resolution and lookup in the
-        // real path index in order to locate.
+        // If the layer has not yet been found, this may be a search path
+        // or some other form of path that requires path resolution and
+        // lookup in the real path index in order to locate.
         if (!foundLayer)
             foundLayer = FindByRealPath(layerPath, resolvedPath);
     }
@@ -303,37 +286,14 @@ Sdf_LayerRegistry::FindByRealPath(
     if (!Sdf_SplitIdentifier(layerPath, &searchPath, &arguments))
         return foundLayer;
 
-    // Ignore errors reported by Sdf_ComputeFilePath. These errors mean we
-    // weren't able to compute a real path from the given layerPath. However,
-    // that shouldn't be an error for this function, it just means there was
-    // nothing to find at that layerPath.
-    {
-        TfErrorMark m;
-        searchPath = !resolvedPath.empty() ?
-            resolvedPath : Sdf_ComputeFilePath(searchPath);
-
-        if (!m.IsClean()) {
-            std::vector<std::string> errors;
-            for (const TfError& e : m) {
-                errors.push_back(e.GetCommentary());
-            }
-
-            TF_DEBUG(SDF_LAYER).Msg(
-                "Sdf_LayerRegistry::FindByRealPath('%s'): "
-                "Failed to compute real path: %s\n",
-                layerPath.c_str(), TfStringJoin(errors, ", ").c_str());
-
-            m.Clear();
-        }
-    }
+    searchPath = !resolvedPath.empty() ?
+        resolvedPath : Sdf_ComputeFilePath(searchPath);
     searchPath = Sdf_CreateIdentifier(searchPath, arguments);
 
-#if AR_VERSION == 1
     // Avoid ambiguity by converting the path to a platform dependent
     // path.  (On Windows this converts slashes to backslashes.)  The
     // real paths stored in the registry are in platform dependent form.
     searchPath = TfAbsPath(searchPath);
-#endif
 
     const _LayersByRealPath& byRealPath = _layers.get<by_real_path>();
     _LayersByRealPath::const_iterator realPathIt =
@@ -370,28 +330,28 @@ operator<<(std::ostream& ostr, const Sdf_LayerRegistry& registry)
     SdfLayerHandleSet layers = registry.GetLayers();
     TF_FOR_ALL(i, layers) {
         if (SdfLayerHandle layer = *i) {
-            ostr << TfStringPrintf(
-                "%p[ref=%zu]:\n"
-                "    format           = %s\n"
-                "    identifier       = '%s'\n"
-                "    repositoryPath   = '%s'\n"
-                "    realPath         = '%s'\n"
-                "    version          = '%s'\n"
-                "    assetInfo        = \n'%s'\n"
-                "    muted            = %s\n"
-                "    anonymous        = %s\n"
-                "\n"
-                , layer.GetUniqueIdentifier()
-                , layer->GetCurrentCount()
-                , layer->GetFileFormat()->GetFormatId().GetText()
-                , layer->GetIdentifier().c_str()
-                , layer->GetRepositoryPath().c_str()
-                , layer->GetRealPath().c_str()
-                , layer->GetVersion().c_str()
-                , TfStringify(layer->GetAssetInfo()).c_str()
-                , (layer->IsMuted()          ? "True" : "False")
-                , (layer->IsAnonymous()      ? "True" : "False")
-                );
+            ostr << boost::format(
+                "%1%[ref=%2%]:\n"
+                "    format           = %3%\n"
+                "    identifier       = '%4%'\n"
+                "    repositoryPath   = '%5%'\n"
+                "    realPath         = '%6%'\n"
+                "    version          = '%7%'\n"
+                "    assetInfo        = \n'%8%'\n"
+                "    muted            = %9%\n"
+                "    anonymous        = %10%\n"
+                "\n")
+                % layer.GetUniqueIdentifier()
+                % layer->GetCurrentCount()
+                % layer->GetFileFormat()->GetFormatId()
+                % layer->GetIdentifier()
+                % layer->GetRepositoryPath()
+                % layer->GetRealPath()
+                % layer->GetVersion()
+                % layer->GetAssetInfo()
+                % (layer->IsMuted()          ? "True" : "False")
+                % (layer->IsAnonymous()      ? "True" : "False")
+                ;
         }
     }
 

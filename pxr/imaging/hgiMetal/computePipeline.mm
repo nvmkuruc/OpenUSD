@@ -48,7 +48,7 @@ HgiMetalComputePipeline::HgiMetalComputePipeline(
     HgiMetalShaderProgram const *metalProgram =
         static_cast<HgiMetalShaderProgram*>(_descriptor.shaderProgram.Get());
     
-    stateDesc.computeFunction = metalProgram->GetComputeFunction();
+    stateDesc.computeFunction = metalProgram->GetVertexFunction();
     
     NSError *error = NULL;
     _computePipelineState = [hgi->GetPrimaryDevice()
@@ -62,6 +62,9 @@ HgiMetalComputePipeline::HgiMetalComputePipeline(
         NSString *err = [error localizedDescription];
         TF_WARN("Failed to create compute pipeline state, error %s",
             [err UTF8String]);
+        if (error) {
+            [error release];
+        }
     }
 }
 

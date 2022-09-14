@@ -22,13 +22,15 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/imaging/hgi/blitCmds.h"
-#include "pxr/imaging/hgi/blitCmdsOps.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-HgiBlitCmds::HgiBlitCmds() = default;
+HgiBlitCmds::HgiBlitCmds()
+{
+}
 
-HgiBlitCmds::~HgiBlitCmds() = default;
-
+HgiBlitCmds::~HgiBlitCmds()
+{
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE

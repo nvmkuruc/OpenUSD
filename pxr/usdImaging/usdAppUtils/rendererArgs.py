@@ -22,33 +22,66 @@
 # language governing permissions and limitations under the Apache License.
 #
 
-HYDRA_DISABLED_OPTION_STRING = "HydraDisabled"
-
-def GetAllPluginArguments():
+class RendererPlugins(object):
     """
-    Returns argument strings for all the renderer plugins available.
+    An enum-like container of the available Hydra renderer plugins.
     """
 
-    from pxr import UsdImagingGL
-    return [ UsdImagingGL.Engine.GetRendererDisplayName(pluginId) for
-                pluginId in UsdImagingGL.Engine.GetRendererPlugins() ]
+    class _RendererPlugin(object):
+        """
+        Class which represents a Hydra renderer plugin. Each one has a plugin
+        identifier and a display name.
+        """
 
+        def __init__(self, pluginId, displayName):
+            self._pluginId = pluginId
+            self._displayName = displayName
 
-def GetPluginIdFromArgument(argumentString):
-    """
-    Returns plugin id, if found, for the passed in argument string.
+        def __repr__(self):
+            return self.displayName
 
-    Valid argument strings are returned by GetAllPluginArguments().
-    """
+        @property
+        def id(self):
+            return self._pluginId
 
-    from pxr import UsdImagingGL
-    for p in UsdImagingGL.Engine.GetRendererPlugins():
-        if argumentString == UsdImagingGL.Engine.GetRendererDisplayName(p):
-            return p
-    return None
+        @property
+        def displayName(self):
+            return self._displayName
 
+    @classmethod
+    def allPlugins(cls):
+        """
+        Get a tuple of all available renderer plugins.
+        """
+        if not hasattr(cls, '_allPlugins'):
+            from pxr import UsdImagingGL
+            cls._allPlugins = tuple(cls._RendererPlugin(pluginId,
+                    UsdImagingGL.Engine.GetRendererDisplayName(pluginId))
+                for pluginId in UsdImagingGL.Engine.GetRendererPlugins())
 
-def AddCmdlineArgs(argsParser, altHelpText='', allowHydraDisabled=False):
+        return cls._allPlugins
+
+    @classmethod
+    def fromId(cls, pluginId):
+        """
+        Get a renderer plugin from its identifier.
+        """
+        matches = [plugin for plugin in cls.allPlugins() if plugin.id == pluginId]
+        if len(matches) == 0:
+            raise ValueError("No renderer plugin with id '{}'".format(pluginId))
+        return matches[0]
+
+    @classmethod
+    def fromDisplayName(cls, displayName):
+        """
+        Get a renderer plugin from its display name.
+        """
+        matches = [plugin for plugin in cls.allPlugins() if plugin.displayName == displayName]
+        if len(matches) == 0:
+            raise ValueError("No renderer plugin with display name '{}'".format(displayName))
+        return matches[0]
+
+def AddCmdlineArgs(argsParser, altHelpText=''):
     """
     Adds Hydra renderer-related command line arguments to argsParser.
 
@@ -62,11 +95,8 @@ def AddCmdlineArgs(argsParser, altHelpText='', allowHydraDisabled=False):
         helpText = (
             'Hydra renderer plugin to use when generating images')
 
-    renderers = GetAllPluginArguments()
-    if allowHydraDisabled:
-        renderers.append(HYDRA_DISABLED_OPTION_STRING)
-
     argsParser.add_argument('--renderer', '-r', action='store',
+        type=RendererPlugins.fromDisplayName,
         dest='rendererPlugin',
-        choices=renderers,
+        choices=[p for p in RendererPlugins.allPlugins()],
         help=helpText)

@@ -97,9 +97,8 @@ SdfAttributeSpec::New(
             layer->GetSchema().FindType(typeName.GetAsToken().GetString());
         if (!typeInSchema) {
             TF_CODING_ERROR(
-                "Cannot create attribute spec <%s> with type '%s' not "
-                "supported by schema",
-                attrPath.GetText(), typeName.GetAsToken().GetText());
+                "Cannot create attribute spec <%s> with invalid type",
+                attrPath.GetText());
             return result;
         }
     }

@@ -59,11 +59,6 @@ public:
     USDIMAGING_API
     bool IsSupported(UsdImagingIndexProxy const* index) const override;
 
-    USDIMAGING_API
-    HdDirtyBits ProcessPropertyChange(UsdPrim const& prim,
-                                      SdfPath const& cachePath,
-                                      TfToken const& propertyName);
-
     // ---------------------------------------------------------------------- //
     /// \name Parallel Setup and Resolve
     // ---------------------------------------------------------------------- //
@@ -82,20 +77,22 @@ public:
         // nv end
             const override;
 
-    // ---------------------------------------------------------------------- //
-    /// \name Data access
-    // ---------------------------------------------------------------------- //
-
+    /// Thread Safe.
     USDIMAGING_API
-    VtValue GetTopology(UsdPrim const& prim,
-                        SdfPath const& cachePath,
-                        UsdTimeCode time) const override;
+    void UpdateForTime(
+        UsdPrim const& prim,
+        SdfPath const& cachePath, 
+        UsdTimeCode time,
+        HdDirtyBits requestedBits,
+        UsdImagingInstancerContext const* instancerContext = nullptr) 
+            const override;
 
     // Override the implemetation in GprimAdapter since we don't fetch the
     // points attribute for implicit primitives.
     USDIMAGING_API
     VtValue GetPoints(
         UsdPrim const& prim,
+        SdfPath const& cachePath,
         UsdTimeCode time) const override;
 
     USDIMAGING_API
@@ -104,6 +101,13 @@ public:
     
     USDIMAGING_API
     static VtValue GetMeshTopology();
+
+    // #nv begin #clean-property-invalidation
+    USDIMAGING_API
+    virtual HdDirtyBits ProcessPropertyChange(UsdPrim const& prim,
+        SdfPath const& cachePath,
+        TfToken const& propertyName) override;
+    // nv end
 };
 
 

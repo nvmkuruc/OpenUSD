@@ -9,9 +9,15 @@ if (NOT ${PXR_BUILD_GPU_SUPPORT} OR NOT ${PXR_ENABLE_GL_SUPPORT})
     return()
 endif()
 
+if (OPENSUBDIV_HAS_GLSL_TRANSFORM_FEEDBACK)
+    add_definitions(-DOPENSUBDIV_HAS_GLSL_TRANSFORM_FEEDBACK)
+endif()
+if (OPENSUBDIV_HAS_GLSL_COMPUTE)
+    add_definitions(-DOPENSUBDIV_HAS_GLSL_COMPUTE)
+endif()
+
 set(optionalLibs "")
 set(optionalIncludeDirs "")
-set(optionalPublicClasses "")
 set(optionalPrivateClasses "")
 if (${PXR_ENABLE_MATERIALX_SUPPORT})
     list(APPEND optionalLibs
@@ -27,11 +33,6 @@ if (${PXR_ENABLE_MATERIALX_SUPPORT})
          materialXShaderGen
     )
 endif()
-if (PXR_ENABLE_PTEX_SUPPORT)
-    list(APPEND optionalLibs ${PTEX_LIBRARY})
-    list(APPEND optionalIncludeDirs ${PTEX_INCLUDE_DIR})
-    list(APPEND optionalPublicClasses ptexMipmapTextureLoader)
-endif()
 
 pxr_library(hdSt
     LIBRARIES
@@ -40,22 +41,24 @@ pxr_library(hdSt
         glf
         hd
         hgiGL
-        hgiInterop
         sdr
         tf
         trace
+        ${GLEW_LIBRARY}
         ${OPENSUBDIV_LIBRARIES}
         ${optionalLibs}
 
     INCLUDE_DIRS
+        ${GLEW_INCLUDE_DIR}
         ${OPENSUBDIV_INCLUDE_DIR}
         ${optionalIncludeDirs}
 
     PUBLIC_CLASSES
         basisCurves
-        bufferArrayRange
-        bufferResource
+        bufferArrayRangeGL
+        bufferResourceGL
         commandBuffer
+        computeShader
         copyComputation
         debugCodes
         dispatchBuffer
@@ -63,23 +66,24 @@ pxr_library(hdSt
         drawItem
         drawItemInstance
         drawTarget
+        drawTargetAttachmentDesc
+        drawTargetAttachmentDescArray
         drawTargetRenderPassState
         dynamicUvTextureObject
         extComputation
         extCompGpuComputation
+        extCompGpuComputationBufferSource
         extCompGpuComputationResource
         extCompGpuPrimvarBufferSource
         fallbackLightingShader
         field
-        fieldSubtextureIdentifier
         flatNormals
         geometricShader
         glConversions
         glslfxShader
         glslProgram
-        bufferUtils
+        glUtils
         hgiConversions
-        hioConversions
         imageShaderRenderPass
         instancer
         interleavedMemoryManager
@@ -88,69 +92,65 @@ pxr_library(hdSt
         material
         materialNetwork
         mesh
+        mixinShader
         package
+        persistentBuffer
         points
-        primUtils
-        ptexTextureObject
         renderBuffer
         renderDelegate
-        renderParam
         renderPass
         renderPassShader
         renderPassState
         resourceRegistry
+        rprimUtils
         samplerObject
         samplerObjectRegistry
         shaderCode
         simpleLightingShader
         smoothNormals
-        stagingBuffer
         subtextureIdentifier
+        surfaceShader
+        texture
         textureBinder
-        textureCpuData
         textureHandle
         textureHandleRegistry
         textureIdentifier
         textureObject
         textureObjectRegistry
-        textureUtils
+        textureResource
+        textureResourceHandle
         tokens
-        udimTextureObject
         unitTestGLDrawing
         vboMemoryManager
         vboSimpleMemoryManager
         volume
-        ${optionalPublicClasses}
 
     PUBLIC_HEADERS
         api.h
-        dynamicUvTextureImplementation.h
 
     PRIVATE_CLASSES
-        assetUvTextureCpuData
         basisCurvesComputations
         basisCurvesShaderKey
         basisCurvesTopology
         codeGen
         cullingShaderKey
         drawBatch
-        drawItemsCache
-        extCompComputeShader
-        fieldTextureCpuData
+        drawTargetTextureResource
         imageShaderShaderKey
+        immediateDrawBatch
         indirectDrawBatch
-        materialNetworkShader
+        materialBufferSourceAndTextureHelper
         materialParam
         meshShaderKey
         meshTopology 
-        pipelineDrawBatch
         pointsShaderKey
         quadrangulate
         resourceBinder
-        resourceLayout
         shaderKey
         subdivision
+        subdivision3
         triangulate
+        unitTestDelegate
         unitTestHelper
         volumeShader
         volumeShaderKey
@@ -164,13 +164,14 @@ pxr_library(hdSt
         shaders/edgeId.glslfx
         shaders/fallbackLighting.glslfx
         shaders/fallbackLightingShader.glslfx
-        shaders/fallbackMaterialNetwork.glslfx
+        shaders/fallbackSurface.glslfx
         shaders/fallbackVolume.glslfx
         shaders/frustumCull.glslfx
         shaders/imageShader.glslfx
         shaders/instancing.glslfx
+        shaders/lighting.glslfx
+        shaders/lightingIntegrationShader.glslfx
         shaders/mesh.glslfx
-        shaders/meshFaceCull.glslfx
         shaders/meshNormal.glslfx
         shaders/meshWire.glslfx
         shaders/points.glslfx
@@ -183,9 +184,6 @@ pxr_library(hdSt
         shaders/visibility.glslfx
         shaders/volume.glslfx
         textures/fallbackBlackDomeLight.png
-
-    DOXYGEN_FILES
-        overview.dox
 )
 
 if (X11_FOUND OR APPLE)

@@ -38,25 +38,30 @@ def _setLights(appController, ambientChecked, domeChecked):
 
     appController._stageView.updateGL()
 
-# Test with only the camera light.
+# Take a shot of the viewport and save it to a file.
+def _takeShot(appController, fileName):
+    viewportShot = appController.GrabViewportShot()
+    viewportShot.save(fileName, "PNG")
+
+# Test the ambient light with key/fill/back lights off.
 def _testCameraLight(appController):
     _setLights(appController, True, False)
-    appController._takeShot("camera.png")
+    _takeShot(appController, "camera.png")
 
 # Test with all lights off.
 def _testNoLights(appController):
     _setLights(appController, False, False)
-    appController._takeShot("noLights.png")
+    _takeShot(appController, "noLights.png")
 
 # Test with only the dome light.
 def _testDomeLight(appController):
     _setLights(appController, False, True)
-    appController._takeShot("dome.png")
+    _takeShot(appController, "dome.png")
 
-# Test with both the dome and camera lights.
+# Test with only the dome and camera lights.
 def _testBothLights(appController):
     _setLights(appController, True, True)
-    appController._takeShot("bothLights.png")
+    _takeShot(appController, "bothLights.png")
 
 # Test that lights work properly in usdview.
 def testUsdviewInputFunction(appController):

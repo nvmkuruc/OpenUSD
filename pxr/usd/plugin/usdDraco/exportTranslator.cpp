@@ -31,10 +31,11 @@
 #include "pxr/usd/usdGeom/mesh.h"
 #include "pxr/base/vt/types.h"
 
-#include <draco/core/macros.h>
 #include <draco/mesh/mesh.h>
 
+
 PXR_NAMESPACE_OPEN_SCOPE
+
 
 bool UsdDracoExportTranslator::Translate(
         const UsdGeomMesh &usdMesh,
@@ -227,9 +228,11 @@ bool UsdDracoExportTranslator::_CheckData() const {
     }
     for (size_t i = 0; i < _genericAttributes.size(); i++) {
         if (!_CheckPrimvarData(*_genericAttributes[i])) {
-            TF_RUNTIME_ERROR(
-                "Primvar %s index is inconsistent.",
-                _genericAttributes[i]->GetDescriptor().GetName().GetText());
+            std::string message("Primvar ");
+            message +=
+                _genericAttributes[i]->GetDescriptor().GetName().GetText();
+            message += " index is inconsistent.";
+            TF_RUNTIME_ERROR(message.c_str());
             return false;
         }
     }
@@ -364,14 +367,9 @@ void UsdDracoExportTranslator::_SetPointMapsToMesh() {
 }
 
 void UsdDracoExportTranslator::_Deduplicate() const {
-#ifdef DRACO_ATTRIBUTE_VALUES_DEDUPLICATION_SUPPORTED
     if (!_posOrder.HasPointAttribute())
         _dracoMesh->DeduplicateAttributeValues();
-#endif
-
-#ifdef DRACO_ATTRIBUTE_INDICES_DEDUPLICATION_SUPPORTED
     _dracoMesh->DeduplicatePointIds();
-#endif
 }
 
 // Polygon reconstruction attribute is associated with every triangle corner and
@@ -411,5 +409,6 @@ inline bool UsdDracoExportTranslator::_IsNewEdge(
     // opposite of corner 1.
     return triIndex != triCount - 1 && triCorner == 1;
 }
+
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -28,7 +28,7 @@
 
 #include "pxr/pxr.h"
 #include "pxr/usd/usdVol/api.h"
-#include "pxr/usd/usdGeom/xformable.h"
+#include "pxr/usd/usdGeom/boundable.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
 
@@ -53,20 +53,20 @@ class SdfAssetPath;
 ///
 /// Base class for field primitives.
 ///
-class UsdVolFieldBase : public UsdGeomXformable
+class UsdVolFieldBase : public UsdGeomBoundable
 {
 public:
     /// Compile time constant representing what kind of schema this class is.
     ///
-    /// \sa UsdSchemaKind
-    static const UsdSchemaKind schemaKind = UsdSchemaKind::AbstractTyped;
+    /// \sa UsdSchemaType
+    static const UsdSchemaType schemaType = UsdSchemaType::AbstractTyped;
 
     /// Construct a UsdVolFieldBase on UsdPrim \p prim .
     /// Equivalent to UsdVolFieldBase::Get(prim.GetStage(), prim.GetPath())
     /// for a \em valid \p prim, but will not immediately throw an error for
     /// an invalid \p prim
     explicit UsdVolFieldBase(const UsdPrim& prim=UsdPrim())
-        : UsdGeomXformable(prim)
+        : UsdGeomBoundable(prim)
     {
     }
 
@@ -74,7 +74,7 @@ public:
     /// Should be preferred over UsdVolFieldBase(schemaObj.GetPrim()),
     /// as it preserves SchemaBase state.
     explicit UsdVolFieldBase(const UsdSchemaBase& schemaObj)
-        : UsdGeomXformable(schemaObj)
+        : UsdGeomBoundable(schemaObj)
     {
     }
 
@@ -104,11 +104,11 @@ public:
 
 
 protected:
-    /// Returns the kind of schema this class belongs to.
+    /// Returns the type of schema this class belongs to.
     ///
-    /// \sa UsdSchemaKind
+    /// \sa UsdSchemaType
     USDVOL_API
-    UsdSchemaKind _GetSchemaKind() const override;
+    UsdSchemaType _GetSchemaType() const override;
 
 private:
     // needs to invoke _GetStaticTfType.

@@ -21,84 +21,76 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/imaging/glf/glew.h"
+#include "pxr/imaging/glf/contextCaps.h"
+
 #include "pxr/imaging/hdSt/dispatchBuffer.h"
-#include "pxr/imaging/hdSt/resourceRegistry.h"
-#include "pxr/imaging/hdSt/tokens.h"
 #include "pxr/imaging/hd/perfLog.h"
 
 #include "pxr/imaging/hf/perfLog.h"
 
-#include "pxr/imaging/hgi/blitCmds.h"
-#include "pxr/imaging/hgi/blitCmdsOps.h"
-#include "pxr/imaging/hgi/buffer.h"
 #include "pxr/imaging/hgi/hgi.h"
+#include "pxr/imaging/hgi/buffer.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-class Hd_DispatchBufferArrayRange : public HdStBufferArrayRange
-{
+
+class Hd_DispatchBufferArrayRange : public HdStBufferArrayRangeGL {
 public:
     /// Constructor.
-    Hd_DispatchBufferArrayRange(
-        HdStResourceRegistry* resourceRegistry, HdStDispatchBuffer *buffer)
-      : HdStBufferArrayRange(resourceRegistry)
-      , _buffer(buffer) {
+    Hd_DispatchBufferArrayRange(HdStDispatchBuffer *buffer) :
+        _buffer(buffer) {
     }
 
     /// Returns true if this range is valid
-    bool IsValid() const override {
+    virtual bool IsValid() const {
         return true;
     }
 
     /// Returns true is the range has been assigned to a buffer
-    bool IsAssigned() const override {
-        return _buffer != nullptr;
+    virtual bool IsAssigned() const {
+        return (_buffer != nullptr);
     }
 
     /// Dispatch buffer array range is always mutable
-    bool IsImmutable() const override {
-        return false;
-    }
-
-    /// Dispatch buffer array range does not require staging
-    bool RequiresStaging() const override {
+    virtual bool IsImmutable() const {
         return false;
     }
 
     /// Resize memory area for this range. Returns true if it causes container
     /// buffer reallocation.
-    bool Resize(int numElements) override {
+    virtual bool Resize(int numElements) {
         TF_CODING_ERROR("Hd_DispatchBufferArrayRange doesn't support this operation");
         return false;
     }
 
     /// Copy source data into buffer
-    void CopyData(HdBufferSourceSharedPtr const &bufferSource) override {
+    virtual void CopyData(HdBufferSourceSharedPtr const &bufferSource) {
         TF_CODING_ERROR("Hd_DispatchBufferArrayRange doesn't support this operation");
     }
 
     /// Read back the buffer content
-    VtValue ReadData(TfToken const &name) const override {
+    virtual VtValue ReadData(TfToken const &name) const {
         TF_CODING_ERROR("Hd_DispatchBufferArrayRange doesn't support this operation");
         return VtValue();
     }
 
-    /// Returns the offset at which this range begins in the underlying buffer
+    /// Returns the offset at which this range begins in the underlying buffer 
     /// array in terms of elements.
-    int GetElementOffset() const override {
+    virtual int GetElementOffset() const {
         TF_CODING_ERROR("Hd_DispatchBufferArrayRange doesn't support this operation");
         return 0;
     }
 
     /// Returns the byte offset at which this range begins in the underlying
     /// buffer array for the given resource.
-    int GetByteOffset(TfToken const& resourceName) const override {
+    virtual int GetByteOffset(TfToken const& resourceName) const {
         TF_CODING_ERROR("Hd_DispatchBufferArrayRange doesn't support this operation");
         return 0;
     }
 
     /// Returns the number of elements allocated
-    size_t GetNumElements() const override {
+    virtual size_t GetNumElements() const {
         TF_CODING_ERROR("Hd_DispatchBufferArrayRange doesn't support this operation");
         return 0;
     }
@@ -110,50 +102,50 @@ public:
     }
 
     /// Returns the version of the buffer array.
-    size_t GetVersion() const override {
+    virtual size_t GetVersion() const {
         TF_CODING_ERROR("Hd_DispatchBufferArrayRange doesn't support this operation");
         return 0;
     }
 
     /// Increment the version of the buffer array.
-    void IncrementVersion() override {
+    virtual void IncrementVersion() {
         TF_CODING_ERROR("Hd_DispatchBufferArrayRange doesn't support this operation");
     }
 
     /// Returns the max number of elements
-    size_t GetMaxNumElements() const override {
+    virtual size_t GetMaxNumElements() const {
         TF_CODING_ERROR("Hd_DispatchBufferArrayRange doesn't support this operation");
         return 1;
     }
 
     /// Returns the usage hint from the underlying buffer array
-    HdBufferArrayUsageHint GetUsageHint() const override {
+    virtual HdBufferArrayUsageHint GetUsageHint() const override {
         return _buffer->GetUsageHint();
     }
 
     /// Returns the GPU resource. If the buffer array contains more than one
     /// resource, this method raises a coding error.
-    HdStBufferResourceSharedPtr GetResource() const override {
+    virtual HdStBufferResourceGLSharedPtr GetResource() const {
         return _buffer->GetResource();
     }
 
     /// Returns the named GPU resource.
-    HdStBufferResourceSharedPtr GetResource(TfToken const& name) override {
+    virtual HdStBufferResourceGLSharedPtr GetResource(TfToken const& name) {
         return _buffer->GetResource(name);
     }
 
     /// Returns the list of all named GPU resources for this bufferArrayRange.
-    HdStBufferResourceNamedList const& GetResources() const override {
+    virtual HdStBufferResourceGLNamedList const& GetResources() const {
         return _buffer->GetResources();
     }
 
     /// Sets the buffer array associated with this buffer;
-    void SetBufferArray(HdBufferArray *bufferArray) override {
+    virtual void SetBufferArray(HdBufferArray *bufferArray) {
         TF_CODING_ERROR("Hd_DispatchBufferArrayRange doesn't support this operation");
     }
 
     /// Debug dump
-    void DebugDump(std::ostream &out) const override {
+    virtual void DebugDump(std::ostream &out) const {
     }
 
     /// Make this range invalid
@@ -163,7 +155,7 @@ public:
 
 protected:
     /// Returns the aggregation container
-    const void *_GetAggregation() const override {
+    virtual const void *_GetAggregation() const {
         return this;
     }
 
@@ -172,80 +164,79 @@ private:
 };
 
 
-HdStDispatchBuffer::HdStDispatchBuffer(
-    HdStResourceRegistry* resourceRegistry,
-    TfToken const &role,
-    int count,
-    unsigned int commandNumUints)
+HdStDispatchBuffer::HdStDispatchBuffer(Hgi* hgi, TfToken const &role, int count,
+                                   unsigned int commandNumUints)
  : HdBufferArray(role, TfToken(), HdBufferArrayUsageHint())
- , _resourceRegistry(resourceRegistry)
+ , _hgi(hgi)
  , _count(count)
  , _commandNumUints(commandNumUints)
 {
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
 
-    size_t stride = commandNumUints * sizeof(uint32_t);
+    size_t stride = commandNumUints * sizeof(GLuint);
     size_t dataSize = count * stride;
     
     // just allocate uninitialized
     HgiBufferDesc bufDesc;
-    bufDesc.usage = HgiBufferUsageUniform | HgiBufferUsageVertex;
+    bufDesc.usage = HgiBufferUsageUniform;
     bufDesc.byteSize = dataSize;
-    bufDesc.vertexStride = stride;
-    HgiBufferHandle buffer = _resourceRegistry->GetHgi()->CreateBuffer(bufDesc);
+    HgiBufferHandle newId = _hgi->CreateBuffer(bufDesc);
 
     // monolithic resource
-    _entireResource = std::make_shared<HdStBufferResource>(
-        role, HdTupleType{HdTypeInt32, 1}, /*offset=*/0, stride);
-    _entireResource->SetAllocation(buffer, dataSize);
+    _entireResource = HdStBufferResourceGLSharedPtr(
+        new HdStBufferResourceGL(
+            role, {HdTypeInt32, 1},
+            /*offset=*/0, stride));
+    _entireResource->SetAllocation(newId, dataSize);
 
     // create a buffer array range, which aggregates all views
     // (will be added by AddBufferResourceView)
-    _bar = std::make_shared<Hd_DispatchBufferArrayRange>(
-        resourceRegistry, this);
+    _bar = HdStBufferArrayRangeGLSharedPtr(new Hd_DispatchBufferArrayRange(this));
 }
 
 HdStDispatchBuffer::~HdStDispatchBuffer()
 {
-    HgiBufferHandle& buffer = _entireResource->GetHandle();
-    _resourceRegistry->GetHgi()->DestroyBuffer(&buffer);
+    HgiBufferHandle& id = _entireResource->GetId();
+    _hgi->DestroyBuffer(&id);
     _entireResource->SetAllocation(HgiBufferHandle(), 0);
 }
 
 void
-HdStDispatchBuffer::CopyData(std::vector<uint32_t> const &data)
+HdStDispatchBuffer::CopyData(std::vector<GLuint> const &data)
 {
-    if (!TF_VERIFY(data.size()*sizeof(uint32_t) == static_cast<size_t>(_entireResource->GetSize())))
+    if (!TF_VERIFY(data.size()*sizeof(GLuint) == static_cast<size_t>(_entireResource->GetSize())))
         return;
 
-    HD_PERF_COUNTER_INCR(HdStPerfTokens->copyBufferCpuToGpu);
+    GlfContextCaps const &caps = GlfContextCaps::GetInstance();
 
-    // Use blit op to copy over the data.
-    Hgi* hgi = _resourceRegistry->GetHgi();
-    HgiBlitCmdsUniquePtr blitCmds = hgi->CreateBlitCmds();
-    HgiBufferCpuToGpuOp blitOp;
-    blitOp.byteSize = _entireResource->GetSize();
-    blitOp.cpuSourceBuffer = data.data();
-    blitOp.sourceByteOffset = 0;
-    blitOp.gpuDestinationBuffer = _entireResource->GetHandle();
-    blitOp.destinationByteOffset = 0;
-    blitCmds->CopyBufferCpuToGpu(blitOp);
-    hgi->SubmitCmds(blitCmds.get());
+    if (caps.directStateAccessEnabled) {
+        glNamedBufferSubData(_entireResource->GetId()->GetRawResource(),
+                             0,
+                             _entireResource->GetSize(),
+                             &data[0]);
+    } else {
+        glBindBuffer(GL_ARRAY_BUFFER,
+                     _entireResource->GetId()->GetRawResource());
+        glBufferSubData(GL_ARRAY_BUFFER, 0,
+                        _entireResource->GetSize(),
+                        &data[0]);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
 }
 
 void
 HdStDispatchBuffer::AddBufferResourceView(
     TfToken const &name, HdTupleType tupleType, int offset)
 {
-    size_t stride = _commandNumUints * sizeof(uint32_t);
+    size_t stride = _commandNumUints * sizeof(GLuint);
 
     // add a binding view (resource binder iterates and automatically binds)
-    HdStBufferResourceSharedPtr view =
+    HdStBufferResourceGLSharedPtr view =
         _AddResource(name, tupleType, offset, stride);
 
     // this is just a view, not consuming memory
-    view->SetAllocation(_entireResource->GetHandle(), /*size=*/0);
+    view->SetAllocation(_entireResource->GetId(), /*size=*/0);
 }
 
 
@@ -270,21 +261,20 @@ HdStDispatchBuffer::DebugDump(std::ostream &out) const
     /*nothing*/
 }
 
-HdStBufferResourceSharedPtr
+HdStBufferResourceGLSharedPtr
 HdStDispatchBuffer::GetResource() const
 {
     HD_TRACE_FUNCTION();
 
-    if (_resourceList.empty()) return HdStBufferResourceSharedPtr();
+    if (_resourceList.empty()) return HdStBufferResourceGLSharedPtr();
 
     if (TfDebug::IsEnabled(HD_SAFE_MODE)) {
         // make sure this buffer array has only one resource.
-        HgiBufferHandle const& buffer =
-                _resourceList.begin()->second->GetHandle();
+        HgiBufferHandle const& id = _resourceList.begin()->second->GetId();
         TF_FOR_ALL (it, _resourceList) {
-            if (it->second->GetHandle() != buffer) {
+            if (it->second->GetId() != id) {
                 TF_CODING_ERROR("GetResource(void) called on"
-                                "HdBufferArray having multiple GPU resources");
+                                "HdBufferArray having multiple GL resources");
             }
         }
     }
@@ -293,21 +283,21 @@ HdStDispatchBuffer::GetResource() const
     return _resourceList.begin()->second;
 }
 
-HdStBufferResourceSharedPtr
+HdStBufferResourceGLSharedPtr
 HdStDispatchBuffer::GetResource(TfToken const& name)
 {
     HD_TRACE_FUNCTION();
 
     // linear search.
     // The number of buffer resources should be small (<10 or so).
-    for (HdStBufferResourceNamedList::iterator it = _resourceList.begin();
+    for (HdStBufferResourceGLNamedList::iterator it = _resourceList.begin();
          it != _resourceList.end(); ++it) {
         if (it->first == name) return it->second;
     }
-    return HdStBufferResourceSharedPtr();
+    return HdStBufferResourceGLSharedPtr();
 }
 
-HdStBufferResourceSharedPtr
+HdStBufferResourceGLSharedPtr
 HdStDispatchBuffer::_AddResource(TfToken const& name,
                                  HdTupleType tupleType,
                                  int offset,
@@ -317,15 +307,15 @@ HdStDispatchBuffer::_AddResource(TfToken const& name,
 
     if (TfDebug::IsEnabled(HD_SAFE_MODE)) {
         // duplication check
-        HdStBufferResourceSharedPtr bufferRes = GetResource(name);
+        HdStBufferResourceGLSharedPtr bufferRes = GetResource(name);
         if (!TF_VERIFY(!bufferRes)) {
             return bufferRes;
         }
     }
 
-    HdStBufferResourceSharedPtr bufferRes = 
-        std::make_shared<HdStBufferResource>(
-            GetRole(), tupleType, offset, stride);
+    HdStBufferResourceGLSharedPtr bufferRes = HdStBufferResourceGLSharedPtr(
+        new HdStBufferResourceGL(GetRole(), tupleType,
+                                 offset, stride));
 
     _resourceList.emplace_back(name, bufferRes);
     return bufferRes;

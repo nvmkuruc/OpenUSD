@@ -23,15 +23,21 @@
 //
 #include "pxr/imaging/hdx/colorizeSelectionTask.h"
 
+#include "pxr/imaging/hd/perfLog.h"
 #include "pxr/imaging/hd/renderBuffer.h"
+#include "pxr/imaging/hd/tokens.h"
 
-#include "pxr/imaging/hdx/fullscreenShader.h"
 #include "pxr/imaging/hdx/hgiConversions.h"
 #include "pxr/imaging/hdx/package.h"
 #include "pxr/imaging/hdx/selectionTracker.h"
 #include "pxr/imaging/hdx/tokens.h"
 
+#include "pxr/imaging/hgi/blitCmds.h"
+#include "pxr/imaging/hgi/blitCmdsOps.h"
 #include "pxr/imaging/hgi/hgi.h"
+#include "pxr/imaging/hgi/tokens.h"
+
+#include "pxr/base/gf/vec2f.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -47,19 +53,19 @@ TF_DEFINE_PRIVATE_TOKENS(
 HdxColorizeSelectionTask::HdxColorizeSelectionTask(
     HdSceneDelegate* delegate,
     SdfPath const& id)
-  : HdxTask(id)
-  , _params()
-  , _lastVersion(-1)
-  , _hasSelection(false)
-  , _selectionOffsets()
-  , _primId(nullptr)
-  , _instanceId(nullptr)
-  , _elementId(nullptr)
-  , _outputBuffer(nullptr)
-  , _outputBufferSize(0)
-  , _converged(false)
-  , _compositor()
-  , _pipelineCreated(false)
+    : HdxTask(id)
+    , _params()
+    , _lastVersion(-1)
+    , _hasSelection(false)
+    , _selectionOffsets()
+    , _primId(nullptr)
+    , _instanceId(nullptr)
+    , _elementId(nullptr)
+    , _outputBuffer(nullptr)
+    , _outputBufferSize(0)
+    , _converged(false)
+    , _compositor()
+    , _pipelineCreated(false)
 {
 }
 
@@ -67,6 +73,9 @@ HdxColorizeSelectionTask::~HdxColorizeSelectionTask()
 {
     delete[] _outputBuffer;
 
+    if (_parameterBuffer) {
+        _GetHgi()->DestroyBuffer(&_parameterBuffer);
+    }
     if (_texture) {
         _GetHgi()->DestroyTexture(&_texture);
     }
@@ -87,14 +96,18 @@ HdxColorizeSelectionTask::_Sync(HdSceneDelegate* delegate,
     HF_MALLOC_TAG_FUNCTION();
 
     if (!_compositor) {
-        _compositor = std::make_unique<HdxFullscreenShader>(
-            _GetHgi(), "ColorizeSelection");
+        _compositor.reset(new HdxFullscreenShader(_GetHgi(), "ColorizeSelection"));
     }
 
     if ((*dirtyBits) & HdChangeTracker::DirtyParams) {
         _GetTaskParams(delegate, &_params);
     }
     *dirtyBits = HdChangeTracker::Clean;
+
+    HdxSelectionTrackerSharedPtr sel;
+    if (_GetTaskContextData(ctx, HdxTokens->selectionState, &sel)) {
+        sel->UpdateSelection(&(delegate->GetRenderIndex()));
+    }
 }
 
 void
@@ -103,11 +116,6 @@ HdxColorizeSelectionTask::Prepare(HdTaskContext* ctx,
 {
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
-
-    HdxSelectionTrackerSharedPtr sel;
-    if (_GetTaskContextData(ctx, HdxTokens->selectionState, &sel)) {
-        sel->UpdateSelection(renderIndex);
-    }
 
     _primId = static_cast<HdRenderBuffer*>(
         renderIndex->GetBprim(HdPrimTypeTokens->renderBuffer,
@@ -118,6 +126,9 @@ HdxColorizeSelectionTask::Prepare(HdTaskContext* ctx,
     _elementId = static_cast<HdRenderBuffer*>(
         renderIndex->GetBprim(HdPrimTypeTokens->renderBuffer,
                               _params.elementIdBufferPath));
+
+    HdxSelectionTrackerSharedPtr sel;
+    _GetTaskContextData(ctx, HdxTokens->selectionState, &sel);
 
     if (sel && sel->GetVersion() != _lastVersion) {
         _lastVersion = sel->GetVersion();
@@ -196,27 +207,7 @@ HdxColorizeSelectionTask::Execute(HdTaskContext* ctx)
     _ColorizeSelection();
 
     // Blit!
-    //Make set program take
-    
-    HgiShaderFunctionDesc fragDesc;
-    fragDesc.debugName = _tokens->outlineFrag.GetString();
-    fragDesc.shaderStage = HgiShaderStageFragment;
-    HgiShaderFunctionAddStageInput(
-        &fragDesc, "uvOut", "vec2");
-    HgiShaderFunctionAddTexture(
-        &fragDesc, "colorIn");
-    
-    HgiShaderFunctionAddConstantParam(
-        &fragDesc, "texelSize", "vec2");
-    HgiShaderFunctionAddConstantParam(
-        &fragDesc, "enableOutline", "int");
-    HgiShaderFunctionAddConstantParam(
-        &fragDesc, "radius", "int");
-    
-    HgiShaderFunctionAddStageOutput(
-        &fragDesc, "hd_FragColor", "vec4", "color");
-    
-    _compositor->SetProgram(HdxPackageOutlineShader(), _tokens->outlineFrag, fragDesc);
+    _compositor->SetProgram(HdxPackageOutlineShader(), _tokens->outlineFrag);
 
     _CreateTexture(
         _primId->GetWidth(), 
@@ -226,10 +217,8 @@ HdxColorizeSelectionTask::Execute(HdTaskContext* ctx)
 
     _compositor->BindTextures({_tokens->colorIn}, {_texture});
 
-    if (_UpdateParameterBuffer()) {
-        const size_t byteSize = sizeof(_ParameterBuffer);
-        _compositor->SetShaderConstants(byteSize, &_parameterData);
-    }
+    _CreateParameterBuffer();
+    _compositor->BindBuffer(_parameterBuffer, 0);
 
     // Blend the selection color on top.  ApplySelectionColor uses the
     // calculation:
@@ -366,8 +355,8 @@ HdxColorizeSelectionTask::_ColorizeSelection()
     }
 }
 
-bool
-HdxColorizeSelectionTask::_UpdateParameterBuffer()
+void
+HdxColorizeSelectionTask::_CreateParameterBuffer()
 {
     _ParameterBuffer pb;
 
@@ -379,13 +368,32 @@ HdxColorizeSelectionTask::_UpdateParameterBuffer()
     pb.enableOutline = (int)_params.enableOutline;
     pb.radius = (int)_params.outlineRadius;
 
-    // All data is still the same, no need to update the compositor
-    if (pb == _parameterData) {
-        return false;
+    // All data is still the same, no need to update the storage buffer
+    if (_parameterBuffer && pb == _parameterData) {
+        return;
     }
-
     _parameterData = pb;
-    return true;
+
+    if (!_parameterBuffer) {
+        // Create a new (storage) buffer for shader parameters
+        HgiBufferDesc bufDesc;
+        bufDesc.debugName = "HdxColorizeSelectionTask parameter buffer";
+        bufDesc.usage = HgiBufferUsageStorage;
+        bufDesc.initialData = &_parameterData;
+        bufDesc.byteSize = sizeof(_parameterData);
+        _parameterBuffer = _GetHgi()->CreateBuffer(bufDesc);
+    } else {
+        // Update the existing storage buffer with new values.
+        HgiBlitCmdsUniquePtr blitCmds = _GetHgi()->CreateBlitCmds();
+        HgiBufferCpuToGpuOp copyOp;
+        copyOp.byteSize = sizeof(_parameterData);
+        copyOp.cpuSourceBuffer = &_parameterData;
+        copyOp.sourceByteOffset = 0;
+        copyOp.destinationByteOffset = 0;
+        copyOp.gpuDestinationBuffer = _parameterBuffer;
+        blitCmds->CopyBufferCpuToGpu(copyOp);
+        _GetHgi()->SubmitCmds(blitCmds.get());
+    }
 }
 
 void
@@ -408,7 +416,7 @@ HdxColorizeSelectionTask::_CreateTexture(
         return;
     }
 
-    const size_t pixelByteSize = HdDataSizeOfFormat(format);
+    size_t pixelByteSize = HdDataSizeOfFormat(format);
 
     HgiTextureDesc texDesc;
     texDesc.debugName = "HdxColorizeSelectionTask texture";

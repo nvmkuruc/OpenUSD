@@ -33,20 +33,20 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-using HdVolumePtrConstVector = std::vector<class HdVolume const *>;
+class HdSceneDelegate;
+typedef std::vector<class HdVolume const *> HdVolumePtrConstVector;
 
 /// \class HdVolume
 ///
 /// Hd schema for a renderable volume primitive.
 ///
-class HdVolume : public HdRprim
-{
+class HdVolume : public HdRprim {
 public:
     HD_API
-    HdVolume(SdfPath const& id);
+    HdVolume(SdfPath const& id, SdfPath const& instancerId = SdfPath());
 
     HD_API
-    ~HdVolume() override;
+    virtual ~HdVolume();
 
     HD_API
     TfTokenVector const & GetBuiltinPrimvarNames() const override;

@@ -117,7 +117,9 @@ public:
 private:
     enum _Type {
         LibraryType, 
+#ifdef PXR_PYTHON_SUPPORT_ENABLED        
         PythonType, 
+#endif // PXR_PYTHON_SUPPORT_ENABLED
         ResourceType 
     };
 

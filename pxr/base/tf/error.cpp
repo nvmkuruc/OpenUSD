@@ -39,7 +39,7 @@ TfError::TfError(TfEnum errorCode, const char* errorCodeString,
     : TfDiagnosticBase(errorCode, errorCodeString, context, commentary, info,
                        quiet)
 {
-    _serial = TfDiagnosticMgr::GetInstance()._nextSerial.fetch_add(1);
+    _serial = TfDiagnosticMgr::GetInstance()._nextSerial.fetch_and_increment();
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

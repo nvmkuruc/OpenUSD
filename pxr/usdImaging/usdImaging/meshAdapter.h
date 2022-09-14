@@ -41,72 +41,50 @@ class PxOsdSubdivTags;
 ///
 /// Delegate support for UsdGeomMesh.
 ///
-class UsdImagingMeshAdapter : public UsdImagingGprimAdapter 
-{
+class UsdImagingMeshAdapter : public UsdImagingGprimAdapter {
 public:
-    using BaseAdapter = UsdImagingGprimAdapter;
+    typedef UsdImagingGprimAdapter BaseAdapter;
 
     UsdImagingMeshAdapter()
         : UsdImagingGprimAdapter()
     {}
     USDIMAGING_API
-    ~UsdImagingMeshAdapter() override;
-
-    // ---------------------------------------------------------------------- //
-    /// \name Scene Index Support
-    // ---------------------------------------------------------------------- //
+    virtual ~UsdImagingMeshAdapter();
 
     USDIMAGING_API
-    TfTokenVector GetImagingSubprims() override;
+    virtual SdfPath Populate(UsdPrim const& prim,
+                     UsdImagingIndexProxy* index,
+                     UsdImagingInstancerContext const* instancerContext = NULL) override;
 
     USDIMAGING_API
-    TfToken GetImagingSubprimType(TfToken const& subprim) override;
-
-    USDIMAGING_API
-    HdContainerDataSourceHandle GetImagingSubprimData(
-            TfToken const& subprim,
-            UsdPrim const& prim,
-            const UsdImagingDataSourceStageGlobals &stageGlobals) override;
-
-    // ---------------------------------------------------------------------- //
-    /// \name Initialization
-    // ---------------------------------------------------------------------- //
-    
-    USDIMAGING_API
-    SdfPath Populate(
-        UsdPrim const& prim,
-        UsdImagingIndexProxy* index,
-        UsdImagingInstancerContext const* instancerContext = nullptr) override;
-
-    USDIMAGING_API
-    bool IsSupported(UsdImagingIndexProxy const* index) const override;
+    virtual bool IsSupported(UsdImagingIndexProxy const* index) const override;
 
     // ---------------------------------------------------------------------- //
     /// \name Parallel Setup and Resolve
     // ---------------------------------------------------------------------- //
 
+
     /// Thread Safe.
     USDIMAGING_API
     virtual void TrackVariability(UsdPrim const& prim,
-                          SdfPath const& cachePath,
-                          HdDirtyBits* timeVaryingBits,
-                          UsdImagingInstancerContext const* 
-                              instancerContext = NULL,
-                          // #nv begin fast-updates
-                          // If checkVariabilty is false, this method
-                          // only populates the value cache with initial values.
-                          bool checkVariability = true) const override;
-                          // nv end
-
+                                  SdfPath const& cachePath,
+                                  HdDirtyBits* timeVaryingBits,
+                                  UsdImagingInstancerContext const* 
+                                      instancerContext = NULL,
+                                  // #nv begin fast-updates
+                                  // If checkVariabilty is false, this method
+                                  // only populates the value cache with initial values.
+                                  bool checkVariability = true) const override;
+                                  // nv end
 
     /// Thread Safe.
     USDIMAGING_API
-    void UpdateForTime(UsdPrim const& prim,
-                       SdfPath const& cachePath, 
-                       UsdTimeCode time,
-                       HdDirtyBits requestedBits,
-                       UsdImagingInstancerContext const* 
-                           instancerContext = nullptr) const override;
+    virtual void UpdateForTime(UsdPrim const& prim,
+                               SdfPath const& cachePath, 
+                               UsdTimeCode time,
+                               HdDirtyBits requestedBits,
+                               UsdImagingInstancerContext const* 
+                                   instancerContext = NULL) const override;
 
     //+NV_CHANGE FRZHANG
     /////+++Update Skinning Animation API
@@ -133,34 +111,26 @@ public:
     // ---------------------------------------------------------------------- //
 
     USDIMAGING_API
-    HdDirtyBits ProcessPropertyChange(UsdPrim const& prim,
-                                      SdfPath const& cachePath,
-                                      TfToken const& propertyName) override;
+    virtual HdDirtyBits ProcessPropertyChange(UsdPrim const& prim,
+                                              SdfPath const& cachePath,
+                                              TfToken const& propertyName) override;
 
     // ---------------------------------------------------------------------- //
     /// \name Data access
     // ---------------------------------------------------------------------- //
 
     USDIMAGING_API
-    PxOsdSubdivTags GetSubdivTags(UsdPrim const& usdPrim,
-                                  SdfPath const& cachePath,
-                                  UsdTimeCode time) const override;
-
-    USDIMAGING_API
-    VtValue GetTopology(UsdPrim const& prim,
-                        SdfPath const& cachePath,
-                        UsdTimeCode time) const override;
-
-    USDIMAGING_API
-    VtValue Get(UsdPrim const& prim,
-                SdfPath const& cachePath,
-                TfToken const& key,
-                UsdTimeCode time,
-                VtIntArray *outIndices) const override;
+    virtual PxOsdSubdivTags GetSubdivTags(UsdPrim const& usdPrim,
+                                          SdfPath const& cachePath,
+                                          UsdTimeCode time) const override;
 
 protected:
     USDIMAGING_API
-    bool _IsBuiltinPrimvar(TfToken const& primvarName) const override;
+    virtual bool _IsBuiltinPrimvar(TfToken const& primvarName) const override;
+
+private:
+    void _GetMeshTopology(UsdPrim const& prim, VtValue* topoHolder, 
+            UsdTimeCode time) const;
 };
 
 

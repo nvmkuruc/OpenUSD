@@ -23,7 +23,7 @@
 //
 
 // Must be included before GL headers.
-#include "pxr/imaging/garch/glApi.h"
+#include "pxr/imaging/glf/glew.h"
 
 #include "pxr/pxr.h"
 #include "pxr/usdImaging/usdAppUtils/frameRecorder.h"
@@ -32,15 +32,14 @@
 
 #include "pxr/imaging/glf/simpleLight.h"
 #include "pxr/imaging/glf/simpleMaterial.h"
-#include "pxr/imaging/hio/image.h"
 #include "pxr/usd/usd/stage.h"
 #include "pxr/usd/usdGeom/bboxCache.h"
 #include "pxr/usd/usdGeom/metrics.h"
 #include "pxr/usd/usdGeom/tokens.h"
 
-#include "pxr/imaging/hdx/types.h"
+#include "pxr/imaging/hgi/blitCmds.h"
+#include "pxr/imaging/hgi/blitCmdsOps.h"
 #include "pxr/imaging/hgi/hgi.h"
-#include "pxr/imaging/hdSt/textureUtils.h"
 
 #include <string>
 
@@ -54,7 +53,7 @@ UsdAppUtilsFrameRecorder::UsdAppUtilsFrameRecorder() :
     _colorCorrectionMode("disabled"),
     _purposes({UsdGeomTokens->default_, UsdGeomTokens->proxy})
 {
-    GarchGLApiLoad();
+    GlfGlewInit();
 }
 
 static bool
@@ -126,38 +125,111 @@ _ComputeCameraToFrameStage(const UsdStagePtr& stage, UsdTimeCode timeCode,
     return gfCamera;
 }
 
-static bool
-_WriteTextureToFile(HgiTextureDesc const& textureDesc,
-                    uint8_t * buffer,
-                    size_t bufferSize,
-                    std::string const& filename,
-                    const bool flipped)
+static void
+_ReadbackTexture(Hgi* const hgi,
+                 HgiTextureHandle const& textureHandle,
+                 std::vector<uint8_t>& buffer)
 {
-    const size_t formatByteSize = HgiGetDataSizeOfFormat(textureDesc.format);
+    const HgiTextureDesc& textureDesc = textureHandle.Get()->GetDescriptor();
+    const size_t formatByteSize = HgiDataSizeOfFormat(textureDesc.format);
     const size_t width = textureDesc.dimensions[0];
     const size_t height = textureDesc.dimensions[1];
     const size_t dataByteSize = width * height * formatByteSize;
     
-    if (bufferSize < dataByteSize) {
+    // For Metal the CPU buffer has to be rounded up to multiple of 4096 bytes.
+    constexpr size_t bitMask = 4096 - 1;
+    const size_t alignedByteSize = (dataByteSize + bitMask) & (~bitMask);
+    
+    buffer.resize(alignedByteSize);
+
+    HgiBlitCmdsUniquePtr const blitCmds = hgi->CreateBlitCmds();
+    HgiTextureGpuToCpuOp copyOp;
+    copyOp.gpuSourceTexture = textureHandle;
+    copyOp.sourceTexelOffset = GfVec3i(0);
+    copyOp.mipLevel = 0;
+    copyOp.startLayer = 0;
+    copyOp.numLayers = 1;
+    copyOp.cpuDestinationBuffer = buffer.data();
+    copyOp.destinationByteOffset = 0;
+    copyOp.destinationBufferByteSize = alignedByteSize;
+    blitCmds->CopyTextureGpuToCpu(copyOp);
+    hgi->SubmitCmds(blitCmds.get());
+}
+
+struct _FormatDesc {
+    GLenum format;
+    GLenum type;
+};
+
+static constexpr _FormatDesc FORMAT_DESC[HgiFormatCount] =
+{
+    // format,  type
+    {GL_RED,  GL_UNSIGNED_BYTE }, // UNorm8
+    {GL_RG,   GL_UNSIGNED_BYTE }, // UNorm8Vec2
+//  {GL_RGB,  GL_UNSIGNED_BYTE }, // Unsupported by HgiFormat
+    {GL_RGBA, GL_UNSIGNED_BYTE }, // UNorm8Vec4
+
+    {GL_RED,  GL_BYTE          }, // SNorm8
+    {GL_RG,   GL_BYTE          }, // SNorm8Vec2
+//  {GL_RGB,  GL_BYTE          }, // Unsupported by HgiFormat
+    {GL_RGBA, GL_BYTE          }, // SNorm8Vec4
+
+    {GL_RED,  GL_HALF_FLOAT    }, // Float16
+    {GL_RG,   GL_HALF_FLOAT    }, // Float16Vec2
+    {GL_RGB,  GL_HALF_FLOAT    }, // Float16Vec3
+    {GL_RGBA, GL_HALF_FLOAT    }, // Float16Vec4
+
+    {GL_RED,  GL_FLOAT         }, // Float32
+    {GL_RG,   GL_FLOAT         }, // Float32Vec2
+    {GL_RGB,  GL_FLOAT         }, // Float32Vec3
+    {GL_RGBA, GL_FLOAT         }, // Float32Vec4
+
+    {GL_RED,  GL_INT           }, // Int32
+    {GL_RG,   GL_INT           }, // Int32Vec2
+    {GL_RGB,  GL_INT           }, // Int32Vec3
+    {GL_RGBA, GL_INT           }, // Int32Vec4
+
+//  {GL_RGB, GL_UNSIGNED_BYTE  }, // Unsupported by HgiFormat
+    {GL_RGBA, GL_UNSIGNED_BYTE }, // UNorm8Vec4sRGB,
+
+    {GL_RGB, GL_FLOAT          }, // BC6FloatVec3
+    {GL_RGB, GL_FLOAT          }
+};
+
+static bool
+_WriteTextureToFile(HgiTextureDesc const& textureDesc,
+                    std::vector<uint8_t> const& buffer,
+                    std::string const& filename,
+                    const bool flipped)
+{
+    const size_t formatByteSize = HgiDataSizeOfFormat(textureDesc.format);
+    const size_t width = textureDesc.dimensions[0];
+    const size_t height = textureDesc.dimensions[1];
+    const size_t dataByteSize = width * height * formatByteSize;
+    
+    if (buffer.size() < dataByteSize) {
         return false;
     }
     
     if (textureDesc.format < 0 || textureDesc.format >= HgiFormatCount) {
         return false;
     }
+
+    _FormatDesc formatDesc = FORMAT_DESC[textureDesc.format];
     
-    HioImage::StorageSpec storage;
+    GlfImage::StorageSpec storage;
     storage.width = width;
     storage.height = height;
-    storage.format = HdxGetHioFormat(textureDesc.format);
+    storage.format = formatDesc.format;
+    storage.type = formatDesc.type;
     storage.flipped = flipped;
-    storage.data = buffer;
+    storage.data = (void*)buffer.data();
 
     {
         TRACE_FUNCTION_SCOPE("writing image");
         VtDictionary metadata;
         
-        HioImageSharedPtr const image = HioImage::OpenForWriting(filename);
+        GlfImageSharedPtr const image = GlfImage::OpenForWriting(filename);
         const bool writeSuccess = image && image->Write(storage, metadata);
         
         if (!writeSuccess) {
@@ -267,14 +339,11 @@ UsdAppUtilsFrameRecorder::Record(
         return false;
     }
     
-    size_t bufferSize = 0;
-    HdStTextureUtils::AlignedBuffer<uint8_t> buffer =
-        HdStTextureUtils::HgiTextureReadback(
-            _imagingEngine.GetHgi(), handle, &bufferSize);
+    std::vector<uint8_t> buffer;
+    _ReadbackTexture(_imagingEngine.GetHgi(), handle, buffer);
 
     return _WriteTextureToFile(handle.Get()->GetDescriptor(),
-                               buffer.get(),
-                               bufferSize,
+                               buffer,
                                outputImagePath,
                                true);
 }

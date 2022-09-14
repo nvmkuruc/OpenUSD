@@ -120,9 +120,6 @@ public:
 protected:
     SDF_FILE_FORMAT_FACTORY_ACCESS;
 
-    bool _ShouldSkipAnonymousReload() const override;
-    bool _ShouldReadAnonymousLayers() const override;
-
     virtual ~UsdDancingCubesExampleFileFormat();
     UsdDancingCubesExampleFileFormat();
 };

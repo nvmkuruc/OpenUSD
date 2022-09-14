@@ -23,10 +23,10 @@
 #
 
 from pxr import Usd, UsdGeom, UsdShade
-from pxr.UsdUtils.constantsGroup import ConstantsGroup
+from .constantGroup import ConstantGroup
 
 
-class ComputedPropertyNames(ConstantsGroup):
+class ComputedPropertyNames(ConstantGroup):
     """Names of all available computed properties."""
     WORLD_BBOX              = "World Bounding Box"
     LOCAL_WORLD_XFORM       = "Local to World Xform"

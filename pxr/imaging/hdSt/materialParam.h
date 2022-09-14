@@ -79,9 +79,7 @@ public:
                     VtValue const& fallbackValue,
                     TfTokenVector const& samplerCoords=TfTokenVector(),
                     HdTextureType textureType=HdTextureType::Uv,
-                    std::string const& swizzle=std::string(),
-                    bool const isPremultiplied=false,
-                    size_t const arrayOfTexturesSize=0);
+                    std::string const& swizzle=std::string());
 
     // No d'tor so that we pick up the implicitly declared default
     // move c'tor.
@@ -112,9 +110,6 @@ public:
     bool IsTransform2d() const {
         return paramType == ParamTypeTransform2d;
     }
-    bool IsArrayOfTextures() const {
-        return IsTexture() && arrayOfTexturesSize > 0;
-    }
 
     ParamType paramType;
     TfToken name;
@@ -122,14 +117,6 @@ public:
     TfTokenVector samplerCoords;
     HdTextureType textureType;
     std::string swizzle;
-    bool isPremultiplied;
-
-    // If paramType is ParamTypeTexture, this indicates both if the textures 
-    // should be bound as an array of textures and the size of the array. If 
-    // arrayOfTexturesSize is 0, then do not bind as an array of textures, but 
-    // rather a single texture (whereas arrayOfTexturesSize = 1 indicates an 
-    // array of textures of size 1).
-    size_t arrayOfTexturesSize;
 };
 
 

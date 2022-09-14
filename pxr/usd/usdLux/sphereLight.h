@@ -28,7 +28,7 @@
 
 #include "pxr/pxr.h"
 #include "pxr/usd/usdLux/api.h"
-#include "pxr/usd/usdLux/boundableLightBase.h"
+#include "pxr/usd/usdLux/light.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
 #include "pxr/usd/usdLux/tokens.h"
@@ -54,25 +54,20 @@ class SdfAssetPath;
 ///
 /// Light emitted outward from a sphere.
 ///
-/// For any described attribute \em Fallback \em Value or \em Allowed \em Values below
-/// that are text/tokens, the actual token is published and defined in \ref UsdLuxTokens.
-/// So to set an attribute to the value "rightHanded", use UsdLuxTokens->rightHanded
-/// as the value.
-///
-class UsdLuxSphereLight : public UsdLuxBoundableLightBase
+class UsdLuxSphereLight : public UsdLuxLight
 {
 public:
     /// Compile time constant representing what kind of schema this class is.
     ///
-    /// \sa UsdSchemaKind
-    static const UsdSchemaKind schemaKind = UsdSchemaKind::ConcreteTyped;
+    /// \sa UsdSchemaType
+    static const UsdSchemaType schemaType = UsdSchemaType::ConcreteTyped;
 
     /// Construct a UsdLuxSphereLight on UsdPrim \p prim .
     /// Equivalent to UsdLuxSphereLight::Get(prim.GetStage(), prim.GetPath())
     /// for a \em valid \p prim, but will not immediately throw an error for
     /// an invalid \p prim
     explicit UsdLuxSphereLight(const UsdPrim& prim=UsdPrim())
-        : UsdLuxBoundableLightBase(prim)
+        : UsdLuxLight(prim)
     {
     }
 
@@ -80,7 +75,7 @@ public:
     /// Should be preferred over UsdLuxSphereLight(schemaObj.GetPrim()),
     /// as it preserves SchemaBase state.
     explicit UsdLuxSphereLight(const UsdSchemaBase& schemaObj)
-        : UsdLuxBoundableLightBase(schemaObj)
+        : UsdLuxLight(schemaObj)
     {
     }
 
@@ -135,11 +130,11 @@ public:
     Define(const UsdStagePtr &stage, const SdfPath &path);
 
 protected:
-    /// Returns the kind of schema this class belongs to.
+    /// Returns the type of schema this class belongs to.
     ///
-    /// \sa UsdSchemaKind
+    /// \sa UsdSchemaType
     USDLUX_API
-    UsdSchemaKind _GetSchemaKind() const override;
+    UsdSchemaType _GetSchemaType() const override;
 
 private:
     // needs to invoke _GetStaticTfType.
@@ -161,7 +156,7 @@ public:
     ///
     /// | ||
     /// | -- | -- |
-    /// | Declaration | `float inputs:radius = 0.5` |
+    /// | Declaration | `float radius = 0.5` |
     /// | C++ Type | float |
     /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Float |
     USDLUX_API

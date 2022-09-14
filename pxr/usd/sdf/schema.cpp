@@ -199,6 +199,21 @@ SdfSchemaBase::SpecDefinition::GetFields() const
 }
 
 TfTokenVector 
+SdfSchemaBase::SpecDefinition::GetRequiredFields() const
+{
+    TRACE_FUNCTION();
+
+    TfTokenVector rval;
+    TF_FOR_ALL(field, _fields) {
+        if (field->second.required) {
+            rval.push_back(field->first);
+        }
+    }
+
+    return rval;
+}
+
+TfTokenVector 
 SdfSchemaBase::SpecDefinition::GetMetadataFields() const
 {
     TRACE_FUNCTION();
@@ -291,12 +306,6 @@ SdfSchemaBase::SpecDefinition::_AddField(
     if (!insertStatus.second) {
         TF_CODING_ERROR("Duplicate registration for field '%s'", 
                         name.GetText());
-        return;
-    }
-    if (fieldInfo.required) {
-        _requiredFields.insert(
-            std::lower_bound(_requiredFields.begin(),
-                             _requiredFields.end(), name), name);
     }
 }
 
@@ -722,7 +731,6 @@ SdfSchemaBase::_RegisterStandardFields()
     _DoRegisterField(SdfFieldKeys->Default, VtValue())
         .ValueValidator(&_ValidateIsSceneDescriptionValue);
     _DoRegisterField(SdfFieldKeys->DisplayGroup, "");
-    _DoRegisterField(SdfFieldKeys->DisplayGroupOrder, VtStringArray());
     _DoRegisterField(SdfFieldKeys->DisplayName, "");
     _DoRegisterField(SdfFieldKeys->DisplayUnit,
                    TfEnum(SdfDimensionlessUnitDefault));
@@ -869,8 +877,6 @@ SdfSchemaBase::_RegisterStandardFields()
         .MetadataField(SdfFieldKeys->AssetInfo,
                        SdfMetadataDisplayGroupTokens->core)
         .MetadataField(SdfFieldKeys->CustomData,
-                       SdfMetadataDisplayGroupTokens->core)
-        .MetadataField(SdfFieldKeys->DisplayGroupOrder,
                        SdfMetadataDisplayGroupTokens->core)
         .MetadataField(SdfFieldKeys->Documentation,
                        SdfMetadataDisplayGroupTokens->core)
@@ -1140,15 +1146,11 @@ SdfSchemaBase::GetMetadataFieldDisplayGroup(SdfSpecType specType,
     return (def ? def->GetMetadataFieldDisplayGroup(metadataField) : TfToken());
 }
 
-const TfTokenVector &
+TfTokenVector 
 SdfSchemaBase::GetRequiredFields(SdfSpecType specType) const
 {
-    if (const SpecDefinition* def = _CheckAndGetSpecDefinition(specType)) {
-        return def->GetRequiredFields();
-    }
-    // Intentionally leak to avoid static destruction issues.
-    static TfTokenVector *theEmptyVector = new TfTokenVector;
-    return *theEmptyVector;
+    const SpecDefinition* def = _CheckAndGetSpecDefinition(specType);
+    return (def ? def->GetRequiredFields() : TfTokenVector());
 }
 
 SdfAllowed
@@ -1467,7 +1469,7 @@ _ParseValue(const std::string &valueTypeName, const JsValue &value,
 
     // Feed the ParserValueContext the values in the correct format.
     // A better solution would be to have the default value be a string,
-    // which is parsed using the sdf text file format syntax for typed values.
+    // which is parsed using the menva file format syntax for typed values.
     // This would involve extracting the typed value rule out of the parser
     // and into a new parser.
     if (context.valueIsShaped)
@@ -1606,7 +1608,7 @@ SdfSchemaBase::_UpdateMetadataFromPlugins(
             continue;
         
         // Register new fields
-        for (const std::pair<const std::string, JsValue>& field : fields) {
+        for (const std::pair<std::string, JsValue>& field : fields) {
             const TfToken fieldName(field.first);
 
             // Validate field

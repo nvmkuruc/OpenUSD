@@ -40,25 +40,30 @@ def _setComplexity(appController, complexity):
     appController._dataModel.viewSettings.complexity = complexity
     appController._stageView.updateGL()
 
+# Take a shot of the viewport and save it to a file.
+def _takeShot(appController, fileName):
+    viewportShot = appController.GrabViewportShot()
+    viewportShot.save(fileName, "PNG")
+
 # Test with low refinement.
 def _testLowRefinement(appController):
     _setComplexity(appController, RefinementComplexities.LOW)
-    appController._takeShot("low.png")
+    _takeShot(appController, "low.png")
 
 # Test with medium refinement.
 def _testMediumRefinement(appController):
     _setComplexity(appController, RefinementComplexities.MEDIUM)
-    appController._takeShot("medium.png")
+    _takeShot(appController, "medium.png")
 
 # Test with high refinement.
 def _testHighRefinement(appController):
     _setComplexity(appController, RefinementComplexities.HIGH)
-    appController._takeShot("high.png")
+    _takeShot(appController, "high.png")
 
 # Test with very high refinement.
 def _testVeryHighRefinement(appController):
     _setComplexity(appController, RefinementComplexities.VERY_HIGH)
-    appController._takeShot("very_high.png")
+    _takeShot(appController, "very_high.png")
 
 # Test that the complexity setting works properly in usdview.
 def testUsdviewInputFunction(appController):

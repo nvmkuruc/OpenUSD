@@ -25,17 +25,18 @@
 #define PXR_USD_SDF_IDENTITY_H
 
 #include "pxr/pxr.h"
+#include "pxr/base/tf/hashmap.h"
 #include "pxr/usd/sdf/api.h"
 #include "pxr/usd/sdf/declareHandles.h"
 #include "pxr/usd/sdf/path.h"
 
-#include <memory>
+#include <boost/intrusive_ptr.hpp>
+#include <boost/noncopyable.hpp>
+#include <tbb/spin_mutex.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 class Sdf_IdentityRegistry;
-class Sdf_IdRegistryImpl;
-
 SDF_DECLARE_HANDLES(SdfLayer);
 
 /// \class Sdf_Identity
@@ -44,9 +45,7 @@ SDF_DECLARE_HANDLES(SdfLayer);
 ///
 /// This is simply the layer the spec belongs to and the path to the spec.
 ///
-class Sdf_Identity {
-    Sdf_Identity(Sdf_Identity const &) = delete;
-    Sdf_Identity &operator=(Sdf_Identity const &) = delete;
+class Sdf_Identity : public boost::noncopyable {
 public:
     /// Returns the layer that this identity refers to.
     SDF_API
@@ -56,25 +55,24 @@ public:
     const SdfPath &GetPath() const {
         return _path;
     }
-    
+
 private:
     // Ref-counting ops manage _refCount.
     friend void intrusive_ptr_add_ref(Sdf_Identity*);
     friend void intrusive_ptr_release(Sdf_Identity*);
 
     friend class Sdf_IdentityRegistry;
-    friend class Sdf_IdRegistryImpl;
 
-    Sdf_Identity(Sdf_IdRegistryImpl *regImpl, const SdfPath &path)
-        : _refCount(0), _path(path), _regImpl(regImpl) {}
-    
     SDF_API
-    static void _UnregisterOrDelete(Sdf_IdRegistryImpl *reg, Sdf_Identity *id);
+    Sdf_Identity(Sdf_IdentityRegistry *registry, const SdfPath &path);
+    SDF_API
+    ~Sdf_Identity();
+
     void _Forget();
 
     mutable std::atomic_int _refCount;
+    Sdf_IdentityRegistry *_registry;
     SdfPath _path;
-    Sdf_IdRegistryImpl *_regImpl;
 };
 
 // Specialize boost::intrusive_ptr operations.
@@ -82,15 +80,8 @@ inline void intrusive_ptr_add_ref(PXR_NS::Sdf_Identity* p) {
     ++p->_refCount;
 }
 inline void intrusive_ptr_release(PXR_NS::Sdf_Identity* p) {
-    // Once the count hits zero, p is liable to be destroyed at any point,
-    // concurrently, by its owning registry if it happens to be doing a cleanup
-    // pass.  Cache 'this' and the impl ptr in local variables so we have them
-    // before decrementing the count.
-    Sdf_Identity *self = p;
-    Sdf_IdRegistryImpl *reg = p->_regImpl;
     if (--p->_refCount == 0) {
-        // Cannot use 'p' anymore here.
-        Sdf_Identity::_UnregisterOrDelete(reg, self);
+        delete p;
     }
 }
 
@@ -114,21 +105,26 @@ public:
     void MoveIdentity(const SdfPath &oldPath, const SdfPath &newPath);
     
 private:
+    // When an identity expires, it will remove itself from the registry.
     friend class Sdf_Identity;
 
-    friend class Sdf_IdRegistryImpl;
-
-    // Remove the identity mapping for \a path to \a id from the registry.  This
-    // is invoked when an identity's refcount hits zero.
-    SDF_API
-    void _UnregisterOrDelete();
+    // Remove the identity mapping for \a path to \a id from the registry.
+    // This is only called by Sdf_Identity's destructor.
+    void _Remove(const SdfPath &path, Sdf_Identity *id);
 
     /// The layer that owns this registry, and on behalf of which
     /// this registry tracks identities.
     const SdfLayerHandle _layer;
+    
+    /// The identities being managed by this registry
+    typedef TfHashMap<SdfPath, Sdf_Identity*, SdfPath::Hash> _IdMap;
+    _IdMap _ids;
 
-    // Private implementation.
-    const std::unique_ptr<Sdf_IdRegistryImpl> _impl;
+    /// Cache the last fetched identity, it's commonly re-fetched.
+    Sdf_IdentityRefPtr _lastId;
+
+    // This mutex synchronizes access to _ids.
+    tbb::spin_mutex _idsMutex;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

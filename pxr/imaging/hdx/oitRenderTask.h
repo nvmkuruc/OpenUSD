@@ -29,11 +29,9 @@
 #include "pxr/imaging/hdx/version.h"
 #include "pxr/imaging/hdx/renderTask.h"
 
-#include <memory>
+#include "pxr/imaging/hdSt/renderPassState.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
-
-using HdStRenderPassShaderSharedPtr = std::shared_ptr<HdStRenderPassShader>;
 
 /// \class HdxOitRenderTask
 ///
@@ -47,23 +45,23 @@ public:
     HdxOitRenderTask(HdSceneDelegate* delegate, SdfPath const& id);
 
     HDX_API
-    ~HdxOitRenderTask() override;
+    virtual ~HdxOitRenderTask();
 
     /// Prepare the tasks resources
     HDX_API
-    void Prepare(HdTaskContext* ctx, 
-                 HdRenderIndex* renderIndex) override;
+    virtual void Prepare(HdTaskContext* ctx, 
+                         HdRenderIndex* renderIndex) override;
 
     /// Execute render pass task
     HDX_API
-    void Execute(HdTaskContext* ctx) override;
+    virtual void Execute(HdTaskContext* ctx) override;
 
 protected:
     /// Sync the render pass resources
     HDX_API
-    void _Sync(HdSceneDelegate* delegate,
-               HdTaskContext* ctx,
-               HdDirtyBits* dirtyBits) override;
+    virtual void _Sync(HdSceneDelegate* delegate,
+                       HdTaskContext* ctx,
+                       HdDirtyBits* dirtyBits) override;
 
 private:
     HdxOitRenderTask() = delete;

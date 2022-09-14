@@ -28,9 +28,17 @@ types.  It contains facilities for creating simple copy-on-write
 implicitly shared types.
 """
 
+from . import _vt
 from pxr import Tf
-Tf.PreparePythonModule()
-del Tf
+Tf.PrepareModule(_vt, locals())
+del _vt, Tf
+
+try:
+    from . import __DOC
+    __DOC.Execute(locals())
+    del __DOC
+except Exception:
+    pass
 
 # For ease-of-use, put each XXXArrayFromBuffer method on its corresponding array
 # wrapper class, also alias it as 'FromNumpy' for compatibility.

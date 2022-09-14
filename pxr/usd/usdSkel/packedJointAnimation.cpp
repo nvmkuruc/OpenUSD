@@ -75,9 +75,8 @@ UsdSkelPackedJointAnimation::Define(
 }
 
 /* virtual */
-UsdSchemaKind UsdSkelPackedJointAnimation::_GetSchemaKind() const
-{
-    return UsdSkelPackedJointAnimation::schemaKind;
+UsdSchemaType UsdSkelPackedJointAnimation::_GetSchemaType() const {
+    return UsdSkelPackedJointAnimation::schemaType;
 }
 
 /* static */

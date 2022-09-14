@@ -39,7 +39,7 @@ typedef TfHashMap<TfToken, VtValue, TfToken::HashFunctor> HdAovSettingsMap;
 
 /// \class HdAovDescriptor
 ///
-/// A bundle of state describing an AOV ("Arbitrary Output Variable") display
+/// A bundle of state describing an AOV ("Alternate Output Value") display
 /// channel. Note that in hydra API, this data is split between
 /// HdRenderPassAovBinding and HdRenderBufferDescriptor. This class is
 /// provided for use in higher level application-facing API.
@@ -82,12 +82,6 @@ typedef std::vector<HdAovDescriptor> HdAovDescriptorList;
 ///
 /// Describes the allocation structure of a render buffer bprim.
 struct HdRenderBufferDescriptor {
-
-    HdRenderBufferDescriptor()
-        : dimensions(0), format(HdFormatInvalid), multiSampled(false) {}
-    HdRenderBufferDescriptor(GfVec3i const& _d, HdFormat _f, bool _ms)
-        : dimensions(_d), format(_f), multiSampled(_ms) {}
-
     /// The width, height, and depth of the allocated render buffer.
     GfVec3i dimensions;
 
@@ -121,9 +115,8 @@ struct HdRenderPassAovBinding {
 
     /// The identifier of the renderer output to be consumed. This should take
     /// a value from HdAovTokens.
-    /// Bindings for depth and depthStencil are identified by the "depth"
-    /// or "depthStencil" suffix, respectively.
-    /// See HdAovHasDepthSemantic() and HdAovHadDepthStencilSemantic().
+    /// XXX: Depth aov bindings are identified by the "depth" suffix.
+    /// See HdAovHasDepthSemantic().
     TfToken aovName;
 
     /// The render buffer to be bound to the above terminal output.
@@ -167,13 +160,9 @@ bool operator!=(const HdRenderPassAovBinding& lhs,
 HD_API
 size_t hash_value(const HdRenderPassAovBinding &b);
 
-/// Returns true if the AOV is used as a depth binding based on its name.
+/// Returns true if the aov is used as a depth binding based on its name.
 HD_API
 bool HdAovHasDepthSemantic(TfToken const& aovName);
-
-/// Returns true if the AOV is used as a depthStencil binding based on its name.
-HD_API
-bool HdAovHasDepthStencilSemantic(TfToken const& aovName);
 
 /// \class HdParsedAovToken
 ///

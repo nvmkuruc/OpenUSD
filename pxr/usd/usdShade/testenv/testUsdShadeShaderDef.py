@@ -29,75 +29,80 @@ import unittest
 import os
 
 class TestUsdShadeShaderDef(unittest.TestCase):
-    def test_ShaderDefParser_NodeDefAPI(self):
-        # Test the NodeDefAPI path.
-        self.test_ShaderDefParser(useForwardedAPI=False)
+    def test_testSplitShaderIdentifier(self):
+        SSI = UsdShade.ShaderDefUtils.SplitShaderIdentifier
+        self.assertEqual(SSI('Primvar'), 
+                ('Primvar', 'Primvar', Ndr.Version()))
+        self.assertEqual(SSI('Primvar_float2'), 
+                ('Primvar', 'Primvar_float2', Ndr.Version()))
+        self.assertEqual(SSI('Primvar_float2_3'), 
+                ('Primvar', 'Primvar_float2', Ndr.Version(3, 0)))
+        self.assertEqual(SSI('Primvar_float_3_4'), 
+                ('Primvar', 'Primvar_float', Ndr.Version(3, 4)))
 
-    def test_ShaderDefParser(self, useForwardedAPI=True):
-        stage = Usd.Stage.CreateNew('shaderDef.usda' if useForwardedAPI else 'shaderDef2.usda')
-        shaderPrim = UsdShade.Shader.Define(stage, "/Primvar_float_2")
-        if useForwardedAPI:
-            # UsdShadeShader has API that covers UsdShadeNodeDefAPI methods;
-            # test that they work.
-            nodeDefAPI = shaderPrim
-        else:
-            # Use the methods as implemented on UsdShadeNodeDefAPI.
-            nodeDefAPI = UsdShade.NodeDefAPI(shaderPrim)
+        self.assertIsNone(SSI('Primvar_float2_3_nonNumber'))
+        self.assertIsNone(SSI('Primvar_4_nonNumber'))
 
-        shaderPrim.SetSdrMetadataByKey(Sdr.NodeMetadata.Role, 
+    def test_ShaderDefParser(self):
+        stage = Usd.Stage.CreateNew('shaderDef.usda')
+
+        shaderDef = UsdShade.Shader.Define(stage, "/Primvar_float_2")
+
+        shaderDef.SetSdrMetadataByKey(Sdr.NodeMetadata.Role, 
                                       Sdr.NodeRole.Primvar)
-        nodeDefAPI.GetImplementationSourceAttr().Set(UsdShade.Tokens.sourceAsset)
+        shaderDef.GetImplementationSourceAttr().Set(UsdShade.Tokens.sourceAsset)
 
         # Create the files referenced by the sourceAsset attributes.
-        osoPath = os.path.normpath(os.path.join(os.getcwd(), 'primvar_2.oso'))
-        glslfxPath = os.path.normpath(
-            os.path.join(os.getcwd(), 'primvar_2.glslfx'))
+        osoPath = os.path.normpath(os.path.join(os.path.realpath(os.curdir), 
+                                                './primvar_2.oso'))
+        glslfxPath = os.path.normpath(os.path.join(os.path.realpath(os.curdir), 
+                                                './primvar_2.glslfx'))
 
         # Create the files referenced by the sourceAsset attributes.
         # These files need to exist for node discovery to succeed.
         open(osoPath, "a").close()
         open(glslfxPath, "a").close()
 
-        nodeDefAPI.SetSourceAsset(Sdf.AssetPath(osoPath), "OSL")
-        nodeDefAPI.SetSourceAsset(Sdf.AssetPath(glslfxPath), "glslfx")
+        shaderDef.SetSourceAsset(Sdf.AssetPath(osoPath), "OSL")
+        shaderDef.SetSourceAsset(Sdf.AssetPath(glslfxPath), "glslfx")
 
-        primvarNameInput = shaderPrim.CreateInput('primvarName', 
+        primvarNameInput = shaderDef.CreateInput('primvarName', 
                 Sdf.ValueTypeNames.Token)
         primvarNameInput.SetConnectability(UsdShade.Tokens.interfaceOnly)
         primvarNameInput.SetSdrMetadataByKey('primvarProperty', "1")
 
-        primvarFileInput = shaderPrim.CreateInput('primvarFile', 
+        primvarFileInput = shaderDef.CreateInput('primvarFile', 
                 Sdf.ValueTypeNames.Asset)
         primvarFileInput.SetConnectability(UsdShade.Tokens.interfaceOnly)
 
-        fallbackInput = shaderPrim.CreateInput('fallback', 
+        fallbackInput = shaderDef.CreateInput('fallback', 
                 Sdf.ValueTypeNames.Float)
         fallbackInput.SetSdrMetadataByKey('defaultInput', "1")
 
         # Create dummy inputs of other types for testing.
-        float2Input = shaderPrim.CreateInput('float2Val', 
+        float2Input = shaderDef.CreateInput('float2Val', 
                 Sdf.ValueTypeNames.Float2)
-        float3Input = shaderPrim.CreateInput('float3Val', 
+        float3Input = shaderDef.CreateInput('float3Val', 
                 Sdf.ValueTypeNames.Float3)
-        float4Input = shaderPrim.CreateInput('float4Val', 
+        float4Input = shaderDef.CreateInput('float4Val', 
                 Sdf.ValueTypeNames.Float4)
 
-        colorInput = shaderPrim.CreateInput('someColor', 
+        colorInput = shaderDef.CreateInput('someColor', 
                 Sdf.ValueTypeNames.Color3f)
-        vectorInput = shaderPrim.CreateInput('someVector', 
+        vectorInput = shaderDef.CreateInput('someVector', 
                 Sdf.ValueTypeNames.Vector3f)
-        normalInput = shaderPrim.CreateInput('normalVector', 
+        normalInput = shaderDef.CreateInput('normalVector', 
                 Sdf.ValueTypeNames.Normal3f)
-        matrixInput = shaderPrim.CreateInput('someVector', 
+        matrixInput = shaderDef.CreateInput('someVector', 
                 Sdf.ValueTypeNames.Matrix4d)
 
-        resultOutput = shaderPrim.CreateOutput('result', 
+        resultOutput = shaderDef.CreateOutput('result', 
                 Sdf.ValueTypeNames.Float)
-        result2Output = shaderPrim.CreateOutput('result2', 
+        result2Output = shaderDef.CreateOutput('result2', 
                 Sdf.ValueTypeNames.Float2)
 
         discoveryResults = UsdShade.ShaderDefUtils.GetNodeDiscoveryResults(
-                shaderPrim, stage.GetRootLayer().realPath)
+                shaderDef, stage.GetRootLayer().realPath)
         self.assertEqual(len(discoveryResults), 2)
 
         parserPlugin = UsdShade.ShaderDefParserPlugin()
@@ -129,16 +134,12 @@ class TestUsdShadeShaderDef(unittest.TestCase):
                  'someColor', 'someVector'])
             self.assertEqual(n.GetOutputNames(), ['result', 'result2'])
             if n.GetSourceType() == "OSL":
-                self.assertEqual(
-                    os.path.normcase(n.GetResolvedImplementationURI()),
-                    os.path.normcase(osoPath))
+                self.assertEqual(n.GetResolvedImplementationURI(), osoPath)
             elif n.GetSourceType() == "glslfx":
-                self.assertEqual(
-                    os.path.normcase(n.GetResolvedImplementationURI()),
-                    os.path.normcase(glslfxPath))
+                self.assertEqual(n.GetResolvedImplementationURI(), glslfxPath)
 
         # Clean-up files.
-        os.remove(stage.GetRootLayer().realPath)
+        os.remove("shaderDef.usda")
         os.remove(osoPath)
         os.remove(glslfxPath)
 
@@ -160,52 +161,6 @@ class TestUsdShadeShaderDef(unittest.TestCase):
         discoveryResult = discoveryResults[0]
         node = UsdShade.ShaderDefParserPlugin().Parse(discoveryResult)
         assert node is not None
-
-        self.assertEqual(os.path.basename(node.GetResolvedImplementationURI()),
-                "TestShaderPropertiesNode.glslfx")
-        self.assertEqual(os.path.basename(node.GetResolvedDefinitionURI()),
-                "shaderDefs.usda")
-        
-        # Test GetOptions on an attribute via allowdTokens and 
-        # sdrMetadata["options"]
-        expectedOptionsList = [('token1', ''), ('token2', '')]
-        self.assertEqual(node.GetInput("testAllowedTokens").GetOptions(), 
-                expectedOptionsList)
-        self.assertEqual(node.GetInput("testMetadataOptions").GetOptions(), 
-                expectedOptionsList)
-
-        # sdrMetadata options will win over explicitly specified allowedTokens
-        # on the attr.
-        attr = shaderDef.GetPrim(). \
-                GetAttribute('inputs:testAllowedTokenAndMetdataOptions')
-        expectedMetdataOptions = "token3|token4"
-        expectedAttrAllowedTokens = ["token1", "token2"]
-        expectedOptionsList = [('token3', ''), ('token4', '')]
-        self.assertEqual(node.GetInput("testAllowedTokenAndMetdataOptions"). \
-                GetMetadata()["options"], expectedMetdataOptions)
-        self.assertEqual([t for t in attr.GetMetadata('allowedTokens')], 
-                expectedAttrAllowedTokens)
-        self.assertEqual(node.GetInput("testAllowedTokenAndMetdataOptions"). \
-                GetOptions(), expectedOptionsList)
-
-        # Test sdrUsdDefinitionType sdrMetadata and GetTypeAsSdfType
-        actualBoolInput = node.GetInput('actualBool')
-        attr = shaderDef.GetPrim(). \
-                GetAttribute('inputs:actualBool')
-        self.assertEqual(attr.GetTypeName(), Sdf.ValueTypeNames.Bool)
-        # Bool types are registered as Int via sdr, if no sdrUsdDefinitionType
-        # provided
-        self.assertEqual(actualBoolInput.GetTypeAsSdfType()[0], 
-                Sdf.ValueTypeNames.Bool) 
-        self.assertEqual(actualBoolInput.GetType(), Sdf.ValueTypeNames.Int)
-
-        intButBoolInput = node.GetInput('intButBool')
-        attr = shaderDef.GetPrim(). \
-                GetAttribute('inputs:intButBool')
-        self.assertEqual(attr.GetTypeName(), Sdf.ValueTypeNames.Int)
-        self.assertEqual(intButBoolInput.GetTypeAsSdfType()[0], 
-                Sdf.ValueTypeNames.Bool)
-        self.assertEqual(intButBoolInput.GetType(), Sdf.ValueTypeNames.Int)
 
         utils.TestShaderPropertiesNode(node)
 

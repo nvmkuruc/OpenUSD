@@ -62,9 +62,8 @@ UsdGeomPrimvarsAPI::Get(const UsdStagePtr &stage, const SdfPath &path)
 
 
 /* virtual */
-UsdSchemaKind UsdGeomPrimvarsAPI::_GetSchemaKind() const
-{
-    return UsdGeomPrimvarsAPI::schemaKind;
+UsdSchemaType UsdGeomPrimvarsAPI::_GetSchemaType() const {
+    return UsdGeomPrimvarsAPI::schemaType;
 }
 
 /* static */
@@ -211,7 +210,7 @@ _MakePrimvars(std::vector<UsdProperty> const &props,
               bool (filterPass)(UsdGeomPrimvar const &))
 {
     std::vector<UsdGeomPrimvar> primvars;
-    primvars.reserve(props.size());
+    
     for (UsdProperty const &prop : props) {
         // All prefixed properties except the ones that contain extra
         // namespaces (eg. the ":indices" attributes belonging to indexed
@@ -558,14 +557,6 @@ UsdGeomPrimvarsAPI::HasPossiblyInheritedPrimvar(const TfToken &name) const
         }
     }
     return false;
-}
-
-/* static */
-bool
-UsdGeomPrimvarsAPI::CanContainPropertyName(const TfToken& name)
-{
-    TfToken const& prefix = UsdGeomPrimvar::_GetNamespacePrefix();
-    return TfStringStartsWith(name, prefix);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
