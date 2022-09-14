@@ -22,8 +22,10 @@
 # KIND, either express or implied. See the Apache License for the specific
 # language governing permissions and limitations under the Apache License.
 
+# pylint: disable=map-builtin-not-iterating
+
 import sys, unittest
-from pxr import Sdf, Usd, UsdGeom, Vt, Gf
+from pxr import Sdf, Usd, UsdGeom, Vt, Gf, Tf
 
 class TestUsdGeomSchemata(unittest.TestCase):
     def test_Basic(self):
@@ -658,6 +660,13 @@ class TestUsdGeomSchemata(unittest.TestCase):
         # Ensure duplicates aren't picked up
         UsdGeom.ModelAPI.Apply(root)
         self.assertEqual(['MotionAPI', 'GeomModelAPI'], root.GetAppliedSchemas())
+
+        # Verify that we get exceptions but don't crash when applying to the 
+        # null prim.
+        with self.assertRaises(Tf.ErrorException):
+            self.assertFalse(UsdGeom.MotionAPI.Apply(Usd.Prim()))
+        with self.assertRaises(Tf.ErrorException):
+            self.assertFalse(UsdGeom.ModelAPI.Apply(Usd.Prim()))
 
     def test_IsATypeless(self):
         from pxr import Usd, Tf

@@ -41,17 +41,44 @@ class UsdPrim;
 ///
 class UsdImagingOpenVDBAssetAdapter : public UsdImagingFieldAdapter {
 public:
-    typedef UsdImagingFieldAdapter BaseAdapter;
+    using BaseAdapter = UsdImagingFieldAdapter;
 
     UsdImagingOpenVDBAssetAdapter()
         : UsdImagingFieldAdapter()
     {}
 
     USDVOLIMAGING_API
-    virtual ~UsdImagingOpenVDBAssetAdapter();
+    ~UsdImagingOpenVDBAssetAdapter() override;
+
+    // ---------------------------------------------------------------------- //
+    /// \name Scene Index Support
+    // ---------------------------------------------------------------------- //
+
+    USDIMAGING_API
+    TfTokenVector GetImagingSubprims() override;
+
+    USDIMAGING_API
+    TfToken GetImagingSubprimType(TfToken const& subprim) override;
+
+    USDIMAGING_API
+    HdContainerDataSourceHandle GetImagingSubprimData(
+            TfToken const& subprim,
+            UsdPrim const& prim,
+            const UsdImagingDataSourceStageGlobals &stageGlobals) override;
+
+    // ---------------------------------------------------------------------- //
+    /// \name Data access
+    // ---------------------------------------------------------------------- //
 
     USDVOLIMAGING_API
-    virtual TfToken GetPrimTypeToken() const;
+    VtValue Get(UsdPrim const& prim,
+                SdfPath const& cachePath,
+                TfToken const& key,
+                UsdTimeCode time,
+                VtIntArray *outIndices) const override;
+
+    USDVOLIMAGING_API
+    TfToken GetPrimTypeToken() const override;
 };
 
 

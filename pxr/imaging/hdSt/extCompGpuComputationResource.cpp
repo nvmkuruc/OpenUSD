@@ -21,12 +21,10 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/imaging/glf/glew.h"
-#include "pxr/imaging/hdSt/bufferArrayRangeGL.h"
+#include "pxr/imaging/hdSt/bufferArrayRange.h"
 #include "pxr/imaging/hdSt/codeGen.h"
 #include "pxr/imaging/hdSt/extCompGpuComputationResource.h"
 #include "pxr/imaging/hdSt/glslProgram.h"
-#include "pxr/imaging/hdSt/glUtils.h"
 #include "pxr/imaging/hd/tokens.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -41,7 +39,7 @@ static size_t _Hash(HdBufferSpecVector const &specs) {
 
 HdStExtCompGpuComputationResource::HdStExtCompGpuComputationResource(
         HdBufferSpecVector const &outputBufferSpecs,
-        HdStComputeShaderSharedPtr const &kernel,
+        HdSt_ExtCompComputeShaderSharedPtr const &kernel,
         HdBufferArrayRangeSharedPtrVector const &inputs,
         HdStResourceRegistrySharedPtr const &registry)
  : _outputBufferSpecs(outputBufferSpecs)
@@ -55,7 +53,7 @@ HdStExtCompGpuComputationResource::HdStExtCompGpuComputationResource(
 }
 
 bool
-HdStExtCompGpuComputationResource::Resolve()
+HdStExtCompGpuComputationResource::_Resolve()
 {
     // Non-in-place sources should have been registered as resource registry
     // sources already and Resolved. They go to an internal buffer range that
@@ -97,9 +95,11 @@ HdStExtCompGpuComputationResource::Resolve()
         // let resourcebinder resolve bindings and populate metadata
         // which is owned by codegen.
         _resourceBinder.ResolveComputeBindings(_outputBufferSpecs,
-                                              inputBufferSpecs,
-                                              shaders,
-                                              codeGen.GetMetaData());
+                                               inputBufferSpecs,
+                                               shaders,
+                                               codeGen.GetMetaData(),
+                                               _registry->GetHgi()->
+                                                   GetCapabilities());
 
         HdStGLSLProgram::ID registryID = codeGen.ComputeHash();
 
@@ -116,10 +116,8 @@ HdStExtCompGpuComputationResource::Resolve()
                 }
                 
                 if (!glslProgram->Link()) {
-                    std::string logString;
-                    HdStGLUtils::GetProgramLinkStatus(
-                        glslProgram->GetProgram()->GetRawResource(),
-                        &logString);
+                    std::string const& logString = 
+                        glslProgram->GetProgram()->GetCompileErrors();
                     TF_WARN("Failed to link compute shader: %s",
                             logString.c_str());
                     return false;
@@ -127,6 +125,10 @@ HdStExtCompGpuComputationResource::Resolve()
                 
                 // store the program into the program registry.
                 programInstance.SetValue(glslProgram);
+
+                TF_DEBUG(HD_EXT_COMPUTATION_UPDATED).Msg(
+                    "Compiled and linked compute program for computation %s\n ",
+                    _kernel->GetExtComputationId().GetText());
             }
 
             _computeProgram = programInstance.GetValue();

@@ -24,13 +24,16 @@
 
 from __future__ import print_function
 
+from pxr import Tf
+Tf.PreparePythonModule()
+
 import sys, argparse, os
 
 from .qt import QtWidgets, QtCore
 from .common import Timer
 from .appController import AppController
 
-from pxr import UsdAppUtils, Tf
+from pxr import UsdAppUtils
 
 
 class InvalidUsdviewOption(Exception):
@@ -73,7 +76,10 @@ class Launcher(object):
             if arg_parse_result.traceToFile:
                 from pxr import Trace
                 traceCollector = Trace.Collector()
-                traceCollector.pythonTracingEnabled = True
+            
+                if arg_parse_result.tracePython:
+                    traceCollector.pythonTracingEnabled = True
+
                 traceCollector.enabled = True
 
             self.__LaunchProcess(arg_parse_result)
@@ -115,14 +121,13 @@ class Launcher(object):
         '''
         from pxr import UsdUtils
 
-        parser.add_argument('--renderer', action='store',
-                            type=str, dest='renderer',
-                            choices=AppController.GetRendererOptionChoices(),
-                            help="Which render backend to use (named as it "
+        UsdAppUtils.rendererArgs.AddCmdlineArgs(parser,
+                altHelpText=("Which render backend to use (named as it "
                             "appears in the menu).  Use '%s' to "
                             "turn off Hydra renderers." %
-                            AppController.HYDRA_DISABLED_OPTION_STRING,
-                            default='')
+                        UsdAppUtils.rendererArgs.HYDRA_DISABLED_OPTION_STRING
+                            ),
+                allowHydraDisabled=True)
         
         parser.add_argument('--select', action='store', default='/',
                             dest='primPath', type=str,
@@ -168,7 +173,7 @@ class Launcher(object):
 
         parser.add_argument('--timing', action='store_true',
                             dest='timing',
-                            help='Echo timing stats to console. NOTE: timings will be unreliable when the --mallocTagStats option is also in use')
+                            help='Echo timing stats to console. NOTE: timings will be unreliable when the --memstats option is also in use')
 
         parser.add_argument('--traceToFile', action='store',
                             type=str,
@@ -187,6 +192,11 @@ class Launcher(object):
                             '--traceToFile. \'chrome\' files can be read in '
                             'chrome, \'trace\' files are simple text reports. '
                             '(default=%(default)s)')
+
+        parser.add_argument('--tracePython', action='store_true',
+                            dest='tracePython',
+                            help='Enable python trace collection, '
+                            'requires --traceToFile to be set.')
 
         parser.add_argument('--memstats', action='store', default='none',
                             dest='mallocTagStats', type=str,
@@ -294,7 +304,12 @@ class Launcher(object):
         from pxr import Ar
         
         r = Ar.GetResolver()
-        r.ConfigureResolverForAsset(usdFile)
+
+        # ConfigureResolverForAsset no longer exists under Ar 2.0; this
+        # is here for backwards compatibility with Ar 1.0.
+        if hasattr(r, "ConfigureResolverForAsset"):
+            r.ConfigureResolverForAsset(usdFile)
+
         return r.CreateDefaultContextForAsset(usdFile)
 
 
@@ -303,6 +318,11 @@ class Launcher(object):
         # respected by subsequent imports.
         from pxr import Work
         Work.SetConcurrencyLimitArgument(arg_parse_result.numThreads)
+
+        # XXX Override HdPrman's defaults using the env var.  In the
+        # future we expect there may be more formal ways to represent
+        # per-app settings for particular Hydra plugins.
+        os.environ.setdefault('HD_PRMAN_MAX_SAMPLES', '1024')
 
         if arg_parse_result.clearSettings:
             AppController.clearSettings()

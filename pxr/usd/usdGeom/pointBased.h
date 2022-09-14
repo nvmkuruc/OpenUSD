@@ -60,8 +60,8 @@ class UsdGeomPointBased : public UsdGeomGprim
 public:
     /// Compile time constant representing what kind of schema this class is.
     ///
-    /// \sa UsdSchemaType
-    static const UsdSchemaType schemaType = UsdSchemaType::AbstractTyped;
+    /// \sa UsdSchemaKind
+    static const UsdSchemaKind schemaKind = UsdSchemaKind::AbstractTyped;
 
     /// Construct a UsdGeomPointBased on UsdPrim \p prim .
     /// Equivalent to UsdGeomPointBased::Get(prim.GetStage(), prim.GetPath())
@@ -106,11 +106,11 @@ public:
 
 
 protected:
-    /// Returns the type of schema this class belongs to.
+    /// Returns the kind of schema this class belongs to.
     ///
-    /// \sa UsdSchemaType
+    /// \sa UsdSchemaKind
     USDGEOM_API
-    UsdSchemaType _GetSchemaType() const override;
+    UsdSchemaKind _GetSchemaKind() const override;
 
 private:
     // needs to invoke _GetStaticTfType.
@@ -373,8 +373,7 @@ public:
     ///                     \p positions or empty. If it is empty, points
     ///                     are computed as if all accelerations were zero in 
     ///                     all dimensions.
-    /// \param velocityScale - factor used to artificially increase the effect
-    ///                        of velocity on positions.
+    /// \param velocityScale - \deprecated
     USDGEOM_API
     static bool
     ComputePointsAtTime(
@@ -385,7 +384,7 @@ public:
         const VtVec3fArray& velocities,
         UsdTimeCode velocitiesSampleTime,
         const VtVec3fArray& accelerations,
-        float velocityScale);
+        float velocityScale=1.0);
 
 };
 

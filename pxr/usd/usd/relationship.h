@@ -53,7 +53,7 @@ typedef std::vector<UsdRelationship> UsdRelationshipVector;
 /// A UsdRelationship is a pointer to other objects, which are named by their
 /// scenegraph paths.  When authoring relationships, the \em target parameters
 /// should be scenegraph paths in the composed namespace of the UsdStage into
-/// which you are authoring.  If your edits are targetted to a different
+/// which you are authoring.  If your edits are targeted to a different
 /// layer, across various composition arcs (because you specified a non-default
 /// \ref UsdEditTarget), the target's path will be automatically translated
 /// into the proper namespace.
@@ -65,10 +65,10 @@ typedef std::vector<UsdRelationship> UsdRelationshipVector;
 /// relationship in weaker layers \em without stomping the weaker opinions,
 /// although stomping behavior is still possible, via SetTargets().
 ///
-/// An authored relationship creates a dependency of the targetting prim on
-/// the targetted prim(s).  We consider these dependencies to be "load
+/// An authored relationship creates a dependency of the targeting prim on
+/// the targeted prim(s).  We consider these dependencies to be "load
 /// dependencies", which means that when we load the targeting prim's
-/// "load group", we will also load the targetted prims' load groups, to ensure
+/// "load group", we will also load the targeted prims' load groups, to ensure
 /// that all the data required to render the model containing the targeting
 /// prim is composed and available.
 ///
@@ -89,22 +89,22 @@ typedef std::vector<UsdRelationship> UsdRelationshipVector;
 /// the aggregate.
 ///
 /// This can happen because references encapsulate just the tree whose root
-/// is targetted in the reference - no other scene description in the
+/// is targeted in the reference - no other scene description in the
 /// referenced layer will be composed into the aggregate.  So if some
 /// descendant prim of the referenced root targets a relationship to another
 /// tree in the same layer, that relationship would dangle, and the client
 /// will error in GetTargets() or GetForwardedTargets().
 ///
-/// Authoring targets to objects within masters is not allowed, since master
-/// prims do not have a stable identity across runs.  Consumers must author
-/// targets to the object within an instance instead.
+/// Authoring targets to objects within prototypes is not allowed, since
+/// prototype prims do not have a stable identity across runs.  Consumers must 
+/// author targets to the object within an instance instead.
 ///
 /// Relationships authored in a descendent prim of a referenced prim may not
 /// target the referenced prim itself or any of its immediate child properties
 /// if the referencing prim is instanceable.  Allowing this would break the
 /// ability for this relationship to be instanced and shared by multiple
-/// instances -- it would force consumers of relationships within masters
-/// to resolve targets in the context of each of that master's instances.
+/// instances -- it would force consumers of relationships within prototypes
+/// to resolve targets in the context of each of that prototype's instances.
 ///
 /// \section usd_relationship_forwarding Relationship Forwarding
 ///
@@ -117,11 +117,11 @@ typedef std::vector<UsdRelationship> UsdRelationshipVector;
 ///     other prims to target.  The prim also hosts a "bindingVariant"
 ///     UsdVariantSet whose variants each modulate the target of the
 ///     binding-post relationship.  We can now change the \em forwarded target 
-///     of all prims targetting the binding-post by simply switching the
+///     of all prims targeting the binding-post by simply switching the
 ///     bindingVariant VariantSet.  We will work through this example in
 ///     the USD reference manual.
 /// \li Defining a relationship as part of a model's interface (so that it can
-///     be targetted in model hierarchy with no models loaded), which, inside
+///     be targeted in model hierarchy with no models loaded), which, inside
 ///     the model's payload, forwards to prims useful to a client, the set of
 ///     which may vary depending on the model's configured VariantSets.
 ///
@@ -142,8 +142,8 @@ public:
     /// Adds \p target to the list of targets, in the position specified
     /// by \p position.
     ///
-    /// Passing paths to master prims or any other objects in masters will 
-    /// cause an error to be issued. It is not valid to author targets to
+    /// Passing paths to prototype prims or any other objects in prototypes
+    /// will cause an error to be issued. It is not valid to author targets to
     /// these objects.
     ///
     /// What data this actually authors depends on what data is currently
@@ -155,23 +155,17 @@ public:
 
     /// Removes \p target from the list of targets.
     ///
-    /// Passing paths to master prims or any other objects in masters will 
-    /// cause an error to be issued. It is not valid to author targets to
+    /// Passing paths to prototype prims or any other objects in prototypes
+    /// will cause an error to be issued. It is not valid to author targets to
     /// these objects.
     USD_API
     bool RemoveTarget(const SdfPath& target) const;
 
-    /// Clears all target edits from the current EditTarget, and makes
-    /// the opinion explicit, which means we are effectively resetting the
-    /// composed value of the targets list to empty.
-    USD_API
-    bool BlockTargets() const;
-
     /// Make the authoring layer's opinion of the targets list explicit,
     /// and set exactly to \p targets.
     ///
-    /// Passing paths to master prims or any other objects in masters will 
-    /// cause an error to be issued. It is not valid to author targets to
+    /// Passing paths to prototype prims or any other objects in prototypes
+    /// will cause an error to be issued. It is not valid to author targets to
     /// these objects.
     ///
     /// If any target in \p targets is invalid, no targets will be authored
@@ -190,6 +184,12 @@ public:
 
     /// Compose this relationship's targets and fill \p targets with the result.
     /// All preexisting elements in \p targets are lost.
+    /// 
+    /// Returns true if any target path opinions have been authored and no
+    /// composition errors were encountered, returns false otherwise. 
+    /// Note that authored opinions may include opinions that clear the targets 
+    /// and a return value of true does not necessarily indicate that \p targets 
+    /// will contain any target paths.
     ///
     /// See \ref Usd_ScenegraphInstancing_TargetsAndConnections for details on 
     /// behavior when targets point to objects beneath instance prims.
@@ -200,13 +200,22 @@ public:
 
     /// Compose this relationship's \em ultimate targets, taking into account
     /// "relationship forwarding", and fill \p targets with the result.  All
-    /// preexisting elements in \p targets are lost.  This method never inserts
+    /// preexisting elements in \p targets are lost. This method never inserts
     /// relationship paths in \p targets.
     ///
-    /// When composition errors occur, continue to collect successfully
-    /// composed targets, but return false to indicate to the caller that
-    /// errors occurred.
-    ///
+    /// Returns true if any of the visited relationships that are not 
+    /// "purely forwarding" has an authored opinion for its target paths and
+    /// no composition errors were encountered while computing any targets. 
+    /// Purely forwarding, in this context, means the relationship has at least 
+    /// one target but all of its targets are paths to other relationships.
+    /// Note that authored opinions may include opinions that clear the targets 
+    /// and a return value of true does not necessarily indicate that \p targets 
+    /// will not be empty.
+    /// 
+    /// Returns false otherwise. When composition errors occur, this function 
+    /// continues to collect successfully composed targets, but returns false 
+    /// to indicate to the caller that errors occurred.
+    /// 
     /// When a forwarded target cannot be determined, e.g. due to a composition
     /// error, no value is returned for that target; the alternative would be to
     /// return the relationship path at which the forwarded targets could not be
@@ -255,10 +264,11 @@ private:
     bool _GetForwardedTargets(SdfPathVector* targets,
                               bool includeForwardingRels) const;
 
-    bool _GetForwardedTargets(SdfPathSet* visited, 
-                              SdfPathSet* uniqueTargets,
-                              SdfPathVector* targets,
-                              bool includeForwardingRels) const;
+    bool _GetForwardedTargetsImpl(SdfPathSet* visited, 
+                                  SdfPathSet* uniqueTargets,
+                                  SdfPathVector* targets,
+                                  bool *foundAnyErrors,
+                                  bool includeForwardingRels) const;
 
     SdfPath _GetTargetForAuthoring(const SdfPath &targetPath,
                                    std::string* whyNot = 0) const;

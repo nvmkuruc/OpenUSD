@@ -50,6 +50,7 @@ pxr_library(usdGeom
         scope
         sphere
         subset
+        visibilityAPI
         xform
         xformable
         xformOp
@@ -94,6 +95,7 @@ pxr_library(usdGeom
         wrapSphere.cpp
         wrapSubset.cpp
         wrapTokens.cpp
+        wrapVisibilityAPI.cpp
         wrapXform.cpp
         wrapXformCache.cpp
         wrapXformable.cpp
@@ -107,6 +109,13 @@ pxr_library(usdGeom
         plugInfo.json
         generatedSchema.usda
         schema.usda:usdGeom/schema.usda
+
+    DOXYGEN_FILES
+        overview.dox
+        snippets.dox
+        images/USDCurveBasisMatrix.png
+        images/USDCurveHydra.png
+        images/USDCurvePrimvars.png
 )
 
 pxr_test_scripts(
@@ -117,6 +126,7 @@ pxr_test_scripts(
     testenv/testUsdGeomConstraintTarget.py
     testenv/testUsdGeomConsts.py
     testenv/testUsdGeomCurves.py
+    testenv/testUsdGeomExtentFromPlugins.py
     testenv/testUsdGeomExtentTransform.py
     testenv/testUsdGeomHermiteCurves.py
     testenv/testUsdGeomImageable.py
@@ -201,6 +211,11 @@ pxr_install_test_dir(
 )
 
 pxr_install_test_dir(
+    SRC testenv/testUsdGeomExtentFromPlugins
+    DEST testUsdGeomExtentFromPlugins
+)
+
+pxr_install_test_dir(
     SRC testenv/testUsdGeomExtentTransform
     DEST testUsdGeomExtentTransform
 )
@@ -221,6 +236,10 @@ pxr_install_test_dir(
     SRC testenv/testUsdGeomImageable
     DEST testUsdGeomImageable)
 
+pxr_install_test_dir(
+    SRC testenv/testUsdGeomMesh
+    DEST testUsdGeomMesh)
+
 pxr_register_test(testUsdGeomBasisCurves
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdGeomBasisCurves"
@@ -233,7 +252,7 @@ pxr_register_test(testUsdGeomBBoxCache
     EXPECTED_RETURN_CODE 0
     ENV 
         TF_DEBUG=USDGEOM_BBOX
-        USD_ASSIGN_MASTERS_DETERMINISTICALLY=1
+        USD_ASSIGN_PROTOTYPES_DETERMINISTICALLY=1
 )
 
 pxr_register_test(testUsdGeomCamera
@@ -270,6 +289,13 @@ pxr_register_test(testUsdGeomMesh
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdGeomMesh"
     EXPECTED_RETURN_CODE 0
 )
+
+pxr_register_test(testUsdGeomMetrics
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdGeomMetrics"
+    EXPECTED_RETURN_CODE 0
+)
+
 
 pxr_register_test(testUsdGeomSubset
     PYTHON
@@ -340,6 +366,12 @@ pxr_register_test(testUsdGeomXformCommonAPI
     ENV
         USDGEOM_XFORMCOMMONAPI_ALLOW_DOUBLES=1
     #nv end
+)
+
+pxr_register_test(testUsdGeomExtentFromPlugins
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdGeomExtentFromPlugins"
+    EXPECTED_RETURN_CODE 0
 )
 
 pxr_register_test(testUsdGeomExtentTransform

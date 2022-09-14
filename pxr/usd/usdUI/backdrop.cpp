@@ -75,8 +75,9 @@ UsdUIBackdrop::Define(
 }
 
 /* virtual */
-UsdSchemaType UsdUIBackdrop::_GetSchemaType() const {
-    return UsdUIBackdrop::schemaType;
+UsdSchemaKind UsdUIBackdrop::_GetSchemaKind() const
+{
+    return UsdUIBackdrop::schemaKind;
 }
 
 /* static */

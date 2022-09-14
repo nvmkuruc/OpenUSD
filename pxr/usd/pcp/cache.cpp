@@ -45,9 +45,10 @@
 #include "pxr/usd/sdf/layer.h"
 #include "pxr/usd/sdf/schema.h"
 #include "pxr/base/trace/trace.h"
-#include "pxr/base/work/arenaDispatcher.h"
+#include "pxr/base/work/dispatcher.h"
 #include "pxr/base/work/loops.h"
 #include "pxr/base/work/utils.h"
+#include "pxr/base/work/withScopedParallelism.h"
 #include "pxr/base/tf/enum.h"
 #include "pxr/base/tf/envSetting.h"
 #include "pxr/base/tf/registryManager.h"
@@ -111,7 +112,7 @@ PcpCache::PcpCache(
     bool usd) :
     _rootLayer(layerStackIdentifier.rootLayer),
     _sessionLayer(layerStackIdentifier.sessionLayer),
-    _pathResolverContext(layerStackIdentifier.pathResolverContext),
+    _layerStackIdentifier(layerStackIdentifier),
     _usd(usd),
     _fileFormatTarget(fileFormatTarget),
     _layerStackCache(Pcp_LayerStackRegistry::New(_fileFormatTarget, _usd)),
@@ -137,20 +138,19 @@ PcpCache::~PcpCache()
 
     // Tear down some of our datastructures in parallel, since it can take quite
     // a bit of time.
-    WorkArenaDispatcher wd;
-
-    wd.Run([this]() { _rootLayer.Reset(); });
-    wd.Run([this]() { _sessionLayer.Reset(); });
-    wd.Run([this]() { TfReset(_includedPayloads); });
-    wd.Run([this]() { TfReset(_variantFallbackMap); });
-    wd.Run([this]() { _primIndexCache.ClearInParallel(); });
-    wd.Run([this]() { TfReset(_propertyIndexCache); });
-
-    // Wait, since _primDependencies cannot be destroyed concurrently
-    // with the prim indexes, since they both hold references to
-    // layer stacks and the layer stack registry is not currently
-    // prepared to handle concurrent expiry of layer stacks.
-    wd.Wait();
+    WorkWithScopedParallelism([this]() {
+            WorkDispatcher wd;
+            wd.Run([this]() { _rootLayer.Reset(); });
+            wd.Run([this]() { _sessionLayer.Reset(); });
+            wd.Run([this]() { TfReset(_includedPayloads); });
+            wd.Run([this]() { TfReset(_variantFallbackMap); });
+            wd.Run([this]() { _primIndexCache.ClearInParallel(); });
+            wd.Run([this]() { TfReset(_propertyIndexCache); });
+            // Wait, since _primDependencies cannot be destroyed concurrently
+            // with the prim indexes, since they both hold references to
+            // layer stacks and the layer stack registry is not currently
+            // prepared to handle concurrent expiry of layer stacks.
+        });
 
     _primDependencies.reset();
     _layerStackCache.Reset();
@@ -159,11 +159,10 @@ PcpCache::~PcpCache()
 ////////////////////////////////////////////////////////////////////////
 // Cache parameters.
 
-PcpLayerStackIdentifier
+const PcpLayerStackIdentifier&
 PcpCache::GetLayerStackIdentifier() const
 {
-    return PcpLayerStackIdentifier(_rootLayer, _sessionLayer,
-                                   _pathResolverContext);
+    return _layerStackIdentifier;
 }
 
 PcpLayerStackPtr
@@ -176,6 +175,12 @@ PcpLayerStackPtr
 PcpCache::FindLayerStack(const PcpLayerStackIdentifier &id) const
 {
     return _layerStackCache->Find(id);
+}
+
+bool
+PcpCache::UsesLayerStack(const PcpLayerStackPtr &layerStack) const
+{
+    return _layerStackCache->Contains(layerStack);
 }
 
 const PcpLayerStackPtrVector&
@@ -264,9 +269,11 @@ PcpCache::RequestPayloads( const SdfPathSet & pathsToInclude,
 void 
 PcpCache::RequestLayerMuting(const std::vector<std::string>& layersToMute,
                              const std::vector<std::string>& layersToUnmute,
-                             PcpChanges* changes)
+                             PcpChanges* changes,
+                             std::vector<std::string>* newLayersMuted,
+                             std::vector<std::string>* newLayersUnmuted)
 {
-    ArResolverContextBinder binder(_pathResolverContext);
+    ArResolverContextBinder binder(_layerStackIdentifier.pathResolverContext);
 
     std::vector<std::string> finalLayersToMute;
     for (const auto& layerToMute : layersToMute) {
@@ -343,6 +350,14 @@ PcpCache::RequestLayerMuting(const std::vector<std::string>& layersToMute,
                 }
             }
         }
+    }
+
+    // update out newLayersMuted and newLayersUnmuted parameters
+    if (newLayersMuted) {
+        *newLayersMuted = std::move(finalLayersToMute);
+    }
+    if (newLayersUnmuted) {
+        *newLayersUnmuted = std::move(finalLayersToUnmute);
     }
 }
 
@@ -471,6 +486,12 @@ PcpCache::GetUsedLayers() const
         rval.insert(localLayers.begin(), localLayers.end());
     }
     return rval;
+}
+
+size_t
+PcpCache::GetUsedLayersRevision() const
+{
+    return _primDependencies->GetLayerStacksRevision();
 }
 
 SdfLayerHandleSet
@@ -879,6 +900,11 @@ PcpCache::Apply(const PcpCacheChanges& changes, PcpLifeboat* lifeboat)
         _primDependencies->RemoveAll(lifeboat);
     }
     else {
+        // If layers may have changed, inform _primDependencies.
+        if (changes.didMaybeChangeLayers) {
+            _primDependencies->LayerStacksChanged();
+        }
+
         // Blow prim and property indexes due to prim graph changes.
         TF_FOR_ALL(i, changes.didChangeSignificantly) {
             const SdfPath& path = *i;
@@ -968,6 +994,9 @@ PcpCache::Apply(const PcpCacheChanges& changes, PcpLifeboat* lifeboat)
     //      this is more costly or that would be.
     static const bool fixTargetPaths = true;
     std::vector<SdfPath> newIncludes;
+    // Path changes are in the order in which they were processed so we know
+    // the difference between a rename from B -> C followed by A -> B as opposed
+    // to from A -> B, B -> C.
     TF_FOR_ALL(i, changes.didChangePath) {
         for (PayloadSet::iterator j = _includedPayloads.begin();
                 j != _includedPayloads.end(); ) {
@@ -984,6 +1013,18 @@ PcpCache::Apply(const PcpCacheChanges& changes, PcpLifeboat* lifeboat)
                 ++j;
             }
         }
+        // Because we could have a chain of renames like A -> B, B -> C, we also
+        // need to check the newIncludes. Any payloads prefixed by A will have
+        // been removed from _includedPayloads and renamed B in newIncludes 
+        // during the A -> B pass, so the B -> C pass needs to rename all the
+        // B prefixed paths in newIncludes to complete the full rename.
+        for (SdfPath &newInclude : newIncludes) {
+            if (newInclude.HasPrefix(i->first)) {
+                // The rename can happen in place.
+                newInclude = newInclude.ReplacePrefix(i->first, i->second,
+                                                       !fixTargetPaths);
+            }
+        }
     }
     _includedPayloads.insert(newIncludes.begin(), newIncludes.end());
 }
@@ -997,7 +1038,7 @@ PcpCache::Reload(PcpChanges* changes)
         return;
     }
 
-    ArResolverContextBinder binder(_pathResolverContext);
+    ArResolverContextBinder binder(_layerStackIdentifier.pathResolverContext);
 
     // Reload every invalid sublayer and asset we know about,
     // in any layer stack or prim index.
@@ -1046,7 +1087,7 @@ PcpCache::ReloadReferences(PcpChanges* changes, const SdfPath& primPath)
 {
     TRACE_FUNCTION();
 
-    ArResolverContextBinder binder(_pathResolverContext);
+    ArResolverContextBinder binder(_layerStackIdentifier.pathResolverContext);
 
     // Traverse every PrimIndex at or under primPath to find
     // InvalidAssetPath errors, and collect the unique layer stacks used.
@@ -1152,6 +1193,25 @@ PcpCache::_RemovePropertyCaches(const SdfPath& root, PcpLifeboat* lifeboat)
 ////////////////////////////////////////////////////////////////////////
 // Private helper methods.
 
+void
+PcpCache::_ForEachLayerStack(
+    const TfFunctionRef<void(const PcpLayerStackPtr&)>& fn) const
+{
+    _layerStackCache->ForEachLayerStack(fn);
+}
+
+void
+PcpCache::_ForEachPrimIndex(
+    const TfFunctionRef<void(const PcpPrimIndex&)>& fn) const
+{
+    for (const auto& entry : _primIndexCache) {
+        const PcpPrimIndex& primIndex = entry.second;
+        if (primIndex.IsValid()) {
+            fn(primIndex);
+        }
+    }
+}
+
 PcpPrimIndex*
 PcpCache::_GetPrimIndex(const SdfPath& path)
 {
@@ -1210,15 +1270,16 @@ struct PcpCache::_ParallelIndexer
 
     // Run the added work and wait for it to complete.
     void RunAndWait() {
-        {
-            Pcp_Dependencies::ConcurrentPopulationContext
-                populationContext(*_cache->_primDependencies);
-            TF_FOR_ALL(i, _toCompute) {
-                _dispatcher.Run(&This::_ComputeIndex, this, i->first, i->second,
-                                /*checkCache=*/true);
-            }
-            _dispatcher.Wait();
-        }
+        WorkWithScopedParallelism([this]() {
+                Pcp_Dependencies::ConcurrentPopulationContext
+                    populationContext(*_cache->_primDependencies);
+                TF_FOR_ALL(i, _toCompute) {
+                    _dispatcher.Run(&This::_ComputeIndex, this,
+                                    i->first, i->second,
+                                    /*checkCache=*/true);
+                }
+                _dispatcher.Wait();
+            });
 
         // Clear out results & working space.  If stuff is huge, dump it
         // asynchronously, otherwise clear in place to possibly reuse heap for
@@ -1357,7 +1418,7 @@ struct PcpCache::_ParallelIndexer
     // Utils.
     tbb::spin_rw_mutex _primIndexCacheMutex;
     tbb::spin_rw_mutex _includedPayloadsMutex;
-    WorkArenaDispatcher _dispatcher;
+    WorkDispatcher _dispatcher;
 
     // Varying inputs.
     _UntypedIndexingChildrenPredicate _childrenPredicate;

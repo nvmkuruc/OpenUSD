@@ -30,6 +30,7 @@
 #include "pxr/usd/sdf/data.h"
 #include "pxr/usd/sdf/fileFormatRegistry.h"
 #include "pxr/usd/sdf/layer.h"
+#include "pxr/usd/sdf/layerHints.h"
 
 #include "pxr/usd/ar/resolver.h"
 #include "pxr/base/trace/trace.h"
@@ -146,10 +147,18 @@ SdfFileFormat::ShouldSkipAnonymousReload() const
     return _ShouldSkipAnonymousReload();
 }
 
+#if AR_VERSION == 1
 bool
 SdfFileFormat::LayersAreFileBased() const
 {
     return _LayersAreFileBased();
+}
+#endif
+
+bool 
+SdfFileFormat::ShouldReadAnonymousLayers() const
+{
+    return _ShouldReadAnonymousLayers();
 }
 
 const SdfSchemaBase&
@@ -259,6 +268,13 @@ SdfFileFormat::WriteToString(
     return false;
 }
 
+std::set<std::string> 
+SdfFileFormat::GetExternalAssetDependencies(
+    const SdfLayer& layer) const
+{
+    return std::set<std::string>();
+}
+
 /* static */
 std::string
 SdfFileFormat::GetFileExtension(
@@ -268,18 +284,7 @@ SdfFileFormat::GetFileExtension(
         return s;
     }
 
-    // We remove any file format arguments that may be appended to the layer
-    // path so we can get just the raw extension.
-    std::string layerPath;
-    std::string dummyArgs;
-    // XXX: if it is a dot file (e.g. .sdf) we append a temp
-    // name to retain behavior of specifier stripping.
-    // this is in place for backwards compatibility
-    Sdf_SplitIdentifier((s[0] == '.' ? "temp_file_name" + s : s), 
-                        &layerPath, &dummyArgs);
-
-    std::string extension = Sdf_GetExtension(layerPath);
-       
+    const std::string extension = Sdf_GetExtension(s);
     return extension.empty() ? s : extension;
 }
 
@@ -341,16 +346,33 @@ SdfFileFormat::_ShouldSkipAnonymousReload() const
     return true;
 }
 
+#if AR_VERSION == 1
 bool 
 SdfFileFormat::_LayersAreFileBased() const
 {
     return true;
+}
+#endif
+
+bool 
+SdfFileFormat::_ShouldReadAnonymousLayers() const
+{
+    return false;
 }
 
 void
 SdfFileFormat::_SetLayerData(
     SdfLayer* layer,
     SdfAbstractDataRefPtr& data)
+{
+    _SetLayerData(layer, data, SdfLayerHints{});
+}
+
+void
+SdfFileFormat::_SetLayerData(
+    SdfLayer* layer,
+    SdfAbstractDataRefPtr& data,
+    SdfLayerHints hints)
 {
     // If layer initialization has not completed, then this
     // is being loaded as a new layer; otherwise we are loading
@@ -366,6 +388,8 @@ SdfFileFormat::_SetLayerData(
     else {
         layer->_SetData(data);
     }
+
+    layer->_hints = hints;
 }
 
 SdfAbstractDataConstPtr

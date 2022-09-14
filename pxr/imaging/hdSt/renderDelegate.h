@@ -33,6 +33,10 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 class Hgi;
+class HdStRenderParam;
+using HdStDrawItemsCacheUniquePtr =
+    std::unique_ptr<class HdSt_DrawItemsCache>;
+using HdStDrawItemsCachePtr = HdSt_DrawItemsCache *;
 
 using HdStResourceRegistrySharedPtr = 
     std::shared_ptr<class HdStResourceRegistry>;
@@ -40,8 +44,9 @@ using HdStResourceRegistrySharedPtr =
 ///
 /// HdStRenderDelegate
 ///
-/// The Storm Render Delegate provides a Hydra render that uses a
-/// streaming graphics implementation to draw the scene.
+/// The Storm Render Delegate provides a rasterizer renderer to draw the scene.
+/// While it currently has some ties to GL, the goal is to use Hgi to allow
+/// it to be graphics API agnostic.
 ///
 class HdStRenderDelegate final : public HdRenderDelegate {
 public:
@@ -52,6 +57,10 @@ public:
 
     HDST_API
     virtual ~HdStRenderDelegate();
+    
+    // ---------------------------------------------------------------------- //
+    /// \name HdRenderDelegate virtual API
+    // ---------------------------------------------------------------------- //
 
     HDST_API
     virtual void SetDrivers(HdDriverVector const& drivers) override;
@@ -76,16 +85,14 @@ public:
 
     HDST_API
     virtual HdInstancer *CreateInstancer(HdSceneDelegate *delegate,
-                                         SdfPath const& id,
-                                         SdfPath const& instancerId) override;
+                                         SdfPath const& id) override;
 
     HDST_API
     virtual void DestroyInstancer(HdInstancer *instancer) override;
 
     HDST_API
     virtual HdRprim *CreateRprim(TfToken const& typeId,
-                                 SdfPath const& rprimId,
-                                 SdfPath const& instancerId) override;
+                                 SdfPath const& rprimId) override;
     HDST_API
     virtual void DestroyRprim(HdRprim *rPrim) override;
 
@@ -117,11 +124,6 @@ public:
     HDST_API
     virtual bool IsPrimvarFilteringNeeded() const override;
 
-    // Returns whether or not HdStRenderDelegate can run on the current
-    // hardware.
-    HDST_API
-    static bool IsSupported();
-
     HDST_API
     virtual HdRenderSettingDescriptorList
         GetRenderSettingDescriptors() const override;
@@ -132,26 +134,45 @@ public:
     HDST_API
     virtual HdAovDescriptor
         GetDefaultAovDescriptor(TfToken const& name) const override;
+    
+    // ---------------------------------------------------------------------- //
+    /// \name Misc public API
+    // ---------------------------------------------------------------------- //
+
+    // Returns whether or not HdStRenderDelegate can run on the current
+    // hardware.
+    HDST_API
+    static bool IsSupported();
+
+    // Returns a raw pointer to the draw items cache owned (solely) by the
+    // render delegate.
+    HDST_API
+    HdStDrawItemsCachePtr GetDrawItemsCache() const;
 
     // Returns Hydra graphics interface
     HDST_API
     Hgi* GetHgi();
 
 private:
+    void _ApplyTextureSettings();
+    HdSprim *_CreateFallbackMaterialPrim();
+
+    HdStRenderDelegate(const HdStRenderDelegate &)             = delete;
+    HdStRenderDelegate &operator =(const HdStRenderDelegate &) = delete;
+
     static const TfTokenVector SUPPORTED_RPRIM_TYPES;
     static const TfTokenVector SUPPORTED_SPRIM_TYPES;
 
-    /// Resource registry used in this render delegate
+    // Resource registry used in this render delegate
     HdStResourceRegistrySharedPtr _resourceRegistry;
 
     HdRenderSettingDescriptorList _settingDescriptors;
 
     Hgi* _hgi;
 
-    HdSprim *_CreateFallbackMaterialPrim();
+    std::unique_ptr<HdStRenderParam> _renderParam;
 
-    HdStRenderDelegate(const HdStRenderDelegate &)             = delete;
-    HdStRenderDelegate &operator =(const HdStRenderDelegate &) = delete;
+    HdStDrawItemsCacheUniquePtr _drawItemsCache;
 };
 
 

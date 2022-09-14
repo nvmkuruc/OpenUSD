@@ -56,11 +56,12 @@ static vector<SdfPath> GetPrefixesHelper( const SdfPath &path ) {
 
 static string
 _Repr(const SdfPath &self) {
-    if (self == SdfPath::EmptyPath()) {
+    if (self.IsEmpty()) {
         return TF_PY_REPR_PREFIX + "Path.emptyPath";
-    } else {
+    }
+    else {
         return string(TF_PY_REPR_PREFIX +
-            "Path(")+TfPyRepr(self.GetString())+")";
+            "Path(")+TfPyRepr(self.GetAsString())+")";
     }
 }
 
@@ -245,6 +246,7 @@ void Sdf_wrapAncestorsRange()
 void wrapPath() {    
     typedef SdfPath This;
 
+    def("_PathGetDebuggerPathText", Sdf_PathGetDebuggerPathText);
     def("_PathStress", &_PathStress);
     def("_DumpPathStats", &Sdf_DumpPathStats);
 
@@ -264,8 +266,7 @@ void wrapPath() {
         .add_property("pathElementCount", &This::GetPathElementCount, 
             "The number of path elements in this path.")
         .add_property("pathString",
-            make_function(&This::GetString, 
-                return_value_policy<return_by_value>()),
+            make_function(&This::GetAsString),
             "The string representation of this path.")
         .add_property("name", make_function(&This::GetName, 
                     return_value_policy<copy_const_reference>()), 
@@ -401,9 +402,7 @@ void wrapPath() {
         .def("FindLongestStrictPrefix", _FindLongestStrictPrefix)
             .staticmethod("FindLongestStrictPrefix")
 
-        .def("__str__", 
-            make_function(&This::GetString, 
-                return_value_policy<return_by_value>()))
+        .def("__str__", make_function(&This::GetAsString))
 
         .def(TfPyBoolBuiltinFuncName, __nonzero__)
 
@@ -417,8 +416,6 @@ void wrapPath() {
         .def("__hash__", &This::GetHash)
         ;
 
-    s.attr("menvaStart") = SdfPathTokens->menvaStart;
-    s.attr("menvaEnd") = &SdfPathTokens->menvaEnd; 
     s.attr("absoluteIndicator") = &SdfPathTokens->absoluteIndicator; 
     s.attr("childDelimiter") = &SdfPathTokens->childDelimiter; 
     s.attr("propertyDelimiter") = &SdfPathTokens->propertyDelimiter; 

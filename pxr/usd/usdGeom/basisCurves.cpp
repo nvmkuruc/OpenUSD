@@ -75,8 +75,9 @@ UsdGeomBasisCurves::Define(
 }
 
 /* virtual */
-UsdSchemaType UsdGeomBasisCurves::_GetSchemaType() const {
-    return UsdGeomBasisCurves::schemaType;
+UsdSchemaKind UsdGeomBasisCurves::_GetSchemaKind() const
+{
+    return UsdGeomBasisCurves::schemaKind;
 }
 
 /* static */

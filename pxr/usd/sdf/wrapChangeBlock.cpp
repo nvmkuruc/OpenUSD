@@ -29,6 +29,8 @@
 
 #include <boost/python.hpp>
 
+#include <memory>
+
 using namespace boost::python;
 
 PXR_NAMESPACE_USING_DIRECTIVE
@@ -37,60 +39,27 @@ namespace {
 
 class Sdf_PythonChangeBlock {
 public:
-    // #nv begin #fast-updates
-    Sdf_PythonChangeBlock(bool fastUpdates=false) : _block(0), _fastUpdates(fastUpdates)
-    // nv end
-    {
-        // Do nothing.
-    }
-
-    ~Sdf_PythonChangeBlock()
-    {
-        delete _block;
-    }
-
-    void Open()
-    {
-        if (!TF_VERIFY(_block == 0)) {
+    explicit Sdf_PythonChangeBlock(bool enabled) : _enabled(enabled) {}
+    
+    void Open() {
+        if (!_enabled || !TF_VERIFY(!_block)) {
             return;
         }
-        // #nv begin #fast-updates
-        _block = new SdfChangeBlock(_fastUpdates);
-        // nv end
+        _block.reset(new SdfChangeBlock);
     }
 
     void Close(object, object, object)
     {
-        if (!TF_VERIFY(_block != 0)) {
+        if (!_enabled || !TF_VERIFY(_block)) {
             return;
         }
-        delete _block;
-        _block = 0;
+        _block.reset();
     }
 
 private:
-    SdfChangeBlock* _block;
-
-    // #nv begin #fast-updates
-    bool _fastUpdates;
-    // nv end
+    std::unique_ptr<SdfChangeBlock> _block;
+    const bool _enabled;
 };
-
-// #nv begin #fast-updates
-static
-void
-_BeginBlock(bool fastUpdates)
-{
-    Sdf_ChangeManager::Get().OpenChangeBlock(fastUpdates);
-}
-// nv end
-
-static
-void
-_EndBlock()
-{
-    Sdf_ChangeManager::Get().CloseChangeBlock();
-}
 
 } // anonymous namespace 
 
@@ -100,19 +69,9 @@ wrapChangeBlock()
     // This allows SdfChangeBlocks to be used in an RAII fashion in Python 
     // with the 'with' statement.
     typedef Sdf_PythonChangeBlock This;
-    class_<This, boost::noncopyable>("ChangeBlock", init<>())
-        // #nv begin #fast-updates
-        .def(init<bool>(arg("fastUpdates")))
-        // nv end
+    class_<This, boost::noncopyable>("ChangeBlock",
+                                     init<bool>(arg("enabled")=true))
         .def("__enter__", &This::Open)
         .def("__exit__", &This::Close)
         ;
-
-    // Helpers to open/close change blocks in a non-RAII fashion. Primarily
-    // here for API compatibility, consumers should prefer the ChangeBlock
-    // object above.
-    // #nv begin #fast-updates
-    def("BeginChangeBlock", &_BeginBlock, arg("fastUpdates")=false);
-    // nv end
-    def("EndChangeBlock", &_EndBlock);
 }

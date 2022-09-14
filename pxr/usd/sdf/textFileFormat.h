@@ -49,6 +49,8 @@ TF_DECLARE_WEAK_AND_REF_PTRS(SdfTextFileFormat);
 
 SDF_DECLARE_HANDLES(SdfSpec);
 
+class ArAsset;
+
 /// \class SdfTextFileFormat
 ///
 /// Sdf text file format
@@ -56,25 +58,6 @@ SDF_DECLARE_HANDLES(SdfSpec);
 class SdfTextFileFormat : public SdfFileFormat
 {
 public:
-    /// Writes the content of the layer \p layer to the stream \p ostr. If
-    /// \p comment is non-empty, the supplied text is written into the stream
-    /// instead of any existing layer comment, without changing the existing
-    /// comment. Returns true if the content is successfully written to
-    /// stream. Otherwise, false is returned and errors are posted.
-    SDF_API
-    bool Write(
-        const SdfLayer& layer,
-        std::ostream& ostr,
-        const std::string& comment = std::string()) const;
-
-    /// Writes the content in \p layer into the stream \p ostr. If the
-    /// content is successfully written, this method returns true. Otherwise,
-    /// false is returned and errors are posted. 
-    SDF_API
-    bool WriteToStream(
-        const SdfLayer& layer,
-        std::ostream& ostr) const;
-
     // SdfFileFormat overrides.
     SDF_API
     virtual bool CanRead(const std::string &file) const override;
@@ -121,17 +104,31 @@ protected:
     SdfTextFileFormat();
 
     /// Constructor. This form of the constructor may be used by formats that
-    /// use menva as their internal representation.  If a non-empty
-    /// versionString is provided, it will be used as the file format version;
-    /// otherwise the menva format version will be implicitly used.
+    /// use the .sdf text format as their internal representation. 
+    /// If a non-empty versionString and target are provided, they will be
+    /// used as the file format version and target; otherwise the .sdf format
+    /// version and target will be implicitly used.
     SDF_API
     explicit SdfTextFileFormat(const TfToken& formatId,
                                const TfToken& versionString = TfToken(),
                                const TfToken& target = TfToken());
 
-private:
+    /// Return true if layer can be read from \p asset at \p resolvedPath.
+    SDF_API
+    bool _CanReadFromAsset(
+        const std::string& resolvedPath,
+        const std::shared_ptr<ArAsset>& asset) const;
 
-    // Override to return false.  Reloading anonymous menva files clears their
+    /// Read layer from \p asset at \p resolvedPath into \p layer.
+    SDF_API 
+    bool _ReadFromAsset(
+        SdfLayer* layer, 
+        const std::string& resolvedPath,
+        const std::shared_ptr<ArAsset>& asset,
+        bool metadataOnly) const;
+
+private:
+    // Override to return false.  Reloading anonymous text layers clears their
     // content.
     SDF_API virtual bool _ShouldSkipAnonymousReload() const override;
 };

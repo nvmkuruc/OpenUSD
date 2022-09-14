@@ -75,8 +75,9 @@ UsdGeomPoints::Define(
 }
 
 /* virtual */
-UsdSchemaType UsdGeomPoints::_GetSchemaType() const {
-    return UsdGeomPoints::schemaType;
+UsdSchemaKind UsdGeomPoints::_GetSchemaKind() const
+{
+    return UsdGeomPoints::schemaKind;
 }
 
 /* static */
@@ -318,6 +319,15 @@ TF_REGISTRY_FUNCTION(UsdGeomBoundable)
 {
     UsdGeomRegisterComputeExtentFunction<UsdGeomPoints>(
         _ComputeExtentForPoints);
+}
+
+size_t
+UsdGeomPoints::GetPointCount(UsdTimeCode timeCode) const
+{
+    UsdAttribute pointsAttr = GetPointsAttr();
+    VtVec3fArray points;
+    pointsAttr.Get(&points, timeCode);
+    return points.size();
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

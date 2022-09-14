@@ -39,28 +39,39 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// Describes the properties of a framebuffer attachment.
 ///
 /// <ul>
-/// <li>texture:
-///   The texture used as render target attachment.</li>
+/// <li>format:
+///   The format of the attachment.
+///   Must match what is set in HgiTextureDesc.</li>
+/// <li>usage:
+///   Describes how the texture is intended to be used.
+///   Must match what is set in HgiTextureDesc.</li>
 /// <li>loadOp:
 ///   The operation to perform on the attachment pixel data prior to rendering.</li>
 /// <li>storeOp:
 ///   The operation to perform on the attachment pixel data after rendering.</li>
 /// <li>clearValue:
 ///   The value to clear the attachment with (r,g,b,a) or (depth,stencil,x,x)</li>
+/// <li>colorMask:
+///   Whether to permit or restrict writing to component channels.</li>
 /// <li>blendEnabled:
 ///   Determines if a blend operation should be applied to the attachment.</li>
 /// <li> ***BlendFactor:
 ///   The blend factors for source and destination.</li>
 /// <li> ***BlendOp: 
 ///   The blending operation.</li>
+/// <li> blendConstantColor:
+///   The constant color for blend operations.</li>
 ///
 struct HgiAttachmentDesc
 {
     HgiAttachmentDesc() 
     : format(HgiFormatInvalid)
+    , usage(0)
     , loadOp(HgiAttachmentLoadOpLoad)
     , storeOp(HgiAttachmentStoreOpStore)
     , clearValue(0)
+    , colorMask(HgiColorMaskRed | HgiColorMaskGreen |
+                HgiColorMaskBlue | HgiColorMaskAlpha)
     , blendEnabled(false)
     , srcColorBlendFactor(HgiBlendFactorZero)
     , dstColorBlendFactor(HgiBlendFactorZero)
@@ -68,12 +79,15 @@ struct HgiAttachmentDesc
     , srcAlphaBlendFactor(HgiBlendFactorZero)
     , dstAlphaBlendFactor(HgiBlendFactorZero)
     , alphaBlendOp(HgiBlendOpAdd)
+    , blendConstantColor(0.0f, 0.0f, 0.0f, 0.0f)
     {}
 
     HgiFormat format;
+    HgiTextureUsage usage;
     HgiAttachmentLoadOp loadOp;
     HgiAttachmentStoreOp storeOp;
     GfVec4f clearValue;
+    HgiColorMask colorMask;
     bool blendEnabled;
     HgiBlendFactor srcColorBlendFactor;
     HgiBlendFactor dstColorBlendFactor;
@@ -81,6 +95,7 @@ struct HgiAttachmentDesc
     HgiBlendFactor srcAlphaBlendFactor;
     HgiBlendFactor dstAlphaBlendFactor;
     HgiBlendOp alphaBlendOp;
+    GfVec4f blendConstantColor;
 };
 
 using HgiAttachmentDescVector = std::vector<HgiAttachmentDesc>;

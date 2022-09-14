@@ -116,12 +116,14 @@ public:
     /// Must rebuild the connections/targets at each path.
     std::map<SdfPath, int, SdfPath::FastLessThan> didChangeTargets;
 
-    typedef std::map<SdfPath, SdfPath> PathEditMap;
-
     /// Must update the path on every namespace object at and below each
-    /// given path.  The first path is the old path to the object and the
-    /// second path is the new path.
-    PathEditMap didChangePath;
+    /// given path. The first path is the old path to the object and the
+    /// second path is the new path. The order of the vector matters and 
+    /// indicates the order in which the namespace edits occur.
+    std::vector<std::pair<SdfPath, SdfPath>> didChangePath;
+
+    /// Layers used in the composition may have changed.
+    bool didMaybeChangeLayers = false;
 
 private:
     friend class PcpCache;
@@ -266,6 +268,13 @@ public:
     PCP_API
     void DidDestroyCache(const PcpCache* cache);
 
+    /// The asset resolver has changed, invalidating previously-resolved
+    /// asset paths. This function will check all prim indexes in \p cache
+    /// for composition arcs that may now refer to a different asset and
+    /// mark them as needing significant resyncs.
+    PCP_API
+    void DidChangeAssetResolver(const PcpCache* cache);
+
     /// Swap the contents of this and \p other.
     PCP_API
     void Swap(PcpChanges& other);
@@ -298,8 +307,9 @@ public:
     void Apply() const;
 
 private:
-    // Internal data type for namespace edits from Sd.
-    typedef std::map<PcpCache*, PcpCacheChanges::PathEditMap> _RenameChanges;
+    // Internal data types for namespace edits from Sd.
+    typedef std::map<SdfPath, SdfPath> _PathEditMap;
+    typedef std::map<PcpCache*, _PathEditMap> _RenameChanges;
 
     // Returns the PcpLayerStackChanges for the given cache's layer stack.
     PcpLayerStackChanges& _GetLayerStackChanges(const PcpCache* cache);
@@ -310,8 +320,8 @@ private:
     // Returns the PcpCacheChanges for the given cache.
     PcpCacheChanges& _GetCacheChanges(const PcpCache* cache);
 
-    // Returns the PcpCacheChanges::PathEditMap for the given cache.
-    PcpCacheChanges::PathEditMap& _GetRenameChanges(const PcpCache* cache);
+    // Returns the _PathEditMap for the given cache.
+    _PathEditMap& _GetRenameChanges(const PcpCache* cache);
 
 
     // Optimize the changes.
@@ -325,7 +335,7 @@ private:
 
     // Optimize path changes.
     void _OptimizePathChanges(const PcpCache* cache, PcpCacheChanges* changes,
-                              PcpCacheChanges::PathEditMap* pathChanges);
+                              const _PathEditMap* pathChanges);
 
     // Sublayer change type for _DidChangeSublayer.
     enum _SublayerChangeType {
@@ -367,10 +377,12 @@ private:
                             bool *significant);
 
     // Mark the layer stack as having changed.
-    void _DidChangeLayerStack(const PcpLayerStackPtr& layerStack,
-                               bool requiresLayerStackChange,
-                               bool requiresLayerStackOffsetsChange,
-                               bool requiresSignificantChange);
+    void _DidChangeLayerStack(
+        const TfSpan<const PcpCache*>& caches,
+        const PcpLayerStackPtr& layerStack,
+        bool requiresLayerStackChange,
+        bool requiresLayerStackOffsetsChange,
+        bool requiresSignificantChange);
 
     // Mark the layer stack's relocations as having changed.
     // Recompute the new relocations, storing the result in the Changes,
@@ -386,6 +398,7 @@ private:
     void _DidChangeLayerStackResolvedPath(
         const TfSpan<const PcpCache*>& caches,
         const PcpLayerStackPtr& layerStack,
+        bool requiresLayerStackChange,
         std::string* debugSummary);
 
     // The spec stack for the prim or property index at \p path must be

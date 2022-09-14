@@ -75,8 +75,9 @@ UsdGeomXform::Define(
 }
 
 /* virtual */
-UsdSchemaType UsdGeomXform::_GetSchemaType() const {
-    return UsdGeomXform::schemaType;
+UsdSchemaKind UsdGeomXform::_GetSchemaKind() const
+{
+    return UsdGeomXform::schemaKind;
 }
 
 /* static */

@@ -21,17 +21,16 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef USDMDL_GENERATED_MDLAPI_H
-#define USDMDL_GENERATED_MDLAPI_H
+#ifndef USDMDLAPI_GENERATED_MDLAPI_H
+#define USDMDLAPI_GENERATED_MDLAPI_H
 
-/// \file usdMdl/mdlAPI.h
+/// \file usdMdlAPI/mdlAPI.h
 
 #include "pxr/pxr.h"
 #include "./api.h"
 #include "pxr/usd/usd/apiSchemaBase.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
-#include "pxr/usd/usdShade/material.h"
 #include "./tokens.h"
 
 #include "pxr/base/vt/value.h"
@@ -43,6 +42,10 @@
 #include "pxr/base/tf/token.h"
 #include "pxr/base/tf/type.h"
 
+// XXX:aluk
+// TODO: How to include this during codegen?
+#include "pxr/usd/usdShade/material.h"
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 class SdfAssetPath;
@@ -51,96 +54,119 @@ class SdfAssetPath;
 // MDLAPI                                                                     //
 // -------------------------------------------------------------------------- //
 
-/// \class UsdMdlMdlAPI
+/// \class UsdMdlAPIMdlAPI
 ///
 /// For any described attribute \em Fallback \em Value or \em Allowed \em Values below
-/// that are text/tokens, the actual token is published and defined in \ref UsdMdlTokens.
-/// So to set an attribute to the value "rightHanded", use UsdMdlTokens->rightHanded
+/// that are text/tokens, the actual token is published and defined in \ref UsdMdlAPITokens.
+/// So to set an attribute to the value "rightHanded", use UsdMdlAPITokens->rightHanded
 /// as the value.
 ///
-class UsdMdlMdlAPI : public UsdAPISchemaBase
+class UsdMdlAPIMdlAPI : public UsdAPISchemaBase
 {
 public:
     /// Compile time constant representing what kind of schema this class is.
     ///
-    /// \sa UsdSchemaType
-    static const UsdSchemaType schemaType = UsdSchemaType::SingleApplyAPI;
+    /// \sa UsdSchemaKind
+    static const UsdSchemaKind schemaKind = UsdSchemaKind::SingleApplyAPI;
 
-    /// Construct a UsdMdlMdlAPI on UsdPrim \p prim .
-    /// Equivalent to UsdMdlMdlAPI::Get(prim.GetStage(), prim.GetPath())
+    /// Construct a UsdMdlAPIMdlAPI on UsdPrim \p prim .
+    /// Equivalent to UsdMdlAPIMdlAPI::Get(prim.GetStage(), prim.GetPath())
     /// for a \em valid \p prim, but will not immediately throw an error for
     /// an invalid \p prim
-    explicit UsdMdlMdlAPI(const UsdPrim& prim=UsdPrim())
+    explicit UsdMdlAPIMdlAPI(const UsdPrim& prim=UsdPrim())
         : UsdAPISchemaBase(prim)
     {
     }
 
-    /// Construct a UsdMdlMdlAPI on the prim held by \p schemaObj .
-    /// Should be preferred over UsdMdlMdlAPI(schemaObj.GetPrim()),
+    /// Construct a UsdMdlAPIMdlAPI on the prim held by \p schemaObj .
+    /// Should be preferred over UsdMdlAPIMdlAPI(schemaObj.GetPrim()),
     /// as it preserves SchemaBase state.
-    explicit UsdMdlMdlAPI(const UsdSchemaBase& schemaObj)
+    explicit UsdMdlAPIMdlAPI(const UsdSchemaBase& schemaObj)
         : UsdAPISchemaBase(schemaObj)
     {
     }
 
     /// Destructor.
-    USDMDL_API
-    virtual ~UsdMdlMdlAPI();
+    USDMDLAPI_API
+    virtual ~UsdMdlAPIMdlAPI();
 
     /// Return a vector of names of all pre-declared attributes for this schema
     /// class and all its ancestor classes.  Does not include attributes that
     /// may be authored by custom/extended methods of the schemas involved.
-    USDMDL_API
+    USDMDLAPI_API
     static const TfTokenVector &
     GetSchemaAttributeNames(bool includeInherited=true);
 
-    /// Return a UsdMdlMdlAPI holding the prim adhering to this
+    /// Return a UsdMdlAPIMdlAPI holding the prim adhering to this
     /// schema at \p path on \p stage.  If no prim exists at \p path on
     /// \p stage, or if the prim at that path does not adhere to this schema,
     /// return an invalid schema object.  This is shorthand for the following:
     ///
     /// \code
-    /// UsdMdlMdlAPI(stage->GetPrimAtPath(path));
+    /// UsdMdlAPIMdlAPI(stage->GetPrimAtPath(path));
     /// \endcode
     ///
-    USDMDL_API
-    static UsdMdlMdlAPI
+    USDMDLAPI_API
+    static UsdMdlAPIMdlAPI
     Get(const UsdStagePtr &stage, const SdfPath &path);
 
+
+    /// Returns true if this <b>single-apply</b> API schema can be applied to 
+    /// the given \p prim. If this schema can not be a applied to the prim, 
+    /// this returns false and, if provided, populates \p whyNot with the 
+    /// reason it can not be applied.
+    /// 
+    /// Note that if CanApply returns false, that does not necessarily imply
+    /// that calling Apply will fail. Callers are expected to call CanApply
+    /// before calling Apply if they want to ensure that it is valid to 
+    /// apply a schema.
+    /// 
+    /// \sa UsdPrim::GetAppliedSchemas()
+    /// \sa UsdPrim::HasAPI()
+    /// \sa UsdPrim::CanApplyAPI()
+    /// \sa UsdPrim::ApplyAPI()
+    /// \sa UsdPrim::RemoveAPI()
+    ///
+    USDMDLAPI_API
+    static bool 
+    CanApply(const UsdPrim &prim, std::string *whyNot=nullptr);
 
     /// Applies this <b>single-apply</b> API schema to the given \p prim.
     /// This information is stored by adding "MdlAPI" to the 
     /// token-valued, listOp metadata \em apiSchemas on the prim.
     /// 
-    /// \return A valid UsdMdlMdlAPI object is returned upon success. 
-    /// An invalid (or empty) UsdMdlMdlAPI object is returned upon 
-    /// failure. See \ref UsdAPISchemaBase::_ApplyAPISchema() for conditions 
+    /// \return A valid UsdMdlAPIMdlAPI object is returned upon success. 
+    /// An invalid (or empty) UsdMdlAPIMdlAPI object is returned upon 
+    /// failure. See \ref UsdPrim::ApplyAPI() for conditions 
     /// resulting in failure. 
     /// 
     /// \sa UsdPrim::GetAppliedSchemas()
     /// \sa UsdPrim::HasAPI()
+    /// \sa UsdPrim::CanApplyAPI()
+    /// \sa UsdPrim::ApplyAPI()
+    /// \sa UsdPrim::RemoveAPI()
     ///
-    USDMDL_API
-    static UsdMdlMdlAPI 
+    USDMDLAPI_API
+    static UsdMdlAPIMdlAPI 
     Apply(const UsdPrim &prim);
 
 protected:
-    /// Returns the type of schema this class belongs to.
+    /// Returns the kind of schema this class belongs to.
     ///
-    /// \sa UsdSchemaType
-    USDMDL_API
-    UsdSchemaType _GetSchemaType() const override;
+    /// \sa UsdSchemaKind
+    USDMDLAPI_API
+    UsdSchemaKind _GetSchemaKind() const override;
 
 private:
     // needs to invoke _GetStaticTfType.
     friend class UsdSchemaRegistry;
-    USDMDL_API
+    USDMDLAPI_API
     static const TfType &_GetStaticTfType();
 
     static bool _IsTypedSchema();
 
     // override SchemaBase virtuals.
-    USDMDL_API
+    USDMDLAPI_API
     const TfType &_GetTfType() const override;
 
 public:
@@ -151,11 +177,10 @@ public:
     ///
     /// | ||
     /// | -- | -- |
-    /// | Declaration | `uniform asset info:mdl:sourceAsset` |
+    /// | Declaration | `asset info:mdl:sourceAsset` |
     /// | C++ Type | SdfAssetPath |
     /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Asset |
-    /// | \ref SdfVariability "Variability" | SdfVariabilityUniform |
-    USDMDL_API
+    USDMDLAPI_API
     UsdAttribute GetInfoMdlSourceAssetAttr() const;
 
     /// See GetInfoMdlSourceAssetAttr(), and also 
@@ -163,7 +188,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
-    USDMDL_API
+    USDMDLAPI_API
     UsdAttribute CreateInfoMdlSourceAssetAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -174,11 +199,10 @@ public:
     ///
     /// | ||
     /// | -- | -- |
-    /// | Declaration | `uniform token info:mdl:sourceAsset:subIdentifier` |
+    /// | Declaration | `token info:mdl:sourceAsset:subIdentifier` |
     /// | C++ Type | TfToken |
     /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Token |
-    /// | \ref SdfVariability "Variability" | SdfVariabilityUniform |
-    USDMDL_API
+    USDMDLAPI_API
     UsdAttribute GetInfoMdlSourceAssetSubIdentifierAttr() const;
 
     /// See GetInfoMdlSourceAssetSubIdentifierAttr(), and also 
@@ -186,7 +210,7 @@ public:
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
-    USDMDL_API
+    USDMDLAPI_API
     UsdAttribute CreateInfoMdlSourceAssetSubIdentifierAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
@@ -229,7 +253,7 @@ public:
                 errors.push_back(ss.str());
             }
             
-            UsdMdlMdlAPI MdlAPI(prim);
+            UsdMdlAPIMdlAPI MdlAPI(prim);
             UsdAttribute sourceAssetAttr(MdlAPI.GetInfoMdlSourceAssetAttr());
             if (!sourceAssetAttr.IsValid())
             {
@@ -259,7 +283,7 @@ public:
 private:
     static void ValidateChild(const UsdPrim& scenePrim, const UsdPrim& childPrim, std::vector<std::string>& errors)
     {
-        std::vector<std::string> newErrors = UsdMdlMdlAPI::Validate(childPrim);
+        std::vector<std::string> newErrors = UsdMdlAPIMdlAPI::Validate(childPrim);
         errors.insert(errors.end(), newErrors.begin(), newErrors.end());
     }
 };

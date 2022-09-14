@@ -75,8 +75,9 @@ UsdSchemaExamplesComplex::Define(
 }
 
 /* virtual */
-UsdSchemaType UsdSchemaExamplesComplex::_GetSchemaType() const {
-    return UsdSchemaExamplesComplex::schemaType;
+UsdSchemaKind UsdSchemaExamplesComplex::_GetSchemaKind() const
+{
+    return UsdSchemaExamplesComplex::schemaKind;
 }
 
 /* static */

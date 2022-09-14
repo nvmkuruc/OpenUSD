@@ -21,25 +21,21 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/imaging/glf/glew.h"
-
-#include "pxr/imaging/hdx/package.h"
 #include "pxr/imaging/hdx/oitVolumeRenderTask.h"
+#include "pxr/imaging/hdx/package.h"
 #include "pxr/imaging/hdx/oitBufferAccessor.h"
-#include "pxr/imaging/hdx/tokens.h"
-#include "pxr/imaging/hdx/debugCodes.h"
 
-#include "pxr/imaging/hd/perfLog.h"
 #include "pxr/imaging/hd/renderDelegate.h"
-#include "pxr/imaging/hd/renderIndex.h"
-#include "pxr/imaging/hd/renderPass.h"
 #include "pxr/imaging/hd/renderPassState.h"
 #include "pxr/imaging/hd/rprimCollection.h"
 #include "pxr/imaging/hd/sceneDelegate.h"
-#include "pxr/imaging/hd/tokens.h"
+#include "pxr/imaging/hd/vtBufferSource.h"
 
-#include "pxr/imaging/hdSt/lightingShader.h"
 #include "pxr/imaging/hdSt/renderPassShader.h"
+#include "pxr/imaging/hdSt/tokens.h"
+#include "pxr/imaging/hdSt/volume.h"
+
+#include "pxr/imaging/glf/diagnostic.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -51,9 +47,6 @@ HdxOitVolumeRenderTask::HdxOitVolumeRenderTask(
             HdxPackageRenderPassOitVolumeShader()))
     , _isOitEnabled(HdxOitBufferAccessor::IsOitEnabled())
 {
-    // Raymarching shader needs to stop when hitting opaque geometry,
-    // so allow shader to read the depth buffer.
-    _oitVolumeRenderPassShader->AddAovReadback(HdAovTokens->depth);
 }
 
 HdxOitVolumeRenderTask::~HdxOitVolumeRenderTask() = default;
@@ -79,14 +72,19 @@ HdxOitVolumeRenderTask::Prepare(HdTaskContext* ctx,
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
 
-    if (_isOitEnabled) {
-        HdxRenderTask::Prepare(ctx, renderIndex);
+    // OIT buffers take up significant GPU resources. Skip if there are no
+    // oit draw items (i.e. no volumetric draw items)
+    if (!_isOitEnabled || !HdxRenderTask::_HasDrawItems()) {
+        return;
+    }
+    
+    HdxRenderTask::Prepare(ctx, renderIndex);
+    HdxOitBufferAccessor(ctx).RequestOitBuffers();
 
-        // OIT buffers take up significant GPU resources. Skip if there are no
-        // oit draw items (i.e. no translucent or volumetric draw items)
-        if (_GetDrawItemCount() > 0) {
-            HdxOitBufferAccessor(ctx).RequestOitBuffers();
-        }
+    if (HdRenderPassStateSharedPtr const state = _GetRenderPassState(ctx)) {
+        _oitVolumeRenderPassShader->UpdateAovInputTextures(
+            state->GetAovInputBindings(),
+            renderIndex);
     }
 }
 
@@ -96,16 +94,20 @@ HdxOitVolumeRenderTask::Execute(HdTaskContext* ctx)
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
 
-    if (!_isOitEnabled) return;
-    if (_GetDrawItemCount() == 0) return;
+    GLF_GROUP_FUNCTION();
 
+    if (!_isOitEnabled || !HdxRenderTask::_HasDrawItems()) {
+        return;
+    }
+    
     //
     // Pre Execute Setup
     //
 
     HdxOitBufferAccessor oitBufferAccessor(ctx);
 
-    oitBufferAccessor.InitializeOitBuffersIfNecessary();
+    oitBufferAccessor.RequestOitBuffers();
+    oitBufferAccessor.InitializeOitBuffersIfNecessary(_GetHgi());
 
     HdRenderPassStateSharedPtr renderPassState = _GetRenderPassState(ctx);
     if (!TF_VERIFY(renderPassState)) return;
@@ -116,7 +118,7 @@ HdxOitVolumeRenderTask::Execute(HdTaskContext* ctx)
         return;
     }
 
-    extendedState->SetOverrideShader(HdStShaderCodeSharedPtr());
+    extendedState->SetUseSceneMaterials(true);
     renderPassState->SetDepthFunc(HdCmpFuncAlways);
     // Setting cull style for consistency even though it is hard-coded in
     // shaders/volume.glslfx.
@@ -127,55 +129,22 @@ HdxOitVolumeRenderTask::Execute(HdTaskContext* ctx)
             "No OIT buffers allocated but needed by OIT volume render task");
         return;
     }
-    
-    // We render into a SSBO -- not MSSA compatible
-    bool oldMSAA = glIsEnabled(GL_MULTISAMPLE);
-    glDisable(GL_MULTISAMPLE);
-    // XXX When rendering HdStPoints we set GL_POINTS and assume that
-    //     GL_POINT_SMOOTH is enabled by default. This renders circles instead
-    //     of squares. However, when toggling MSAA off (above) we see GL_POINTS
-    //     start to render squares (driver bug?).
-    //     For now we always enable GL_POINT_SMOOTH. 
-    // XXX Switch points rendering to emit quad with FS that draws circle.
-    bool oldPointSmooth = glIsEnabled(GL_POINT_SMOOTH);
-    glEnable(GL_POINT_SMOOTH);
+
+    // We render into an SSBO -- not MSSA compatible
+    renderPassState->SetMultiSampleEnabled(false);
 
     // XXX
     //
     // To show volumes that intersect the far clipping plane, we might consider
     // calling glEnable(GL_DEPTH_CLAMP) here.
 
-    // XXX HdxRenderTask::Prepare calls HdStRenderPassState::Prepare.
-    // This sets the cullStyle for the render pass shader.
-    // Since Oit uses a custom render pass shader, we must manually
-    // set cullStyle.
-    _oitVolumeRenderPassShader->SetCullStyle(
-        renderPassState->GetCullStyle());
-
-    // We want OIT to render into the resolve aov, not the multi sample aov.
-    // This assumes a 'resolve' task has been run between rendering the opaque
-    // prims and volume prims. See HdxTaskController::GetRenderingTasks().
-    renderPassState->SetUseAovMultiSample(false);
-
     //
     // Translucent pixels pass
     //
     extendedState->SetRenderPassShader(_oitVolumeRenderPassShader);
     renderPassState->SetEnableDepthMask(false);
-    renderPassState->SetColorMask(HdRenderPassState::ColorMaskNone);
+    renderPassState->SetColorMasks({HdRenderPassState::ColorMaskNone});
     HdxRenderTask::Execute(ctx);
-
-    //
-    // Post Execute Restore
-    //
-
-    if (oldMSAA) {
-        glEnable(GL_MULTISAMPLE);
-    }
-
-    if (!oldPointSmooth) {
-        glDisable(GL_POINT_SMOOTH);
-    }
 }
 
 

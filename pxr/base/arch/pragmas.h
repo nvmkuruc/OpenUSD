@@ -41,6 +41,14 @@
     #define ARCH_PRAGMA_POP \
         _Pragma("GCC diagnostic pop")
 
+    #define ARCH_PRAGMA(x) _Pragma(#x)
+
+    #define ARCH_PRAGMA_PUSH_MACRO(macro_name) \
+        ARCH_PRAGMA(push_macro(#macro_name))
+
+    #define ARCH_PRAGMA_POP_MACRO(macro_name) \
+        ARCH_PRAGMA(pop_macro(#macro_name))
+
     // Convert errors about variables that may be used before initialization
     // into warnings.
     //
@@ -54,6 +62,9 @@
     #define ARCH_PRAGMA_WRITE_STRINGS \
         _Pragma("GCC diagnostic ignored \"-Wwrite-strings\"")
 
+    #define ARCH_PRAGMA_UNUSED_FUNCTION \
+        _Pragma("GCC diagnostic ignored \"-Wunused-function\"")
+
 #elif defined(ARCH_COMPILER_CLANG)
 
     #define ARCH_PRAGMA_PUSH \
@@ -61,6 +72,14 @@
 
     #define ARCH_PRAGMA_POP \
         _Pragma("clang diagnostic pop")
+
+    #define ARCH_PRAGMA(x) _Pragma(#x)
+
+    #define ARCH_PRAGMA_PUSH_MACRO(macro_name) \
+        ARCH_PRAGMA(push_macro(#macro_name))
+
+    #define ARCH_PRAGMA_POP_MACRO(macro_name) \
+        ARCH_PRAGMA(pop_macro(#macro_name))
 
     #define ARCH_PRAGMA_MACRO_REDEFINITION \
         _Pragma("clang diagnostic ignored \"-Wbuiltin-macro-redefined\"")
@@ -70,6 +89,9 @@
 
     #define ARCH_PRAGMA_WRITE_STRINGS \
         _Pragma("clang diagnostic ignored \"-Wwrite-strings\"")
+
+    #define ARCH_PRAGMA_UNUSED_FUNCTION \
+        _Pragma("clang diagnostic ignored \"-Wunused-function\"")
 
     #define ARCH_PRAGMA_INSTANTIATION_AFTER_SPECIALIZATION \
         _Pragma("clang diagnostic ignored \"-Winstantiation-after-specialization\"")
@@ -85,11 +107,22 @@
     #define ARCH_PRAGMA_POP \
         __pragma(warning(pop)) 
 
+    #define ARCH_PRAGMA(x) __pragma(x)
+
+    #define ARCH_PRAGMA_PUSH_MACRO(macro_name) \
+        __pragma(push_macro(#macro_name))
+
+    #define ARCH_PRAGMA_POP_MACRO(macro_name) \
+        __pragma(pop_macro(#macro_name))
+
     #define ARCH_PRAGMA_MACRO_TOO_FEW_ARGUMENTS \
         __pragma(warning(disable:4003)) 
 
     #define ARCH_PRAGMA_MACRO_REDEFINITION \
         __pragma(warning(disable:4005)) 
+
+    #define ARCH_PRAGMA_UNUSED_FUNCTION \
+        __pragma(warning(disable:4505)) 
 
     #define ARCH_PRAGMA_QUALIFIER_HAS_NO_MEANING \
         __pragma(warning(disable:4180)) 
@@ -134,6 +167,18 @@
     #define ARCH_PRAGMA_POP
 #endif
 
+#if !defined ARCH_PRAGMA
+    #define ARCH_PRAGMA
+#endif
+
+#if !defined ARCH_PRAGMA_PUSH_MACRO
+    #define ARCH_PRAGMA_PUSH_MACRO
+#endif
+
+#if !defined ARCH_PRAGMA_POP_MACRO
+    #define ARCH_PRAGMA_POP_MACRO
+#endif
+
 #if !defined ARCH_PRAGMA_MAYBE_UNINITIALIZED
     #define ARCH_PRAGMA_MAYBE_UNINITIALIZED
 #endif
@@ -144,6 +189,10 @@
 
 #if !defined ARCH_PRAGMA_WRITE_STRINGS
     #define ARCH_PRAGMA_WRITE_STRINGS
+#endif
+
+#if !defined ARCH_PRAGMA_UNUSED_FUNCTION
+    #define ARCH_PRAGMA_UNUSED_FUNCTION
 #endif
 
 #if !defined ARCH_PRAGMA_MACRO_TOO_FEW_ARGUMENTS

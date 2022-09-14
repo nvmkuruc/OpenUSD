@@ -30,6 +30,8 @@
 #include "pxr/imaging/hd/version.h"
 #include "pxr/imaging/hd/enums.h"
 
+#include "pxr/imaging/cameraUtil/framing.h"
+
 #include "pxr/usd/sdf/path.h"
 
 #include "pxr/base/tf/token.h"
@@ -55,7 +57,8 @@ class HdCamera;
 ///
 /// Parameters are expressed as GL states, uniforms or shaders.
 ///
-class HdRenderPassState {
+class HdRenderPassState
+{
 public:
     HD_API
     HdRenderPassState();
@@ -69,48 +72,84 @@ public:
     HD_API
     virtual void Prepare(HdResourceRegistrySharedPtr const &resourceRegistry);
 
-    // Bind, called once per frame before drawing.
-    HD_API
-    virtual void Bind();
-
-    // Unbind, called once per frame after drawing.
-    HD_API
-    virtual void Unbind();
-
     // ---------------------------------------------------------------------- //
     /// \name Camera and framing state
     // ---------------------------------------------------------------------- //
 
-    typedef std::vector<GfVec4d> ClipPlanesVector;
+    using ClipPlanesVector = std::vector<GfVec4d>;
+
     /// Camera setter API
-    /// Option 1: Specify matrices, viewport and clipping planes (defined in
-    /// camera space) directly.
+    ///
+    /// Sets the camera transform (aka view inverse matrix) and physical
+    /// parameters, the framing information and a possible overide value
+    /// for the window policy used to conform the camera frustum if its
+    /// aspect ratio is not matching the display window.
+    ///
+    /// Note: using std::pair<bool, ...> here instead of std::optional<...>
+    /// since the latter is only available in C++17 or later.
     HD_API
-    void SetCameraFramingState(GfMatrix4d const &worldToViewMatrix,
-                               GfMatrix4d const &projectionMatrix,
-                               GfVec4d const &viewport,
-                               ClipPlanesVector const & clipPlanes);
-    
-    /// Option 2:  Set camera handle and viewport to use.
+    void SetCameraAndFraming(
+        HdCamera const *camera,
+        CameraUtilFraming const &framing,
+        const std::pair<bool, CameraUtilConformWindowPolicy> &
+                                            overrideWindowPolicy);
+
+    /// Get camera
+    HdCamera const *
+    GetCamera() const { return _camera; }
+
+    /// Get framing information determining how the filmback plane maps
+    /// to pixels.
+    const CameraUtilFraming &
+    GetFraming() const { return _framing; }
+
+    /// The override value for the window policy to conform the camera 
+    /// frustum that can be specified by the application.
+    const std::pair<bool, CameraUtilConformWindowPolicy> &
+    GetOverrideWindowPolicy() const { return _overrideWindowPolicy; }
+
+    /// The resolved window policy to conform the camera frustum.
+    /// This is either the override value specified by the application or
+    /// the value from the scene delegate's camera.
+    HD_API
+    CameraUtilConformWindowPolicy
+    GetWindowPolicy() const;
+
+    /// Camera setter API
     /// The view, projection and clipping plane info of the camera will be used.
+    ///
+    /// \deprecated Use the more expressive SetCameraAndFraming instead.
     HD_API
     void SetCameraAndViewport(HdCamera const *camera,
                               GfVec4d const& viewport);
     /// Camera getter API
+    ///
+    /// Returns inverse of HdCamera's transform.
+    ///
     HD_API
-    GfMatrix4d const & GetWorldToViewMatrix() const;
+    virtual GfMatrix4d GetWorldToViewMatrix() const;
 
+    /// Compute projection matrix using physical attributes of an HdCamera.
+    ///
     HD_API
-    GfMatrix4d GetProjectionMatrix() const;
+    virtual GfMatrix4d GetProjectionMatrix() const;
 
+    /// Only use when clients did not specify a camera framing.
+    ///
+    /// \deprecated
     GfVec4f const & GetViewport() const { return _viewport; }
 
+    /// Compute a transform from window relative coordinates (x,y,z,1) to
+    /// homogeneous world coordinates (x,y,z,w), using the HdCamera's 
+    /// attributes, framing, and viewport dimensions.
+    /// 
     HD_API
-    ClipPlanesVector const & GetClipPlanes() const;
+    GfMatrix4d GetImageToWorldMatrix() const;
 
-    GfMatrix4d GetCullMatrix() const { return _cullMatrix; }
-
-    HdCamera const *GetCamera() const { return _camera; }
+    /// Returns HdCamera's clip planes.
+    ///
+    HD_API
+    virtual ClipPlanesVector const & GetClipPlanes() const;
 
     // ---------------------------------------------------------------------- //
     /// \name Application rendering state
@@ -157,6 +196,10 @@ public:
     void SetLightingEnabled(bool enabled);
     bool GetLightingEnabled() const { return _lightingEnabled; }
 
+    HD_API
+    void SetClippingEnabled(bool enabled);
+    bool GetClippingEnabled() const { return _clippingEnabled; }
+
     // ---------------------------------------------------------------------- //
     /// \name Render pipeline state
     // ---------------------------------------------------------------------- //
@@ -166,6 +209,12 @@ public:
     void SetAovBindings(HdRenderPassAovBindingVector const &aovBindings);
     HD_API
     HdRenderPassAovBindingVector const& GetAovBindings() const;
+
+    /// Set the AOVs that this renderpass needs to read from.
+    HD_API
+    void SetAovInputBindings(HdRenderPassAovBindingVector const &aovBindings);
+    HD_API
+    HdRenderPassAovBindingVector const& GetAovInputBindings() const;
 
     /// Returns true if the render pass wants to render into the multi-sample
     /// aovs. Returns false if the render wants to render into the resolve aovs.
@@ -177,7 +226,7 @@ public:
     HD_API
     void SetCullStyle(HdCullStyle cullStyle);
     HD_API
-    HdCullStyle GetCullStyle() { return _cullStyle; }
+    HdCullStyle GetCullStyle() const { return _cullStyle; }
 
     HD_API
     void SetAlphaThreshold(float alphaThreshold);
@@ -190,10 +239,8 @@ public:
     HD_API
     void SetDrawingRange(GfVec2f const &drawRange);
     GfVec2f GetDrawingRange() const { return _drawRange; } // in pixel
-    GfVec2f GetDrawingRangeNDC() const { // in ndc
-        return GfVec2f(2*_drawRange[0]/_viewport[2],
-                       2*_drawRange[1]/_viewport[3]);
-    }
+    HD_API
+    GfVec2f GetDrawingRangeNDC() const; // in ndc
 
     HD_API
     void SetDepthBiasUseDefault(bool useDefault);
@@ -212,9 +259,23 @@ public:
 
     HD_API
     void SetEnableDepthMask(bool state);
+    HD_API
+    bool GetEnableDepthMask() const;
 
     HD_API
-    bool GetEnableDepthMask();
+    void SetEnableDepthTest(bool enabled);
+    HD_API
+    bool GetEnableDepthTest() const;
+
+    HD_API
+    void SetEnableDepthClamp(bool enabled);
+    HD_API
+    bool GetEnableDepthClamp() const;
+
+    HD_API
+    void SetDepthRange(GfVec2f const &depthRange);
+    HD_API
+    const GfVec2f& GetDepthRange() const;
 
     HD_API
     void SetStencil(HdCompareFunction func, int ref, int mask,
@@ -227,6 +288,8 @@ public:
     HdStencilOp GetStencilDepthPassOp() const { return _stencilZPassOp; }
     HD_API
     void SetStencilEnabled(bool enabled);
+    HD_API
+    bool GetStencilEnabled() const;
     
     HD_API
     void SetLineWidth(float width);
@@ -252,16 +315,21 @@ public:
     void SetBlendEnabled(bool enabled);
 
     HD_API
-    void SetAlphaToCoverageUseDefault(bool useDefault);
-    bool GetAlphaToCoverageUseDefault() const { return _alphaToCoverageUseDefault; }
-
-    HD_API
     void SetAlphaToCoverageEnabled(bool enabled);
     bool GetAlphaToCoverageEnabled() const { return _alphaToCoverageEnabled; }
 
     HD_API
     void SetColorMaskUseDefault(bool useDefault);
     bool GetColorMaskUseDefault() const { return _colorMaskUseDefault;}
+
+    HD_API
+    void SetConservativeRasterizationEnabled(bool enabled);
+    bool GetConservativeRasterizationEnabled() const {
+        return _conservativeRasterizationEnabled;
+    }
+
+    HD_API
+    void SetVolumeRenderingConstants(float stepSize, float stepSizeLighting);
 
     enum ColorMask {
         ColorMaskNone,
@@ -270,8 +338,12 @@ public:
     };
 
     HD_API
-    void SetColorMask(ColorMask const& mask);
-    ColorMask GetColorMask() const { return _colorMask; }
+    void SetColorMasks(std::vector<ColorMask> const& masks);
+    std::vector<ColorMask> const& GetColorMasks() const { return _colorMasks; }
+
+    HD_API
+    void SetMultiSampleEnabled(bool enabled);
+    bool GetMultiSampleEnabled() const { return _multiSampleEnabled; }
 
 protected:
     // ---------------------------------------------------------------------- //
@@ -279,24 +351,22 @@ protected:
     // ---------------------------------------------------------------------- //
     HdCamera const *_camera;
     GfVec4f _viewport;
-    // TODO: This is only used for CPU culling, should compute it on the fly.
-    GfMatrix4d _cullMatrix; 
-
-    GfMatrix4d _worldToViewMatrix;
-    GfMatrix4d _projectionMatrix;
-    ClipPlanesVector _clipPlanes;
+    CameraUtilFraming _framing;
+    std::pair<bool, CameraUtilConformWindowPolicy> _overrideWindowPolicy;
 
     // ---------------------------------------------------------------------- //
     // Application rendering state
     // ---------------------------------------------------------------------- //
     GfVec4f _overrideColor;
     GfVec4f _wireframeColor;
-    GfVec4f _maskColor;
-    GfVec4f _indicatorColor;
     GfVec4f _pointColor;
     float _pointSize;
-    float _pointSelectedSize;
     bool _lightingEnabled;
+    bool _clippingEnabled;
+
+    GfVec4f _maskColor;
+    GfVec4f _indicatorColor;
+    float _pointSelectedSize;
 
     // ---------------------------------------------------------------------- //
     // Render pipeline state
@@ -305,17 +375,16 @@ protected:
     float _tessLevel;
     GfVec2f _drawRange;
 
-    // Depth Bias RenderPassState
-    // When use default is true - state
-    // is inherited and onther values are
-    // ignored.  Otherwise the raster state
-    // is set using the values specified.
-    bool _depthBiasUseDefault;
+    bool _depthBiasUseDefault; // inherit existing state, ignore values below.
     bool _depthBiasEnabled;
     float _depthBiasConstantFactor;
     float _depthBiasSlopeFactor;
     HdCompareFunction _depthFunc;
     bool _depthMaskEnabled;
+    bool _depthTestEnabled;
+    bool _depthClampEnabled;
+    GfVec2f _depthRange;
+
     HdCullStyle _cullStyle;
 
     // Stencil RenderPassState
@@ -341,14 +410,21 @@ protected:
     bool _blendEnabled;
 
     // alpha to coverage
-    bool _alphaToCoverageUseDefault;
     bool _alphaToCoverageEnabled;
 
     bool _colorMaskUseDefault;
-    ColorMask _colorMask;
+    std::vector<ColorMask> _colorMasks;
 
     HdRenderPassAovBindingVector _aovBindings;
+    HdRenderPassAovBindingVector _aovInputBindings;
     bool _useMultiSampleAov;
+
+    bool _conservativeRasterizationEnabled;
+
+    float _stepSize;
+    float _stepSizeLighting;
+
+    bool _multiSampleEnabled;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

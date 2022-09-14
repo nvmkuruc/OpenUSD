@@ -98,6 +98,9 @@ UsdImagingConeAdapter::TrackVariability(UsdPrim const& prim,
     // base adapter invocation) that might result in the bit being set, we need
     // to be careful not to reset it.  Translation: only check _IsVarying for a
     // given cause IFF the bit wasn't already set by a previous invocation.
+
+    // Check DirtyPoints before doing variability checks, in case we can skip
+    // any of them...
     if ((*timeVaryingBits & HdChangeTracker::DirtyPoints) == 0) {
         _IsVarying(prim, UsdGeomTokens->height,
                    HdChangeTracker::DirtyPoints,
@@ -118,32 +121,27 @@ UsdImagingConeAdapter::TrackVariability(UsdPrim const& prim,
     }
 }
 
-// Thread safe.
-//  * Populate dirty bits for the given \p time.
-void 
-UsdImagingConeAdapter::UpdateForTime(UsdPrim const& prim,
-                               SdfPath const& cachePath, 
-                               UsdTimeCode time,
-                               HdDirtyBits requestedBits,
-                               UsdImagingInstancerContext const* 
-                                   instancerContext) const
+HdDirtyBits
+UsdImagingConeAdapter::ProcessPropertyChange(UsdPrim const& prim,
+                                             SdfPath const& cachePath,
+                                             TfToken const& propertyName)
 {
-    BaseAdapter::UpdateForTime(
-        prim, cachePath, time, requestedBits, instancerContext);
-    UsdImagingValueCache* valueCache = _GetValueCache();
-    if (requestedBits & HdChangeTracker::DirtyTopology) {
-        valueCache->GetTopology(cachePath) = GetMeshTopology();
+    if (propertyName == UsdGeomTokens->height ||
+        propertyName == UsdGeomTokens->radius ||
+        propertyName == UsdGeomTokens->axis) {
+        return HdChangeTracker::DirtyPoints;
     }
+
+    // Allow base class to handle change processing.
+    return BaseAdapter::ProcessPropertyChange(prim, cachePath, propertyName);
 }
 
 /*virtual*/
 VtValue
 UsdImagingConeAdapter::GetPoints(UsdPrim const& prim,
-                                 SdfPath const& cachePath,
                                  UsdTimeCode time) const
 {
-    TF_UNUSED(cachePath);
-    return GetMeshPoints(prim, time);   
+    return GetMeshPoints(prim, time);
 }
 
 static GfMatrix4d
@@ -193,22 +191,16 @@ UsdImagingConeAdapter::GetMeshTopology()
     return VtValue(HdMeshTopology(UsdImagingGetUnitConeMeshTopology()));
 }
 
-// #nv begin #clean-property-invalidation
-/*virtual*/
-HdDirtyBits
-UsdImagingConeAdapter::ProcessPropertyChange(
-    UsdPrim const& prim,
-    SdfPath const& cachePath,
-    TfToken const& propertyName)
+/*virtual*/ 
+VtValue
+UsdImagingConeAdapter::GetTopology(UsdPrim const& prim,
+                                   SdfPath const& cachePath,
+                                   UsdTimeCode time) const
 {
-    if ((propertyName == UsdGeomTokens->height) || (propertyName == UsdGeomTokens->radius) ||
-        (propertyName == UsdGeomTokens->axis))
-        return HdChangeTracker::DirtyPoints;
-
-    // Allow base class to handle change processing.
-    return BaseAdapter::ProcessPropertyChange(prim, cachePath, propertyName);
+    TRACE_FUNCTION();
+    HF_MALLOC_TAG_FUNCTION();
+    return GetMeshTopology();
 }
-// nv end
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

@@ -56,8 +56,9 @@ UsdContrivedBase::Get(const UsdStagePtr &stage, const SdfPath &path)
 
 
 /* virtual */
-UsdSchemaType UsdContrivedBase::_GetSchemaType() const {
-    return UsdContrivedBase::schemaType;
+UsdSchemaKind UsdContrivedBase::_GetSchemaKind() const
+{
+    return UsdContrivedBase::schemaKind;
 }
 
 /* static */

@@ -27,10 +27,9 @@
 #include "pxr/pxr.h"
 #include "pxr/usd/sdf/path.h"
 #include "pxr/imaging/hdx/api.h"
-#include "pxr/imaging/hdx/fullscreenShader.h"
 #include "pxr/imaging/hdx/task.h"
 #include "pxr/imaging/hdx/tokens.h"
-
+#include "pxr/imaging/hgi/graphicsCmds.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -45,31 +44,32 @@ public:
     HdxColorChannelTask(HdSceneDelegate* delegate, SdfPath const& id);
 
     HDX_API
-    virtual ~HdxColorChannelTask();
+    ~HdxColorChannelTask() override;
 
     /// Prepare the tasks resources
     HDX_API
-    virtual void Prepare(HdTaskContext* ctx,
-                         HdRenderIndex* renderIndex) override;
+    void Prepare(HdTaskContext* ctx,
+                 HdRenderIndex* renderIndex) override;
 
     /// Execute the color channel task
     HDX_API
-    virtual void Execute(HdTaskContext* ctx) override;
+    void Execute(HdTaskContext* ctx) override;
 
 protected:
     /// Sync the render pass resources
     HDX_API
-    virtual void _Sync(HdSceneDelegate* delegate,
-                       HdTaskContext* ctx,
-                       HdDirtyBits* dirtyBits) override;
+    void _Sync(HdSceneDelegate* delegate,
+               HdTaskContext* ctx,
+               HdDirtyBits* dirtyBits) override;
 
 private:
     HdxColorChannelTask() = delete;
     HdxColorChannelTask(const HdxColorChannelTask &) = delete;
     HdxColorChannelTask &operator =(const HdxColorChannelTask &) = delete;
 
-    // Utility function to create a storage buffer for the shader parameters.
-    void _CreateParameterBuffer();
+    // Utility function to update the shader uniform parameters.
+    // Returns true if the values were updated. False if unchanged.
+    bool _UpdateParameterBuffer(float screenSizeX, float screenSizeY);
 
     /// Apply the color channel filtering.
     void _ApplyColorChannel();
@@ -78,16 +78,17 @@ private:
     // Be careful to remember the std430 rules.
     struct _ParameterBuffer
     {
+        float screenSize[2];
         int channel;
-        
         bool operator==(const _ParameterBuffer& other) const {
-            return channel == other.channel;
+            return channel == other.channel &&
+                   screenSize[0] == other.screenSize[0] &&
+                   screenSize[1] == other.screenSize[1];
         }
     };
 
-    std::unique_ptr<HdxFullscreenShader> _compositor;
+    std::unique_ptr<class HdxFullscreenShader> _compositor;
     _ParameterBuffer _parameterData;
-    HgiBufferHandle _parameterBuffer;
 
     // The color channel to be rendered (see HdxColorChannelTokens for the
     // possible values).

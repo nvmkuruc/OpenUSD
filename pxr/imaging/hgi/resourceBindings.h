@@ -55,11 +55,18 @@ PXR_NAMESPACE_OPEN_SCOPE
 ///   limits to max buffers in an array.</li>
 /// <li>offsets:
 ///    Offset (in bytes) where data begins from the start of the buffer.
-///    This if an offset for each buffer in 'buffers'.</li>
+///    There is an offset corresponding to each buffer in 'buffers'.</li>
+/// <li>sizes:
+///    Size (in bytes) of the range of data in the buffer to bind.
+///    There is a size corresponding to each buffer in 'buffers'.
+///    If sizes is empty or the size for a buffer is specified as zero,
+///    then the entire buffer is bound.
+///    If the offset for a buffer is non-zero, then a non-zero size must
+///    also be specified.</li>
 /// <li>resourceType:
 ///    The type of buffer(s) that is to be bound.
 ///    All buffers in the array must have the same type.
-///    Note that vertex and index buffers are not bound to a resourceSet.
+///    Vertex, index and indirect buffers are not bound to a resourceSet.
 ///    They are instead passed to the draw command.</li>
 /// <li>bindingIndex:
 ///    Binding location for the buffer(s).</li>
@@ -74,6 +81,7 @@ struct HgiBufferBindDesc
 
     HgiBufferHandleVector buffers;
     std::vector<uint32_t> offsets;
+    std::vector<uint32_t> sizes;
     HgiBindResourceType resourceType;
     uint32_t bindingIndex;
     HgiShaderStage stageUsage;
@@ -140,8 +148,6 @@ bool operator!=(
 /// Describes a set of resources that are bound to the GPU during encoding.
 ///
 /// <ul>
-/// <li>pipelineType:
-///   Bind point for pipeline.</li>
 /// <li>buffers:
 ///   The buffers to be bound (E.g. uniform or shader storage).</li>
 /// <li>textures:
@@ -154,7 +160,6 @@ struct HgiResourceBindingsDesc
     HgiResourceBindingsDesc();
 
     std::string debugName;
-    HgiPipelineType pipelineType;
     HgiBufferBindDescVector buffers;
     HgiTextureBindDescVector textures;
 };
@@ -198,9 +203,7 @@ private:
     HgiResourceBindings(const HgiResourceBindings&) = delete;
 };
 
-/// Explicitly instantiate and define ResourceBindings handle
-template class HgiHandle<class HgiResourceBindings>;
-using HgiResourceBindingsHandle = HgiHandle<class HgiResourceBindings>;
+using HgiResourceBindingsHandle = HgiHandle<HgiResourceBindings>;
 using HgiResourceBindingsHandleVector = std::vector<HgiResourceBindingsHandle>;
 
 

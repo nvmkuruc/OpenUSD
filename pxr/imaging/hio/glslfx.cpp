@@ -24,7 +24,10 @@
 #include "pxr/imaging/hio/glslfx.h"
 #include "pxr/imaging/hio/glslfxConfig.h"
 #include "pxr/imaging/hio/debugCodes.h"
+#include "pxr/imaging/hio/dictionary.h"
 
+#include "pxr/usd/ar/asset.h"
+#include "pxr/usd/ar/resolvedPath.h"
 #include "pxr/usd/ar/resolver.h"
 
 #include "pxr/base/arch/systemInfo.h"
@@ -65,6 +68,7 @@ TF_DEFINE_PRIVATE_TOKENS(
     (version)
     (configuration)
     (glsl)
+    (layout)
     ((import, "#import"))
     ((shaderResources, "ShaderResources"))
     ((toolSubst, "$TOOLS"))
@@ -172,8 +176,9 @@ _ComputeResolvedPath(
         return _ResolveResourcePath(filename, errorStr);
     }
 
-    // Pass absolute and repository paths to the resolver.
     ArResolver& resolver = ArGetResolver();
+
+#if AR_VERSION == 1
     if (filename[0] == '/') {
         return resolver.Resolve(filename);
     }
@@ -199,6 +204,14 @@ _ComputeResolvedPath(
 
     // Search for the file along the resolver search path.
     return resolver.Resolve(filename);
+#else
+    // Create an identifier for the specified .glslfx file by combining
+    // the containing file and the new file to accommodate relative paths,
+    // then resolve it.
+    const std::string assetPath =
+        resolver.CreateIdentifier(filename, ArResolvedPath(containingFile));
+    return assetPath.empty() ? string() : resolver.Resolve(assetPath);
+#endif
 }
 
 HioGlslfx::HioGlslfx() :
@@ -212,12 +225,17 @@ HioGlslfx::HioGlslfx(string const & filePath, TfToken const & technique)
     , _valid(true)
     , _hash(0)
 {
+    string errorStr;
+#if AR_VERSION == 1
     // Resolve with the containingFile set to the current working directory
     // with a trailing slash. This ensures that relative paths supplied to the
     // constructor are properly anchored to the containing file's directory.
-    string errorStr;
     const string resolvedPath =
         _ComputeResolvedPath(ArchGetCwd() + "/", filePath, &errorStr);
+#else
+    const string resolvedPath =
+        _ComputeResolvedPath(string(), filePath, &errorStr);
+#endif
     if (resolvedPath.empty()) {
         if (!errorStr.empty()) {
             TF_RUNTIME_ERROR(errorStr);
@@ -264,6 +282,26 @@ HioGlslfx::IsValid(std::string *reason) const
     return _valid;
 }
 
+static unique_ptr<istream>
+_CreateStreamForFile(string const& filePath)
+{
+    if (TfIsFile(filePath)) {
+        return make_unique<ifstream>(filePath);
+    }
+
+    const shared_ptr<ArAsset> asset = ArGetResolver().OpenAsset(
+        ArResolvedPath(filePath));
+    if (asset) {
+        const shared_ptr<const char> buffer = asset->GetBuffer();
+        if (buffer) {
+            return make_unique<istringstream>(
+                string(buffer.get(), asset->GetSize()));
+        }
+    }
+
+    return nullptr;
+}
+
 bool
 HioGlslfx::_ProcessFile(string const & filePath, _ParseContext & context)
 {
@@ -275,15 +313,21 @@ HioGlslfx::_ProcessFile(string const & filePath, _ParseContext & context)
     }
 
     _seenFiles.insert(filePath);
-    ifstream input(filePath.c_str());
-    return _ProcessInput(&input, context);
+
+    const unique_ptr<istream> str = _CreateStreamForFile(filePath);
+    if (!str) {
+        TF_RUNTIME_ERROR("Could not open %s", filePath.c_str());
+        return false;
+    }
+
+    return _ProcessInput(str.get(), context);
 }
 
 // static
 vector<string>
 HioGlslfx::ExtractImports(const string& filename)
 {
-    ifstream input(filename);
+    const unique_ptr<istream> input = _CreateStreamForFile(filename);
     if (!input) {
         return {};
     }
@@ -291,7 +335,7 @@ HioGlslfx::ExtractImports(const string& filename)
     vector<string> imports;
 
     string line;
-    while (getline(input, line)) {
+    while (getline(*input, line)) {
         if (line.find(_tokens->import) == 0) {
             imports.push_back(TfStringTrim(line.substr(_tokens->import.size())));
         }
@@ -347,6 +391,10 @@ HioGlslfx::_ProcessInput(std::istream * input,
             // don't do any parsing of these lines. this will be compiled
             // and linked with the glsl compiler later.
             _sourceMap[context.currentSectionId].append(
+                context.currentLine + "\n");
+        } else
+        if (context.currentSectionType == _tokens->layout) {
+            _layoutMap[context.currentSectionId].append(
                 context.currentLine + "\n");
         } else
         if (context.currentSectionType == _tokens->configuration) {
@@ -430,6 +478,9 @@ HioGlslfx::_ParseSectionLine(_ParseContext & context)
     } else
     if (context.currentSectionType == _tokens->glsl.GetText()) {
         return _ParseGLSLSectionLine(tokens, context);
+    } else
+    if (context.currentSectionType == _tokens->layout.GetText()) {
+        return _ParseLayoutSectionLine(tokens, context);
     }
 
     TF_RUNTIME_ERROR("Syntax Error on line %d of %s. Unknown section tag \"%s\"",
@@ -467,6 +518,35 @@ HioGlslfx::_ParseGLSLSectionLine(vector<string> const & tokens,
     _sourceMap[context.currentSectionId].append(
         TfStringPrintf("// line %d \"%s\"\n",
                        context.lineNo, context.filename.c_str()));
+
+    return true;
+}
+
+bool
+HioGlslfx::_ParseLayoutSectionLine(vector<string> const & tokens,
+                                         _ParseContext & context)
+{
+    if (tokens.size() < 3) {
+        TF_RUNTIME_ERROR("Syntax Error on line %d of %s. \"layout\" tag "
+                         "must be followed by a valid identifier.",
+                         context.lineNo, context.filename.c_str());
+        return false;
+    }
+
+    context.currentSectionId = tokens[2];
+
+    // if we already have a section id that is registered in our layout map,
+    // bail
+    _SourceMap::const_iterator cit =
+                        _layoutMap.find(context.currentSectionId);
+    if (cit != _layoutMap.end()) {
+        TF_RUNTIME_ERROR("Syntax Error on line %d of %s. "
+                         "Layout for \"%s\" "
+                         "has already been defined", context.lineNo,
+                         context.filename.c_str(),
+                         context.currentSectionId.c_str());
+        return false;
+    }
 
     return true;
 }
@@ -608,13 +688,65 @@ HioGlslfx::GetMetadata() const
 }
 
 string
+HioGlslfx::_GetLayout(const TfToken &shaderStageKey) const
+{
+    if (!_config) {
+        return "";
+    }
+
+    vector<string> configKeys = _config->GetSourceKeys(shaderStageKey);
+
+    string ret;
+
+    for (std::string const& key : configKeys) {
+        // now look up the keys and concatenate them together..
+        _SourceMap::const_iterator cit = _layoutMap.find(key);
+
+        if (cit == _layoutMap.end()) {
+            // do nothing if there is no layout section with a matching key
+            continue;
+        }
+
+        if (!ret.empty()) {
+            ret += ",\n";
+        }
+        ret += cit->second + "\n";
+    }
+
+    return ret;
+}
+
+string
+HioGlslfx::_GetLayoutAsString(const TfTokenVector &shaderStageKeys) const
+{
+    std::string ret;
+    for (TfToken const &shaderStageKey : shaderStageKeys) {
+        if (!ret.empty()) {
+            ret += ", ";
+        }
+        ret += "\"" + shaderStageKey.GetString() +
+               "\" : [ " + _GetLayout(shaderStageKey) + " ]";
+    }
+    ret = "{ " + ret + " }";
+
+    return ret;
+}
+
+VtDictionary
+HioGlslfx::GetLayoutAsDictionary(const TfTokenVector &shaderStageKeys,
+                                 std::string *errorStr) const
+{
+    return Hio_GetDictionaryFromInput(
+        _GetLayoutAsString(shaderStageKeys), "no filename", errorStr);
+}
+
+string
 HioGlslfx::_GetSource(const TfToken &shaderStageKey) const
 {
     if (!_config) {
         return "";
     }
 
-    string errors;
     vector<string> sourceKeys = _config->GetSourceKeys(shaderStageKey);
 
     string ret;

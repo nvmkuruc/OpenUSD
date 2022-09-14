@@ -23,6 +23,7 @@
 # language governing permissions and limitations under the Apache License.
 #
 
+from __future__ import print_function
 from pxr.UsdAppUtils.complexityArgs import RefinementComplexities
 from pxr.Usdviewq.common import RenderModes, Usd, UsdGeom
 from pxr import Vt, Gf
@@ -42,28 +43,23 @@ def _setComplexity(appController, complexity):
     appController._dataModel.viewSettings.complexity = complexity
     appController._stageView.updateView()
 
-# Take a shot of the viewport and save it to a file.
-def _takeShot(appController, fileName):
-    viewportShot = appController.GrabViewportShot()
-    viewportShot.save(fileName, "PNG")
-
 def _testChangeComplexity(appController):
     _setComplexity(appController, RefinementComplexities.MEDIUM)
-    _takeShot(appController, "change_complexity.png")
+    appController._takeShot("change_complexity.png")
     _setComplexity(appController, RefinementComplexities.LOW)
 
 def _testInvisVisOnPlayback(appController):
     # Start playback
     appController.setFrame(4)
     appController._stageView.updateView()
-    _takeShot(appController, "vis_frame_4.png")
+    appController._takeShot("vis_frame_4.png")
 
     stage = appController._dataModel.stage
     skelRoot = UsdGeom.Imageable(stage.GetPrimAtPath("/Model"))
     print("Invising skel root.")
     skelRoot.MakeInvisible()
     appController._stageView.updateView()
-    _takeShot(appController, "invis_frame_4.png")
+    appController._takeShot("invis_frame_4.png")
     
     print("Scrubbing a few frames ahead.")
     appController.setFrame(5)
@@ -73,14 +69,14 @@ def _testInvisVisOnPlayback(appController):
     print("Vising skel root.")
     skelRoot.MakeVisible()
     appController.setFrame(8)
-    _takeShot(appController, "vis_frame_8.png")
+    appController._takeShot("vis_frame_8.png")
 
 # Force the skinned prim to resync by modifying a built-in primvar (such
 # as displayColor).
 def _testResyncSkinnedPrim(appController):
     appController._dataModel.viewSettings.renderMode = RenderModes.FLAT_SHADED
     appController.setFrame(2)
-    _takeShot(appController, "pre_skinned_prim_resync_frame_2.png")
+    appController._takeShot("pre_skinned_prim_resync_frame_2.png")
 
     stage = appController._dataModel.stage
     arm = stage.GetPrimAtPath("/Model/Arm")
@@ -89,13 +85,13 @@ def _testResyncSkinnedPrim(appController):
     attr.Set(Vt.Vec3fArray(1, Gf.Vec3f(1.0,0.0,0.0)))
 
     appController._stageView.updateView()
-    _takeShot(appController, "post_skinned_prim_resync_frame_2.png")
+    appController._takeShot("post_skinned_prim_resync_frame_2.png")
 
 # Force the skeleton prim to resync by modifying its rest xform.
 def _testResyncSkeleton(appController):
     appController._dataModel.viewSettings.renderMode = RenderModes.FLAT_SHADED
     appController.setFrame(6)
-    _takeShot(appController, "pre_skel_resync_frame_6.png")
+    appController._takeShot("pre_skel_resync_frame_6.png")
 
     stage = appController._dataModel.stage
     arm = stage.GetPrimAtPath("/Model/Skel")
@@ -115,7 +111,7 @@ def _testResyncSkeleton(appController):
                                               2.0, 0.0, 2.0, 1.0))))
 
     appController._stageView.updateView()
-    _takeShot(appController, "post_skel_resync_frame_6.png")
+    appController._takeShot("post_skel_resync_frame_6.png")
 
 # Skinning makes use of adapter hijacking (for the skinned prims). Callbacks
 # for various operations need to be forwarded/processed correctly.

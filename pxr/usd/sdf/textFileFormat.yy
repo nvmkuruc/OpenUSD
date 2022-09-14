@@ -137,15 +137,48 @@ _SetupValue(const std::string& typeName, Sdf_TextParserContext *context)
 
 template <class T>
 static bool
+_GeneralHasDuplicates(const std::vector<T> &v)
+{
+    // Copy and sort to look for dupes.
+    std::vector<T> copy(v);
+    std::sort(copy.begin(), copy.end());
+    return std::adjacent_find(copy.begin(), copy.end()) != copy.end();
+}
+
+template <class T>
+static inline bool
 _HasDuplicates(const std::vector<T> &v)
 {
-    std::set<T> s;
-    TF_FOR_ALL(i, v) {
-        if (!s.insert(*i).second) {
-            return true;
-        }
+    // Many of the vectors we see here are either just a few elements long
+    // (references, payloads) or are already sorted and unique (topology
+    // indexes, etc).
+    if (v.size() <= 1) {
+        return false;
     }
-    return false;
+
+    // Many are of small size, just check all pairs.
+    if (v.size() <= 10) {
+       using iter = typename std::vector<T>::const_iterator;
+       iter iend = std::prev(v.end()), jend = v.end();
+       for (iter i = v.begin(); i != iend; ++i) {
+           for (iter j = std::next(i); j != jend; ++j) {
+               if (*i == *j) {
+                   return true;
+               }
+           }
+       }
+       return false;
+    }
+
+    // Check for strictly sorted order.
+    if (std::adjacent_find(v.begin(), v.end(),
+                           [](T const &l, T const &r) {
+                               return l >= r;
+                           }) == v.end()) {
+        return false;
+    }
+    // Otherwise do a more expensive copy & sort to check for dupes.
+    return _GeneralHasDuplicates(v);
 }
 
 namespace
@@ -557,6 +590,7 @@ _RelocatesAdd(const Value& arg1, const Value& arg2,
 
     context->relocatesParsingMap.insert(std::make_pair(srcAbsPath, 
                                                         targetAbsPath));
+    context->layerHints.mightHaveRelocates = true;
 }
 
 static void
@@ -621,7 +655,7 @@ _AttributeAppendConnectionPath(Sdf_TextParserContext *context)
                 "using <%s> instead.  Resaving the file will fix this issue.",
                 absPath.GetText(),
                 context->fileContext.c_str(),
-                context->menvaLineNo,
+                context->sdfLineNo,
                 absPath.StripAllVariantSelections().GetText());
         absPath = absPath.StripAllVariantSelections();
     }
@@ -975,29 +1009,42 @@ _SetGenericMetadataListOpItems(const TfType& fieldType,
 }
 
 template <class ListOpType>
-static bool
-_IsListOpType(const TfType& type, TfType* itemArrayType = nullptr)
-{
-    if (type.IsA<ListOpType>()) {
-        if (itemArrayType) {
-            typedef VtArray<typename ListOpType::value_type> ArrayType;
-            *itemArrayType = TfType::Find<ArrayType>();
-        }
-        return true;
-    }
-    return false;
+static std::pair<TfType, TfType>
+_GetListOpAndArrayTfTypes() {
+    return {
+        TfType::Find<ListOpType>(),
+        TfType::Find<VtArray<typename ListOpType::value_type>>()
+    };
 }
 
 static bool
 _IsGenericMetadataListOpType(const TfType& type,
                              TfType* itemArrayType = nullptr)
 {
-    return _IsListOpType<SdfIntListOp>(type, itemArrayType)    ||
-           _IsListOpType<SdfInt64ListOp>(type, itemArrayType)  || 
-           _IsListOpType<SdfUIntListOp>(type, itemArrayType)   ||
-           _IsListOpType<SdfUInt64ListOp>(type, itemArrayType) ||
-           _IsListOpType<SdfStringListOp>(type, itemArrayType) ||
-           _IsListOpType<SdfTokenListOp>(type, itemArrayType);
+    static std::pair<TfType, TfType> listOpAndArrayTypes[] = {
+        _GetListOpAndArrayTfTypes<SdfIntListOp>(),
+        _GetListOpAndArrayTfTypes<SdfInt64ListOp>(),
+        _GetListOpAndArrayTfTypes<SdfUIntListOp>(),
+        _GetListOpAndArrayTfTypes<SdfUInt64ListOp>(),
+        _GetListOpAndArrayTfTypes<SdfStringListOp>(),
+        _GetListOpAndArrayTfTypes<SdfTokenListOp>(),
+    };
+
+    auto iter = std::find_if(std::begin(listOpAndArrayTypes),
+                             std::end(listOpAndArrayTypes),
+                             [&type](auto const &p) {
+                                 return p.first == type;
+                             });
+
+    if (iter == std::end(listOpAndArrayTypes)) {
+        return false;
+    }
+
+    if (itemArrayType) {
+        *itemArrayType = iter->second;
+    }
+    
+    return true;
 }
 
 static void
@@ -1242,7 +1289,7 @@ _GenericMetadataEnd(SdfSpecType specType, Sdf_TextParserContext *context)
 %%
 
 // The first, root production rule
-menva_file:
+sdf_file:
     layer
 
 keyword:
@@ -1320,7 +1367,12 @@ layer:
     ;
 
 layer_metadata_opt:
-    newlines_opt
+    newlines_opt {
+            // If we're only reading metadata and we got here, 
+            // we're done.
+            if (context->metadataOnly)
+                YYACCEPT;
+        }
     | newlines_opt '(' layer_metadata_list_opt ')' newlines_opt {
             // Abort if error after layer metadata.
             ABORT_IF_ERROR(context->seenError);
@@ -3081,9 +3133,9 @@ void textFileFormatYyerror(Sdf_TextParserContext *context, const char *msg)
     const bool isNewlineToken = 
         (nextToken.length() == 1 && nextToken[0] == '\n');
 
-    int errLineNumber = context->menvaLineNo;
+    int errLineNumber = context->sdfLineNo;
 
-    // By this time, menvaLineNo has already been updated to account for
+    // By this time, sdfLineNo has already been updated to account for
     // nextToken. So, if nextToken is a newline, the error really occurred on
     // the previous line.
     if (isNewlineToken) { 
@@ -3193,16 +3245,18 @@ private:
 };
 }
 
-/// Parse a .menva file into an SdfData
-bool Sdf_ParseMenva(
-     const std::string& fileContext, 
-     const std::shared_ptr<ArAsset>& asset,
-     const std::string& magicId,
-     const std::string& versionString,
-     bool metadataOnly,
-     SdfDataRefPtr data)
+/// Parse a text layer into an SdfData
+bool 
+Sdf_ParseLayer(
+    const std::string& fileContext, 
+    const std::shared_ptr<ArAsset>& asset,
+    const std::string& magicId,
+    const std::string& versionString,
+    bool metadataOnly,
+    SdfDataRefPtr data,
+    SdfLayerHints *hints)
 {
-    TfAutoMallocTag2 tag("Menva", "Menva_Parse");
+    TfAutoMallocTag2 tag("Sdf", "Sdf_ParseLayer");
 
     TRACE_FUNCTION();
 
@@ -3235,9 +3289,10 @@ bool Sdf_ParseMenva(
             try {
                 TRACE_SCOPE("textFileFormatYyParse");
                 status = textFileFormatYyparse(&context);
+                *hints = context.layerHints;
             } catch (boost::bad_get) {
-                TF_CODING_ERROR("Bad boost:get<T>() in menva parser.");
-                Err(&context, "Internal menva parser error.");
+                TF_CODING_ERROR("Bad boost:get<T>() in layer parser.");
+                Err(&context, "Internal layer parser error.");
             }
         }
     }
@@ -3251,13 +3306,16 @@ bool Sdf_ParseMenva(
     return status == 0;
 }
 
-/// Parse a .menva string into an SdfData
-bool Sdf_ParseMenvaFromString(const std::string & menvaString, 
-                             const std::string & magicId,
-                             const std::string & versionString,
-                             SdfDataRefPtr data)
+/// Parse a layer text string into an SdfData
+bool
+Sdf_ParseLayerFromString(
+    const std::string & layerString, 
+    const std::string & magicId,
+    const std::string & versionString,
+    SdfDataRefPtr data,
+    SdfLayerHints *hints)
 {
-    TfAutoMallocTag2 tag("Menva", "Menva_Parse");
+    TfAutoMallocTag2 tag("Sdf", "Sdf_ParseLayerFromString");
 
     TRACE_FUNCTION();
 
@@ -3275,15 +3333,16 @@ bool Sdf_ParseMenvaFromString(const std::string & menvaString,
     textFileFormatYyset_extra(&context, context.scanner);
 
     // Run parser.
-    yy_buffer_state *buf = textFileFormatYy_scan_string(menvaString.c_str(), 
-                                               context.scanner);
+    yy_buffer_state *buf = textFileFormatYy_scan_string(
+        layerString.c_str(), context.scanner);
     int status = -1;
     try {
         TRACE_SCOPE("textFileFormatYyParse");
         status = textFileFormatYyparse(&context);
+        *hints = context.layerHints;
     } catch (boost::bad_get) {
-        TF_CODING_ERROR("Bad boost:get<T>() in menva parser.");
-        Err(&context, "Internal menva parser error.");
+        TF_CODING_ERROR("Bad boost:get<T>() in layer parser.");
+        Err(&context, "Internal layer parser error.");
     }
 
     // Clean up.

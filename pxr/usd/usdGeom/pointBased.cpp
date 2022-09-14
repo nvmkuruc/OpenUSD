@@ -56,8 +56,9 @@ UsdGeomPointBased::Get(const UsdStagePtr &stage, const SdfPath &path)
 
 
 /* virtual */
-UsdSchemaType UsdGeomPointBased::_GetSchemaType() const {
-    return UsdGeomPointBased::schemaType;
+UsdSchemaKind UsdGeomPointBased::_GetSchemaKind() const
+{
+    return UsdGeomPointBased::schemaKind;
 }
 
 /* static */
@@ -350,7 +351,6 @@ UsdGeomPointBased::ComputePointsAtTimes(
     VtVec3fArray velocities;
     UsdTimeCode velocitiesSampleTime;
     VtVec3fArray accelerations;
-    float velocityScale;
 
     // by passing in 0 to expectedNumPositions we default the expected number
     // of positions to the number of points in the points attribute
@@ -364,7 +364,6 @@ UsdGeomPointBased::ComputePointsAtTimes(
             &velocities,
             &velocitiesSampleTime,
             &accelerations,
-            &velocityScale,
             GetPrim())) {
         return false;
     }
@@ -409,8 +408,7 @@ UsdGeomPointBased::ComputePointsAtTimes(
                 positions,
                 velocities,
                 velocitiesSampleTime,
-                accelerations,
-                velocityScale)) {
+                accelerations)) {
             return false;
         }
 
@@ -429,13 +427,12 @@ UsdGeomPointBased::ComputePointsAtTime(
     const VtVec3fArray& velocities,
     UsdTimeCode velocitiesSampleTime,
     const VtVec3fArray& accelerations,
-    float velocityScale)
+    float /* velocityScale */)
 {
     size_t numPoints = positions.size();
 
     const double timeCodesPerSecond = stage->GetTimeCodesPerSecond();
-    const float velocityTimeDelta = UsdGeom_CalculateTimeDelta(
-                                      velocityScale,
+    const double velocityTimeDelta = UsdGeom_CalculateTimeDelta(
                                       time,
                                       velocitiesSampleTime,
                                       timeCodesPerSecond);

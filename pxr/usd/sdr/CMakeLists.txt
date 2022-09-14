@@ -18,6 +18,7 @@ pxr_library(sdr
         declare.h
 
     PUBLIC_CLASSES
+        debugCodes
         registry
         shaderMetadataHelpers
         shaderNode
@@ -35,6 +36,9 @@ pxr_library(sdr
     PYMODULE_FILES
         __init__.py
         shaderParserTestUtils.py
+
+    DOXYGEN_FILES
+        overview.dox
 )
 
 pxr_test_scripts(

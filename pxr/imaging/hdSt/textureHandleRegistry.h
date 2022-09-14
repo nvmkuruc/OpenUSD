@@ -38,8 +38,7 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-class Hgi;
-
+class HdStResourceRegistry;
 class HdStTextureIdentifier;
 class HdSamplerParameters;
 class HdSt_SamplerObjectRegistry;
@@ -73,7 +72,10 @@ using HdStShaderCodeSharedPtr =
 class HdSt_TextureHandleRegistry final
 {
 public:
-    explicit HdSt_TextureHandleRegistry(Hgi * hgi);
+    HDST_API
+    explicit HdSt_TextureHandleRegistry(HdStResourceRegistry * registry);
+
+    HDST_API
     ~HdSt_TextureHandleRegistry();
 
     /// Allocate texture handle (thread-safe).
@@ -87,7 +89,6 @@ public:
         const HdSamplerParameters &samplerParams,
         /// memoryRequest in bytes.
         size_t memoryRequest,
-        bool createBindlessHandle,
         HdStShaderCodePtr const &shaderCode);
 
     /// Mark texture dirty (thread-safe).
@@ -97,6 +98,7 @@ public:
     /// handles will be updated potentially triggering texture garbage
     /// collection.
     ///
+    HDST_API
     void MarkDirty(HdStTextureObjectPtr const &texture);
 
     /// Mark shader dirty (thread-safe).
@@ -104,11 +106,13 @@ public:
     /// If set, the shader is scheduled to be updated (i.e., have its
     /// AddResourcesFromTextures called) on the next commit.
     ///
+    HDST_API
     void MarkDirty(HdStShaderCodePtr const &shader);
 
     /// Mark that sampler garbage collection needs to happen during
     /// next commit (thead-safe).
     ///
+    HDST_API
     void MarkSamplerGarbageCollectionNeeded();
 
     /// Get texture object registry.
@@ -129,11 +133,26 @@ public:
     ///
     /// Also garbage collect textures and samplers if necessary.
     ///
+    HDST_API
     std::set<HdStShaderCodeSharedPtr> Commit();
+
+    /// Sets how much memory a single texture can consume in bytes by
+    /// texture type.
+    ///
+    /// Only has an effect if non-zero and only applies to textures if
+    /// no texture handle referencing the texture has a memory
+    /// request.
+    ///
+    HDST_API
+    void SetMemoryRequestForTextureType(HdTextureType textureType, size_t memoryRequest);
+
+    HDST_API
+    size_t GetNumberOfTextureHandles() const;
 
 private:
     void _ComputeMemoryRequest(HdStTextureObjectSharedPtr const &);
     void _ComputeMemoryRequests(const std::set<HdStTextureObjectSharedPtr> &);
+    void _ComputeAllMemoryRequests();
 
     bool _GarbageCollectHandlesAndComputeTargetMemory();
     void _GarbageCollectAndComputeTargetMemory();
@@ -141,7 +160,13 @@ private:
 
     class _TextureToHandlesMap;
 
-    bool _samplerGarbageCollectionNeeded;
+    // Maps texture type to memory a single texture of that type can consume
+    // (in bytes).
+    // Will be taken into account when computing the maximum of all the
+    // memory requests of the texture handles.
+    std::map<HdTextureType, size_t> _textureTypeToMemoryRequest;
+    // Has _textureTypeToMemoryRequest changed since the last commit.
+    bool _textureTypeToMemoryRequestChanged;
 
     // Handles that are new or for which the underlying texture has
     // changed: samplers might need to be (re-)allocated and the

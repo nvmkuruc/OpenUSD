@@ -68,6 +68,9 @@ public:
     HGIMETAL_API
     void PopDebugGroup() override;
 
+    HGIMETAL_API
+    void MemoryBarrier(HgiMemoryBarrier barrier) override;
+
 protected:
     friend class HgiMetal;
 
@@ -75,16 +78,22 @@ protected:
     HgiMetalComputeCmds(HgiMetal* hgi);
 
     HGIMETAL_API
-    bool _Submit(Hgi* hgi) override;
+    bool _Submit(Hgi* hgi, HgiSubmitWaitType wait) override;
 
 private:
     HgiMetalComputeCmds() = delete;
     HgiMetalComputeCmds & operator=(const HgiMetalComputeCmds&) = delete;
     HgiMetalComputeCmds(const HgiMetalComputeCmds&) = delete;
 
+    void _CreateEncoder();
+    void _CreateArgumentBuffer();
+    
     HgiMetal* _hgi;
     HgiMetalComputePipeline* _pipelineState;
+    id<MTLCommandBuffer> _commandBuffer;
+    id<MTLBuffer> _argumentBuffer;
     id<MTLComputeCommandEncoder> _encoder;
+    bool _secondaryCommandBuffer;
     bool _hasWork;
 };
 

@@ -58,8 +58,8 @@ class UsdContrivedPublicMultipleApplyAPI : public UsdAPISchemaBase
 public:
     /// Compile time constant representing what kind of schema this class is.
     ///
-    /// \sa UsdSchemaType
-    static const UsdSchemaType schemaType = UsdSchemaType::MultipleApplyAPI;
+    /// \sa UsdSchemaKind
+    static const UsdSchemaKind schemaKind = UsdSchemaKind::MultipleApplyAPI;
 
     /// Construct a UsdContrivedPublicMultipleApplyAPI on UsdPrim \p prim with
     /// name \p name . Equivalent to
@@ -89,14 +89,20 @@ public:
     virtual ~UsdContrivedPublicMultipleApplyAPI();
 
     /// Return a vector of names of all pre-declared attributes for this schema
+    /// class and all its ancestor classes.  Does not include attributes that
+    /// may be authored by custom/extended methods of the schemas involved.
+    USDCONTRIVED_API
+    static const TfTokenVector &
+    GetSchemaAttributeNames(bool includeInherited=true);
+
+    /// Return a vector of names of all pre-declared attributes for this schema
     /// class and all its ancestor classes for a given instance name.  Does not
     /// include attributes that may be authored by custom/extended methods of
     /// the schemas involved. The names returned will have the proper namespace
     /// prefix.
     USDCONTRIVED_API
-    static const TfTokenVector &
-    GetSchemaAttributeNames(
-        bool includeInherited=true, const TfToken instanceName=TfToken());
+    static TfTokenVector
+    GetSchemaAttributeNames(bool includeInherited, const TfToken &instanceName);
 
     /// Returns the name of this multiple-apply schema instance
     TfToken GetName() const {
@@ -140,6 +146,27 @@ public:
     static bool
     IsPublicMultipleApplyAPIPath(const SdfPath &path, TfToken *name);
 
+    /// Returns true if this <b>multiple-apply</b> API schema can be applied,
+    /// with the given instance name, \p name, to the given \p prim. If this 
+    /// schema can not be a applied the prim, this returns false and, if 
+    /// provided, populates \p whyNot with the reason it can not be applied.
+    /// 
+    /// Note that if CanApply returns false, that does not necessarily imply
+    /// that calling Apply will fail. Callers are expected to call CanApply
+    /// before calling Apply if they want to ensure that it is valid to 
+    /// apply a schema.
+    /// 
+    /// \sa UsdPrim::GetAppliedSchemas()
+    /// \sa UsdPrim::HasAPI()
+    /// \sa UsdPrim::CanApplyAPI()
+    /// \sa UsdPrim::ApplyAPI()
+    /// \sa UsdPrim::RemoveAPI()
+    ///
+    USDCONTRIVED_API
+    static bool 
+    CanApply(const UsdPrim &prim, const TfToken &name, 
+             std::string *whyNot=nullptr);
+
     /// Applies this <b>multiple-apply</b> API schema to the given \p prim 
     /// along with the given instance name, \p name. 
     /// 
@@ -155,6 +182,7 @@ public:
     /// 
     /// \sa UsdPrim::GetAppliedSchemas()
     /// \sa UsdPrim::HasAPI()
+    /// \sa UsdPrim::CanApplyAPI()
     /// \sa UsdPrim::ApplyAPI()
     /// \sa UsdPrim::RemoveAPI()
     ///
@@ -163,11 +191,11 @@ public:
     Apply(const UsdPrim &prim, const TfToken &name);
 
 protected:
-    /// Returns the type of schema this class belongs to.
+    /// Returns the kind of schema this class belongs to.
     ///
-    /// \sa UsdSchemaType
+    /// \sa UsdSchemaKind
     USDCONTRIVED_API
-    UsdSchemaType _GetSchemaType() const override;
+    UsdSchemaKind _GetSchemaKind() const override;
 
 private:
     // needs to invoke _GetStaticTfType.

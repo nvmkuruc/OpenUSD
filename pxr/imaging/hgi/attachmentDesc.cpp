@@ -32,7 +32,9 @@ bool operator==(
     const HgiAttachmentDesc& rhs) 
 {
     return  lhs.format == rhs.format &&
+            lhs.usage == rhs.usage &&
             lhs.clearValue == rhs.clearValue &&
+            lhs.colorMask == rhs.colorMask &&
             lhs.loadOp == rhs.loadOp &&
             lhs.storeOp == rhs.storeOp &&
             lhs.blendEnabled == rhs.blendEnabled &&
@@ -41,7 +43,8 @@ bool operator==(
             lhs.colorBlendOp == rhs.colorBlendOp &&
             lhs.srcAlphaBlendFactor == rhs.srcAlphaBlendFactor &&
             lhs.dstAlphaBlendFactor == rhs.dstAlphaBlendFactor &&
-            lhs.alphaBlendOp == rhs.alphaBlendOp;
+            lhs.alphaBlendOp == rhs.alphaBlendOp &&
+            lhs.blendConstantColor == rhs.blendConstantColor;
 }
 
 bool operator!=(
@@ -57,7 +60,9 @@ std::ostream& operator<<(
 {
     out << "HgiAttachmentDesc: {"
         << "format: " << attachment.format << ", "
+        << "usage: " << attachment.usage << ", "
         << "clearValue: " << attachment.clearValue << ", "
+        << "colorMask: " << attachment.colorMask << ", "
         << "loadOp: " << attachment.loadOp << ", "
         << "storeOp: " << attachment.storeOp << ", "
         << "blendEnabled: " << attachment.blendEnabled << ", "
@@ -66,7 +71,8 @@ std::ostream& operator<<(
         << "colorBlendOp: " << attachment.colorBlendOp << ", "
         << "srcAlphaBlendFactor: " << attachment.srcAlphaBlendFactor << ", "
         << "dstAlphaBlendFactor: " << attachment.dstAlphaBlendFactor << ", "
-        << "alphaBlendOp: " << attachment.alphaBlendOp <<
+        << "alphaBlendOp: " << attachment.alphaBlendOp << ", "
+        << "blendConstantColor: " << attachment.blendConstantColor <<
     "}";
     return out;
 }

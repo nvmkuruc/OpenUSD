@@ -30,11 +30,10 @@
 #include "pxr/usdImaging/usdImaging/api.h"
 #include "pxr/usdImaging/usdImaging/version.h"
 #include "pxr/usdImaging/usdImaging/collectionCache.h"
-#include "pxr/usdImaging/usdImaging/valueCache.h"
+#include "pxr/usdImaging/usdImaging/primvarDescCache.h"
 #include "pxr/usdImaging/usdImaging/resolvedAttributeCache.h"
 
 #include "pxr/imaging/hd/changeTracker.h"
-#include "pxr/imaging/hd/texture.h"
 #include "pxr/imaging/hd/selection.h"
 #include "pxr/usd/usd/attribute.h"
 #include "pxr/usd/usd/prim.h"
@@ -56,6 +55,8 @@ class UsdImagingIndexProxy;
 class UsdImagingInstancerContext;
 class HdExtComputationContext;
 
+class UsdImagingDataSourceStageGlobals;
+
 using UsdImagingPrimAdapterSharedPtr = 
     std::shared_ptr<class UsdImagingPrimAdapter>;
 
@@ -64,25 +65,43 @@ using UsdImagingPrimAdapterSharedPtr =
 /// Base class for all PrimAdapters.
 ///
 class UsdImagingPrimAdapter 
-            : public std::enable_shared_from_this<UsdImagingPrimAdapter> {
+            : public std::enable_shared_from_this<UsdImagingPrimAdapter>
+{
 public:
     
-    // ---------------------------------------------------------------------- //
-    /// \name Initialization
-    // ---------------------------------------------------------------------- //
- 
     UsdImagingPrimAdapter()
     {}
 
     USDIMAGING_API
     virtual ~UsdImagingPrimAdapter();
 
+    // ---------------------------------------------------------------------- //
+    /// \name Scene Index Support
+    // ---------------------------------------------------------------------- //
+
+    USDIMAGING_API
+    virtual TfTokenVector GetImagingSubprims();
+
+    USDIMAGING_API
+    virtual TfToken GetImagingSubprimType(TfToken const& subprim);
+
+    USDIMAGING_API
+    virtual HdContainerDataSourceHandle GetImagingSubprimData(
+            TfToken const& subprim,
+            UsdPrim const& prim,
+            const UsdImagingDataSourceStageGlobals &stageGlobals);
+
+    // ---------------------------------------------------------------------- //
+    /// \name Initialization
+    // ---------------------------------------------------------------------- //
+ 
     /// Called to populate the RenderIndex for this UsdPrim. The adapter is
     /// expected to create one or more prims in the render index using the
     /// given proxy.
     virtual SdfPath Populate(UsdPrim const& prim,
-                UsdImagingIndexProxy* index,
-                UsdImagingInstancerContext const* instancerContext = NULL) = 0;
+                             UsdImagingIndexProxy* index,
+                             UsdImagingInstancerContext const*
+                                 instancerContext = nullptr) = 0;
 
     // Indicates whether population traversal should be pruned based on
     // prim-specific features (like whether it's imageable).
@@ -95,19 +114,47 @@ public:
     USDIMAGING_API
     virtual bool ShouldCullChildren() const;
 
+    // Indicates whether or not native USD prim instancing should be ignored
+    // for prims using this delegate, along with their descendants.
+    USDIMAGING_API
+    virtual bool ShouldIgnoreNativeInstanceSubtrees() const;
+
     // Indicates the adapter is a multiplexing adapter (e.g. PointInstancer),
     // potentially managing its children. This flag is used in nested
     // instancer cases to determine which adapter is assigned to which prim.
     USDIMAGING_API
     virtual bool IsInstancerAdapter() const;
 
-    // Indicates whether this adapter can populate a master prim. By policy,
-    // you can't directly instance a gprim, but you can directly instance proxy
-    // objects (like cards). Note: masters don't have attributes, so an adapter
-    // opting in here needs to check if prims it's populating are master prims,
-    // and if so find a copy of the instancing prim.
+    // Indicates whether this adapter can directly populate USD instance prims.
+    //
+    // Normally, with USD instances, we make a firewall between the instance
+    // prim and the USD prototype tree. The instance adapter creates one
+    // hydra prototype per prim in the USD prototype tree, shared by all USD
+    // instances; this lets us recognize the benefits of instancing,
+    // by hopefully having a high instance count per prototype.  The instance
+    // adapter additionally configures a hydra instancer for the prototype tree;
+    // and a small set of specially-handled data is allowed through: things like
+    // inherited constant primvars, transforms, visibility, and other things
+    // we know how to vary per-instance.
+    //
+    // We enforce the above policy by refusing to populate gprims which are
+    // USD instances, since we'd need one prototype per instance and would lose
+    // any instancing benefit.
+    //
+    // There are a handful of times when it really is useful to directly
+    // populate instance prims: for example, instances with cards applied,
+    // or instances of type UsdSkelRoot.  In those cases, the adapters can
+    // opt into this scheme with "CanPopulateUsdInstance".
+    //
+    // Note that any adapters taking advantage of this feature will need
+    // extensive code support in instanceAdapter: the instance adapter will
+    // need to potentially create and track  multiple hydra prototypes per
+    // USD prototype, and the adapter will need special handling to pass down
+    // any relevant instance-varying data.
+    //
+    // In summary: use with caution.
     USDIMAGING_API
-    virtual bool CanPopulateMaster() const;
+    virtual bool CanPopulateUsdInstance() const;
 
     // ---------------------------------------------------------------------- //
     /// \name Parallel Setup and Resolve
@@ -138,7 +185,7 @@ public:
                                UsdTimeCode time,
                                HdDirtyBits requestedBits,
                                UsdImagingInstancerContext const* 
-                                   instancerContext = NULL) const = 0;
+                                   instancerContext = nullptr) const = 0;
 
     // ---------------------------------------------------------------------- //
     /// \name Change Processing 
@@ -178,7 +225,10 @@ public:
     virtual void ProcessPrimRemoval(SdfPath const& cachePath,
                                    UsdImagingIndexProxy* index);
 
-    //+NV_CHANGE FRZHANG
+    //+NV_CHANGE FRZHANG : fix skelmesh resync
+    USDIMAGING_API
+    virtual SdfPath GetPrimResyncRootPath(SdfPath const& primPath);
+
     USDIMAGING_API
     virtual void RefreshSkeletonQuery(const SdfPath& primPath, const TfToken& propertyName, UsdImagingIndexProxy* proxy);
     //-NV_CHANGE FRZHANG
@@ -229,6 +279,11 @@ public:
                                    UsdImagingIndexProxy* index);
 
     USDIMAGING_API
+    virtual void MarkLightParamsDirty(UsdPrim const& prim,
+                                     SdfPath const& cachePath,
+                                     UsdImagingIndexProxy* index);
+
+    USDIMAGING_API
     virtual void MarkWindowPolicyDirty(UsdPrim const& prim,
                                        SdfPath const& cachePath,
                                        UsdImagingIndexProxy* index);
@@ -244,7 +299,7 @@ public:
     /// \name Computations 
     // ---------------------------------------------------------------------- //
     USDIMAGING_API
-    virtual void InvokeComputation(SdfPath const& computationPath,
+    virtual void InvokeComputation(SdfPath const& cachePath,
                                    HdExtComputationContext* context);
 
     // ---------------------------------------------------------------------- //
@@ -256,19 +311,42 @@ public:
     virtual std::vector<VtArray<TfToken>>
     GetInstanceCategories(UsdPrim const& prim);
 
+    /// Get the instancer transform for the given prim.
+    /// \see HdSceneDelegate::GetInstancerTransform()
+    USDIMAGING_API
+    virtual GfMatrix4d GetInstancerTransform(
+        UsdPrim const& instancerPrim,
+        SdfPath const& instancerPath,
+        UsdTimeCode time) const;
+
     /// Sample the instancer transform for the given prim.
     /// \see HdSceneDelegate::SampleInstancerTransform()
     USDIMAGING_API
-    virtual size_t
-    SampleInstancerTransform(UsdPrim const& instancerPrim,
-                             SdfPath const& instancerPath,
-                             UsdTimeCode time,
-                             size_t maxNumSamples,
-                             float *sampleTimes,
-                             GfMatrix4d *sampleValues);
+    virtual size_t SampleInstancerTransform(
+        UsdPrim const& instancerPrim,
+        SdfPath const& instancerPath,
+        UsdTimeCode time,
+        size_t maxNumSamples,
+        float *sampleTimes,
+        GfMatrix4d *sampleValues);
 
-    /// Sample the primvar for the given prim.
-    /// \see HdSceneDelegate::SamplePrimvar()
+    /// Return the instancerId for this prim.
+    USDIMAGING_API
+    virtual SdfPath GetInstancerId(
+        UsdPrim const& usdPrim,
+        SdfPath const& cachePath) const;
+
+    /// Return the list of known prototypes of this prim.
+    USDIMAGING_API
+    virtual SdfPathVector GetInstancerPrototypes(
+        UsdPrim const& usdPrim,
+        SdfPath const& cachePath) const;
+
+    /// Sample the primvar for the given prim. If *sampleIndices is not nullptr 
+    /// and the primvar has indices, it will sample the unflattened primvar and 
+    /// set *sampleIndices to the primvar's sampled indices.
+    /// \see HdSceneDelegate::SamplePrimvar() and 
+    /// HdSceneDelegate::SampleIndexedPrimvar()
     USDIMAGING_API
     virtual size_t
     SamplePrimvar(UsdPrim const& usdPrim,
@@ -277,7 +355,8 @@ public:
                   UsdTimeCode time,
                   size_t maxNumSamples, 
                   float *sampleTimes,
-                  VtValue *sampleValues);
+                  VtValue *sampleValues,
+                  VtIntArray *sampleIndices);
 
     /// Get the subdiv tags for this prim.
     USDIMAGING_API
@@ -305,6 +384,7 @@ public:
     /// \name Selection
     // ---------------------------------------------------------------------- //
 
+    /// \deprecated Call and implement GetScenePrimPaths instead.
     USDIMAGING_API
     virtual SdfPath GetScenePrimPath(SdfPath const& cachePath,
         int instanceIndex,
@@ -350,20 +430,6 @@ public:
         HdSelectionSharedPtr const &result) const;
 
     // ---------------------------------------------------------------------- //
-    /// \name Texture resources
-    // ---------------------------------------------------------------------- //
-
-    USDIMAGING_API
-    virtual HdTextureResource::ID
-    GetTextureResourceID(UsdPrim const& usdPrim, SdfPath const &id,
-                         UsdTimeCode time, size_t salt) const;
-
-    USDIMAGING_API
-    virtual HdTextureResourceSharedPtr
-    GetTextureResource(UsdPrim const& usdPrim, SdfPath const &id,
-                       UsdTimeCode time) const;
-
-    // ---------------------------------------------------------------------- //
     /// \name Volume field information
     // ---------------------------------------------------------------------- //
 
@@ -397,16 +463,20 @@ public:
     /// visibility values. Inherited values are strongest, Usd has no notion of
     /// "super vis/invis".
     USDIMAGING_API
-    bool GetVisible(UsdPrim const& prim, UsdTimeCode time) const;
-
-    /// Returns the purpose token for \p prim. If an \p instancerContext is 
-    /// provided and the prim doesn't have an explicitly authored or inherited 
-    /// purpose, it may inherit the instancerContext's purpose if the instance
-    /// has an explicit purpose.
-    USDIMAGING_API
-    TfToken GetPurpose(
+    virtual bool GetVisible(
         UsdPrim const& prim, 
-        UsdImagingInstancerContext const* instancerContext) const;
+        SdfPath const& cachePath,
+        UsdTimeCode time) const;
+
+    /// Returns the purpose token for \p prim. If a non-empty \p
+    /// instanceInheritablePurpose is specified and the prim doesn't have an 
+    /// explicitly authored or inherited purpose, it may inherit the 
+    /// instancer's purpose if the instance has an explicit purpose.
+    USDIMAGING_API
+    virtual TfToken GetPurpose(
+        UsdPrim const& prim, 
+        SdfPath const& cachePath,
+        TfToken const& instanceInheritablePurpose) const;
 
     /// Returns the purpose token for \p prim, but only if it is inheritable 
     /// by child prims (i.e. it is an explicitly authored purpose on the prim
@@ -419,23 +489,41 @@ public:
     /// pre-computed cache of prim transforms. Requesting transforms at
     /// incoherent times is currently inefficient.
     USDIMAGING_API
-    GfMatrix4d GetTransform(UsdPrim const& prim, UsdTimeCode time,
-                            bool ignoreRootTransform = false) const;
+    virtual GfMatrix4d GetTransform(UsdPrim const& prim, 
+                                    SdfPath const& cachePath,
+                                    UsdTimeCode time,
+                                    bool ignoreRootTransform = false) const;
 
     /// Samples the transform for the given prim.
     USDIMAGING_API
-    virtual size_t
-    SampleTransform(UsdPrim const& prim,
-                    SdfPath const& cachePath,
-                    UsdTimeCode time,
-                    size_t maxNumSamples, 
-                    float *sampleTimes,
-                    GfMatrix4d *sampleValues);
+    virtual size_t SampleTransform(UsdPrim const& prim,
+                                   SdfPath const& cachePath,
+                                   UsdTimeCode time,
+                                   size_t maxNumSamples, 
+                                   float *sampleTimes,
+                                   GfMatrix4d *sampleValues);
+
+    /// Gets the value of the parameter named key for the given prim (which
+    /// has the given cache path) and given time. If outIndices is not nullptr 
+    /// and the value has indices, it will return the unflattened value and set 
+    /// outIndices to the value's associated indices.
+    USDIMAGING_API
+    virtual VtValue Get(UsdPrim const& prim,
+                        SdfPath const& cachePath,
+                        TfToken const& key,
+                        UsdTimeCode time, 
+                        VtIntArray *outIndices) const;
+
+    /// Gets the cullstyle of a specific path in the scene graph.
+    USDIMAGING_API
+    virtual HdCullStyle GetCullStyle(UsdPrim const& prim,
+                                     SdfPath const& cachePath,
+                                     UsdTimeCode time) const;
 
     /// Gets the material path for the given prim, walking up namespace if
     /// necessary.  
     USDIMAGING_API
-    SdfPath GetMaterialUsdPath(UsdPrim const& prim) const; 
+    SdfPath GetMaterialUsdPath(UsdPrim const& prim) const;
 
     /// Gets the model:drawMode attribute for the given prim, walking up
     /// the namespace if necessary.
@@ -451,10 +539,101 @@ public:
     VtArray<VtIntArray> GetPerPrototypeIndices(UsdPrim const& prim,
                                                UsdTimeCode time) const;
 
+    /// Gets the topology object of a specific Usd prim. If the
+    /// adapter is a mesh it will return an HdMeshTopology,
+    /// if it is of type basis curves, it will return an HdBasisCurvesTopology.
+    /// If the adapter does not have a topology, it returns an empty VtValue.
     USDIMAGING_API
-    virtual VtValue GetMaterialResource(UsdPrim const& prim,
-        SdfPath const& cachePath,
-        UsdTimeCode time) const;
+    virtual VtValue GetTopology(UsdPrim const& prim,
+                                SdfPath const& cachePath,
+                                UsdTimeCode time) const;
+
+    /// Reads the extent from the given prim. If the extent is not authored,
+    /// an empty GfRange3d is returned, the extent will not be computed.
+    USDIMAGING_API
+    virtual GfRange3d GetExtent(UsdPrim const& prim, 
+                                SdfPath const& cachePath, 
+                                UsdTimeCode time) const;
+
+    /// Reads double-sided from the given prim. If not authored, returns false
+    USDIMAGING_API
+    virtual bool GetDoubleSided(UsdPrim const& prim, 
+                                SdfPath const& cachePath, 
+                                UsdTimeCode time) const;
+
+    USDIMAGING_API
+    virtual SdfPath GetMaterialId(UsdPrim const& prim, 
+                                  SdfPath const& cachePath, 
+                                  UsdTimeCode time) const;
+
+    USDIMAGING_API
+    virtual VtValue GetMaterialResource(UsdPrim const& prim, 
+                                  SdfPath const& cachePath, 
+                                  UsdTimeCode time) const;
+
+    // ---------------------------------------------------------------------- //
+    /// \name ExtComputations
+    // ---------------------------------------------------------------------- //
+    USDIMAGING_API
+    virtual const TfTokenVector &GetExtComputationSceneInputNames(
+        SdfPath const& cachePath) const;
+
+    USDIMAGING_API
+    virtual HdExtComputationInputDescriptorVector
+    GetExtComputationInputs(UsdPrim const& prim,
+                            SdfPath const& cachePath,
+                            const UsdImagingInstancerContext* instancerContext)
+                                    const;
+
+    USDIMAGING_API
+    virtual HdExtComputationOutputDescriptorVector
+    GetExtComputationOutputs(UsdPrim const& prim,
+                             SdfPath const& cachePath,
+                             const UsdImagingInstancerContext* instancerContext)
+                                    const;
+
+    USDIMAGING_API
+    virtual HdExtComputationPrimvarDescriptorVector
+    GetExtComputationPrimvars(
+            UsdPrim const& prim,
+            SdfPath const& cachePath,
+            HdInterpolation interpolation,
+            const UsdImagingInstancerContext* instancerContext) const;
+
+    USDIMAGING_API
+    virtual VtValue 
+    GetExtComputationInput(
+            UsdPrim const& prim,
+            SdfPath const& cachePath,
+            TfToken const& name,
+            UsdTimeCode time,
+            const UsdImagingInstancerContext* instancerContext) const;
+
+    USDIMAGING_API
+    virtual size_t
+    SampleExtComputationInput(
+            UsdPrim const& prim,
+            SdfPath const& cachePath,
+            TfToken const& name,
+            UsdTimeCode time,
+            const UsdImagingInstancerContext* instancerContext,
+            size_t maxSampleCount,
+            float *sampleTimes,
+            VtValue *sampleValues);
+
+    USDIMAGING_API
+    virtual std::string 
+    GetExtComputationKernel(
+            UsdPrim const& prim,
+            SdfPath const& cachePath,
+            const UsdImagingInstancerContext* instancerContext) const;
+
+    USDIMAGING_API
+    virtual VtValue
+    GetInstanceIndices(UsdPrim const& instancerPrim,
+                       SdfPath const& instancerCachePath,
+                       SdfPath const& prototypeCachePath,
+                       UsdTimeCode time) const;
 
     // ---------------------------------------------------------------------- //
     /// \name Render Index Compatibility
@@ -466,7 +645,7 @@ public:
     }
 
 protected:
-    typedef UsdImagingValueCache::Key Keys;
+    using Keys = UsdImagingPrimvarDescCache::Key;
 
     template <typename T>
     T _Get(UsdPrim const& prim, TfToken const& attrToken, 
@@ -483,7 +662,13 @@ protected:
     }
 
     USDIMAGING_API
-    UsdImagingValueCache* _GetValueCache() const;
+    UsdImagingPrimvarDescCache* _GetPrimvarDescCache() const;
+
+    UsdImaging_NonlinearSampleCountCache*
+        _GetNonlinearSampleCountCache() const;
+
+    UsdImaging_BlurScaleCache*
+        _GetBlurScaleCache() const;
 
     USDIMAGING_API
     UsdPrim _GetPrim(SdfPath const& usdPath) const;
@@ -503,8 +688,8 @@ protected:
     // XXX: Transitional API
     // Returns the instance proxy prim path for a USD-instanced prim, given the
     // instance chain leading to that prim. The paths are sorted from more to
-    // less local; the first path is the prim path (possibly in master), then
-    // instance paths (possibly in master); the last path is the prim or
+    // less local; the first path is the prim path (possibly in prototype), then
+    // instance paths (possibly in prototype); the last path is the prim or
     // instance path in the scene.
     USDIMAGING_API
     SdfPath _GetPrimPathFromInstancerChain(
@@ -529,6 +714,14 @@ protected:
     USDIMAGING_API
     TfTokenVector _GetMaterialRenderContexts() const;
 
+    /// Returns whether custom shading of prims is enabled.
+    USDIMAGING_API
+    bool _GetSceneMaterialsEnabled() const;
+
+    /// Returns whether lights found in the usdscene are enabled.
+    USDIMAGING_API
+    bool _GetSceneLightsEnabled() const;
+
     // Returns true if render delegate wants primvars to be filtered based.
     // This will filter the primvars based on the bound material primvar needs.
     USDIMAGING_API
@@ -549,6 +742,9 @@ protected:
     //
     // If \p exists is non-null, _IsVarying will store whether the attribute
     // was found.  If the attribute is not found, it counts as non-varying.
+    // 
+    // This only sets the dirty bit, never un-sets.  The caller is responsible
+    // for setting the initial state correctly.
     USDIMAGING_API
     bool _IsVarying(UsdPrim prim, TfToken const& attrName, 
            HdDirtyBits dirtyFlag, TfToken const& perfToken,
@@ -558,6 +754,9 @@ protected:
     // Determines if the prim's transform (CTM) is varying and if so, sets the 
     // given \p dirtyFlag in the \p dirtyFlags and increments a perf counter. 
     // Returns true if the prim's transform is varying.
+    //
+    // This only sets the dirty bit, never un-sets.  The caller is responsible
+    // for setting the initial state correctly.
     USDIMAGING_API
     bool _IsTransformVarying(UsdPrim prim,
                              HdDirtyBits dirtyFlag,
@@ -565,13 +764,14 @@ protected:
                              HdDirtyBits* dirtyFlags) const;
 
     // Convenience method for adding or updating a primvar descriptor.
-    // Role defaults to empty token (none).
+    // Role defaults to empty token (none). Indexed defaults to false.
     USDIMAGING_API
     void _MergePrimvar(
         HdPrimvarDescriptorVector* vec,
         TfToken const& name,
         HdInterpolation interp,
-        TfToken const& role = TfToken()) const;
+        TfToken const& role = TfToken(), 
+        bool indexed = false) const;
 
     // Convenience method for removing a primvar descriptor.
     USDIMAGING_API
@@ -579,18 +779,17 @@ protected:
         HdPrimvarDescriptorVector* vec,
         TfToken const& name) const;
 
-    // Convenience method for computing a primvar. THe primvar will only be
-    // added to the list in the valueCache if there is no primvar of the same
+    // Convenience method for computing a primvar. The primvar will only be
+    // added to the list of prim desc if there is no primvar of the same
     // name already present.  Thus, "local" primvars should be merged before
     // inherited primvars.
     USDIMAGING_API
-    void _ComputeAndMergePrimvar(UsdPrim const& prim,
-                                 SdfPath const& cachePath,
-                                 UsdGeomPrimvar const& primvar,
-                                 UsdTimeCode time,
-                                 UsdImagingValueCache* valueCache,
-                                 HdInterpolation *interpOverride = nullptr)
-                                 const;
+    void _ComputeAndMergePrimvar(
+        UsdPrim const& prim,
+        UsdGeomPrimvar const& primvar,
+        UsdTimeCode time,
+        HdPrimvarDescriptorVector* primvarDescs,
+        HdInterpolation *interpOverride = nullptr) const;
 
     // Returns true if the property name has the "primvars:" prefix.
     USDIMAGING_API
@@ -627,6 +826,13 @@ protected:
     virtual void _RemovePrim(SdfPath const& cachePath,
                              UsdImagingIndexProxy* index) = 0;
 
+    // Utility to resync bound dependencies of a particular usd path.
+    // This is necessary for the resync processing of certain prim types
+    // (e.g. materials).
+    USDIMAGING_API
+    void _ResyncDependents(SdfPath const& usdPath,
+                           UsdImagingIndexProxy *index);
+
     USDIMAGING_API
     UsdImaging_CollectionCache& _GetCollectionCache() const;
 
@@ -648,6 +854,9 @@ protected:
 
     USDIMAGING_API
     Usd_PrimFlagsConjunction _GetDisplayPredicate() const;
+
+    USDIMAGING_API
+    Usd_PrimFlagsConjunction _GetDisplayPredicateForPrototypes() const;
 
     USDIMAGING_API
     bool _DoesDelegateSupportCoordSys() const;

@@ -27,8 +27,6 @@
 #include "pxr/pxr.h"
 #include <cstddef>
 
-#include "pxr/imaging/glf/glew.h"
-
 #include "pxr/imaging/hd/enums.h"
 #include "pxr/imaging/hd/vtBufferSource.h"
 
@@ -84,6 +82,7 @@ HdEmbreeTypeHelper::GetTupleType<T>() { return HdTupleType{type, 1}; }
     TYPE_HELPER(GfVec4d, HdTypeDoubleVec4)
     TYPE_HELPER(GfMatrix4f, HdTypeFloatMat4)
     TYPE_HELPER(GfMatrix4d, HdTypeDoubleMat4)
+    TYPE_HELPER(GfQuath, HdTypeHalfFloatVec4)
 #undef TYPE_HELPER
 
 /// \class HdEmbreeBufferSampler
