@@ -2,9 +2,7 @@
 (
     defaultPrim = "Sphere"
     endFrame = 1
-    metersPerUnit = 0.01
     startFrame = 1
-    upAxis = "Y"
 )
 
 def Xform "Sphere" (
@@ -22,9 +20,7 @@ def Xform "Sphere" (
         )
         uniform token subsetFamily:materialBind:familyType = "partition"
 
-        def GeomSubset "subset1" (
-            apiSchemas = ["MaterialBindingAPI"]
-        )
+        def GeomSubset "subset1"
         {
             uniform token elementType = "face"
             uniform token familyName = "materialBind"
@@ -32,9 +28,7 @@ def Xform "Sphere" (
             rel material:binding = </Sphere/Materials/initialShadingGroup>
         }
 
-        def GeomSubset "subset2" (
-            apiSchemas = ["MaterialBindingAPI"]
-        )
+        def GeomSubset "subset2"
         {
             uniform token elementType = "face"
             uniform token familyName = "materialBind"
@@ -42,9 +36,7 @@ def Xform "Sphere" (
             rel material:binding = </Sphere/Materials/lambert2SG>
         }
 
-        def GeomSubset "subset3" (
-            apiSchemas = ["MaterialBindingAPI"]
-        )
+        def GeomSubset "subset3"
         {
             uniform token elementType = "face"
             uniform token familyName = "materialBind"
@@ -57,49 +49,58 @@ def Xform "Sphere" (
     {
         def Material "initialShadingGroup"
         {
+            rel connectedSourceFor:outputs:bxdf = </Sphere/Materials/initialShadingGroup/initialShadingGroup_lambert.outputs:out>
             color3f inputs:displayColor = (0.00902149, 1, 0.0393514)
             float inputs:displayOpacity
             color3f inputs:transparency
-            token outputs:ri:surface.connect = </Sphere/Materials/initialShadingGroup/initialShadingGroup_lambert.outputs:out>
+            token outputs:bxfd
 
             def Shader "initialShadingGroup_lambert"
             {
+                rel connectedSourceFor:diffuseColor = </Sphere/Materials/initialShadingGroup.inputs:displayColor>
+                rel connectedSourceFor:transmissionColor = </Sphere/Materials/initialShadingGroup.inputs:transparency>
+                color3f diffuseColor
                 uniform token info:id = "PxrDiffuse"
-                color3f inputs:diffuseColor.connect = </Sphere/Materials/initialShadingGroup.inputs:displayColor>
-                color3f inputs:transmissionColor.connect = </Sphere/Materials/initialShadingGroup.inputs:transparency>
                 token outputs:out
+                color3f transmissionColor
             }
         }
 
         def Material "lambert2SG"
         {
+            rel connectedSourceFor:outputs:bxdf = </Sphere/Materials/lambert2SG/lambert2SG_lambert.outputs:out>
             color3f inputs:displayColor = (0.0592683, 0.167102, 0.7593)
             float inputs:displayOpacity
             color3f inputs:transparency
-            token outputs:ri:surface.connect = </Sphere/Materials/lambert2SG/lambert2SG_lambert.outputs:out>
+            token outputs:bxfd
 
             def Shader "lambert2SG_lambert"
             {
+                rel connectedSourceFor:diffuseColor = </Sphere/Materials/lambert2SG.inputs:displayColor>
+                rel connectedSourceFor:transmissionColor = </Sphere/Materials/lambert2SG.inputs:transparency>
+                color3f diffuseColor
                 uniform token info:id = "PxrDiffuse"
-                color3f inputs:diffuseColor.connect = </Sphere/Materials/lambert2SG.inputs:displayColor>
-                color3f inputs:transmissionColor.connect = </Sphere/Materials/lambert2SG.inputs:transparency>
                 token outputs:out
+                color3f transmissionColor
             }
         }
 
         def Material "lambert3SG"
         {
+            rel connectedSourceFor:outputs:bxdf = </Sphere/Materials/lambert3SG/lambert3SG_lambert.outputs:out>
             color3f inputs:displayColor = (0.835528, 0, 0)
             float inputs:displayOpacity
             color3f inputs:transparency
-            token outputs:ri:surface.connect = </Sphere/Materials/lambert3SG/lambert3SG_lambert.outputs:out>
+            token outputs:bxfd
 
             def Shader "lambert3SG_lambert"
             {
+                rel connectedSourceFor:diffuseColor = </Sphere/Materials/lambert3SG.inputs:displayColor>
+                rel connectedSourceFor:transmissionColor = </Sphere/Materials/lambert3SG.inputs:transparency>
+                color3f diffuseColor
                 uniform token info:id = "PxrDiffuse"
-                color3f inputs:diffuseColor.connect = </Sphere/Materials/lambert3SG.inputs:displayColor>
-                color3f inputs:transmissionColor.connect = </Sphere/Materials/lambert3SG.inputs:transparency>
                 token outputs:out
+                color3f transmissionColor
             }
         }
     }

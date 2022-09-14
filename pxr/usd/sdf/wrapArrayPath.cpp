@@ -47,5 +47,5 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 void wrapArrayPath() {
     VtWrapArray<VtArray<SdfPath> >();
-    VtValueFromPythonLValue<VtArray<SdfPath> >();
+    VtValueFromPython<VtArray<SdfPath> >();
 }

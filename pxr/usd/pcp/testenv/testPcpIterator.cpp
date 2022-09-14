@@ -41,7 +41,6 @@
 
 #include <fstream>
 #include <iostream>
-#include <memory>
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
@@ -224,17 +223,17 @@ _TestRandomAccessOperations(IteratorType first, IteratorType last)
     }
 }
 
-static std::unique_ptr<PcpCache>
+static boost::shared_ptr<PcpCache>
 _CreateCacheForRootLayer(const std::string& rootLayerPath)
 {
     SdfLayerRefPtr rootLayer = SdfLayer::FindOrOpen(rootLayerPath);
     if (!rootLayer) {
-        return std::unique_ptr<PcpCache>();
+        return boost::shared_ptr<PcpCache>();
     }
 
     const PcpLayerStackIdentifier layerStackID(
         rootLayer, SdfLayerRefPtr(), ArResolverContext());
-    return std::make_unique<PcpCache>(layerStackID);
+    return boost::shared_ptr<PcpCache>(new PcpCache(layerStackID));
 }
 
 int 
@@ -257,7 +256,7 @@ main(int argc, char** argv)
         const std::string layerPath(argv[1]);
         const SdfPath primPath(argv[2]);
 
-        std::unique_ptr<PcpCache> cache = _CreateCacheForRootLayer(layerPath);
+        boost::shared_ptr<PcpCache> cache = _CreateCacheForRootLayer(layerPath);
         if (!cache) {
             std::cerr << "Failed to load root layer " << layerPath << std::endl;
             return EXIT_FAILURE;
@@ -268,7 +267,7 @@ main(int argc, char** argv)
     }
 
     // Otherwise, run the normal test suite.
-    std::unique_ptr<PcpCache> cache = _CreateCacheForRootLayer("root.sdf");
+    boost::shared_ptr<PcpCache> cache = _CreateCacheForRootLayer("root.sdf");
     TF_AXIOM(cache);
 
     SdfPathSet includePayload;

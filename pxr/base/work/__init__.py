@@ -28,6 +28,14 @@ Allows for configuration of the system's multithreading subsystem.
 
 """
 
+from . import _work
 from pxr import Tf
-Tf.PreparePythonModule()
-del Tf
+Tf.PrepareModule(_work, locals())
+del _work, Tf
+
+try:
+    from . import __DOC
+    __DOC.Execute(locals())
+    del __DOC
+except Exception:
+    pass

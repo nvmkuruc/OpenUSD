@@ -40,33 +40,33 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// prims (which translate scene data into drawable representations) and hydra
 /// renderpasses (which draw the scene to the framebuffer).
 ///
-class HdEmbreeRendererPlugin final : public HdRendererPlugin
-{
+class HdEmbreeRendererPlugin final : public HdRendererPlugin {
 public:
     HdEmbreeRendererPlugin() = default;
+    virtual ~HdEmbreeRendererPlugin() = default;
 
     /// Construct a new render delegate of type HdEmbreeRenderDelegate.
     /// Embree render delegates own the embree scene object, so a new render
     /// delegate should be created for each instance of HdRenderIndex.
     ///   \return A new HdEmbreeRenderDelegate object.
-    HdRenderDelegate *CreateRenderDelegate() override;
+    virtual HdRenderDelegate *CreateRenderDelegate() override;
 
     /// Construct a new render delegate of type HdEmbreeRenderDelegate.
     /// Embree render delegates own the embree scene object, so a new render
     /// delegate should be created for each instance of HdRenderIndex.
     ///   \param settingsMap A list of initialization-time settings for embree.
     ///   \return A new HdEmbreeRenderDelegate object.
-    HdRenderDelegate *CreateRenderDelegate(
+    virtual HdRenderDelegate *CreateRenderDelegate(
         HdRenderSettingsMap const& settingsMap) override;
 
     /// Destroy a render delegate created by this class's CreateRenderDelegate.
     ///   \param renderDelegate The render delegate to delete.
-    void DeleteRenderDelegate(
+    virtual void DeleteRenderDelegate(
         HdRenderDelegate *renderDelegate) override;
 
     /// Checks to see if the embree plugin is supported on the running system
     ///
-    bool IsSupported() const override;
+    virtual bool IsSupported() const override;
 
 private:
     // This class does not support copying.

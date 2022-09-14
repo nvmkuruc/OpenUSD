@@ -28,8 +28,10 @@
 #include "pxr/imaging/hdx/api.h"
 #include "pxr/imaging/hdx/version.h"
 #include "pxr/imaging/hd/enums.h"
+#include "pxr/imaging/hd/rprimCollection.h"
 #include "pxr/imaging/hd/task.h"
 
+#include "pxr/base/gf/vec2f.h"
 #include "pxr/base/gf/vec4f.h"
 #include "pxr/base/gf/vec4d.h"
 #include "pxr/base/tf/declarePtrs.h"
@@ -50,14 +52,13 @@ using HdStShaderCodeSharedPtr =
 
 using HdRenderPassSharedPtr = std::shared_ptr<class HdRenderPass>;
 using HdRenderPassSharedPtrVector = std::vector<HdRenderPassSharedPtr>;
-using HdStRenderPassStateSharedPtr = std::shared_ptr<class HdStRenderPassState>;
-using HdStRenderPassStateSharedPtrVector = 
-    std::vector<HdStRenderPassStateSharedPtr>;
+using HdRenderPassStateSharedPtr = std::shared_ptr<class HdRenderPassState>;
+using HdRenderPassStateSharedPtrVector = 
+    std::vector<HdRenderPassStateSharedPtr>;
 
 TF_DECLARE_WEAK_AND_REF_PTRS(GlfSimpleShadowArray);
 
-struct HdxShadowTaskParams
-{
+struct HdxShadowTaskParams {
     HdxShadowTaskParams()
         : overrideColor(0.0)
         , wireframeColor(0.0)
@@ -70,6 +71,10 @@ struct HdxShadowTaskParams
         , depthBiasSlopeFactor(1.0f)
         , depthFunc(HdCmpFuncLEqual)
         , cullStyle(HdCullStyleBackUnlessDoubleSided)
+        , camera()
+        , viewport(0.0)
+        , lightIncludePaths(1, SdfPath::AbsoluteRootPath())
+        , lightExcludePaths()
         {}
 
     // RenderPassState
@@ -84,47 +89,60 @@ struct HdxShadowTaskParams
     float depthBiasSlopeFactor;
     HdCompareFunction depthFunc;
     HdCullStyle cullStyle;
+
+    // RenderPassState index objects
+    SdfPath camera;
+    GfVec4d viewport;
+
+    // Lights/Shadows specific parameters
+    SdfPathVector lightIncludePaths;
+    SdfPathVector lightExcludePaths;
 };
 
 /// \class HdxShadowTask
 ///
 /// A task for generating shadow maps.
 ///
-class HdxShadowTask : public HdTask
-{
+class HdxShadowTask : public HdTask {
 public:
     HDX_API
     HdxShadowTask(HdSceneDelegate* delegate, SdfPath const& id);
 
     HDX_API
-    ~HdxShadowTask() override;
+    virtual ~HdxShadowTask();
 
     /// Sync the render pass resources
     HDX_API
-    void Sync(HdSceneDelegate* delegate,
-              HdTaskContext* ctx,
-              HdDirtyBits* dirtyBits) override;
-    
+    virtual void Sync(HdSceneDelegate* delegate,
+                      HdTaskContext* ctx,
+                      HdDirtyBits* dirtyBits) override;
+
     /// Prepare the tasks resources
     HDX_API
-    void Prepare(HdTaskContext* ctx,
-                 HdRenderIndex* renderIndex) override;
+    virtual void Prepare(HdTaskContext* ctx,
+                         HdRenderIndex* renderIndex) override;
 
     /// Execute render pass task
     HDX_API
-    void Execute(HdTaskContext* ctx) override;
+    virtual void Execute(HdTaskContext* ctx) override;
 
     /// Collect Render Tags used by the task.
     HDX_API
-    const TfTokenVector &GetRenderTags() const override;
+    virtual const TfTokenVector &GetRenderTags() const override;
 
 
 private:
-    void _UpdateDirtyParams(HdStRenderPassStateSharedPtr &renderPassState, 
+    void _SetHdStRenderPassState(HdxShadowTaskParams const &params,
+        HdStRenderPassState *renderPassState);
+
+    void _UpdateDirtyParams(HdRenderPassStateSharedPtr &renderPassState, 
         HdxShadowTaskParams const &params);
 
+    static HdStShaderCodeSharedPtr _overrideShader;
+    static void _CreateOverrideShader();
+
     HdRenderPassSharedPtrVector _passes;
-    HdStRenderPassStateSharedPtrVector _renderPassStates;
+    HdRenderPassStateSharedPtrVector _renderPassStates;
     HdxShadowTaskParams _params;
     TfTokenVector       _renderTags;
 

@@ -23,16 +23,34 @@
 //
 #include "pxr/imaging/hd/rprim.h"
 
+#include "pxr/imaging/hd/bufferSpec.h"
 #include "pxr/imaging/hd/changeTracker.h"
+#include "pxr/imaging/hd/computation.h"
+#include "pxr/imaging/hd/drawItem.h"
+#include "pxr/imaging/hd/extComputation.h"
 #include "pxr/imaging/hd/instancer.h"
+#include "pxr/imaging/hd/instanceRegistry.h"
+#include "pxr/imaging/hd/material.h"
 #include "pxr/imaging/hd/perfLog.h"
+#include "pxr/imaging/hd/repr.h"
 #include "pxr/imaging/hd/renderIndex.h"
+#include "pxr/imaging/hd/resourceRegistry.h"
+#include "pxr/imaging/hd/sceneDelegate.h"
+#include "pxr/imaging/hd/tokens.h"
+#include "pxr/imaging/hd/vtBufferSource.h"
+
+#include "pxr/base/tf/envSetting.h"
+
+#include "pxr/base/arch/hash.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+TF_DEFINE_ENV_SETTING(HD_ENABLE_SHARED_VERTEX_PRIMVAR, 1,
+                      "Enable sharing of vertex primvar");
 
-HdRprim::HdRprim(SdfPath const& id)
-    : _instancerId()
+HdRprim::HdRprim(SdfPath const& id,
+                 SdfPath const& instancerId)
+    : _instancerId(instancerId)
     , _materialId()
     , _sharedData(HdDrawingCoord::DefaultNumSlots,
                   /*visible=*/true)
@@ -40,7 +58,10 @@ HdRprim::HdRprim(SdfPath const& id)
     _sharedData.rprimID = id;
 }
 
-HdRprim::~HdRprim() = default;
+HdRprim::~HdRprim()
+{
+    /*NOTHING*/
+}
 
 // -------------------------------------------------------------------------- //
 ///                 Rprim Hydra Engine API : Pre-Sync & Sync-Phase
@@ -118,6 +139,13 @@ HdRprim::InitRepr(HdSceneDelegate* delegate,
                   TfToken const &reprToken,
                   HdDirtyBits *dirtyBits)
 {
+    // If _sharedData.instancerLevels == -1, it's uninitialized and we should
+    // compute it now.
+    if (_sharedData.instancerLevels == -1) {
+        _sharedData.instancerLevels = HdInstancer::GetInstancerNumLevels(
+            delegate->GetRenderIndex(), *this);
+    }
+
     _InitRepr(reprToken, dirtyBits);
 }
 
@@ -133,7 +161,7 @@ HdRprim::GetDrawItems(TfToken const& reprToken) const
 
     static HdRepr::DrawItemUniquePtrVector empty;
 
-    TF_CODING_ERROR("Rprim has no draw items for repr %s", reprToken.GetText());
+    TF_CODING_ERROR("Rprim has draw items for repr %s", reprToken.GetText());
 
     return empty;
 }
@@ -156,12 +184,6 @@ HdRprim::SetPrimId(int32_t primId)
     // Don't set DirtyPrimID here, to avoid undesired variability tracking.
 }
 
-void 
-HdRprim::SetMaterialId(SdfPath const& materialId)
-{
-    _materialId = materialId;
-}
-
 bool
 HdRprim::IsDirty(HdChangeTracker &changeTracker) const
 {
@@ -172,17 +194,11 @@ void
 HdRprim::UpdateReprSelector(HdSceneDelegate* delegate,
                             HdDirtyBits *dirtyBits)
 {
-    if (HdChangeTracker::IsReprDirty(*dirtyBits, GetId())) {
-        _authoredReprSelector = delegate->GetReprSelector(GetId());
+    SdfPath const& id = GetId();
+    if (HdChangeTracker::IsReprDirty(*dirtyBits, id)) {
+        _authoredReprSelector = delegate->GetReprSelector(id);
         *dirtyBits &= ~HdChangeTracker::DirtyRepr;
     }
-}
-
-void
-HdRprim::UpdateRenderTag(HdSceneDelegate *delegate,
-                         HdRenderParam *renderParam)
-{
-    _renderTag = delegate->GetRenderTag(GetId());
 }
 
 // -------------------------------------------------------------------------- //
@@ -212,27 +228,16 @@ HdRprim::_UpdateVisibility(HdSceneDelegate* delegate,
     }
 }
 
-void
-HdRprim::_UpdateInstancer(HdSceneDelegate* delegate,
-                          HdDirtyBits *dirtyBits)
+void 
+HdRprim::_SetMaterialId(HdChangeTracker &changeTracker,
+                        SdfPath const& materialId)
 {
-    if (HdChangeTracker::IsInstancerDirty(*dirtyBits, GetId())) {
-        SdfPath const& instancerId = delegate->GetInstancerId(GetId());
-        if (instancerId == _instancerId) {
-            return;
-        }
+    if (_materialId != materialId) {
+        _materialId = materialId;
 
-        // If we have a new instancer ID, we need to update the dependency
-        // map and also update the stored instancer ID.
-        HdChangeTracker &tracker =
-            delegate->GetRenderIndex().GetChangeTracker();
-        if (!_instancerId.IsEmpty()) {
-            tracker.RemoveInstancerRprimDependency(_instancerId, GetId());
-        }
-        if (!instancerId.IsEmpty()) {
-            tracker.AddInstancerRprimDependency(instancerId, GetId());
-        }
-        _instancerId = instancerId;
+        // The batches need to be verified and rebuilt, since a changed shader
+        // may change aggregation.
+        changeTracker.MarkBatchesDirty();
     }
 }
 
@@ -254,6 +259,88 @@ HdRprim::GetInstancerTransforms(HdSceneDelegate* delegate)
         }
     }
     return transforms;
+}
+
+//
+// De-duplicating and sharing immutable primvar data.
+// 
+// Primvar data is identified using a hash computed from the
+// sources of the primvar data, of which there are generally
+// two kinds:
+//   - data provided by the scene delegate
+//   - data produced by computations
+// 
+// Immutable and mutable buffer data is managed using distinct
+// heaps in the resource registry. Aggregation of buffer array
+// ranges within each heap is managed separately.
+// 
+// We attempt to balance the benefits of sharing vs efficient
+// varying update using the following simple strategy:
+//
+//  - When populating the first repr for an rprim, allocate
+//    the primvar range from the immutable heap and attempt
+//    to deduplicate the data by looking up the primvarId
+//    in the primvar instance registry.
+//
+//  - When populating an additional repr for an rprim using
+//    an existing immutable primvar range, compute an updated
+//    primvarId and allocate from the immutable heap, again
+//    attempting to deduplicate.
+//
+//  - Otherwise, migrate the primvar data to the mutable heap
+//    and abandon further attempts to deduplicate.
+//
+//  - The computation of the primvarId for an rprim is cumulative
+//    and includes the new sources of data being committed
+//    during each successive update.
+//
+//  - Once we have migrated a primvar allocation to the mutable
+//    heap we will no longer spend time computing a primvarId.
+//
+
+/* static */
+bool
+HdRprim::_IsEnabledSharedVertexPrimvar()
+{
+    static bool enabled =
+        (TfGetEnvSetting(HD_ENABLE_SHARED_VERTEX_PRIMVAR) == 1);
+    return enabled;
+}
+
+uint64_t
+HdRprim::_ComputeSharedPrimvarId(
+    uint64_t baseId,
+    HdBufferSourceSharedPtrVector const &sources,
+    HdComputationSharedPtrVector const &computations) const
+{
+    size_t primvarId = baseId;
+    for (HdBufferSourceSharedPtr const &bufferSource : sources) {
+        size_t sourceId = bufferSource->ComputeHash();
+        primvarId = ArchHash64((const char*)&sourceId,
+                               sizeof(sourceId), primvarId);
+
+        if (bufferSource->HasPreChainedBuffer()) {
+            HdBufferSourceSharedPtr src = bufferSource->GetPreChainedBuffer();
+
+            while (src) {
+                size_t chainedSourceId = bufferSource->ComputeHash();
+                primvarId = ArchHash64((const char*)&chainedSourceId,
+                                       sizeof(chainedSourceId), primvarId);
+
+                src = src->GetPreChainedBuffer();
+            }
+        }
+    }
+
+    HdBufferSpecVector bufferSpecs;
+    HdBufferSpec::GetBufferSpecs(computations, &bufferSpecs);
+    for (HdBufferSpec const &bufferSpec : bufferSpecs) {
+        boost::hash_combine(primvarId, bufferSpec.name);
+        boost::hash_combine(primvarId, bufferSpec.tupleType.type);
+        boost::hash_combine(primvarId, bufferSpec.tupleType.count);
+    }
+
+    return primvarId;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

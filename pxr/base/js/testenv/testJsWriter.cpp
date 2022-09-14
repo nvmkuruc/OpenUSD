@@ -29,7 +29,6 @@
 #include "pxr/base/tf/diagnostic.h"
 
 #include <fstream>
-#include <limits>
 
 PXR_NAMESPACE_USING_DIRECTIVE
 

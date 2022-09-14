@@ -46,10 +46,8 @@ PXR_NAMESPACE_OPEN_SCOPE
 //              flat instance indices in hydra selection.
 // Version 13 - Deleted GetPathForInstanceIndex; added GetScenePrimPath.
 // Version 14 - Added HdInstancerContext to GetScenePrimPath.
-// Version 15 - CanPopulateMaster renamed to CanPopulateUsdInstance.
-// Version 16 - InsertRprim/InsertInstancer no longer take an instancer path.
 
-#define USD_IMAGING_API_VERSION 16
+#define USD_IMAGING_API_VERSION 14
 
 
 PXR_NAMESPACE_CLOSE_SCOPE

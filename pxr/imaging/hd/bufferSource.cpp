@@ -27,16 +27,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-template <class HashState>
-void
-TfHashAppend(HashState &h, HdBufferSource const &bs)
-{
-    HdTupleType tt = bs.GetTupleType();
-    h.AppendContiguous(reinterpret_cast<const char *>(bs.GetData()),
-                       HdDataSizeOfTupleType(tt) * bs.GetNumElements());
-    // Hash signature as well.
-    h.Append(bs.GetName(), tt);
-}
 
 HdBufferSource::~HdBufferSource()
 {
@@ -45,7 +35,16 @@ HdBufferSource::~HdBufferSource()
 size_t
 HdBufferSource::ComputeHash() const
 {
-    return TfHash()(*this);
+    size_t hash = 0;
+    size_t size = HdDataSizeOfTupleType(GetTupleType()) * GetNumElements();
+    hash = ArchHash64((const char*)GetData(), size, hash);
+
+    // Hash signature as well.
+    HdTupleType tt = GetTupleType();
+    boost::hash_combine(hash, GetName());
+    boost::hash_combine(hash, tt.type);
+    boost::hash_combine(hash, tt.count);
+    return hash;
 }
 
 bool
@@ -159,6 +158,7 @@ HdNullBufferSource::GetTupleType() const
 size_t
 HdNullBufferSource::GetNumElements() const
 {
+    TF_CODING_ERROR("HdNullBufferSource can't be scheduled with a buffer range");
     return 0;
 }
 

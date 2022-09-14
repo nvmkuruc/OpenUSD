@@ -34,6 +34,14 @@ def _modifySettings(appController):
     appController._dataModel.viewSettings.showBBoxes = False
     appController._dataModel.viewSettings.showHUD = False
 
+# Take a shot of the viewport and save it to a file.
+def _takeShot(appController, fileName):
+
+    QtWidgets.QApplication.processEvents()
+    appController._mainWindow.update()
+    viewportShot = appController.GrabViewportShot()
+    viewportShot.save(fileName, "PNG")
+
 # Select one or more prim paths, then set active state of those prims.
 def _selectAndSetActive(appController, active, paths):
     selection = appController._dataModel.selection
@@ -54,25 +62,25 @@ def _selectAndSetActive(appController, active, paths):
 # Test deactivating then reactivating a single prim with no children.
 def _testSingleDeactivate(appController):
     _selectAndSetActive(appController, False, ["/spheres/a"])
-    appController._takeShot("singleDeactivate.png")
+    _takeShot(appController, "singleDeactivate.png")
     _selectAndSetActive(appController, True, ["/spheres/a"])
 
 # Test deactivating then reactivating a single prim with some children.
 def _testParentDeactivate(appController):
     _selectAndSetActive(appController, False, ["/spheres"])
-    appController._takeShot("parentDeactivate.png")
+    _takeShot(appController, "parentDeactivate.png")
     _selectAndSetActive(appController, True, ["/spheres"])
 
 # Test deactivating then reactivating a parent prim and one of its children.
 def _testParentChildDeactivate(appController):
     _selectAndSetActive(appController, False, ["/spheres", "/spheres/a"])
-    appController._takeShot("parentChildDeactivate1.png")
+    _takeShot(appController, "parentChildDeactivate1.png")
 
     # Reactivation is a two-part process because we must activate the parent
     # before we can even select the child. Take a snapshot in-between to verify
     # this is working.
     _selectAndSetActive(appController, True, ["/spheres"])
-    appController._takeShot("parentChildDeactivate2.png")
+    _takeShot(appController, "parentChildDeactivate2.png")
     _selectAndSetActive(appController, True, ["/spheres/a"])
 
 # In this case, the child prim has a shorter path than the parent due to a

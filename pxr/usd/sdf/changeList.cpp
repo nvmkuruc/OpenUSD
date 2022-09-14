@@ -28,7 +28,7 @@
 #include "pxr/base/tf/instantiateSingleton.h"
 #include "pxr/base/tf/type.h"
 
-#include <ostream>
+#include <iostream>
 
 PXR_NAMESPACE_OPEN_SCOPE
 

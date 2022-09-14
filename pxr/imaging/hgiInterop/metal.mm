@@ -22,16 +22,14 @@
 // language governing permissions and limitations under the Apache License.
 //
 
-#include "pxr/imaging/garch/glApi.h"
-
 #include "pxr/imaging/hgiInterop/metal.h"
 
 #include "pxr/imaging/hgiMetal/capabilities.h"
 #include "pxr/imaging/hgiMetal/diagnostic.h"
 #include "pxr/imaging/hgiMetal/hgi.h"
+#include "pxr/imaging/hgiMetal/texture.h"
 
 #include "pxr/base/tf/diagnostic.h"
-#include "pxr/base/vt/value.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -190,6 +188,15 @@ HgiInteropMetal::_CreateShaderContext(
     }
     
     Vertex v[12] = {
+        { {-1, -1}, {0, 0} },
+        { { 1, -1}, {1, 0} },
+        { {-1,  1}, {0, 1} },
+        
+        { {-1, 1}, {0, 1} },
+        { {1, -1}, {1, 0} },
+        { {1,  1}, {1, 1} },
+        
+        // Second set have flipped v coord
         { {-1, -1}, {0, 1} },
         { { 1, -1}, {1, 1} },
         { {-1,  1}, {0, 0} },
@@ -214,7 +221,8 @@ HgiInteropMetal::HgiInteropMetal(Hgi* hgi)
 
     NSError *error = NULL;
     
-    GarchGLApiLoad();
+    glewExperimental = true;
+    glewInit();
     
     _currentOpenGLContext = [NSOpenGLContext currentContext];
     
@@ -372,6 +380,7 @@ HgiInteropMetal::HgiInteropMetal(Hgi* hgi)
         TF_FATAL_CODING_ERROR(
             "Failed to create interop pipeline state: %s",
             [errStr UTF8String]);
+        [errStr release];
     }
     
     // Load the fragment program into the library
@@ -404,6 +413,8 @@ HgiInteropMetal::HgiInteropMetal(Hgi* hgi)
         TF_FATAL_CODING_ERROR(
             "Failed to create compute pipeline state, error %s",
             [errStr UTF8String]);
+        [errStr release];
+        [error release];
     }
         
     computePipelineStateDescriptor.computeFunction = _computeColorCopyProgram;
@@ -422,6 +433,8 @@ HgiInteropMetal::HgiInteropMetal(Hgi* hgi)
         TF_FATAL_CODING_ERROR(
             "Failed to create compute pipeline state, error %s",
             [errStr UTF8String]);
+        [errStr release];
+        [error release];
     }
 
     CVReturn cvret;
@@ -648,7 +661,6 @@ HgiInteropMetal::_SetAttachmentSize(int width, int height)
 void
 HgiInteropMetal::_CaptureOpenGlState()
 {
-    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &_restoreDrawFbo);
     glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &_restoreVao);
     glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &_restoreVbo);
     glGetBooleanv(GL_DEPTH_TEST, (GLboolean*)&_restoreDepthTest);
@@ -746,16 +758,10 @@ HgiInteropMetal::_RestoreOpenGlState()
     }
     glBindBuffer(GL_ARRAY_BUFFER, _restoreVbo);
     
-    if (!_restoreVao && _restoreVbo) {
+    if (!_restoreVao) {
         for (int i = 0; i < 2; i++) {
             VertexAttribState &state(_restoreVertexAttribState[i]);
-            if (state.enabled) {
-                glVertexAttribPointer(state.bufferBinding, state.size,
-                    state.type, state.normalized, state.stride, state.pointer);
-                glEnableVertexAttribArray(state.bufferBinding);
-            } else {
-                glDisableVertexAttribArray(state.bufferBinding);
-            }
+            
         }
     }
     
@@ -767,29 +773,15 @@ HgiInteropMetal::_RestoreOpenGlState()
     glActiveTexture(_restoreActiveTexture);
     
     glUseProgram(_restoreProgram);
-
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, _restoreDrawFbo);
 }
 
 void
-HgiInteropMetal::_BlitToOpenGL(VtValue const &framebuffer,
-                               GfVec4i const &compRegion,
-                               int shaderIndex)
+HgiInteropMetal::_BlitToOpenGL(bool flipY, int shaderIndex)
 {
     // Clear GL error state
     _ProcessGLErrors(true);
 
     _CaptureOpenGlState();
-
-    if (!framebuffer.IsEmpty()) {
-        if (framebuffer.IsHolding<uint32_t>()) {
-            glBindFramebuffer(GL_DRAW_FRAMEBUFFER,
-                              framebuffer.UncheckedGet<uint32_t>());
-        } else {
-            TF_CODING_ERROR(
-                "dstFramebuffer must hold uint32_t when targeting OpenGL");
-        }
-    }
     
     // XXX: This doesn't support "optional" depth. Enabling depth writes without
     // a depth aov to xfer would mean that the bound depth buffer is overwritten
@@ -844,10 +836,12 @@ HgiInteropMetal::_BlitToOpenGL(VtValue const &framebuffer,
                 _mtlAliasedColorTexture.width,
                 _mtlAliasedColorTexture.height);
     
-    // Region of the framebuffer over which to composite.
-    glViewport(compRegion[0], compRegion[1], compRegion[2], compRegion[3]);
-
-    glDrawArrays(GL_TRIANGLES, 0, 6);
+    if (flipY) {
+        glDrawArrays(GL_TRIANGLES, 6, 12);
+    }
+    else {
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+    }
 
     _RestoreOpenGlState();
     glFlush();
@@ -856,9 +850,7 @@ HgiInteropMetal::_BlitToOpenGL(VtValue const &framebuffer,
 void
 HgiInteropMetal::CompositeToInterop(
     HgiTextureHandle const &color,
-    HgiTextureHandle const &depth,
-    VtValue const &framebuffer,
-    GfVec4i const &compRegion)
+    HgiTextureHandle const &depth)
 {
     if (!ARCH_UNLIKELY(color)) {
         TF_CODING_ERROR("No valid color texture provided");
@@ -867,33 +859,40 @@ HgiInteropMetal::CompositeToInterop(
 
     _ValidateGLContext();
 
-    const int width = 
-        color ? color->GetDescriptor().dimensions[0] :
-        depth ? depth->GetDescriptor().dimensions[0] :
+    // XXX We need to flip all renderers (Embree, Prman, ...) for now as we
+    // assume they all output gl coords. That may not always be the case if
+    // Storm renders with Metal directly.
+    bool flipImage = true;
+
+    HgiMetalTexture *metalColor = static_cast<HgiMetalTexture*>(color.Get());
+    HgiMetalTexture *metalDepth = static_cast<HgiMetalTexture*>(depth.Get());
+
+    int width = 
+        metalColor ? metalColor->GetDescriptor().dimensions[0] :
+        metalDepth ? metalDepth->GetDescriptor().dimensions[0] :
         256;
 
-    const int height = 
-        color ? color->GetDescriptor().dimensions[1] :
-        depth ? depth->GetDescriptor().dimensions[1] :
+    int height = 
+        metalColor ? metalColor->GetDescriptor().dimensions[1] :
+        metalDepth ? metalDepth->GetDescriptor().dimensions[1] :
         256;
 
     _SetAttachmentSize(width, height);
 
     id<MTLTexture> colorTexture = nil;
     id<MTLTexture> depthTexture = nil;
-    if (color) {
-        colorTexture = id<MTLTexture>(color->GetRawResource());
+    if (metalColor) {
+        colorTexture = metalColor->GetTextureId();
     }
-    if (depth) {
-        depthTexture = id<MTLTexture>(depth->GetRawResource());
+    if (metalDepth) {
+        depthTexture = metalDepth->GetTextureId();
     }
 
-    id<MTLCommandBuffer> commandBuffer = _hgiMetal->GetPrimaryCommandBuffer();
+    id<MTLCommandBuffer> commandBuffer = _hgiMetal->GetCommandBuffer();
     
     id<MTLComputeCommandEncoder> computeEncoder;
     
-    if (_hgiMetal->GetCapabilities()->
-                        IsSet(HgiDeviceCapabilitiesBitsConcurrentDispatch)) {
+    if (_hgiMetal->GetCapabilities().concurrentDispatchSupported) {
         computeEncoder = [commandBuffer
          computeCommandEncoderWithDispatchType:MTLDispatchTypeConcurrent];
     }
@@ -964,11 +963,11 @@ HgiInteropMetal::CompositeToInterop(
 
     // We wait until the work is scheduled for execution so that future OpenGL
     // calls are guaranteed to happen after the Metal work encoded above
-    _hgiMetal->CommitPrimaryCommandBuffer(
+    _hgiMetal->CommitCommandBuffer(
         HgiMetal::CommitCommandBuffer_WaitUntilScheduled);
 
     if (glShaderIndex != -1) {
-        _BlitToOpenGL(framebuffer, compRegion, glShaderIndex);
+        _BlitToOpenGL(flipImage, glShaderIndex);
 
         _ProcessGLErrors();
     }

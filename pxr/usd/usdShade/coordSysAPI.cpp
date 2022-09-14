@@ -62,9 +62,8 @@ UsdShadeCoordSysAPI::Get(const UsdStagePtr &stage, const SdfPath &path)
 
 
 /* virtual */
-UsdSchemaKind UsdShadeCoordSysAPI::_GetSchemaKind() const
-{
-    return UsdShadeCoordSysAPI::schemaKind;
+UsdSchemaType UsdShadeCoordSysAPI::_GetSchemaType() const {
+    return UsdShadeCoordSysAPI::schemaType;
 }
 
 /* static */
@@ -211,7 +210,7 @@ UsdShadeCoordSysAPI::BlockBinding(const TfToken &name) const
 {
     TfToken relName = GetCoordSysRelationshipName(name);
     if (UsdRelationship rel = GetPrim().CreateRelationship(relName)) {
-        return rel.SetTargets({});
+        return rel.BlockTargets();
     }
     return false;
 }
@@ -220,13 +219,6 @@ TfToken
 UsdShadeCoordSysAPI::GetCoordSysRelationshipName(const std::string &name)
 {
     return TfToken(_tokens->coordSys.GetString() + ":" + name);
-}
-
-/* static */
-bool
-UsdShadeCoordSysAPI::CanContainPropertyName(const TfToken &name)
-{
-    return TfStringStartsWith(name, UsdShadeTokens->coordSys);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -63,10 +63,6 @@ pxr_library(trace
     PYMODULE_FILES
         __init__.py
         __main__.py
-
-    DOXYGEN_FILES
-        overview.dox
-        detailedOverview.dox
 )
 
 pxr_build_test(testTraceCategory

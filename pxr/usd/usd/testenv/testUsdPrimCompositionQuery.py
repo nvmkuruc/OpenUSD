@@ -22,7 +22,6 @@
 # KIND, either express or implied. See the Apache License for the specific
 # language governing permissions and limitations under the Apache License.
 
-from __future__ import print_function
 import os, sys, unittest
 from pxr import Gf, Tf, Sdf, Pcp, Usd
 
@@ -678,14 +677,6 @@ class TestUsdPrimCompositionQuery(unittest.TestCase):
                                     if not d['isAncestral'] and
                                            d['isIntroRootLayer']]
         _VerifyExpectedArcs(arcs, filteredExpectedValues)
-
-        # test to make sure c++ objects are propertly destroyed when
-        # PrimCollectionQuery instance is garbage collection
-        stage = Usd.Stage.CreateInMemory("testCreationAndGarbageCollect.usda")
-        Usd.PrimCompositionQuery(stage.GetPseudoRoot())
-        sessionLayer = stage.GetSessionLayer()
-        del stage
-        self.assertTrue(sessionLayer.expired)
 
 if __name__ == "__main__":
     unittest.main()

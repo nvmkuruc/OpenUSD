@@ -28,10 +28,10 @@ import unittest
 class TestUsdUtilsIntrospection(unittest.TestCase):
     def test_UsdUtilsComputeStageStats(self):
         expectedStageStats = {
-            'prototypes': {
+            'masters': {
                 'primCountsByType': {'untyped': 4, 'Mesh': 7, 'Xform': 2}, 
                 'primCounts': {'activePrimCount': 13, 'inactivePrimCount': 0,
-                                'instanceCount': 2, 'pureOverCount': 0, 
+                                'instanceCount': 2, 'pureOverCount': 4, 
                                 'totalPrimCount': 13}},
                 'usedLayerCount': 1, 
             'primary': {
@@ -43,7 +43,7 @@ class TestUsdUtilsIntrospection(unittest.TestCase):
             'instancedModelCount': 1, 
             'totalPrimCount': 47, 
             'totalInstanceCount': 8, 
-            'prototypeCount': 4, 
+            'masterCount': 4, 
             'assetCount': 1}
 
         self.assertEqual(UsdUtils.ComputeUsdStageStats('stageStats.usda'),

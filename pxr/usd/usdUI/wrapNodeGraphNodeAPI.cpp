@@ -27,7 +27,6 @@
 #include "pxr/usd/sdf/primSpec.h"
 
 #include "pxr/usd/usd/pyConversions.h"
-#include "pxr/base/tf/pyAnnotatedBoolResult.h"
 #include "pxr/base/tf/pyContainerConversions.h"
 #include "pxr/base/tf/pyResultConversions.h"
 #include "pxr/base/tf/pyUtils.h"
@@ -101,29 +100,11 @@ _Repr(const UsdUINodeGraphNodeAPI &self)
         primRepr.c_str());
 }
 
-struct UsdUINodeGraphNodeAPI_CanApplyResult : 
-    public TfPyAnnotatedBoolResult<std::string>
-{
-    UsdUINodeGraphNodeAPI_CanApplyResult(bool val, std::string const &msg) :
-        TfPyAnnotatedBoolResult<std::string>(val, msg) {}
-};
-
-static UsdUINodeGraphNodeAPI_CanApplyResult
-_WrapCanApply(const UsdPrim& prim)
-{
-    std::string whyNot;
-    bool result = UsdUINodeGraphNodeAPI::CanApply(prim, &whyNot);
-    return UsdUINodeGraphNodeAPI_CanApplyResult(result, whyNot);
-}
-
 } // anonymous namespace
 
 void wrapUsdUINodeGraphNodeAPI()
 {
     typedef UsdUINodeGraphNodeAPI This;
-
-    UsdUINodeGraphNodeAPI_CanApplyResult::Wrap<UsdUINodeGraphNodeAPI_CanApplyResult>(
-        "_CanApplyResult", "whyNot");
 
     class_<This, bases<UsdAPISchemaBase> >
         cls("NodeGraphNodeAPI");
@@ -135,9 +116,6 @@ void wrapUsdUINodeGraphNodeAPI()
 
         .def("Get", &This::Get, (arg("stage"), arg("path")))
         .staticmethod("Get")
-
-        .def("CanApply", &_WrapCanApply, (arg("prim")))
-        .staticmethod("CanApply")
 
         .def("Apply", &This::Apply, (arg("prim")))
         .staticmethod("Apply")

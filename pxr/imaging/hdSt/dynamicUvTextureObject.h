@@ -31,7 +31,8 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-class HdStDynamicUvTextureImplementation;
+struct HgiTextureDesc;
+class HdSt_TextureObjectRegistry;
 
 /// \class HdStDynamicUvTextureObject
 ///
@@ -64,49 +65,22 @@ public:
     /// Allocate GPU resource using the texture descriptor. Populate
     /// if data are given in the descriptor.
     /// 
-    void CreateTexture(const HgiTextureDesc &desc) {
-        _CreateTexture(desc);
+    HDST_API
+    void CreateTexture(const HgiTextureDesc &desc);
+
+    /// Get the handle to the actual GPU resource.
+    ///
+    /// Only valid after CreateTexture has been called.
+    ///
+    HDST_API
+    HgiTextureHandle const &GetTexture() const override {
+        return _gpuTexture;
     }
 
-    /// Make GPU generate mipmaps.
+    /// Just returns HdWrapNoOpinion.
     ///
-    void GenerateMipmaps()
-    {
-        _GenerateMipmaps();
-    }
-
-    /// Release GPU resource.
-    void DestroyTexture() {
-        _DestroyTexture();
-    }
-
-    /// Set wrap mode hints used when a texture node's wrap mode
-    /// is use metadata.
-    ///
-    /// This is typically called from HdStDynamicUvTextureImplementation::Load
-    /// when the texture file has wrap mode hints.
-    void SetWrapParameters(const std::pair<HdWrap, HdWrap> &wrapParameters) {
-        _SetWrapParameters(wrapParameters);
-    }
-
-    /// Save CPU data for this texture (transfering ownership).
-    ///
-    /// This is typically called from HdStDynamicUvTextureImplementation::Load
-    /// so that the CPU data can be uploaded during commit.
-    ///
-    /// To free the CPU data, call with nullptr.
-    ///
-    void SetCpuData(std::unique_ptr<HdStTextureCpuData> &&cpuData) {
-        _SetCpuData(std::move(cpuData));
-    }
-
-    /// Get the CPU data stored for this texture.
-    ///
-    /// Typically used in HdStDynamicUvTextureImplementation::Commit to
-    /// commit CPU data to GPU.
-    HdStTextureCpuData * GetCpuData() const {
-        return _GetCpuData();
-    }
+    HDST_API
+    const std::pair<HdWrap, HdWrap> &GetWrapParameters() const override;
 
     /// Always returns true - so that samplers for this texture are
     /// created.
@@ -122,7 +96,7 @@ protected:
     void _Commit() override;
 
 private:
-    HdStDynamicUvTextureImplementation * _GetImpl() const;
+    HgiTextureHandle _gpuTexture;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

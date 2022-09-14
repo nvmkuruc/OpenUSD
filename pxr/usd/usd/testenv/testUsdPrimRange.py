@@ -22,8 +22,6 @@
 # KIND, either express or implied. See the Apache License for the specific
 # language governing permissions and limitations under the Apache License.
 
-# pylint: disable=map-builtin-not-iterating
-
 import unittest
 from pxr import Sdf, Usd
 
@@ -187,7 +185,7 @@ class TestUsdPrimRange(unittest.TestCase):
             x4 = list(Usd.PrimRange(foo, Usd.PrimIsLoaded))
             self.assertEqual(x4, [foo])
 
-    def test_PrimIsInstanceOrPrototypeOrRoot(self):
+    def test_PrimIsInstanceOrMasterOrRoot(self):
         for fmt in allFormats:
             refStage = Usd.Stage.CreateInMemory("reference."+fmt)
             refStage.DefinePrim("/Ref/Child")
@@ -278,19 +276,18 @@ class TestUsdPrimRange(unittest.TestCase):
             n.GetReferences().AddReference(refStage.GetRootLayer().identifier, "/Ref")
             nChild = stage.GetPrimAtPath('/Root/NonInstance/Child')
 
-            prototype = stage.GetPrototypes()[0]
-            prototypeChild = prototype.GetChild('Child')
+            master = stage.GetMasters()[0]
+            masterChild = master.GetChild('Child')
 
             # A default traversal of a stage with instances should not descend into 
-            # instance prototypes
+            # instance masters
             self.assertEqual(list(Usd.PrimRange.Stage(stage)), [root, i, n, nChild])
             self.assertEqual(list(Usd.PrimRange(stage.GetPseudoRoot())),
                         [stage.GetPseudoRoot(), root, i, n, nChild])
 
-            # But the tree iterator should allow traversal of the prototypes if
+            # But the tree iterator should allow traversal of the masters if
             # explicitly specified.
-            self.assertEqual(list(Usd.PrimRange(prototype)), 
-                             [prototype, prototypeChild])
+            self.assertEqual(list(Usd.PrimRange(master)), [master, masterChild])
 
 if __name__ == "__main__":
     unittest.main()

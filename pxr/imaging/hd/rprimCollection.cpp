@@ -28,7 +28,8 @@
 #include "pxr/imaging/hd/mesh.h"
 #include "pxr/imaging/hd/points.h"
 #include "pxr/imaging/hd/rprim.h"
-#include "pxr/base/tf/hash.h"
+
+#include <boost/functional/hash.hpp>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -163,7 +164,18 @@ HdRprimCollection::GetMaterialTag() const
 size_t
 HdRprimCollection::ComputeHash() const
 {
-    return TfHash()(*this);
+    size_t h = _name.Hash();
+    boost::hash_combine(h, _reprSelector.Hash());
+    boost::hash_combine(h, _forcedRepr);
+    TF_FOR_ALL(pathIt, _rootPaths) {
+        boost::hash_combine(h, SdfPath::Hash()(*pathIt));
+    }
+    TF_FOR_ALL(pathIt, _excludePaths) {
+        boost::hash_combine(h, SdfPath::Hash()(*pathIt));
+    }
+
+    boost::hash_combine(h, _materialTag);
+    return h;
 }
 
 bool HdRprimCollection::operator==(HdRprimCollection const & other) const 
@@ -187,9 +199,7 @@ bool HdRprimCollection::operator!=(HdRprimCollection const & other) const
 
 std::ostream& operator<<(std::ostream& out, HdRprimCollection const & v)
 {
-    out << "name: " << v._name
-        << ", repr sel: " << v._reprSelector
-        << ", mat tag: " << v._materialTag
+    out << v._name
         ;
     return out;
 }

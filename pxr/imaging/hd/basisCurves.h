@@ -33,7 +33,6 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 #define HD_BASISCURVES_REPR_DESC_TOKENS \
     (surfaceShader)                     \
-    (surfaceShaderUnlit)                \
     (hullColor)                         \
     (pointColor)
 
@@ -44,8 +43,7 @@ TF_DECLARE_PUBLIC_TOKENS(HdBasisCurvesReprDescTokens, HD_API,
 ///
 /// Descriptor to configure a drawItem for a repr.
 ///
-struct HdBasisCurvesReprDesc
-{
+struct HdBasisCurvesReprDesc {
     HdBasisCurvesReprDesc(
         HdBasisCurvesGeomStyle geomStyle = HdBasisCurvesGeomStyleInvalid,
         TfToken shadingTerminal = HdBasisCurvesReprDescTokens->surfaceShader)
@@ -65,12 +63,11 @@ struct HdBasisCurvesReprDesc
 
 /// Hydra Schema for a collection of curves using a particular basis.
 ///
-class HdBasisCurves : public HdRprim
-{
+class HdBasisCurves : public HdRprim {
 public:
     HD_API
-    ~HdBasisCurves() override;
-    
+    virtual ~HdBasisCurves();
+
     ///
     /// Topology
     ///
@@ -91,9 +88,10 @@ public:
     
 protected:
     HD_API
-    HdBasisCurves(SdfPath const& id);
+    HdBasisCurves(SdfPath const& id,
+                  SdfPath const& instancerId = SdfPath());
 
-    using _BasisCurvesReprConfig = _ReprDescConfigs<HdBasisCurvesReprDesc>;
+    typedef _ReprDescConfigs<HdBasisCurvesReprDesc> _BasisCurvesReprConfig;
 
     HD_API
     static _BasisCurvesReprConfig::DescArray

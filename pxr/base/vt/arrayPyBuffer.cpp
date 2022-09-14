@@ -205,7 +205,14 @@ struct Vt_ArrayBufferWrapper
         }
     }
 
-    const Array array;
+    void MakeWritable() {
+        // Invoke the .data() method on array.  As a side effect this will
+        // detach it from any shared storage, ensuring that any modifications
+        // will not affect other VtArray instances.
+        (void)array.data();
+    }
+
+    Array array;
 
     Vt_PyShape<Vt_GetElementShape<value_type>().size() + 1> shape;
     Vt_PyShape<Vt_GetElementShape<value_type>().size() + 1> strides;
@@ -225,7 +232,7 @@ Vt_getreadbuf(PyObject *self, Py_ssize_t segment, void **ptrptr) {
         return -1;
     }
     T &selfT = bp::extract<T &>(self);
-    *ptrptr = const_cast<void *>(static_cast<void const *>(selfT.cdata()));
+    *ptrptr = static_cast<void *>(selfT.data());
     // Return size in bytes.
     return selfT.size() * sizeof(typename T::value_type);
 }
@@ -234,7 +241,8 @@ Vt_getreadbuf(PyObject *self, Py_ssize_t segment, void **ptrptr) {
 template <class T>
 Py_ssize_t
 Vt_getwritebuf(PyObject *self, Py_ssize_t segment, void **ptrptr) {
-    PyErr_SetString(PyExc_ValueError, "writable buffers unsupported");
+    PyErr_SetString(PyExc_ValueError, "writable buffers supported only with "
+                    "new-style buffer protocol.");
     return -1;
 }
 
@@ -281,23 +289,19 @@ Vt_getbuffer(PyObject *self, Py_buffer *view, int flags)
         return -1;
     }
 
-    // We don't support writable buffers, since we'd have to make a copy (in
-    // general) and guaranteed O(1) buffer requests outweigh that.  Clients can
-    // always make copies themselves if they want a writable thing.
-    if ((flags & PyBUF_WRITABLE) == PyBUF_WRITABLE) {
-        PyErr_SetString(PyExc_ValueError, "writable buffers unsupported");
-        return -1;
-    }
-
     T &array = bp::extract<T &>(self);
     auto wrapper = std::unique_ptr<Vt_ArrayBufferWrapper<T>>(
         new Vt_ArrayBufferWrapper<T>(array));
 
+    bool writable = ((flags & PyBUF_WRITABLE) == PyBUF_WRITABLE);
+
+    if (writable)
+        wrapper->MakeWritable();
+
     view->obj = self;
-    view->buf =
-        const_cast<void *>(static_cast<void const *>(wrapper->array.cdata()));
+    view->buf = static_cast<void *>(wrapper->array.data());
     view->len = wrapper->array.size() * sizeof(value_type);
-    view->readonly = 1;
+    view->readonly = static_cast<int>(!writable);
     view->itemsize = sizeof(typename Vt_GetSubElementType<value_type>::Type);
     if ((flags & PyBUF_FORMAT) == PyBUF_FORMAT) {
         view->format = Vt_FormatStr<value_type>::Get();
@@ -521,7 +525,7 @@ static VtValue Vt_CastPyObjToArray(VtValue const &v)
         ret.Swap(array);
     }
     else {
-        ret = Vt_ConvertFromPySequenceOrIter<VtArray<T>>(obj);
+        ret = Vt_ConvertFromPySequence<VtArray<T>>(obj);
     }
 
     return ret;

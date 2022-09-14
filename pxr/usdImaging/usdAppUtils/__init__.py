@@ -22,9 +22,18 @@
 # language governing permissions and limitations under the Apache License.
 #
 
+from . import _usdAppUtils
 from pxr import Tf
-Tf.PreparePythonModule()
-del Tf
+Tf.PrepareModule(_usdAppUtils, locals())
+del _usdAppUtils, Tf
+
+try:
+    from . import __DOC
+    __DOC.Execute(locals())
+    del __DOC
+except Exception:
+    pass
+
 
 from . import cameraArgs
 from . import colorArgs

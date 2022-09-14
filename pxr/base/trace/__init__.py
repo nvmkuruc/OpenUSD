@@ -25,9 +25,10 @@
 Trace -- Utilities for counting and recording events.
 """
 
+from . import _trace
 from pxr import Tf
-Tf.PreparePythonModule()
-del Tf
+Tf.PrepareModule(_trace, locals())
+del _trace, Tf
 
 import contextlib
 
@@ -87,3 +88,14 @@ def TraceMethod(obj):
     """A convenience.  Same as TraceFunction but changes the recorded
     label to use the term 'method' rather than 'function'."""
     return TraceFunction(obj)
+
+
+# Remove any private stuff, like test classes, if we are not being
+# imported from a test.
+
+try:
+    from . import __DOC
+    __DOC.Execute(locals())
+    del __DOC
+except Exception:
+    pass

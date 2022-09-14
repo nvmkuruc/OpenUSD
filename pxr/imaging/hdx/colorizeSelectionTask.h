@@ -27,8 +27,10 @@
 #include "pxr/pxr.h"
 #include "pxr/base/gf/vec2f.h"
 #include "pxr/imaging/hdx/api.h"
+#include "pxr/imaging/hdx/fullscreenShader.h"
 #include "pxr/imaging/hdx/task.h"
 
+#include "pxr/imaging/hgi/buffer.h"
 #include "pxr/imaging/hgi/texture.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -76,26 +78,26 @@ public:
     HdxColorizeSelectionTask(HdSceneDelegate* delegate, SdfPath const& id);
 
     HDX_API
-    ~HdxColorizeSelectionTask() override;
+    virtual ~HdxColorizeSelectionTask();
 
     /// Hooks for progressive rendering.
-    bool IsConverged() const override;
+    virtual bool IsConverged() const override;
 
     /// Prepare the render pass resources
     HDX_API
-    void Prepare(HdTaskContext* ctx,
-                 HdRenderIndex* renderIndex) override;
+    virtual void Prepare(HdTaskContext* ctx,
+                         HdRenderIndex* renderIndex) override;
 
     /// Execute the task
     HDX_API
-    void Execute(HdTaskContext* ctx) override;
+    virtual void Execute(HdTaskContext* ctx) override;
 
 protected:
     /// Sync the render pass resources
     HDX_API
-    void _Sync(HdSceneDelegate* delegate,
-               HdTaskContext* ctx,
-               HdDirtyBits* dirtyBits) override;
+    virtual void _Sync(HdSceneDelegate* delegate,
+                       HdTaskContext* ctx,
+                       HdDirtyBits* dirtyBits) override;
 
 private:
     // The core colorizing logic of this task: given the ID buffers and the
@@ -104,9 +106,8 @@ private:
 
     GfVec4f _GetColorForMode(int mode) const;
 
-    // Utility function to update the shader uniform parameters.
-    // Returns true if the values were updated. False if unchanged.
-    bool _UpdateParameterBuffer();
+    // Utility function to create a storage buffer for the shader parameters.
+    void _CreateParameterBuffer();
 
     // Create a new GPU texture for the provided format and pixel data.
     // If an old texture exists it will be destroyed first.
@@ -149,9 +150,10 @@ private:
     size_t _outputBufferSize;
     bool _converged;
 
-    std::unique_ptr<class HdxFullscreenShader> _compositor;
+    std::unique_ptr<HdxFullscreenShader> _compositor;
 
     _ParameterBuffer _parameterData;
+    HgiBufferHandle _parameterBuffer;
     HgiTextureHandle _texture;
     bool _pipelineCreated;
 };

@@ -48,8 +48,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 ///
 /// A simple delegate class for unit test driver.
 ///
-class HdUnitTestDelegate : public HdSceneDelegate
-{
+class HdUnitTestDelegate : public HdSceneDelegate {
 public:
     HD_API
     HdUnitTestDelegate(HdRenderIndex *parentIndex,
@@ -91,26 +90,6 @@ public:
                  VtValue const &color,
                  HdInterpolation colorInterpolation,
                  VtValue const &opacity,
-                 HdInterpolation opacityInterpolation,
-                 bool guide=false,
-                 SdfPath const &instancerId=SdfPath(),
-                 TfToken const &scheme=PxOsdOpenSubdivTokens->catmullClark,
-                 TfToken const &orientation=HdTokens->rightHanded,
-                 bool doubleSided=false);
-
-    HD_API
-    void AddMesh(SdfPath const &id,
-                 GfMatrix4f const &transform,
-                 VtVec3fArray const &points,
-                 VtIntArray const &numVerts,
-                 VtIntArray const &verts,
-                 VtIntArray const &holes,
-                 PxOsdSubdivTags const &subdivTags,
-                 VtValue const &color,
-                 VtIntArray const &colorIndices,
-                 HdInterpolation colorInterpolation,
-                 VtValue const &opacity,
-                 VtIntArray const &opacityIndices,
                  HdInterpolation opacityInterpolation,
                  bool guide=false,
                  SdfPath const &instancerId=SdfPath(),
@@ -165,13 +144,6 @@ public:
     void AddPolygons(SdfPath const &id, GfMatrix4f const &transform,
                      HdInterpolation colorInterp,
                      SdfPath const &instancerId=SdfPath());
-                     
-    /// Add a triangle, quad and pentagon with face-varying displayColor and
-    /// displayOpacity            
-    HD_API
-    void AddFaceVaryingPolygons(
-        SdfPath const &id, GfMatrix4f const &transform,
-        SdfPath const &instancerId=SdfPath());
 
     /// Add a subdiv with various tags
     HD_API
@@ -184,7 +156,6 @@ public:
     void AddBasisCurves(SdfPath const &id,
                         VtVec3fArray const &points,
                         VtIntArray const &curveVertexCounts,
-                        VtIntArray const &curveIndices,
                         VtVec3fArray const &normals,
                         TfToken const &type,
                         TfToken const &basis,
@@ -237,31 +208,22 @@ public:
                                 VtVec4fArray const &rotate,
                                 VtVec3fArray const &translate);
 
-    HD_API
-    void UpdateInstancer(SdfPath const& rprimId, SdfPath const& instancerId);
-
     /// Primvars
     HD_API
     void AddPrimvar(SdfPath const& id,
                     TfToken const& name,
                     VtValue const& value,
                     HdInterpolation const& interp,
-                    TfToken const& role,
-                    VtIntArray const& indices=VtIntArray(0));
+                    TfToken const& role);
     
     HD_API
     void UpdatePrimvarValue(SdfPath const& id,
                             TfToken const& name,
-                            VtValue const& value,
-                            VtIntArray const& indices=VtIntArray(0));
+                            VtValue const& value);
     
     HD_API
     void RemovePrimvar(SdfPath const& id, TfToken const& name);
 
-    /// Transform
-    HD_API
-    void UpdateTransform(SdfPath const& id, GfMatrix4f const& mat);
-    
     /// Material
     HD_API
     void AddMaterialResource(SdfPath const &id,
@@ -281,11 +243,8 @@ public:
 
     /// Render buffers
     HD_API
-    void AddRenderBuffer(SdfPath const &id, 
-                         HdRenderBufferDescriptor const &desc);
-    HD_API
-    void UpdateRenderBuffer(SdfPath const &id, 
-                            HdRenderBufferDescriptor const &desc);
+    void AddRenderBuffer(SdfPath const &id, GfVec3i const& dims,
+                         HdFormat format, bool multiSampled);
 
     /// Camera
     HD_API
@@ -364,8 +323,6 @@ public:
     HD_API
     virtual TfToken GetRenderTag(SdfPath const& id) override;
     HD_API
-    virtual TfTokenVector GetTaskRenderTags(SdfPath const &taskId) override;
-    HD_API
     virtual PxOsdSubdivTags GetSubdivTags(SdfPath const& id) override;
     HD_API
     virtual GfRange3d GetExtent(SdfPath const & id) override;
@@ -380,9 +337,6 @@ public:
     HD_API
     virtual VtValue Get(SdfPath const& id, TfToken const& key) override;
     HD_API
-    virtual VtValue GetIndexedPrimvar(SdfPath const& id, TfToken const& key, 
-                                      VtIntArray *outIndices) override;
-    HD_API
     virtual HdReprSelector GetReprSelector(SdfPath const &id) override;
     HD_API
     virtual HdPrimvarDescriptorVector
@@ -394,18 +348,11 @@ public:
                                           SdfPath const& prototypeId) override;
 
     HD_API
-    virtual SdfPathVector GetInstancerPrototypes(SdfPath const& instancerId)
-        override;
-
-    HD_API
     virtual GfMatrix4d GetInstancerTransform(SdfPath const& instancerId)
         override;
 
     HD_API
     virtual SdfPath GetMaterialId(SdfPath const& rprimId) override;
-
-    HD_API
-    virtual SdfPath GetInstancerId(SdfPath const& primId) override;
 
     HD_API 
     virtual VtValue GetMaterialResource(SdfPath const &materialId) override;
@@ -413,6 +360,12 @@ public:
     HD_API
     virtual VtValue GetCameraParamValue(SdfPath const &cameraId, 
                                         TfToken const &paramName) override;
+    HD_API
+    virtual HdTextureResource::ID GetTextureResourceID(
+        SdfPath const& textureId) override;
+    HD_API
+    virtual HdTextureResourceSharedPtr GetTextureResource(
+        SdfPath const& textureId) override;
 
     HD_API
     virtual HdRenderBufferDescriptor GetRenderBufferDescriptor(
@@ -461,15 +414,13 @@ private:
         _Curves() { }
         _Curves(VtVec3fArray const &points,
                 VtIntArray const &curveVertexCounts,
-                VtIntArray const &curveIndices,
                 TfToken const &type,
                 TfToken const &basis) :
             points(points), curveVertexCounts(curveVertexCounts), 
-            curveIndices(curveIndices), type(type), basis(basis) { }
+            type(type), basis(basis) { }
 
         VtVec3fArray points;
         VtIntArray curveVertexCounts;
-        VtIntArray curveIndices;
         TfToken type;
         TfToken basis;
     };
@@ -501,19 +452,16 @@ private:
         _Primvar(TfToken const& _name,
                  VtValue const& _value,
                  HdInterpolation const& _interp,
-                 TfToken const& _role,
-                 VtIntArray const& _indices=VtIntArray(0)) :
+                 TfToken const& _role) :
             name(_name),
             value(_value),
             interp(_interp),
-            role(_role),
-            indices(_indices) {}
+            role(_role) {}
 
         TfToken name;
         VtValue value;
         HdInterpolation interp;
         TfToken role;
-        VtIntArray indices;
     };
     using _Primvars = std::vector<_Primvar>;
     // Given an rprim id and primvar name, looks up the primvars map (see below)
@@ -524,7 +472,6 @@ private:
 
     struct _Camera {
         VtDictionary params;
-        GfMatrix4f transform;
     };
     struct _Light {
         VtDictionary params;
@@ -555,7 +502,6 @@ private:
 
     typedef std::map<SdfPath, SdfPath> SdfPathMap;
     SdfPathMap _materialBindings;
-    SdfPathMap _instancerBindings;
 
     bool _hasInstancePrimvars;
     int _refineLevel;

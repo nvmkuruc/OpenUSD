@@ -46,7 +46,6 @@ class PcpPropertyIndex;
 struct PcpTargetIndex {
     SdfPathVector paths;
     PcpErrorVector localErrors;
-    bool hasTargetOpinions = false;
 };
 
 /// Build a PcpTargetIndex representing the target paths of the given

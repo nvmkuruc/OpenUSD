@@ -14,18 +14,18 @@ TF_DECLARE_WEAK_AND_REF_PTRS(UsdStage);
 /// Test distilling/baking and build a test stage using distilled output and UsdPreviewSurface shader.
 /// Input a material qualified name.
 /// A new stage "preview.usda" and baked images are saved in current working directory.
-USDMDLAPI_API UsdStageRefPtr UsdMdl_TestDistill(const std::string& materialQualifiedName);
+USDMDL_API UsdStageRefPtr UsdMdl_TestDistill(const std::string& materialQualifiedName);
 
 /// Set MDL SDK verbosity level.
 /// verbosity should be in the range [0..6]. 0 suppress all messages, 6 enable all messages.
 /// Here is the list of severity levels in increasing order: Fatal, Error, Warning, Info, Verbose, Debug.
-USDMDLAPI_API bool UsdMdl_SetVerbosity(int verbosity);
+USDMDL_API bool UsdMdl_SetVerbosity(int verbosity);
 
 /// If the input stage is valid and the prim is a USD Material corresponding to an MDL,
 /// convert the USD to MDL and create a corresponding MDL material instance.
-USDMDLAPI_API bool UsdMdl_CreateMdl(const std::string& stageName, const std::string& prim);
+USDMDL_API bool UsdMdl_CreateMdl(const std::string& stageName, const std::string& prim);
 
 /// Enable/Disable UsdMdl Discovery plugin
-USDMDLAPI_API bool UsdMdl_EnableDiscoveryPlugin(bool enable);
+USDMDL_API bool UsdMdl_EnableDiscoveryPlugin(bool enable);
 
 PXR_NAMESPACE_CLOSE_SCOPE

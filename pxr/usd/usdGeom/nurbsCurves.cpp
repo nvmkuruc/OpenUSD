@@ -75,9 +75,8 @@ UsdGeomNurbsCurves::Define(
 }
 
 /* virtual */
-UsdSchemaKind UsdGeomNurbsCurves::_GetSchemaKind() const
-{
-    return UsdGeomNurbsCurves::schemaKind;
+UsdSchemaType UsdGeomNurbsCurves::_GetSchemaType() const {
+    return UsdGeomNurbsCurves::schemaType;
 }
 
 /* static */

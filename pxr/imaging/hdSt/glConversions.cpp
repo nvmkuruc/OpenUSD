@@ -21,16 +21,105 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/imaging/garch/glApi.h"
-
+#include "pxr/imaging/glf/glew.h"
 #include "pxr/imaging/hdSt/glConversions.h"
-#include "pxr/imaging/hdSt/geometricShader.h"
+#include "pxr/base/tf/iterator.h"
 #include "pxr/base/tf/staticTokens.h"
 #include "pxr/base/tf/stringUtils.h"
 
 #include <cctype>
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+
+struct _FormatDesc {
+    GLenum format;
+    GLenum type;
+    GLenum internalFormat;
+};
+
+static const _FormatDesc FORMAT_DESC[] =
+{
+    // format,  type,          internal format
+    {GL_RED,  GL_UNSIGNED_BYTE, GL_R8},      // HdFormatUNorm8,
+    {GL_RG,   GL_UNSIGNED_BYTE, GL_RG8},     // HdFormatUNorm8Vec2,
+    {GL_RGB,  GL_UNSIGNED_BYTE, GL_RGB8},    // HdFormatUNorm8Vec3,
+    {GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA8},   // HdFormatUNorm8Vec4,
+
+    {GL_RED,  GL_BYTE,          GL_R8_SNORM},      // HdFormatSNorm8,
+    {GL_RG,   GL_BYTE,          GL_RG8_SNORM},     // HdFormatSNorm8Vec2,
+    {GL_RGB,  GL_BYTE,          GL_RGB8_SNORM},    // HdFormatSNorm8Vec3,
+    {GL_RGBA, GL_BYTE,          GL_RGBA8_SNORM},   // HdFormatSNorm8Vec4,
+
+    {GL_RED,  GL_HALF_FLOAT,    GL_R16F},    // HdFormatFloat16,
+    {GL_RG,   GL_HALF_FLOAT,    GL_RG16F},   // HdFormatFloat16Vec2,
+    {GL_RGB,  GL_HALF_FLOAT,    GL_RGB16F},  // HdFormatFloat16Vec3,
+    {GL_RGBA, GL_HALF_FLOAT,    GL_RGBA16F}, // HdFormatFloat16Vec4,
+
+    {GL_RED,  GL_FLOAT,         GL_R32F},    // HdFormatFloat32,
+    {GL_RG,   GL_FLOAT,         GL_RG32F},   // HdFormatFloat32Vec2,
+    {GL_RGB,  GL_FLOAT,         GL_RGB32F},  // HdFormatFloat32Vec3,
+    {GL_RGBA, GL_FLOAT,         GL_RGBA32F}, // HdFormatFloat32Vec4,
+
+    {GL_RED,  GL_INT,           GL_R32I},    // HdFormatInt32,
+    {GL_RG,   GL_INT,           GL_RG32I},   // HdFormatInt32Vec2,
+    {GL_RGB,  GL_INT,           GL_RGB32I},  // HdFormatInt32Vec3,
+    {GL_RGBA, GL_INT,           GL_RGBA32I}, // HdFormatInt32Vec4,
+
+    {GL_DEPTH_STENCIL, GL_FLOAT, GL_DEPTH32F_STENCIL8}, // HdFormatFloat32UInt8
+};
+static_assert(TfArraySize(FORMAT_DESC) ==
+        HdFormatCount, "FORMAT_DESC to HdFormat enum mismatch");
+
+size_t
+HdStGLConversions::GetComponentSize(int glDataType)
+{
+    switch (glDataType) {
+        case GL_BOOL:
+            // Note that we don't use GLboolean here because according to
+            // code in vtBufferSource, everything gets rounded up to 
+            // size of single value in interleaved struct rounds up to
+            // sizeof(GLint) according to GL spec.
+            //      _size = std::max(sizeof(T), sizeof(GLint));
+            return sizeof(GLint);
+        case GL_BYTE:
+            return sizeof(GLbyte);
+        case GL_UNSIGNED_BYTE:
+            return sizeof(GLubyte);
+        case GL_SHORT:
+            return sizeof(GLshort);
+        case GL_UNSIGNED_SHORT:
+            return sizeof(GLushort);
+        case GL_INT:
+            return sizeof(GLint);
+        case GL_UNSIGNED_INT:
+            return sizeof(GLuint);
+        case GL_FLOAT:
+            return sizeof(GLfloat);
+        case GL_2_BYTES:
+            return 2;
+        case GL_3_BYTES:
+            return 3;
+        case GL_4_BYTES:
+            return 4;
+        case GL_UNSIGNED_INT64_ARB:
+            return sizeof(GLuint64EXT);
+        case GL_DOUBLE:
+            return sizeof(GLdouble);
+        case GL_INT_2_10_10_10_REV:
+            return sizeof(GLint);
+        // following enums are for bindless texture pointers.
+        case GL_SAMPLER_2D:
+            return sizeof(GLuint64EXT);
+        case GL_SAMPLER_2D_ARRAY:
+            return sizeof(GLuint64EXT);
+        case GL_INT_SAMPLER_BUFFER:
+            return sizeof(GLuint64EXT);
+    };
+
+    TF_CODING_ERROR("Unexpected GL datatype 0x%x", glDataType);
+    return 1;
+}
 
 
 GLenum
@@ -146,13 +235,79 @@ HdStGLConversions::GetGlBlendFactor(HdBlendFactor factor)
     return HD_2_GL_BLEND_FACTOR[factor];
 }
 
-GLenum
+GLenum 
+HdStGLConversions::GetMinFilter(HdMinFilter filter)
+{
+    switch (filter) {
+        case HdMinFilterNearest : return GL_NEAREST;
+        case HdMinFilterLinear :  return GL_LINEAR;
+        case HdMinFilterNearestMipmapNearest : return GL_NEAREST_MIPMAP_NEAREST;
+        case HdMinFilterLinearMipmapNearest : return GL_LINEAR_MIPMAP_NEAREST;
+        case HdMinFilterNearestMipmapLinear : return GL_NEAREST_MIPMAP_LINEAR;
+        case HdMinFilterLinearMipmapLinear : return GL_LINEAR_MIPMAP_LINEAR;
+    }
+
+    TF_CODING_ERROR("Unexpected HdMinFilter type %d", filter);
+    return GL_NEAREST_MIPMAP_LINEAR; 
+}
+
+GLenum 
+HdStGLConversions::GetMagFilter(HdMagFilter filter)
+{
+    switch (filter) {
+        case HdMagFilterNearest : return GL_NEAREST;
+        case HdMagFilterLinear : return GL_LINEAR;
+    }
+
+    TF_CODING_ERROR("Unexpected HdMagFilter type %d", filter);
+    return GL_LINEAR;
+}
+
+GLenum 
+HdStGLConversions::GetWrap(HdWrap wrap)
+{
+    switch (wrap) {
+        case HdWrapClamp:
+            return GL_CLAMP_TO_EDGE;
+        case HdWrapLegacyNoOpinionFallbackRepeat:
+        case HdWrapRepeat:
+            return GL_REPEAT;
+        case HdWrapNoOpinion:
+        case HdWrapBlack:
+            return GL_CLAMP_TO_BORDER;
+        case HdWrapMirror:
+            return GL_MIRRORED_REPEAT;
+    }
+
+    TF_CODING_ERROR("Unexpected HdWrap type %d", wrap);
+    return GL_CLAMP_TO_BORDER;
+}
+
+void
+HdStGLConversions::GetGlFormat(
+        HdFormat inFormat,
+        GLenum *outFormat, GLenum *outType, GLenum *outInternalFormat)
+{
+    if ((inFormat < 0) || (inFormat >= HdFormatCount))
+    {
+        TF_CODING_ERROR("Unexpected HdFormat %d", inFormat);
+        *outFormat         = GL_RGBA;
+        *outType           = GL_BYTE;
+        *outInternalFormat = GL_RGBA8;
+        return;
+    }
+
+    const _FormatDesc &desc = FORMAT_DESC[inFormat];
+
+    *outFormat         = desc.format;
+    *outType           = desc.type;
+    *outInternalFormat = desc.internalFormat;
+}
+
+int
 HdStGLConversions::GetGLAttribType(HdType type)
 {
     switch (type) {
-    case HdTypeHalfFloatVec2:
-    case HdTypeHalfFloatVec4:
-        return GL_HALF_FLOAT;
     case HdTypeInt32:
     case HdTypeInt32Vec2:
     case HdTypeInt32Vec3:
@@ -185,43 +340,6 @@ HdStGLConversions::GetGLAttribType(HdType type)
     return -1;
 }
 
-GLenum 
-HdStGLConversions::GetPrimitiveMode(
-        HdSt_GeometricShader const *geometricShader)
-{
-    GLenum primMode = GL_POINTS;
-
-    using PrimitiveType = HdSt_GeometricShader::PrimitiveType;
-    switch (geometricShader->GetPrimitiveType())
-    {
-        case PrimitiveType::PRIM_POINTS:
-            primMode = GL_POINTS;
-            break;
-        case PrimitiveType::PRIM_BASIS_CURVES_LINES:
-            primMode = GL_LINES;
-            break;
-        case PrimitiveType::PRIM_MESH_COARSE_TRIANGLES:
-        case PrimitiveType::PRIM_MESH_REFINED_TRIANGLES:
-        case PrimitiveType::PRIM_MESH_COARSE_TRIQUADS:
-        case PrimitiveType::PRIM_MESH_REFINED_TRIQUADS:
-        case PrimitiveType::PRIM_VOLUME:
-            primMode = GL_TRIANGLES;
-            break;
-        case PrimitiveType::PRIM_MESH_COARSE_QUADS:
-        case PrimitiveType::PRIM_MESH_REFINED_QUADS:
-            primMode = GL_LINES_ADJACENCY;
-            break;
-        case PrimitiveType::PRIM_BASIS_CURVES_CUBIC_PATCHES:
-        case PrimitiveType::PRIM_BASIS_CURVES_LINEAR_PATCHES:
-        case PrimitiveType::PRIM_MESH_BSPLINE:
-        case PrimitiveType::PRIM_MESH_BOXSPLINETRIANGLE:
-            primMode = GL_PATCHES;
-            break;    
-    }
-
-    return primMode;
-}
-
 TF_DEFINE_PRIVATE_TOKENS(
     _glTypeNames,
     ((_bool, "bool"))
@@ -251,8 +369,6 @@ TF_DEFINE_PRIVATE_TOKENS(
     (uvec4)
 
     (packed_2_10_10_10)
-    (packed_half2)
-    (packed_half4)
 );
 
 TfToken
@@ -266,12 +382,6 @@ HdStGLConversions::GetGLSLTypename(HdType type)
     // Packed types (require special handling in codegen)...
     case HdTypeInt32_2_10_10_10_REV:
         return _glTypeNames->packed_2_10_10_10;
-    // XXX: Note that we don't support half or half3, since we can't
-    // index-address them...
-    case HdTypeHalfFloatVec2:
-        return _glTypeNames->packed_half2;
-    case HdTypeHalfFloatVec4:
-        return _glTypeNames->packed_half4;
 
     case HdTypeBool:
         return _glTypeNames->_bool;

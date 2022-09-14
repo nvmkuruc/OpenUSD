@@ -61,7 +61,7 @@ struct UsdRenderSpec {
         /// Path to the primary UsdGeomCamera camera to use for this product.
         SdfPath cameraPath;
         /// If set to true, disables motion blur.
-        bool disableMotionBlur;
+        bool instantaneousShutter;
         /// The pixel resolution of the product.
         GfVec2i resolution;
         /// The pixel aspect ratio as adjusted by aspectRatioConformPolicy.

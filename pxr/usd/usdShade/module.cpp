@@ -28,7 +28,6 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 TF_WRAP_MODULE
 {
-    TF_WRAP(UsdShadeTypes);
     TF_WRAP(UsdShadeUtils);
     TF_WRAP(UsdShadeConnectableAPI);
     TF_WRAP(UsdShadeCoordSysAPI);
@@ -37,7 +36,6 @@ TF_WRAP_MODULE
     TF_WRAP(UsdShadeShader);
     TF_WRAP(UsdShadeShaderDefParser);
     TF_WRAP(UsdShadeShaderDefUtils);
-    TF_WRAP(UsdShadeNodeDefAPI);
     TF_WRAP(UsdShadeNodeGraph);
     TF_WRAP(UsdShadeMaterial); 
     TF_WRAP(UsdShadeMaterialBindingAPI);

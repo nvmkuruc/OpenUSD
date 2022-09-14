@@ -79,18 +79,12 @@ NdrProperty::CanConnectTo(const NdrProperty& other) const
     return _type == other.GetType();
 }
 
-const NdrSdfTypeIndicator
+const SdfTypeIndicator
 NdrProperty::GetTypeAsSdfType() const {
     return std::make_pair(
         SdfValueTypeNames->Token,
         _type
     );
-}
-
-const VtValue&
-NdrProperty::GetDefaultValueAsSdfType() const {
-    static const VtValue& emptyValue = VtValue();
-    return emptyValue;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

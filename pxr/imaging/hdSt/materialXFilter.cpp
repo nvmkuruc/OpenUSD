@@ -428,12 +428,12 @@ _UpdateTextureNodes(
         textureConn.upstreamNode = texturePath;
         textureConn.upstreamOutputName = TfToken(newConnName);
         hdNetwork->nodes[hdTerminalNodePath].
-            inputConnections[textureConn.upstreamOutputName] = { textureConn };
+            inputConnections[textureConn.upstreamOutputName] = {textureConn};
     }
 }
 
 // Connect the primvar nodes to the terminal node
-static void
+static void 
 _UpdatePrimvarNodes(
     mx::DocumentPtr const &mxDoc,
     HdMaterialNetwork2* hdNetwork,
@@ -452,7 +452,7 @@ _UpdatePrimvarNodes(
 
             // Figure out the mx typename
             mx::NodeDefPtr mxNodeDef = mxDoc->getNodeDef(
-                hdPrimvarNode.nodeTypeId.GetString());
+                    hdPrimvarNode.nodeTypeId.GetString());
             if (mxNodeDef) {
                 (*mxHdPrimvarMap)[primvarName] = mxNodeDef->getType();
             }
@@ -489,25 +489,13 @@ _UpdatePrimvarNodes(
         primvarConn.upstreamNode = primvarPath;
         primvarConn.upstreamOutputName = TfToken(newConnName);
         hdNetwork->nodes[hdTerminalNodePath]
-            .inputConnections[primvarConn.upstreamOutputName] = { primvarConn };
+            .inputConnections[primvarConn.upstreamOutputName] = {primvarConn};
     }
 }
 
 static std::string const&
 _GetMaterialTag(HdMaterialNode2 const& terminal)
 {
-    // Masked MaterialTag:
-    // UsdPreviewSurface: terminal.opacityThreshold value > 0
-    // StandardSurface materials do not have an opacityThreshold parameter
-    // so we StandardSurface will not use the Masked materialTag.
-    for (auto const& currParam : terminal.parameters) {
-        if (currParam.first != _tokens->opacityThreshold) continue;
-
-        if (currParam.second.Get<float>() > 0.0f) {
-            return HdStMaterialTagTokens->masked.GetString();
-        }
-    }
-
     // Translucent MaterialTag
     bool isTranslucent = false;
 

@@ -67,6 +67,8 @@ struct HgiGraphicsCmdsDesc
     , colorResolveTextures()
     , depthTexture()
     , depthResolveTexture()
+    , width(0)
+    , height(0)
     {}
 
     inline bool HasAttachments() const {
@@ -81,6 +83,9 @@ struct HgiGraphicsCmdsDesc
 
     HgiTextureHandle depthTexture;
     HgiTextureHandle depthResolveTexture;
+
+    uint32_t width;
+    uint32_t height;
 };
 
 HGI_API

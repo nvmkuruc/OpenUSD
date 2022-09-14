@@ -34,7 +34,7 @@
 #include "pxr/base/gf/matrix4d.h"
 #include "pxr/base/gf/vec2i.h"
 #include "pxr/base/gf/vec4d.h"
-#include "pxr/imaging/garch/glApi.h"
+#include "pxr/imaging/garch/gl.h"
 
 #include <vector>
 
@@ -48,15 +48,33 @@ public:
     GLF_API
     GlfSimpleShadowArray();
     GLF_API
-    ~GlfSimpleShadowArray() override;
+    virtual ~GlfSimpleShadowArray();
 
     // Disallow copies
     GlfSimpleShadowArray(const GlfSimpleShadowArray&) = delete;
     GlfSimpleShadowArray& operator=(const GlfSimpleShadowArray&) = delete;
 
-    // Returns the GL texture id of the shadow texture.
+    // Driven by the env var GLF_ENABLE_BINDLESS_SHADOW_TEXTURE, this returns 
+    // whether bindless shadow maps are enabled, which in turn dictates the API
+    // to use. See below.
+    GLF_API static
+    bool GetBindlessShadowMapsEnabled();
+
+    ///  Bindful API:
+
+    // Set the 2D size of the shadow map texture array.
     GLF_API
-    GLuint GetShadowMapTexture(int shadowIndex) const;
+    void SetSize(GfVec2i const & size);
+
+    // Set the depth of the shadow map texture array, which corresponds to the
+    // number of shadow maps necessary. Each shadow casting light uses one
+    // shadow map.
+    GLF_API
+    void SetNumLayers(size_t numLayers);
+
+    // Returns the GL texture id of the texture array.
+    GLF_API
+    GLuint GetShadowMapTexture() const;
 
     // Returns the GL sampler id of the sampler object used to read the raw
     // depth values.
@@ -67,19 +85,29 @@ public:
     GLF_API
     GLuint GetShadowMapCompareSampler() const;
 
+    /// Bindless API:
+
     // Set the resolutions of all the shadow maps necessary. The number of
     // resolutions corresponds to the number of shadow map textures necessary,
     // which is currently one per shadow casting light.
     GLF_API
     void SetShadowMapResolutions(std::vector<GfVec2i> const& resolutions);
 
+    // Returns a vector of the 64bit bindless handles corresponding to the
+    // bindless shadow map textures.
+    GLF_API
+    std::vector<uint64_t> const& GetBindlessShadowMapHandles() const;
+
+    /// Common API (for shadow map generation)
+    
     // Returns the number of shadow map generation passes required, which is
     // currently one per shadow map (corresponding to a shadow casting light).
     GLF_API
     size_t GetNumShadowMapPasses() const;
     
-    // Returns the shadow map resolution for a given pass.
-    // this returns the resolution of the corresponding shadow map,
+    // Returns the shadow map resolution for a given pass. For bindful shadows,
+    // this returns a single size for all passes, while for bindless, it returns
+    // the resolution of the corresponding shadow map,
     GLF_API
     GfVec2i GetShadowMapSize(size_t pass) const;
 
@@ -108,42 +136,42 @@ public:
     GLF_API
     void EndCapture(size_t index);
 
-    // Sets the GL texture ids of the shadow textures, as opposed to creating
-    // them internally with _AllocTextures().
-    GLF_API
-    void SetTextures(std::vector<GLuint> textureIds);
-
-    // Allocates the shadow samplers.
-    GLF_API
-    void AllocSamplers();
-
 private:
     void _AllocResources();
-    void _AllocTextures();
+    void _AllocBindfulTextures();
+    void _AllocBindlessTextures();
     void _FreeResources();
-    void _FreeTextures();
+    void _FreeBindfulTextures();
+    void _FreeBindlessTextures();
     bool _ShadowMapExists() const;
     void _BindFramebuffer(size_t index);
     void _UnbindFramebuffer();
 
 private:
-    std::vector<GfVec2i> _resolutions;
-    std::vector<GLuint> _textures;
+    // bindful state
+    GfVec2i _size;
+    size_t _numLayers;
+    GLuint _bindfulTexture;
+    GLuint _shadowDepthSampler;
 
+    // bindless state
+    std::vector<GfVec2i> _resolutions;
+    std::vector<GLuint> _bindlessTextures;
+    std::vector<uint64_t> _bindlessTextureHandles;
+
+    // common state
+    bool _usingBindlessShadowMaps;
     std::vector<GfMatrix4d> _viewMatrix;
     std::vector<GfMatrix4d> _projectionMatrix;
 
     GLuint _framebuffer;
 
-    GLuint _shadowDepthSampler;
     GLuint _shadowCompareSampler;
 
     GLuint _unbindRestoreDrawFramebuffer;
     GLuint _unbindRestoreReadFramebuffer;
 
     GLint  _unbindRestoreViewport[4];
-
-    bool _texturesAllocatedExternally;
 };
 
 

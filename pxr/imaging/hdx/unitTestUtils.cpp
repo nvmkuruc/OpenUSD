@@ -59,7 +59,7 @@ _GetPartialHitHash(HdxPickHit const& hit)
     return hash;
 }
 
-using AggregatedHits = std::unordered_map<size_t, AggregatedHit>;
+typedef std::unordered_map<size_t, AggregatedHit> AggregatedHits;
 
 // aggregates subprimitive hits to the same prim/instance
 static AggregatedHits
@@ -271,8 +271,6 @@ void
 Marquee::Draw(float width, float height, 
               GfVec2f const& startPos, GfVec2f const& endPos)
 {
-    glViewport(0, 0, width, height);
-
     glDisable(GL_DEPTH_TEST);
     glUseProgram(_program);
 

@@ -28,9 +28,9 @@
 
 #include "pxr/imaging/hd/renderThread.h"
 #include "pxr/imaging/hd/renderPassState.h"
+#include "pxr/imaging/hd/tokens.h"
 
 #include "pxr/base/gf/matrix4d.h"
-#include "pxr/base/gf/rect2i.h"
 
 #include <embree3/rtcore.h>
 #include <embree3/rtcore_ray.h>
@@ -51,8 +51,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 ///    origin.
 ///  - Ambient occlusion.
 ///
-class HdEmbreeRenderer final
-{
+class HdEmbreeRenderer final {
 public:
     /// Renderer constructor.
     HdEmbreeRenderer();
@@ -64,9 +63,10 @@ public:
     ///   \param scene The embree scene to use.
     void SetScene(RTCScene scene);
 
-    /// Set the data window to fill (same meaning as in CameraUtilFraming
-    /// with coordinate system also being y-Down).
-    void SetDataWindow(const GfRect2i &dataWindow);
+    /// Specify a new viewport size for the sample/color buffer.
+    ///   \param width The new viewport width.
+    ///   \param height The new viewport height.
+    void SetViewport(unsigned int width, unsigned int height);
 
     /// Set the camera to use for rendering.
     ///   \param viewMatrix The camera's world-to-view matrix.
@@ -175,12 +175,9 @@ private:
     // Are the aov bindings valid?
     bool _aovBindingsValid;
 
-    // Data window - as in CameraUtilFraming.
-    GfRect2i _dataWindow;
-
-    // The width of the render buffers.
+    // The width of the viewport we're rendering into.
     unsigned int _width;
-    // The height of the render buffers.
+    // The height of the viewport we're rendering into.
     unsigned int _height;
 
     // View matrix: world space to camera space.

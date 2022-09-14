@@ -26,8 +26,6 @@
 
 #include "pxr/pxr.h"
 
-#include <algorithm>
-
 PXR_NAMESPACE_OPEN_SCOPE
 
 constexpr size_t _GetMaxAlign() {

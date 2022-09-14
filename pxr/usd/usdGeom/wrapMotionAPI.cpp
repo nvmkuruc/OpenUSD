@@ -27,7 +27,6 @@
 #include "pxr/usd/sdf/primSpec.h"
 
 #include "pxr/usd/usd/pyConversions.h"
-#include "pxr/base/tf/pyAnnotatedBoolResult.h"
 #include "pxr/base/tf/pyContainerConversions.h"
 #include "pxr/base/tf/pyResultConversions.h"
 #include "pxr/base/tf/pyUtils.h"
@@ -51,24 +50,10 @@ WRAP_CUSTOM;
 
         
 static UsdAttribute
-_CreateMotionBlurScaleAttr(UsdGeomMotionAPI &self,
-                                      object defaultVal, bool writeSparsely) {
-    return self.CreateMotionBlurScaleAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float), writeSparsely);
-}
-        
-static UsdAttribute
 _CreateVelocityScaleAttr(UsdGeomMotionAPI &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreateVelocityScaleAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float), writeSparsely);
-}
-        
-static UsdAttribute
-_CreateNonlinearSampleCountAttr(UsdGeomMotionAPI &self,
-                                      object defaultVal, bool writeSparsely) {
-    return self.CreateNonlinearSampleCountAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Int), writeSparsely);
 }
 
 static std::string
@@ -80,29 +65,11 @@ _Repr(const UsdGeomMotionAPI &self)
         primRepr.c_str());
 }
 
-struct UsdGeomMotionAPI_CanApplyResult : 
-    public TfPyAnnotatedBoolResult<std::string>
-{
-    UsdGeomMotionAPI_CanApplyResult(bool val, std::string const &msg) :
-        TfPyAnnotatedBoolResult<std::string>(val, msg) {}
-};
-
-static UsdGeomMotionAPI_CanApplyResult
-_WrapCanApply(const UsdPrim& prim)
-{
-    std::string whyNot;
-    bool result = UsdGeomMotionAPI::CanApply(prim, &whyNot);
-    return UsdGeomMotionAPI_CanApplyResult(result, whyNot);
-}
-
 } // anonymous namespace
 
 void wrapUsdGeomMotionAPI()
 {
     typedef UsdGeomMotionAPI This;
-
-    UsdGeomMotionAPI_CanApplyResult::Wrap<UsdGeomMotionAPI_CanApplyResult>(
-        "_CanApplyResult", "whyNot");
 
     class_<This, bases<UsdAPISchemaBase> >
         cls("MotionAPI");
@@ -114,9 +81,6 @@ void wrapUsdGeomMotionAPI()
 
         .def("Get", &This::Get, (arg("stage"), arg("path")))
         .staticmethod("Get")
-
-        .def("CanApply", &_WrapCanApply, (arg("prim")))
-        .staticmethod("CanApply")
 
         .def("Apply", &This::Apply, (arg("prim")))
         .staticmethod("Apply")
@@ -134,24 +98,10 @@ void wrapUsdGeomMotionAPI()
         .def(!self)
 
         
-        .def("GetMotionBlurScaleAttr",
-             &This::GetMotionBlurScaleAttr)
-        .def("CreateMotionBlurScaleAttr",
-             &_CreateMotionBlurScaleAttr,
-             (arg("defaultValue")=object(),
-              arg("writeSparsely")=false))
-        
         .def("GetVelocityScaleAttr",
              &This::GetVelocityScaleAttr)
         .def("CreateVelocityScaleAttr",
              &_CreateVelocityScaleAttr,
-             (arg("defaultValue")=object(),
-              arg("writeSparsely")=false))
-        
-        .def("GetNonlinearSampleCountAttr",
-             &This::GetNonlinearSampleCountAttr)
-        .def("CreateNonlinearSampleCountAttr",
-             &_CreateNonlinearSampleCountAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
 
@@ -186,12 +136,6 @@ WRAP_CUSTOM {
     _class
         .def("ComputeVelocityScale", &UsdGeomMotionAPI::ComputeVelocityScale,
                 (arg("time")=UsdTimeCode::Default()))
-        .def("ComputeNonlinearSampleCount",
-             &UsdGeomMotionAPI::ComputeNonlinearSampleCount,
-                (arg("time")=UsdTimeCode::Default()))
-        .def("ComputeMotionBlurScale", 
-             &UsdGeomMotionAPI::ComputeMotionBlurScale,
-             (arg("time")=UsdTimeCode::Default()))
      ;
 }
 

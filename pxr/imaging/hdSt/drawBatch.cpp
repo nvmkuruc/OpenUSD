@@ -21,18 +21,20 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/imaging/glf/glew.h"
+
 #include "pxr/imaging/hdSt/codeGen.h"
 #include "pxr/imaging/hdSt/commandBuffer.h"
-#include "pxr/imaging/hdSt/debugCodes.h"
 #include "pxr/imaging/hdSt/drawBatch.h"
 #include "pxr/imaging/hdSt/geometricShader.h"
 #include "pxr/imaging/hdSt/glslfxShader.h"
 #include "pxr/imaging/hdSt/glslProgram.h"
 #include "pxr/imaging/hdSt/lightingShader.h"
-#include "pxr/imaging/hdSt/materialNetworkShader.h"
 #include "pxr/imaging/hdSt/package.h"
+#include "pxr/imaging/hdSt/renderPassShader.h"
 #include "pxr/imaging/hdSt/renderPassState.h"
 #include "pxr/imaging/hdSt/resourceRegistry.h"
+#include "pxr/imaging/hdSt/surfaceShader.h"
 
 #include "pxr/imaging/hd/binding.h"
 #include "pxr/imaging/hd/perfLog.h"
@@ -42,8 +44,6 @@
 #include "pxr/imaging/hio/glslfx.h"
 
 #include "pxr/base/tf/getenv.h"
-
-#include <mutex>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -127,14 +127,8 @@ bool
 HdSt_DrawBatch::_IsAggregated(HdStDrawItem const *drawItem0,
                               HdStDrawItem const *drawItem1)
 {
-    if (!HdSt_MaterialNetworkShader::CanAggregate(
-            drawItem0->GetMaterialNetworkShader(),
-            drawItem1->GetMaterialNetworkShader())) {
-        return false;
-    }
-
-    if (drawItem0->GetMaterialIsFinal() != 
-        drawItem1->GetMaterialIsFinal()) {
+    if (!HdStSurfaceShader::CanAggregate(drawItem0->GetMaterialShader(),
+                                         drawItem1->GetMaterialShader())) {
         return false;
     }
 
@@ -147,8 +141,6 @@ HdSt_DrawBatch::_IsAggregated(HdStDrawItem const *drawItem0,
                          drawItem1->GetTopologyVisibilityRange())
         && isAggregated(drawItem0->GetVertexPrimvarRange(),
                          drawItem1->GetVertexPrimvarRange())
-        && isAggregated(drawItem0->GetVaryingPrimvarRange(),
-                         drawItem1->GetVaryingPrimvarRange())
         && isAggregated(drawItem0->GetElementPrimvarRange(),
                          drawItem1->GetElementPrimvarRange())
         && isAggregated(drawItem0->GetFaceVaryingPrimvarRange(),
@@ -196,38 +188,16 @@ HdSt_DrawBatch::Rebuild()
             return false;
         }
         if (!Append(item)) {
-            TF_DEBUG(HDST_DRAW_BATCH).Msg("   Rebuild failed for batch %p\n",
-            (void*)(this));
             return false;
         }
     }
 
-    TF_DEBUG(HDST_DRAW_BATCH).Msg("   Rebuild success for batch %p\n",
-        (void*)(this));
-
     return true;
-}
-
-static
-HdSt_MaterialNetworkShaderSharedPtr
-_GetFallbackMaterialNetworkShader()
-{
-    static std::once_flag once;
-    static HdSt_MaterialNetworkShaderSharedPtr fallbackShader;
-   
-    std::call_once(once, [](){
-        HioGlslfxSharedPtr glslfx =
-            std::make_shared<HioGlslfx>(
-                HdStPackageFallbackMaterialNetworkShader());
-
-        fallbackShader.reset(new HdStGLSLFXShader(glslfx));
-    });
-
-    return fallbackShader;
 }
 
 HdSt_DrawBatch::_DrawingProgram &
 HdSt_DrawBatch::_GetDrawingProgram(HdStRenderPassStateSharedPtr const &state,
+                                 bool indirect,
                                  HdStResourceRegistrySharedPtr const &resourceRegistry)
 {
     HD_TRACE_FUNCTION();
@@ -240,19 +210,11 @@ HdSt_DrawBatch::_GetDrawingProgram(HdStRenderPassStateSharedPtr const &state,
     size_t shaderHash = state->GetShaderHash();
     boost::hash_combine(shaderHash,
                         firstDrawItem->GetGeometricShader()->ComputeHash());
-
-    HdSt_MaterialNetworkShaderSharedPtr materialNetworkShader =
-        firstDrawItem->GetMaterialNetworkShader();
-    
-    if (!state->GetUseSceneMaterials() &&
-        !firstDrawItem->GetMaterialIsFinal() ) {
-        materialNetworkShader = _GetFallbackMaterialNetworkShader();
-    }
-
-    size_t materialNetworkShaderHash =
-        materialNetworkShader ? materialNetworkShader->ComputeHash() : 0;
-    boost::hash_combine(shaderHash, materialNetworkShaderHash);
-
+    HdStShaderCodeSharedPtr overrideShader = state->GetOverrideShader();
+    HdStShaderCodeSharedPtr surfaceShader  = overrideShader ? overrideShader
+                                       : firstDrawItem->GetMaterialShader();
+    size_t surfaceHash = surfaceShader ? surfaceShader->ComputeHash() : 0;
+    boost::hash_combine(shaderHash, surfaceHash);
     bool shaderChanged = (_shaderHash != shaderHash);
     
     // Set shaders (lighting and renderpass) to the program. 
@@ -267,11 +229,11 @@ HdSt_DrawBatch::_GetDrawingProgram(HdStRenderPassStateSharedPtr const &state,
     //      programs by shaderHash.
     if (!_program.GetGLSLProgram() || shaderChanged) {
         
-        _program.SetMaterialNetworkShader(materialNetworkShader);
+        _program.SetSurfaceShader(surfaceShader);
 
         // Try to compile the shader and if it fails to compile we go back
-        // to use the specified fallback material network shader.
-        if (!_program.CompileShader(firstDrawItem, resourceRegistry)){
+        // to use the specified fallback surface shader.
+        if (!_program.CompileShader(firstDrawItem, indirect, resourceRegistry)){
 
             // While the code should gracefully handle shader compilation
             // failures, it is also undesirable for shaders to silently fail.
@@ -279,22 +241,29 @@ HdSt_DrawBatch::_GetDrawingProgram(HdStRenderPassStateSharedPtr const &state,
                             firstDrawItem->GetRprimID().GetText());
 
 
-            // If we failed to compile the material network, replace it
-            // with the fallback material network shader and try again.
-            // XXX: Note that we only say "material network shader" here
-            // because it is currently the only one for which we allow
-            // customization.  We expect all the other shaders to compile
-            // or else the shipping code is broken and needs to be fixed.
-            // When we open up more shaders for customization, we will
-            // need to check them as well.
+            // If we failed to compile the surface shader, replace it with the
+            // fallback surface shader and try again.
+            // XXX: Note that we only say "surface shader" here because it is
+            // currently the only one that we allow customization for.  We
+            // expect all the other shaders to compile or else the shipping
+            // code is broken and needs to be fixed.  When we open up more
+            // shaders for customization, we will need to check them as well.
             
-            _program.SetMaterialNetworkShader(
-                _GetFallbackMaterialNetworkShader());
+            HioGlslfxSharedPtr glslSurfaceFallback = 
+                HioGlslfxSharedPtr(
+                        new HioGlslfx(HdStPackageFallbackSurfaceShader()));
+
+            HdStShaderCodeSharedPtr fallbackSurface =
+                HdStShaderCodeSharedPtr(
+                    new HdStGLSLFXShader(glslSurfaceFallback));
+
+            _program.SetSurfaceShader(fallbackSurface);
 
             bool res = _program.CompileShader(firstDrawItem, 
+                                              indirect, 
                                               resourceRegistry);
             // We expect the fallback shader to always compile.
-            TF_VERIFY(res, "Failed to compile with fallback material network");
+            TF_VERIFY(res);
         }
 
         _shaderHash = shaderHash;
@@ -304,18 +273,18 @@ HdSt_DrawBatch::_GetDrawingProgram(HdStRenderPassStateSharedPtr const &state,
 }
 
 bool
-HdSt_DrawBatch::_DrawingProgram::IsValid() const
-{
-    return _glslProgram && _glslProgram->Validate();
-}
-
-bool
 HdSt_DrawBatch::_DrawingProgram::CompileShader(
         HdStDrawItem const *drawItem,
+        bool indirect,
         HdStResourceRegistrySharedPtr const &resourceRegistry)
 {
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
+
+    // glew has to be initialized
+    if (!glLinkProgram) {
+        return false;
+    }
 
     if (!_geometricShader) {
         TF_CODING_ERROR("Can not compile a shader without a geometric shader");
@@ -334,17 +303,16 @@ HdSt_DrawBatch::_DrawingProgram::CompileShader(
         (*it)->AddBindings(&customBindings);
     }
 
-    HdSt_CodeGen codeGen(_geometricShader, shaders, drawItem->GetMaterialTag());
+    HdSt_CodeGen codeGen(_geometricShader, shaders);
 
     // let resourcebinder resolve bindings and populate metadata
     // which is owned by codegen.
     _resourceBinder.ResolveBindings(drawItem,
                                     shaders,
                                     codeGen.GetMetaData(),
+                                    indirect,
                                     instanceDraw,
-                                    customBindings,
-                                    resourceRegistry->GetHgi()->
-                                        GetCapabilities());
+                                    customBindings);
 
     HdStGLSLProgram::ID hash = codeGen.ComputeHash();
 
@@ -364,7 +332,9 @@ HdSt_DrawBatch::_DrawingProgram::CompileShader(
 
         _glslProgram = programInstance.GetValue();
 
-        if (!_glslProgram) {
+        if (_glslProgram) {
+            _resourceBinder.IntrospectBindings(_glslProgram->GetProgram());
+        } else {
             // Failed to compile and link a valid glsl program.
             return false;
         }

@@ -34,7 +34,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_REGISTRY_FUNCTION(TfType)
 {
     TfType::Define<UsdLuxDomeLight,
-        TfType::Bases< UsdLuxNonboundableLightBase > >();
+        TfType::Bases< UsdLuxLight > >();
     
     // Register the usd prim typename as an alias under UsdSchemaBase. This
     // enables one to call
@@ -75,9 +75,8 @@ UsdLuxDomeLight::Define(
 }
 
 /* virtual */
-UsdSchemaKind UsdLuxDomeLight::_GetSchemaKind() const
-{
-    return UsdLuxDomeLight::schemaKind;
+UsdSchemaType UsdLuxDomeLight::_GetSchemaType() const {
+    return UsdLuxDomeLight::schemaType;
 }
 
 /* static */
@@ -106,13 +105,13 @@ UsdLuxDomeLight::_GetTfType() const
 UsdAttribute
 UsdLuxDomeLight::GetTextureFileAttr() const
 {
-    return GetPrim().GetAttribute(UsdLuxTokens->inputsTextureFile);
+    return GetPrim().GetAttribute(UsdLuxTokens->textureFile);
 }
 
 UsdAttribute
 UsdLuxDomeLight::CreateTextureFileAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdLuxTokens->inputsTextureFile,
+    return UsdSchemaBase::_CreateAttr(UsdLuxTokens->textureFile,
                        SdfValueTypeNames->Asset,
                        /* custom = */ false,
                        SdfVariabilityVarying,
@@ -123,31 +122,14 @@ UsdLuxDomeLight::CreateTextureFileAttr(VtValue const &defaultValue, bool writeSp
 UsdAttribute
 UsdLuxDomeLight::GetTextureFormatAttr() const
 {
-    return GetPrim().GetAttribute(UsdLuxTokens->inputsTextureFormat);
+    return GetPrim().GetAttribute(UsdLuxTokens->textureFormat);
 }
 
 UsdAttribute
 UsdLuxDomeLight::CreateTextureFormatAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdLuxTokens->inputsTextureFormat,
+    return UsdSchemaBase::_CreateAttr(UsdLuxTokens->textureFormat,
                        SdfValueTypeNames->Token,
-                       /* custom = */ false,
-                       SdfVariabilityVarying,
-                       defaultValue,
-                       writeSparsely);
-}
-
-UsdAttribute
-UsdLuxDomeLight::GetGuideRadiusAttr() const
-{
-    return GetPrim().GetAttribute(UsdLuxTokens->guideRadius);
-}
-
-UsdAttribute
-UsdLuxDomeLight::CreateGuideRadiusAttr(VtValue const &defaultValue, bool writeSparsely) const
-{
-    return UsdSchemaBase::_CreateAttr(UsdLuxTokens->guideRadius,
-                       SdfValueTypeNames->Float,
                        /* custom = */ false,
                        SdfVariabilityVarying,
                        defaultValue,
@@ -184,14 +166,12 @@ const TfTokenVector&
 UsdLuxDomeLight::GetSchemaAttributeNames(bool includeInherited)
 {
     static TfTokenVector localNames = {
-        UsdLuxTokens->lightShaderId,
-        UsdLuxTokens->inputsTextureFile,
-        UsdLuxTokens->inputsTextureFormat,
-        UsdLuxTokens->guideRadius,
+        UsdLuxTokens->textureFile,
+        UsdLuxTokens->textureFormat,
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(
-            UsdLuxNonboundableLightBase::GetSchemaAttributeNames(true),
+            UsdLuxLight::GetSchemaAttributeNames(true),
             localNames);
 
     if (includeInherited)

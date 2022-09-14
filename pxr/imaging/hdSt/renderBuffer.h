@@ -27,7 +27,6 @@
 #include "pxr/pxr.h"
 #include "pxr/base/gf/vec3i.h"
 #include "pxr/imaging/hdSt/api.h"
-#include "pxr/imaging/hdSt/textureUtils.h"
 #include "pxr/imaging/hd/renderBuffer.h"
 #include "pxr/imaging/hgi/hgi.h"
 #include "pxr/imaging/hgi/enums.h"
@@ -50,11 +49,6 @@ public:
     ~HdStRenderBuffer() override;
 
     HDST_API
-    void Sync(HdSceneDelegate *sceneDelegate,
-              HdRenderParam *renderParam,
-              HdDirtyBits *dirtyBits) override;
-
-    HDST_API
     bool Allocate(GfVec3i const& dimensions,
                   HdFormat format,
                   bool multiSampled) override;
@@ -73,9 +67,6 @@ public:
 
     HDST_API
     bool IsMultiSampled() const override;
-
-    HDST_API
-    uint32_t GetMSAASampleCount() const;
 
     /// Map the buffer for reading. The control flow should be Map(),
     /// before any I/O, followed by memory access, followed by Unmap() when
@@ -130,8 +121,6 @@ private:
     // Hgi texture descriptor holds an HgiFormat instead of HdFormat.
     HdFormat _format;
 
-    uint32_t _msaaSampleCount;
-
     // The GPU texture resource
     HdStDynamicUvTextureObjectSharedPtr _textureObject;
 
@@ -141,7 +130,7 @@ private:
     // The number of callers mapping this buffer.
     std::atomic<int> _mappers;
     // Texels are temp captured into this buffer between map and unmap.
-    HdStTextureUtils::AlignedBuffer<uint8_t> _mappedBuffer;
+    std::vector<uint8_t> _mappedBuffer;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -762,18 +762,6 @@ SdfPrimSpec::SetVariantSelection(const std::string& variantSetName,
     }
 }
 
-void
-SdfPrimSpec::BlockVariantSelection(const std::string& variantSetName)
-{
-    if (_ValidateEdit(SdfFieldKeys->VariantSelection)) {
-        SdfVariantSelectionProxy proxy = GetVariantSelections();
-        if (proxy) {
-            SdfChangeBlock block;
-            proxy[variantSetName] = std::string();
-        }
-    }
-}
-
 //
 // Relocates
 //
@@ -840,7 +828,7 @@ _FindOrCreateVariantSpec(SdfLayer *layer, const SdfPath &vsPath)
     // Create a new variant set spec and add it to the variant set list.
     if (!varSetSpec) {
         if ((varSetSpec = SdfVariantSetSpec::New(primSpec, varSel.first)))
-            primSpec->GetVariantSetNameList().Prepend(varSel.first);
+            primSpec->GetVariantSetNameList().Add(varSel.first);
     }
 
     if (!TF_VERIFY(varSetSpec, "Failed to create variant set for '%s' in @%s@",

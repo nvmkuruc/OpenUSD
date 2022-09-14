@@ -28,8 +28,6 @@
 
 #include "pxr/base/trace/trace.h"
 
-#include <algorithm>
-
 PXR_NAMESPACE_OPEN_SCOPE
 
 Trace_EventTreeBuilder::Trace_EventTreeBuilder() 

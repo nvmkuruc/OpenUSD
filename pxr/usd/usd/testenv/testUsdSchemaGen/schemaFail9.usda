@@ -14,20 +14,20 @@ over "GLOBAL" (
 {
 }
 
-class "SingleApplyAPI" (
+class "NonAppliedAPI" (
     inherits = </APISchemaBase>
     customData = {
-        token apiSchemaType = "singleApply"
+        token apiSchemaType = "nonApplied"
     }
 )
 {
 }
 
-# A non-applied API schema can't inherit from an applied API schema
-class "NonAppliedAPI" (
-    inherits = </SingleApplyAPI>
+# A single apply API schema can't inherit from a non-applied API schema
+class "SingleApplyAPI" (
+    inherits = </NonAppliedAPI>
     customData = {
-        token apiSchemaType = "nonApplied"
+        token apiSchemaType = "singleApply"
     }
 )
 {

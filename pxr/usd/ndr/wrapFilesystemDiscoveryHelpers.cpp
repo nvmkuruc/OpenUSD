@@ -29,13 +29,14 @@
 
 #include <boost/python.hpp>
 #include <boost/python/def.hpp>
-#include <boost/python/tuple.hpp>
 
 using namespace boost::python;
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
-static NdrNodeDiscoveryResultVec
+namespace {
+
+NdrNodeDiscoveryResultVec
 _WrapFsHelpersDiscoverNodes(
     const NdrStringVec& searchPaths,
     const NdrStringVec& allowedExtensions,
@@ -48,17 +49,6 @@ _WrapFsHelpersDiscoverNodes(
                                      boost::get_pointer(context));
 }
 
-static object
-_WrapFsHelpersSplitShaderIdentifier(const TfToken &identifier)
-{
-    TfToken family, name;
-    NdrVersion version;
-    if (NdrFsHelpersSplitShaderIdentifier(identifier,
-            &family, &name, &version)) {
-        return boost::python::make_tuple(family, name, version);
-    } else {
-        return object();
-    }
 }
 
 void wrapFilesystemDiscoveryHelpers()
@@ -69,8 +59,6 @@ void wrapFilesystemDiscoveryHelpers()
         .def_readwrite("resolvedUri", &NdrDiscoveryUri::resolvedUri)
     ;
 
-    def("FsHelpersSplitShaderIdentifier", _WrapFsHelpersSplitShaderIdentifier,
-        arg("identifier"));
     def("FsHelpersDiscoverNodes", _WrapFsHelpersDiscoverNodes,
         (args("searchPaths"),
         args("allowedExtensions"),

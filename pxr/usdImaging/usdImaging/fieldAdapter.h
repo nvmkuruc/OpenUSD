@@ -41,7 +41,7 @@ class UsdPrim;
 ///
 class UsdImagingFieldAdapter : public UsdImagingPrimAdapter {
 public:
-    using BaseAdapter = UsdImagingPrimAdapter;
+    typedef UsdImagingPrimAdapter BaseAdapter;
 
 
     UsdImagingFieldAdapter()
@@ -49,16 +49,15 @@ public:
     {}
 
     USDIMAGING_API
-    ~UsdImagingFieldAdapter() override;
+    virtual ~UsdImagingFieldAdapter();
 
     USDIMAGING_API
-    SdfPath Populate(UsdPrim const& prim,
+    virtual SdfPath Populate(UsdPrim const& prim,
                      UsdImagingIndexProxy* index,
-                     UsdImagingInstancerContext const*
-                         instancerContext = nullptr) override;
+                     UsdImagingInstancerContext const* instancerContext = NULL);
 
     USDIMAGING_API
-    bool IsSupported(UsdImagingIndexProxy const* index) const override;
+    virtual bool IsSupported(UsdImagingIndexProxy const* index) const;
 
     // ---------------------------------------------------------------------- //
     /// \name Parallel Setup and Resolve
@@ -67,25 +66,25 @@ public:
     /// Thread Safe.
     USDIMAGING_API
     virtual void TrackVariability(UsdPrim const& prim,
-                          SdfPath const& cachePath,
-                          HdDirtyBits* timeVaryingBits,
-                          UsdImagingInstancerContext const* 
-                              instancerContext = NULL,
-                          // #nv begin fast-updates
-                          // If checkVariabilty is false, this method
-                          // only populates the value cache with initial values.
-                          bool checkVariability = true) const;
-                          // nv end
+                                  SdfPath const& cachePath,
+                                  HdDirtyBits* timeVaryingBits,
+                                  UsdImagingInstancerContext const* 
+                                      instancerContext = NULL,
+                                  // #nv begin fast-updates
+                                  // If checkVariabilty is false, this method
+                                  // only populates the value cache with initial values.
+                                  bool checkVariability = true) const;
+                                  // nv end
 
 
     /// Thread Safe.
     USDIMAGING_API
-    void UpdateForTime(UsdPrim const& prim,
-                       SdfPath const& cachePath,
-                       UsdTimeCode time,
-                       HdDirtyBits requestedBits,
-                       UsdImagingInstancerContext const* 
-                           instancerContext = nullptr) const override;
+    virtual void UpdateForTime(UsdPrim const& prim,
+                               SdfPath const& cachePath, 
+                               UsdTimeCode time,
+                               HdDirtyBits requestedBits,
+                               UsdImagingInstancerContext const* 
+                                   instancerContext = NULL) const;
 
     // ---------------------------------------------------------------------- //
     /// \name Change Processing 
@@ -94,36 +93,25 @@ public:
     /// Returns a bit mask of attributes to be udpated, or
     /// HdChangeTracker::AllDirty if the entire prim must be resynchronized.
     USDIMAGING_API
-    HdDirtyBits ProcessPropertyChange(UsdPrim const& prim,
-                                      SdfPath const& cachePath,
-                                      TfToken const& propertyName) override;
+    virtual HdDirtyBits ProcessPropertyChange(UsdPrim const& prim,
+                                              SdfPath const& cachePath,
+                                              TfToken const& propertyName);
 
     USDIMAGING_API
-    void MarkDirty(UsdPrim const& prim,
-                   SdfPath const& cachePath,
-                   HdDirtyBits dirty,
-                   UsdImagingIndexProxy* index) override;
+    virtual void MarkDirty(UsdPrim const& prim,
+                           SdfPath const& cachePath,
+                           HdDirtyBits dirty,
+                           UsdImagingIndexProxy* index);
 
     USDIMAGING_API
-    void MarkTransformDirty(UsdPrim const& prim,
-                            SdfPath const& cachePath,
-                            UsdImagingIndexProxy* index) override;
+    virtual void MarkTransformDirty(UsdPrim const& prim,
+                                    SdfPath const& cachePath,
+                                    UsdImagingIndexProxy* index);
 
     USDIMAGING_API
-    void MarkVisibilityDirty(UsdPrim const& prim,
-                             SdfPath const& cachePath,
-                             UsdImagingIndexProxy* index) override;
-
-    // ---------------------------------------------------------------------- //
-    /// \name Data access
-    // ---------------------------------------------------------------------- //
-
-    USDIMAGING_API
-    VtValue Get(UsdPrim const& prim,
-                SdfPath const& cachePath,
-                TfToken const& key,
-                UsdTimeCode time,
-                VtIntArray *outIndices) const override;
+    virtual void MarkVisibilityDirty(UsdPrim const& prim,
+                                     SdfPath const& cachePath,
+                                     UsdImagingIndexProxy* index);
 
     // ---------------------------------------------------------------------- //
     /// \name Field adapter requirements
@@ -135,8 +123,8 @@ public:
 
 protected:
     USDIMAGING_API
-    void _RemovePrim(SdfPath const& cachePath,
-                     UsdImagingIndexProxy* index) override;
+    virtual void _RemovePrim(SdfPath const& cachePath,
+                             UsdImagingIndexProxy* index);
 };
 
 

@@ -16,7 +16,7 @@ over "World"
             over "points" (
                 clips = {
                     dictionary default = {
-                        asset manifestAssetPath = @./result.manifest.usda@
+                        asset manifestAssetPath = @./result.topology.usda@
                         string primPath = "/World/fx/Particles_Splash/points"
                         double templateActiveOffset = 0.3
                         string templateAssetPath = "p.#.usd"

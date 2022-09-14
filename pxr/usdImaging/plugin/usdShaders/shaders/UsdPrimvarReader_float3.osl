@@ -34,9 +34,8 @@
 
 shader UsdPrimvarReader_float3
 [[
-    string category = "generator",
-    string role = "primvar",
-    string primvars = "$varname",
+    string category="generator",
+    string primvars="$varname",
 ]]
 (
     string varname = ""

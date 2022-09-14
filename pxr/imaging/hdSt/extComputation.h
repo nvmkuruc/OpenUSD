@@ -41,23 +41,19 @@ using HdBufferArrayRangeSharedPtr = std::shared_ptr<class HdBufferArrayRange>;
 ///
 /// Specialization of HdExtComputation which manages inputs as GPU resources.
 ///
-class HdStExtComputation : public HdExtComputation
-{
+class HdStExtComputation : public HdExtComputation {
 public:
     /// Construct a new ExtComputation identified by id.
     HDST_API
     HdStExtComputation(SdfPath const &id);
 
     HDST_API
-    ~HdStExtComputation() override;
+    virtual ~HdStExtComputation() = default;
 
     HDST_API
-    void Sync(HdSceneDelegate *sceneDelegate,
-              HdRenderParam   *renderParam,
-              HdDirtyBits     *dirtyBits) override;
-
-    HDST_API
-    void Finalize(HdRenderParam *renderParam) override;
+    virtual void Sync(HdSceneDelegate *sceneDelegate,
+                      HdRenderParam   *renderParam,
+                      HdDirtyBits     *dirtyBits) override;
 
     HDST_API
     HdBufferArrayRangeSharedPtr const & GetInputRange() const {

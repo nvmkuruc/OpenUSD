@@ -68,46 +68,38 @@ public:
     HdxRenderTask(HdSceneDelegate* delegate, SdfPath const& id);
 
     HDX_API
-    ~HdxRenderTask() override;
+    virtual ~HdxRenderTask();
 
     /// Hooks for progressive rendering (delegated to renderpasses).
-    HDX_API
-    bool IsConverged() const override;
+    virtual bool IsConverged() const override;
 
     /// Prepare the tasks resources
     HDX_API
-    void Prepare(HdTaskContext* ctx,
-                 HdRenderIndex* renderIndex) override;
+    virtual void Prepare(HdTaskContext* ctx,
+                         HdRenderIndex* renderIndex) override;
 
     /// Execute render pass task
     HDX_API
-    void Execute(HdTaskContext* ctx) override;
+    virtual void Execute(HdTaskContext* ctx) override;
 
     /// Collect Render Tags used by the task.
     HDX_API
-    const TfTokenVector &GetRenderTags() const override;
+    virtual const TfTokenVector &GetRenderTags() const override;
 
 protected:
     /// Sync the render pass resources
     HDX_API
-    void _Sync(HdSceneDelegate* delegate,
-               HdTaskContext* ctx,
-               HdDirtyBits* dirtyBits) override;
+    virtual void _Sync(HdSceneDelegate* delegate,
+                       HdTaskContext* ctx,
+                       HdDirtyBits* dirtyBits) override;
 
     HDX_API
     HdRenderPassStateSharedPtr _GetRenderPassState(HdTaskContext *ctx) const;
 
-    // XXX: Storm specific API
-    // While HdDrawItem is currently a core-Hydra concept, it'll be moved
-    // to Storm. Until then, allow querying the render pass to know if there's
-    // draw submission work.
-
-    // Returns whether the render pass has any draw items to submit.
-    // For non-Storm backends, this returns true.
-    // When using with Storm tasks, make sure to call it after
-    // HdxRenderTask::Prepare().
+    // Returns the number of draw items used for rendering. This will only 
+    // return the correct result after HdxRenderTask::Prepare() has been called.
     HDX_API
-    bool _HasDrawItems() const;
+    size_t _GetDrawItemCount() const;
 
 private:
     HdRenderPassSharedPtr _pass;
@@ -116,14 +108,10 @@ private:
     // Optional internal render setup task, for params unpacking.
     HdxRenderSetupTaskSharedPtr _setupTask;
 
-    // XXX: Storm specific API
     // Setup additional state that HdStRenderPassState requires.
+    // XXX: This should be moved to hdSt!
     void _SetHdStRenderPassState(HdTaskContext *ctx,
                                  HdStRenderPassState *renderPassState);
-    
-    // Inspect the AOV bindings to determine if any of them need to be cleared.
-    bool _NeedToClearAovs(HdRenderPassStateSharedPtr const &renderPassState)
-        const;
 
     HdxRenderTask() = delete;
     HdxRenderTask(const HdxRenderTask &) = delete;

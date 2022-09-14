@@ -48,13 +48,6 @@ namespace {
 // fwd decl.
 WRAP_CUSTOM;
 
-        
-static UsdAttribute
-_CreateShaderIdAttr(UsdLuxLightFilter &self,
-                                      object defaultVal, bool writeSparsely) {
-    return self.CreateShaderIdAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Token), writeSparsely);
-}
 
 static std::string
 _Repr(const UsdLuxLightFilter &self)
@@ -97,13 +90,6 @@ void wrapUsdLuxLightFilter()
 
         .def(!self)
 
-        
-        .def("GetShaderIdAttr",
-             &This::GetShaderIdAttr)
-        .def("CreateShaderIdAttr",
-             &_CreateShaderIdAttr,
-             (arg("defaultValue")=object(),
-              arg("writeSparsely")=false))
 
         .def("__repr__", ::_Repr)
     ;
@@ -130,55 +116,12 @@ void wrapUsdLuxLightFilter()
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
 
-#include "pxr/usd/usdShade/connectableAPI.h"
-
-static UsdAttribute
-_CreateShaderIdAttrForRenderContext(
-    UsdLuxLightFilter &self, 
-    const TfToken &renderContext,
-    object defaultVal, 
-    bool writeSparsely) 
-{
-    return self.CreateShaderIdAttrForRenderContext(
-        renderContext,
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Token), 
-        writeSparsely);
-}
-
 namespace {
 
 WRAP_CUSTOM {
     _class
-        .def(init<UsdShadeConnectableAPI>(arg("connectable")))
-        .def("ConnectableAPI", &UsdLuxLightFilter::ConnectableAPI)
-
-        .def("CreateOutput", &UsdLuxLightFilter::CreateOutput,
-             (arg("name"), arg("type")))
-        .def("GetOutput", &UsdLuxLightFilter::GetOutput, arg("name"))
-        .def("GetOutputs", &UsdLuxLightFilter::GetOutputs,
-             (arg("onlyAuthored")=true),
-             return_value_policy<TfPySequenceToList>())
-
-        .def("CreateInput", &UsdLuxLightFilter::CreateInput,
-             (arg("name"), arg("type")))
-        .def("GetInput", &UsdLuxLightFilter::GetInput, arg("name"))
-        .def("GetInputs", &UsdLuxLightFilter::GetInputs,
-             (arg("onlyAuthored")=true),
-             return_value_policy<TfPySequenceToList>())
-
         .def("GetFilterLinkCollectionAPI",
              &UsdLuxLightFilter::GetFilterLinkCollectionAPI)
-
-        .def("GetShaderIdAttrForRenderContext",
-             &UsdLuxLightFilter::GetShaderIdAttrForRenderContext, 
-             arg("renderContext"))
-        .def("CreateShaderIdAttrForRenderContext",
-             &_CreateShaderIdAttrForRenderContext,
-             (arg("renderContext"),
-              arg("defaultValue")=object(),
-              arg("writeSparsely")=false))
-        .def("GetShaderId", 
-             &UsdLuxLightFilter::GetShaderId, arg("renderContexts"))
         ;
 }
 

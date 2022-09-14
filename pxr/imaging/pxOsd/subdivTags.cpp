@@ -28,8 +28,6 @@
 #include "pxr/imaging/pxOsd/subdivTags.h"
 #include "pxr/base/arch/hash.h"
 
-#include <ostream>
-
 PXR_NAMESPACE_OPEN_SCOPE
 
 

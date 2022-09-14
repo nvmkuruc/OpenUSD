@@ -26,7 +26,6 @@
 
 #include "pxr/pxr.h"
 #include "pxr/usd/sdf/api.h"
-#include "pxr/base/tf/functionRef.h"
 #include "pxr/base/tf/token.h"
 #include "pxr/base/tf/mallocTag.h"
 
@@ -125,41 +124,32 @@ public:
     };
 
     static Sdf_PathPrimNodeHandle
-    FindOrCreatePrim(Sdf_PathNode const *parent, const TfToken &name,
-                     TfFunctionRef<bool ()> isValid);
+    FindOrCreatePrim(Sdf_PathNode const *parent, const TfToken &name);
     
     static Sdf_PathPropNodeHandle
-    FindOrCreatePrimProperty(
-        Sdf_PathNode const *parent, const TfToken &name,
-        TfFunctionRef<bool ()> isValid);
+    FindOrCreatePrimProperty(Sdf_PathNode const *parent, const TfToken &name);
     
     static Sdf_PathPrimNodeHandle
     FindOrCreatePrimVariantSelection(Sdf_PathNode const *parent,
                                      const TfToken &variantSet,
-                                     const TfToken &variant,
-                                     TfFunctionRef<bool ()> isValid);
+                                     const TfToken &variant);
 
     static Sdf_PathPropNodeHandle
     FindOrCreateTarget(Sdf_PathNode const *parent,
-                       SdfPath const &targetPath,
-                       TfFunctionRef<bool ()> isValid);
+                       SdfPath const &targetPath);
 
     static Sdf_PathPropNodeHandle
     FindOrCreateRelationalAttribute(Sdf_PathNode const *parent,
-                                    const TfToken &name,
-                                    TfFunctionRef<bool ()> isValid);
+                                    const TfToken &name);
 
     static Sdf_PathPropNodeHandle
-    FindOrCreateMapper(Sdf_PathNode const *parent, SdfPath const &targetPath,
-                       TfFunctionRef<bool ()> isValid);
+    FindOrCreateMapper(Sdf_PathNode const *parent, SdfPath const &targetPath);
 
     static Sdf_PathPropNodeHandle
-    FindOrCreateMapperArg(Sdf_PathNode const *parent, const TfToken &name,
-                          TfFunctionRef<bool ()> isValid);
+    FindOrCreateMapperArg(Sdf_PathNode const *parent, const TfToken &name);
     
     static Sdf_PathPropNodeHandle
-    FindOrCreateExpression(Sdf_PathNode const *parent,
-                           TfFunctionRef<bool ()> isValid);
+    FindOrCreateExpression(Sdf_PathNode const *parent);
 
     static Sdf_PathNode const *GetAbsoluteRootNode();
     static Sdf_PathNode const *GetRelativeRootNode();
@@ -204,16 +194,12 @@ public:
     // targets, etc...)
     inline TfToken GetElement() const;
 
-    // Return the stringified path to this node as a TfToken lvalue.
+    // Append this element's text (same as GetElement()) to \p str.
+    void AppendText(std::string *str) const;
+
+    // Return the stringified path to this node as a TfToken.
     SDF_API static const TfToken &
     GetPathToken(Sdf_PathNode const *primPart, Sdf_PathNode const *propPart);
-
-    // Return the stringified path to this node as a TfToken rvalue.
-    SDF_API static TfToken
-    GetPathAsToken(Sdf_PathNode const *primPart, Sdf_PathNode const *propPart);
-
-    static char const *
-    GetDebugText(Sdf_PathNode const *primPart, Sdf_PathNode const *propPart);
 
     // Lexicographic ordering for Compare().
     struct LessThan {
@@ -260,24 +246,10 @@ protected:
     // required since this class hierarchy doesn't use normal C++ polymorphism
     // for space reasons.
     inline void _Destroy() const;
- 
-    TfToken _GetElementImpl() const;
 
-    // Helper function for GetPathToken, which lazily creates its token
+    // // Helper function for GetPathToken, which lazily creates its token
     static TfToken _CreatePathToken(Sdf_PathNode const *primPart,
                                     Sdf_PathNode const *propPart);
-
-    template <class Buffer>
-    static void _WriteTextToBuffer(Sdf_PathNode const *primPart,
-                                   Sdf_PathNode const *propPart,
-                                   Buffer &out);
-
-    template <class Buffer>
-    static void _WriteTextToBuffer(SdfPath const &path, Buffer &out);
-
-    // Append this element's text (same as GetElement()) to \p out.
-    template <class Buffer>
-    void _WriteText(Buffer &out) const;
 
     // Helper for dtor, removes this path node's token from the token table.
     SDF_API void _RemovePathTokenFromTable() const;
@@ -415,9 +387,7 @@ public:
     static const NodeType nodeType = Sdf_PathNode::PrimVariantSelectionNode;
 
     const TfToken &_GetNameImpl() const;
-
-    template <class Buffer>
-    void _WriteTextImpl(Buffer &out) const;
+    void _AppendText(std::string *str) const;
 
 private:
     Sdf_PrimVariantSelectionNode(Sdf_PathNode const *parent, 
@@ -444,8 +414,7 @@ public:
     typedef SdfPath ComparisonType;
     static const NodeType nodeType = Sdf_PathNode::TargetNode;
 
-    template <class Buffer>
-    void _WriteTextImpl(Buffer &out) const;
+    void _AppendText(std::string *str) const;
 
 private:
     Sdf_TargetPathNode(Sdf_PathNode const *parent,
@@ -493,8 +462,7 @@ public:
     typedef SdfPath ComparisonType;
     static const NodeType nodeType = Sdf_PathNode::MapperNode;
 
-    template <class Buffer>
-    void _WriteTextImpl(Buffer &out) const;
+    void _AppendText(std::string *str) const;
 
 private:
     Sdf_MapperPathNode(Sdf_PathNode const *parent,
@@ -519,8 +487,7 @@ public:
     typedef TfToken ComparisonType;
     static const NodeType nodeType = Sdf_PathNode::MapperArgNode;
 
-    template <class Buffer>
-    void _WriteTextImpl(Buffer &out) const;
+    void _AppendText(std::string *str) const;
 
 private:
     Sdf_MapperArgPathNode(Sdf_PathNode const *parent,
@@ -545,8 +512,7 @@ public:
     typedef void *ComparisonType;
     static const NodeType nodeType = Sdf_PathNode::ExpressionNode;
 
-    template <class Buffer>
-    void _WriteTextImpl(Buffer &out) const;
+    void _AppendText(std::string *str) const;
 
 private:
     Sdf_ExpressionPathNode(Sdf_PathNode const *parent)
@@ -740,7 +706,9 @@ Sdf_PathNode::GetElement() const
     case PrimNode:
         return _Downcast<Sdf_PrimPathNode>()->_name;
     default:
-        return _GetElementImpl();
+        std::string str;
+        AppendText(&str);
+        return TfToken(str);
     };
 }
 

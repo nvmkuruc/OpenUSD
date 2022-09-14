@@ -126,25 +126,19 @@ UsdDancingCubesExample_DataParams::ToArgs() const
 
 /*static*/
 UsdDancingCubesExample_DataRefPtr 
-UsdDancingCubesExample_Data::New()
+UsdDancingCubesExample_Data::New(const UsdDancingCubesExample_DataParams &params)
 {
-    return TfCreateRefPtr(new UsdDancingCubesExample_Data());
+    return TfCreateRefPtr(new UsdDancingCubesExample_Data(params));
 }
 
-UsdDancingCubesExample_Data::UsdDancingCubesExample_Data() :
-    _impl(new UsdDancingCubesExample_DataImpl())
+UsdDancingCubesExample_Data::UsdDancingCubesExample_Data(
+    const UsdDancingCubesExample_DataParams &params) :
+    _impl(new UsdDancingCubesExample_DataImpl(params))
 {
 }
 
 UsdDancingCubesExample_Data::~UsdDancingCubesExample_Data()
 {
-}
-
-void 
-UsdDancingCubesExample_Data::SetParams(
-    const UsdDancingCubesExample_DataParams &params)
-{
-    _impl.reset(new UsdDancingCubesExample_DataImpl(params));
 }
 
 bool
@@ -153,6 +147,12 @@ UsdDancingCubesExample_Data::StreamsData() const
     // We say this data object streams data because the implementation generates
     // most of its queries on demand.
     return true;
+}
+
+bool 
+UsdDancingCubesExample_Data::IsEmpty() const
+{
+    return !_impl || _impl->IsEmpty();
 }
 
 bool

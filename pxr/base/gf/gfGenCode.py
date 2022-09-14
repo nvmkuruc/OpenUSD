@@ -49,8 +49,7 @@ def _WriteFile(filePath, content, verbose=True):
     content = (content + '\n'
                if content and not content.endswith('\n') else content)
     if os.path.exists(filePath):
-        with open(filePath, 'r') as fp:
-            existingContent = fp.read()
+        existingContent = open(filePath, 'r').read()
         if existingContent == content:
             if verbose:
                 print('\tunchanged %s' % filePath)

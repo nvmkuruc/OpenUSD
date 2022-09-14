@@ -62,15 +62,15 @@ TF_DEFINE_PRIVATE_TOKENS(
     (UsdUtilsPipeline)
         (MaterialsScopeName)
         (PrimaryCameraName)
-        (ProvidesRegisteredVariantSetsFromPlugin)
         (RegisteredVariantSets)
             (selectionExportPolicy)
+                // lowerCamelCase of the enums.
+                (never)
+                (ifAuthored)
+                (always)
 
     ((DefaultMaterialsScopeName, "Looks"))
     ((DefaultPrimaryCameraName, "main_cam"))
-
-    (pref)
-    (st)
 );
 
 
@@ -115,12 +115,9 @@ UsdUtilsGetModelNameFromRootLayer(
 
 TF_MAKE_STATIC_DATA(std::set<UsdUtilsRegisteredVariantSet>, _regVarSets)
 {
-}
-
-static void
-_RegisterVariantSetsFromPlugInfos()
-{
-    for (PlugPluginPtr plug : PlugRegistry::GetInstance().GetAllPlugins()) {
+    PlugPluginPtrVector plugs = PlugRegistry::GetInstance().GetAllPlugins();
+    TF_FOR_ALL(plugIter, plugs) {
+        PlugPluginPtr plug = *plugIter;
         JsObject metadata = plug->GetMetadata();
         JsValue pipelineUtilsDictValue;
         if (TfMapLookup(metadata, _tokens->UsdUtilsPipeline, &pipelineUtilsDictValue)) {
@@ -161,50 +158,29 @@ _RegisterVariantSetsFromPlugInfos()
                     JsObject info = v.GetJsObject();
                     std::string variantSetType = info[_tokens->selectionExportPolicy].GetString();
 
+
                     UsdUtilsRegisteredVariantSet::SelectionExportPolicy selectionExportPolicy;
-                    if (!UsdUtilsRegisteredVariantSet::
-                            GetSelectionExportPolicyFromString(
-                                variantSetType, &selectionExportPolicy)) {
+                    if (variantSetType == _tokens->never) {
+                        selectionExportPolicy = 
+                            UsdUtilsRegisteredVariantSet::SelectionExportPolicy::Never;
+                    }
+                    else if (variantSetType == _tokens->ifAuthored) {
+                        selectionExportPolicy = 
+                            UsdUtilsRegisteredVariantSet::SelectionExportPolicy::IfAuthored;
+                    }
+                    else if (variantSetType == _tokens->always) {
+                        selectionExportPolicy = 
+                            UsdUtilsRegisteredVariantSet::SelectionExportPolicy::Always;
+                    }
+                    else {
                         TF_CODING_ERROR(
-                            "%s[UsdUtilsPipeline][RegisteredVariantSets][%s] was not valid.",
-                            plug->GetName().c_str(), variantSetName.c_str());
+                                "%s[UsdUtilsPipeline][RegisteredVariantSets][%s] was not valid.",
+                                plug->GetName().c_str(),
+                                variantSetName.c_str());
                         continue;
                     }
-                    UsdUtilsRegisterVariantSet(variantSetName, selectionExportPolicy);
-                }
-            }
-        }
-    }
-}
-
-static void
-_LoadPluginsThatRegisterVariantSets()
-{
-    for (PlugPluginPtr plug : PlugRegistry::GetInstance().GetAllPlugins()) {
-        JsObject metadata = plug->GetMetadata();
-        JsValue pipelineUtilsDictValue;
-        if (TfMapLookup(metadata, _tokens->UsdUtilsPipeline, &pipelineUtilsDictValue)) {
-            if (!pipelineUtilsDictValue.Is<JsObject>()) {
-                TF_CODING_ERROR(
-                        "%s[UsdUtilsPipeline] was not a dictionary.",
-                        plug->GetName().c_str());
-                continue;
-            }
-
-            JsObject pipelineUtilsDict =
-                pipelineUtilsDictValue.Get<JsObject>();
-            JsValue registersVariantSets;
-            if (TfMapLookup(pipelineUtilsDict,
-                        _tokens->ProvidesRegisteredVariantSetsFromPlugin,
-                        &registersVariantSets)) {
-                if (!registersVariantSets.IsBool()) {
-                    TF_CODING_ERROR(
-                            "%s[UsdUtilsPipeline][ProvidesRegisteredVariantSetsFromPlugin] was not a bool.",
-                            plug->GetName().c_str());
-                }
-
-                if (registersVariantSets.GetBool()) {
-                    plug->Load();
+                    _regVarSets->insert(UsdUtilsRegisteredVariantSet(
+                                variantSetName, selectionExportPolicy));
                 }
             }
         }
@@ -214,29 +190,7 @@ _LoadPluginsThatRegisterVariantSets()
 const std::set<UsdUtilsRegisteredVariantSet>&
 UsdUtilsGetRegisteredVariantSets()
 {
-    // Lazy population on first use.
-    static std::once_flag _flag;
-    std::call_once(_flag, []() {
-        // First, we'll populate from any plugInfos that provide this information.
-        _RegisterVariantSetsFromPlugInfos();
-
-        // Now, we load any plugins that may want register variantSets as well.
-        _LoadPluginsThatRegisterVariantSets();
-
-        // Invoke any code for UsdUtilsRegisteredVariantSet.
-        TfRegistryManager::GetInstance().SubscribeTo<UsdUtilsRegisteredVariantSet>();
-    });
-
     return *_regVarSets;
-}
-
-void
-UsdUtilsRegisterVariantSet(
-    const std::string& variantSetName,
-    const UsdUtilsRegisteredVariantSet::SelectionExportPolicy&
-        selectionExportPolicy)
-{
-    _regVarSets->emplace(variantSetName, selectionExportPolicy);
 }
 
 UsdPrim 
@@ -246,9 +200,9 @@ UsdUtilsGetPrimAtPathWithForwarding(const UsdStagePtr &stage,
     // If the given path refers to a prim beneath an instance,
     // UsdStage::GetPrimAtPath will return an instance proxy
     // from which we can retrieve the corresponding prim in
-    // the prototype.
+    // the master.
     UsdPrim p = stage->GetPrimAtPath(path);
-    return (p && p.IsInstanceProxy()) ? p.GetPrimInPrototype() : p;
+    return (p && p.IsInstanceProxy()) ? p.GetPrimInMaster() : p;
 }
 
 UsdPrim 
@@ -289,14 +243,14 @@ UsdUtilsUninstancePrimAtPath(const UsdStagePtr &stage,
     return p;
 }
 
-const TfToken& UsdUtilsGetPrimaryUVSetName()
+TfToken UsdUtilsGetPrimaryUVSetName()
 {
-    return _tokens->st;
+    return TfToken("st");
 }
 
-const TfToken& UsdUtilsGetPrefName()
+TfToken UsdUtilsGetPrefName()
 {
-    return _tokens->pref;
+    return TfToken("pref");
 }
 
 using _TokenToTokenMap = TfHashMap<TfToken, TfToken, TfToken::HashFunctor>;

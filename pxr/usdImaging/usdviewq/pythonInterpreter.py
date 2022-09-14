@@ -21,14 +21,10 @@
 # KIND, either express or implied. See the Apache License for the specific
 # language governing permissions and limitations under the Apache License.
 #
-
-# pylint: disable=dict-keys-not-iterating
-
 from __future__ import print_function
 
 from pxr import Tf
 
-from .common import DefaultFontFamily
 from .qt import QtCore, QtGui, QtWidgets
 from .usdviewApi import UsdviewApi
 
@@ -674,7 +670,7 @@ class View(QtWidgets.QTextEdit):
 
     def ResetCharFormat(self):
         charFormat = QtGui.QTextCharFormat()
-        charFormat.setFontFamily(DefaultFontFamily.MONOSPACE_FONT_FAMILY)
+        charFormat.setFontFamily('monospace')
         self.setCurrentCharFormat(charFormat)
 
     def _PositionInInputArea(self, position):

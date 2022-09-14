@@ -48,10 +48,6 @@ TF_REGISTRY_FUNCTION(TfType)
     TfType::Define<
         UsdNotice::ObjectsChanged,
         TfType::Bases<UsdNotice::StageNotice> >();
-
-    TfType::Define<
-        UsdNotice::LayerMutingChanged,
-        TfType::Bases<UsdNotice::StageNotice> >();
 }
 
 
@@ -65,8 +61,6 @@ UsdNotice::StageNotice::~StageNotice() {}
 UsdNotice::StageContentsChanged::~StageContentsChanged() {}
 
 UsdNotice::StageEditTargetChanged::~StageEditTargetChanged() {}
-
-UsdNotice::LayerMutingChanged::~LayerMutingChanged() {}
 
 TfTokenVector 
 UsdNotice::ObjectsChanged::PathRange::const_iterator::GetChangedFields() const

@@ -24,6 +24,7 @@
 #include "pxr/imaging/hdx/task.h"
 #include "pxr/imaging/hgi/hgi.h"
 #include "pxr/imaging/hgi/tokens.h"
+#include "pxr/imaging/hd/tokens.h"
 #include "pxr/imaging/hdx/tokens.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -34,7 +35,9 @@ HdxTask::HdxTask(SdfPath const& id)
 {
 }
 
-HdxTask::~HdxTask() = default;
+HdxTask::~HdxTask()
+{
+}
 
 bool
 HdxTask::IsConverged() const

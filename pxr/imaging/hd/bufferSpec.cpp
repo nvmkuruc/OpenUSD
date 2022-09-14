@@ -24,7 +24,7 @@
 #include "pxr/imaging/hd/bufferSpec.h"
 #include "pxr/imaging/hd/perfLog.h"
 
-#include "pxr/base/tf/hash.h"
+#include <boost/functional/hash.hpp>
 
 #include <iostream>
 
@@ -84,7 +84,12 @@ HdBufferSpec::ComputeDifference(HdBufferSpecVector const &specs1,
 size_t
 HdBufferSpec::Hash() const
 {
-    return TfHash()(*this);
+    size_t hash = 0;
+    boost::hash_combine(hash, name.Hash());
+    boost::hash_combine(hash, (size_t) tupleType.type);
+    boost::hash_combine(hash, tupleType.count);
+
+    return hash;
 }
 
 void

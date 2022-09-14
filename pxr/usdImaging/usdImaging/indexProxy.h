@@ -89,6 +89,7 @@ public:
     USDIMAGING_API
     void InsertRprim(TfToken const& primType,
                      SdfPath const& cachePath,
+                     SdfPath const& parentPath,
                      UsdPrim const& usdPrim,
                      UsdImagingPrimAdapterSharedPtr adapter =
                         UsdImagingPrimAdapterSharedPtr());
@@ -109,6 +110,7 @@ public:
 
     USDIMAGING_API
     void InsertInstancer(SdfPath const& cachePath,
+                         SdfPath const& parentPath,
                          UsdPrim const& usdPrim,
                          UsdImagingPrimAdapterSharedPtr adapter =
                             UsdImagingPrimAdapterSharedPtr());
@@ -192,17 +194,6 @@ public:
     UsdImagingPrimAdapterSharedPtr GetMaterialAdapter(
         UsdPrim const& materialPrim);
 
-    // XXX: This is a workaround for some bugs in USD edit processing, and
-    // the weird use of HdPrimInfo by instanced prims. It removes the dependency
-    // between a hydra prim and whatever USD prim is in its primInfo, since this
-    // dependency is automatically inserted and for instanced prims will
-    // erroneously add a dependency between a hydra prototype and
-    // a USD instancer.
-    //
-    // Pending some refactoring, hopefully this API will disappear.
-    USDIMAGING_API
-    void RemovePrimInfoDependency(SdfPath const& cachePath);
-
 private:
     friend class UsdImagingDelegate;
 
@@ -230,10 +221,15 @@ private:
     // #nv begin #nv-gpu-skel
     USDIMAGING_API
     // nv end
-    UsdImagingDelegate::_HdPrimInfo*
-        _AddHdPrimInfo(SdfPath const& cachePath,
-                       UsdPrim const& usdPrim,
-                       UsdImagingPrimAdapterSharedPtr const& adapter);
+    bool _AddHdPrimInfo(SdfPath const& cachePath,
+                        UsdPrim const& usdPrim,
+                        UsdImagingPrimAdapterSharedPtr const& adapter);
+
+    // XXX: Workaround for some bugs in USD edit processing, and weird uses
+    // of HdPrimInfo by instanced prims.  Remove the dependency between
+    // a hydra prim and whatever USD prim is in its primInfo.
+    friend class UsdImagingGprimAdapter;
+    void _RemovePrimInfoDependency(SdfPath const& cachePath);
 
     USDIMAGING_API
     void _RemoveDependencies(SdfPath const& cachePath);

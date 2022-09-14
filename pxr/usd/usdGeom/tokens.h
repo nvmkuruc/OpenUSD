@@ -168,7 +168,7 @@ struct UsdGeomTokensType {
     const TfToken creaseSharpnesses;
     /// \brief "cross"
     /// 
-    /// Possible value for UsdGeomModelAPI::GetModelCardGeometryAttr(), Default value for UsdGeomModelAPI::GetModelCardGeometryAttr()
+    /// Possible value for UsdGeomModelAPI::GetModelCardGeometryAttr()
     const TfToken cross;
     /// \brief "cubic"
     /// 
@@ -202,10 +202,6 @@ struct UsdGeomTokensType {
     /// 
     /// UsdGeomSubset
     const TfToken elementType;
-    /// \brief "exposure"
-    /// 
-    /// UsdGeomCamera
-    const TfToken exposure;
     /// \brief "extent"
     /// 
     /// UsdGeomCone, UsdGeomCapsule, UsdGeomCylinder, UsdGeomSphere, UsdGeomCube, UsdGeomBoundable
@@ -258,10 +254,6 @@ struct UsdGeomTokensType {
     /// 
     /// Possible value for UsdGeomImageable::GetPurposeAttr()
     const TfToken guide;
-    /// \brief "guideVisibility"
-    /// 
-    /// UsdGeomVisibilityAPI
-    const TfToken guideVisibility;
     /// \brief "height"
     /// 
     /// UsdGeomCone, UsdGeomCapsule, UsdGeomCylinder
@@ -296,7 +288,7 @@ struct UsdGeomTokensType {
     const TfToken indices;
     /// \brief "inherited"
     /// 
-    /// Possible value for UsdGeomModelAPI::GetModelDrawModeAttr(), Default value for UsdGeomModelAPI::GetModelDrawModeAttr(), Possible value for UsdGeomVisibilityAPI::GetGuideVisibilityAttr(), Possible value for UsdGeomVisibilityAPI::GetProxyVisibilityAttr(), Default value for UsdGeomVisibilityAPI::GetProxyVisibilityAttr(), Possible value for UsdGeomVisibilityAPI::GetRenderVisibilityAttr(), Default value for UsdGeomVisibilityAPI::GetRenderVisibilityAttr(), Possible value for UsdGeomImageable::GetVisibilityAttr(), Default value for UsdGeomImageable::GetVisibilityAttr()
+    /// Possible value for UsdGeomImageable::GetVisibilityAttr(), Default value for UsdGeomImageable::GetVisibilityAttr()
     const TfToken inherited;
     /// \brief "interpolateBoundary"
     /// 
@@ -308,7 +300,7 @@ struct UsdGeomTokensType {
     const TfToken interpolation;
     /// \brief "invisible"
     /// 
-    /// Possible value for UsdGeomVisibilityAPI::GetGuideVisibilityAttr(), Default value for UsdGeomVisibilityAPI::GetGuideVisibilityAttr(), Possible value for UsdGeomVisibilityAPI::GetProxyVisibilityAttr(), Possible value for UsdGeomVisibilityAPI::GetRenderVisibilityAttr(), Possible value for UsdGeomImageable::GetVisibilityAttr()
+    /// Possible value for UsdGeomImageable::GetVisibilityAttr()
     const TfToken invisible;
     /// \brief "invisibleIds"
     /// 
@@ -382,14 +374,6 @@ struct UsdGeomTokensType {
     /// 
     /// Possible value for UsdGeomCamera::GetStereoRoleAttr(), Default value for UsdGeomCamera::GetStereoRoleAttr()
     const TfToken mono;
-    /// \brief "motion:blurScale"
-    /// 
-    /// UsdGeomMotionAPI
-    const TfToken motionBlurScale;
-    /// \brief "motion:nonlinearSampleCount"
-    /// 
-    /// UsdGeomMotionAPI
-    const TfToken motionNonlinearSampleCount;
     /// \brief "motion:velocityScale"
     /// 
     /// UsdGeomMotionAPI
@@ -498,10 +482,6 @@ struct UsdGeomTokensType {
     /// 
     /// UsdGeomImageable
     const TfToken proxyPrim;
-    /// \brief "proxyVisibility"
-    /// 
-    /// UsdGeomVisibilityAPI
-    const TfToken proxyVisibility;
     /// \brief "purpose"
     /// 
     /// UsdGeomImageable
@@ -518,10 +498,6 @@ struct UsdGeomTokensType {
     /// 
     /// Possible value for UsdGeomImageable::GetPurposeAttr()
     const TfToken render;
-    /// \brief "renderVisibility"
-    /// 
-    /// UsdGeomVisibilityAPI
-    const TfToken renderVisibility;
     /// \brief "right"
     /// 
     /// Possible value for UsdGeomCamera::GetStereoRoleAttr()
@@ -658,10 +634,6 @@ struct UsdGeomTokensType {
     /// 
     /// UsdGeomImageable
     const TfToken visibility;
-    /// \brief "visible"
-    /// 
-    /// Possible value for UsdGeomVisibilityAPI::GetGuideVisibilityAttr(), Possible value for UsdGeomVisibilityAPI::GetProxyVisibilityAttr(), Possible value for UsdGeomVisibilityAPI::GetRenderVisibilityAttr()
-    const TfToken visible;
     /// \brief "vKnots"
     /// 
     /// UsdGeomNurbsPatch

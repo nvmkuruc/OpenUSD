@@ -78,8 +78,10 @@ def _compareFiles(installedFiles, generatedFiles, configuration):
     return diffs
 
 def _copyGeneratedFiles(installedFiles, generatedFiles, diffs):
-    for generatedFile, installedFile in zip(generatedFiles, installedFiles):
-        baseName = basename(installedFile)
+    baseNames = list(map(basename, installedFiles))
+    for baseName, generatedFile, installedFile in zip(baseNames, 
+                                                      generatedFiles, 
+                                                      installedFiles):
         if baseName in diffs:
             print(('Changed: ' + baseName))
             print((diffs[baseName]))
@@ -116,7 +118,7 @@ def _runBisonAndFlexCommands(configuration):
     # generate all components of a flex/bison command, these
     # include the desired executables, flag settings 
     bisonFlags = lambda base: ['-d', '-p', base + 'Yy', '-o']
-    flexFlags  = lambda base: ['-P'+ base + "Yy", '-Cfe', '-o']
+    flexFlags  = lambda base: ['-P'+ base + "Yy", '-t']  
 
     bisonExecutable = configuration[BISON_EXE]
     flexExecutable  = configuration[FLEX_EXE]
@@ -128,17 +130,15 @@ def _runBisonAndFlexCommands(configuration):
 
     flexCommand  = lambda index: ([flexExecutable] 
                                   + flexFlags(base)
-                                  + [flexGenSources[index]]
                                   + [flexFiles[index]])
     
     for index, base in enumerate(bases):
         print('Running bison on %s' % (base + '.yy'))
-        print('    ', ' '.join(bisonCommand(index)))
         call(bisonCommand(index))
 
         print('Running flex on %s' % (base + '.ll'))
-        print('    ', ' '.join(flexCommand(index)))
-        call(flexCommand(index))
+        with open(flexGenSources[index], 'w') as outputFile:
+            call(flexCommand(index), stdout=outputFile)
 
     # prepend license header to all generated files.
     licenseText = '\n'.join([

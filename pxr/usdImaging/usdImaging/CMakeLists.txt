@@ -27,25 +27,14 @@ pxr_library(usdImaging
     PUBLIC_CLASSES
         adapterRegistry
         collectionCache
-        dataSourceAttribute
-        dataSourceBasisCurves
-        dataSourceCamera
-        dataSourceGprim
-        dataSourceMesh
-        dataSourcePoints
-        dataSourcePrim
-        dataSourcePrimvars
-        dataSourceRelationship
-        dataSourceStageGlobals
-        dataSourceVolume
         debugCodes
         delegate
         indexProxy
         materialParamUtils
         resolvedAttributeCache
         instancerContext
-        stageSceneIndex
         tokens
+        valueCache
         basisCurvesAdapter
         capsuleAdapter
         cameraAdapter
@@ -58,7 +47,6 @@ pxr_library(usdImaging
         distantLightAdapter
         domeLightAdapter
         fieldAdapter
-        geometryLightAdapter
         gprimAdapter
         hermiteCurvesAdapter
         implicitSurfaceMeshUtils
@@ -69,13 +57,9 @@ pxr_library(usdImaging
         meshAdapter
         nurbsCurvesAdapter
         nurbsPatchAdapter
-        pluginLightAdapter
-        pluginLightFilterAdapter
         pointsAdapter
         pointInstancerAdapter
-        portalLightAdapter
         primAdapter
-        primvarDescCache
         rectLightAdapter
         sphereAdapter
         sphereLightAdapter
@@ -92,6 +76,18 @@ pxr_library(usdImaging
 )
 
 # #nv begin #fast-updates
+pxr_build_test(testUsdImagingFastUpdates
+    LIBRARIES
+        trace
+        sdf
+        hd
+        usd
+        usdImaging
+        ${GLEW_LIBRARY}
+    CPPFILES
+        testenv/testUsdImagingFastUpdates.cpp
+)
+
 pxr_build_test(testUsdImagingPopulate_Perf
     LIBRARIES
         trace
@@ -102,6 +98,10 @@ pxr_build_test(testUsdImagingPopulate_Perf
         ${GLEW_LIBRARY}
     CPPFILES
         testenv/testUsdImagingPopulate_Perf.cpp
+)
+
+pxr_register_test(testUsdImagingFastUpdates
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdImagingFastUpdates"
 )
 
 pxr_register_test(testUsdImagingPopulate_Perf

@@ -32,8 +32,8 @@ using namespace boost::python;
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-// Put this in the pxr namespace so that we can declare it a friend in
-// anyWeakPtr.h
+// put this in the presto namespace so that we can declare it a friend in
+// AnyweakPtr.h
 
 object Tf_GetPythonObjectFromAnyWeakPtr(TfAnyWeakPtr const &self) {
     return self._GetPythonObject();

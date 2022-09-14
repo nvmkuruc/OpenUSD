@@ -29,17 +29,16 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-class HdPrmanLoaderRendererPlugin final : public HdRendererPlugin 
-{
+class HdPrmanLoaderRendererPlugin final : public HdRendererPlugin {
 public:
     HdPrmanLoaderRendererPlugin();
     virtual ~HdPrmanLoaderRendererPlugin();
 
-    HdRenderDelegate *CreateRenderDelegate() override;
-    HdRenderDelegate *CreateRenderDelegate(
+    virtual HdRenderDelegate *CreateRenderDelegate() override;
+    virtual HdRenderDelegate *CreateRenderDelegate(
         HdRenderSettingsMap const& settingsMap) override;
-    void DeleteRenderDelegate(HdRenderDelegate *) override;
-    bool IsSupported() const override;
+    virtual void DeleteRenderDelegate(HdRenderDelegate *) override;
+    virtual bool IsSupported() const override;
 
 private:
     // This class does not support copying.

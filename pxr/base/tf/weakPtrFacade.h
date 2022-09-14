@@ -211,11 +211,11 @@ public:
     
     DataType *operator -> () const {
         DataType *ptr = _FetchPointer();
-        if (ptr) {
+        if (ARCH_LIKELY(ptr)) {
             return ptr;
         }
-        Tf_PostNullSmartPtrDereferenceFatalError(
-            TF_CALL_CONTEXT, typeid(Derived).name());
+        static const TfCallContext ctx(TF_CALL_CONTEXT);
+        Tf_PostNullSmartPtrDereferenceFatalError(ctx, typeid(Derived));
     }
 
     DataType &operator * () const {

@@ -33,7 +33,6 @@
 #include "pxr/usd/usdMtlx/reader.h"
 #include "pxr/usd/usdMtlx/utils.h"
 #include "pxr/usd/usdShade/connectableAPI.h"
-#include "pxr/usd/usdShade/nodeDefAPI.h"
 #include "pxr/usd/usdShade/shader.h"
 
 #include <MaterialXCore/Document.h>
@@ -120,10 +119,12 @@ UsdShadeShader _GetSurfaceSource(UsdShadeMaterial const &mtlxMaterial)
 {
     UsdShadeOutput output = mtlxMaterial.GetOutput(_tokens->mtlxSurface);
     if (output) {
-        UsdShadeAttributeVector valueAttrs =
-            UsdShadeUtils::GetValueProducingAttributes(
-                output, /*shaderOutputsOnly*/true);
-        return UsdShadeShader(valueAttrs[0].GetPrim());
+        UsdShadeConnectableAPI source;
+        TfToken sourceName;
+        UsdShadeAttributeType sourceType;
+        if (output.GetConnectedSource(&source, &sourceName, &sourceType)) {
+            return UsdShadeShader(source.GetPrim());
+        }
     }
     return UsdShadeShader();
 }
@@ -174,14 +175,16 @@ UsdBakeMtlxBakeMaterial(
 
     // Convert to HdMaterialNetwork
     HdMaterialNetworkMap networkMap;
+    const TfTokenVector mtlxVector{_tokens->mtlx};
     UsdImagingBuildHdMaterialNetworkFromTerminal(
-        mtlxShader.GetPrim(), _tokens->surface, {_tokens->mtlx},
-        {_tokens->mtlx}, &networkMap, UsdTimeCode());
+        mtlxShader.GetPrim(), _tokens->surface, mtlxVector,
+        &networkMap, UsdTimeCode(), &mtlxVector);
 
     // Convert to HdMaterialNetwork2
+    HdMaterialNetwork2 network2;
     bool isVolume = false;
-    const HdMaterialNetwork2 network2 =
-        HdConvertToHdMaterialNetwork2(networkMap, &isVolume);
+    HdMaterialNetwork2ConvertFromHdMaterialNetworkMap(
+        networkMap, &network2, &isVolume);
     if (isVolume) {
         // Not supported
         return std::string();

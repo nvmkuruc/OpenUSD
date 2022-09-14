@@ -22,15 +22,15 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/imaging/hdSt/renderBuffer.h"
-
-#include "pxr/imaging/hdSt/dynamicUvTextureObject.h"
 #include "pxr/imaging/hdSt/hgiConversions.h"
-#include "pxr/imaging/hdSt/resourceRegistry.h"
+#include "pxr/imaging/hdSt/dynamicUvTextureObject.h"
 #include "pxr/imaging/hdSt/subtextureIdentifier.h"
-#include "pxr/imaging/hdSt/tokens.h"
+#include "pxr/imaging/hdSt/resourceRegistry.h"
 #include "pxr/imaging/hd/aov.h"
-#include "pxr/imaging/hd/sceneDelegate.h"
 #include "pxr/imaging/hd/tokens.h"
+#include "pxr/imaging/hgi/blitCmds.h"
+#include "pxr/imaging/hgi/blitCmdsOps.h"
+#include "pxr/imaging/hgi/texture.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -38,10 +38,11 @@ static
 HgiTextureUsage _GetTextureUsage(HdFormat format, TfToken const &name)
 {
     if (HdAovHasDepthSemantic(name)) {
+        if (format == HdFormatFloat32UInt8) {
+            return HgiTextureUsageBitsDepthTarget |
+                   HgiTextureUsageBitsStencilTarget;
+        }
         return HgiTextureUsageBitsDepthTarget;
-    } else if (HdAovHasDepthStencilSemantic(name)) {
-        return HgiTextureUsageBitsDepthTarget |
-               HgiTextureUsageBitsStencilTarget;
     }
 
     return HgiTextureUsageBitsColorTarget;
@@ -52,31 +53,12 @@ HdStRenderBuffer::HdStRenderBuffer(
     : HdRenderBuffer(id)
     , _resourceRegistry(resourceRegistry)
     , _format(HdFormatInvalid)
-    , _msaaSampleCount(4)
     , _mappers(0)
     , _mappedBuffer()
 {
 }
 
 HdStRenderBuffer::~HdStRenderBuffer() = default;
-
-void
-HdStRenderBuffer::Sync(HdSceneDelegate *sceneDelegate,
-                       HdRenderParam *renderParam,
-                       HdDirtyBits *dirtyBits)
-{
-    // Invoke base class processing for the DirtyDescriptor bit after pulling
-    // the MSAA sample count, which is authored for consumption by Storm alone.
-    if (*dirtyBits & DirtyDescription) {
-        VtValue val = sceneDelegate->Get(GetId(),
-                                HdStRenderBufferTokens->stormMsaaSampleCount);
-        if (val.IsHolding<uint32_t>()) {
-            _msaaSampleCount = val.UncheckedGet<uint32_t>();
-        }
-    }
-
-    HdRenderBuffer::Sync(sceneDelegate, renderParam, dirtyBits);
-}
 
 HdStTextureIdentifier
 HdStRenderBuffer::GetTextureIdentifier(const bool multiSampled)
@@ -109,20 +91,6 @@ _GetDebugName(const HdStDynamicUvTextureObjectSharedPtr &textureObject)
     return textureObject->GetTextureIdentifier().GetFilePath().GetString();
 }
 
-static
-void
-_CreateTexture(
-    HdStDynamicUvTextureObjectSharedPtr const &textureObject,
-    const HgiTextureDesc &desc)
-{
-    HgiTextureHandle const texture = textureObject->GetTexture();
-    if (texture && texture->GetDescriptor() == desc) {
-        return;
-    }
-
-    textureObject->CreateTexture(desc);
-}
-
 bool
 HdStRenderBuffer::Allocate(
     GfVec3i const& dimensions,
@@ -152,7 +120,7 @@ HdStRenderBuffer::Allocate(
     
     if (multiSampled) {
         if (!_textureMSAAObject) {
-            // Allocate texture object if necessary
+            // Allocate texture object if necesssary
             _textureMSAAObject =
                 std::dynamic_pointer_cast<HdStDynamicUvTextureObject>(
                     _resourceRegistry->AllocateTextureObject(
@@ -177,14 +145,14 @@ HdStRenderBuffer::Allocate(
     texDesc.sampleCount = HgiSampleCount1;
 
     // Allocate actual GPU resource
-    _CreateTexture(_textureObject, texDesc);
+    _textureObject->CreateTexture(texDesc);
 
     if (multiSampled) {
         texDesc.debugName = _GetDebugName(_textureMSAAObject);
-        texDesc.sampleCount = HgiSampleCount(_msaaSampleCount);
+        texDesc.sampleCount = HgiSampleCount4;
 
         // Allocate actual GPU resource
-        _CreateTexture(_textureMSAAObject, texDesc);
+        _textureMSAAObject->CreateTexture(texDesc);
     }
 
     return true;
@@ -207,6 +175,20 @@ HdStRenderBuffer::Map()
     }
 
     HgiTextureHandle const texture = _textureObject->GetTexture();
+    if (!texture) {
+        return nullptr;
+    }
+
+    const HgiTextureDesc &desc = texture->GetDescriptor();
+    const size_t dataByteSize =
+        desc.dimensions[0] * desc.dimensions[1] * desc.dimensions[2] *
+        HgiDataSizeOfFormat(desc.format);
+    
+    if (dataByteSize == 0) {
+        return nullptr;
+    }
+
+    _mappedBuffer.resize(dataByteSize);
 
     if (!TF_VERIFY(_resourceRegistry)) {
         return nullptr;
@@ -217,10 +199,25 @@ HdStRenderBuffer::Map()
         return nullptr;
     }
 
-    size_t size = 0;
-    _mappedBuffer = HdStTextureUtils::HgiTextureReadback(hgi, texture, &size);
+    // Use blit work to record resource copy commands.
+    HgiBlitCmdsUniquePtr blitCmds = hgi->CreateBlitCmds();
 
-    return _mappedBuffer.get();
+    {
+        HgiTextureGpuToCpuOp copyOp;
+        copyOp.gpuSourceTexture = texture;
+        copyOp.sourceTexelOffset = GfVec3i(0);
+        copyOp.mipLevel = 0;
+        copyOp.startLayer = 0;
+        copyOp.numLayers = 1;
+        copyOp.cpuDestinationBuffer = _mappedBuffer.data();
+        copyOp.destinationByteOffset = 0;
+        copyOp.destinationBufferByteSize = dataByteSize;
+        blitCmds->CopyTextureGpuToCpu(copyOp);
+    }
+        
+    hgi->SubmitCmds(blitCmds.get());
+
+    return _mappedBuffer.data();
 }
 
 void
@@ -229,8 +226,8 @@ HdStRenderBuffer::Unmap()
     // XXX We could consider clearing _mappedBuffer here to free RAM.
     //     For now we assume that Map() will be called frequently so we prefer
     //     to avoid the cost of clearing the buffer over memory savings.
-    // _mappedBuffer.reset(nullptr);
-
+    // _mappedBuffer.clear();
+    // _mappedBuffer.shrink_to_fit();
     _mappers.fetch_sub(1);
 }
 
@@ -266,12 +263,6 @@ bool
 HdStRenderBuffer::IsMultiSampled() const
 {
     return bool(_textureMSAAObject);
-}
-
-uint32_t
-HdStRenderBuffer::GetMSAASampleCount() const
-{
-    return _msaaSampleCount;
 }
 
 static

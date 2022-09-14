@@ -32,8 +32,6 @@
 #include "pxr/base/tf/token.h"
 #include "pxr/usd/sdr/declare.h"
 
-#include <limits>
-
 PXR_NAMESPACE_OPEN_SCOPE
 
 /// \namespace ShaderMetadataHelpers
@@ -42,46 +40,43 @@ PXR_NAMESPACE_OPEN_SCOPE
 ///
 namespace ShaderMetadataHelpers
 {
-    /// Determines if the given metadatum in the metadata dictionary has a
+    /// Determines if the given property in the metadata dictionary has a
     /// truthy value. All values are considered to be true except the following
-    /// (case-insensitive): '0', 'false', and 'f'. The absence of `key`
+    /// (case-insensitive): '0', 'false', and 'f'. The absence of `propName`
     /// in the metadata also evaluates to false.
     SDR_API
     bool
-    IsTruthy(const TfToken& key, const NdrTokenMap& metadata);
+    IsTruthy(const TfToken& propName, const NdrTokenMap& metadata);
 
-    /// Extracts the string value from the given metadatum if it exists,
+    /// Extracts the string value from the given property.
+    SDR_API
+    const std::string&
+    StringVal(const TfToken& propName, const NdrTokenMap& metadata);
+
+    /// Extracts the string value from the given property if it exists,
     /// otherwise returns \p defaultValue.
     SDR_API
-    std::string
-    StringVal(const TfToken& key, const NdrTokenMap& metadata,
-              const std::string& defaultValue = std::string());
+    const std::string&
+    StringVal(const TfToken& propName, const NdrTokenMap& metadata,
+              const std::string& defaultValue);
 
-    /// Extracts the tokenized value from the given metadatum if it exists,
-    /// otherwise returns \p defaultValue.
+    /// Extracts the tokenized value from the given property. An empty token is
+    /// returned if the property does not exist.
     SDR_API
     TfToken
-    TokenVal(const TfToken& key, const NdrTokenMap& metadata,
+    TokenVal(const TfToken& propName, const NdrTokenMap& metadata,
              const TfToken& defaultValue = TfToken());
 
-    /// Extracts the int value from the given metadatum if it exists and is a
-    /// valid integer value, otherwise returns \p default value.
-    SDR_API
-    int
-    IntVal(const TfToken& key, const NdrTokenMap& metadata,
-           int defaultValue = std::numeric_limits<int>::max());
-
-    /// Extracts a vector of strings from the given metadatum. An empty vector
-    /// is returned if the metadatum does not exist.
+    /// Extracts a vector of strings from the given property.
     SDR_API
     NdrStringVec
-    StringVecVal(const TfToken& key, const NdrTokenMap& metadata);
+    StringVecVal(const TfToken& propName, const NdrTokenMap& metadata);
 
-    /// Extracts a vector of tokenized values from the given metadatum. An empty
-    /// vector is returned if the metadatum does not exist.
+    /// Extracts a vector of tokenized values from the given property. An empty
+    /// vector is returned if the property does not exist.
     SDR_API
     NdrTokenVec
-    TokenVecVal(const TfToken& key, const NdrTokenMap& metadata);
+    TokenVecVal(const TfToken& propName, const NdrTokenMap& metadata);
 
     /// Extracts an "options" vector from the given string.
     SDR_API

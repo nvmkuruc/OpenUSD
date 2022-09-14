@@ -83,7 +83,7 @@ public:
 
     /// Destructor deletes the internal storage.
     HD_API
-    ~HdVtBufferSource() override;
+    ~HdVtBufferSource();
 
     /// Truncate the buffer to the given number of elements.
     /// If the VtValue contains too much data, this is a way to only forward
@@ -93,32 +93,32 @@ public:
     void Truncate(size_t numElements);
 
     /// Return the name of this buffer source.
-    TfToken const &GetName() const override {
+    virtual TfToken const &GetName() const override {
         return _name;
     }
 
     /// Returns the raw pointer to the underlying data.
-    void const* GetData() const override {
+    virtual void const* GetData() const override {
         return HdGetValueData(_value);
     }
 
     /// Returns the data type and count of this buffer source.
-    HdTupleType GetTupleType() const override {
+    virtual HdTupleType GetTupleType() const override {
         return _tupleType;
     }
 
     /// Returns the number of elements (e.g. VtVec3dArray().GetLength()) from
     /// the source array.
     HD_API
-    size_t GetNumElements() const override;
+    virtual size_t GetNumElements() const override;
 
     /// Add the buffer spec for this buffer source into given bufferspec vector.
-    void GetBufferSpecs(HdBufferSpecVector *specs) const override {
+    virtual void GetBufferSpecs(HdBufferSpecVector *specs) const override {
         specs->push_back(HdBufferSpec(_name, _tupleType));
     }
 
     /// Prepare the access of GetData().
-    bool Resolve() override {
+    virtual bool Resolve() override {
         if (!_TryLock()) return false;
 
         // nothing. just marks as resolved, and returns _data in GetData()
@@ -128,7 +128,7 @@ public:
 
 protected:
     HD_API
-    bool _CheckValid() const override;
+    virtual bool _CheckValid() const override;
 
 private:
     // Constructor helper.

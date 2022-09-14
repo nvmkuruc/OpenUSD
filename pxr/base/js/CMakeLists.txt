@@ -54,9 +54,6 @@ pxr_library(js
         rapidjson/stream.h
         rapidjson/stringbuffer.h
         rapidjson/writer.h
-
-    DOXYGEN_FILES
-        overview.dox
 )
 
 pxr_build_test(testJsIO

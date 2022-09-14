@@ -21,6 +21,14 @@
 # KIND, either express or implied. See the Apache License for the specific
 # language governing permissions and limitations under the Apache License.
 #
+from . import _usdMtlx
 from pxr import Tf
-Tf.PreparePythonModule()
+Tf.PrepareModule(_usdMtlx, locals())
 del Tf
+
+try:
+    from . import __DOC
+    __DOC.Execute(locals())
+    del __DOC
+except Exception:
+    pass

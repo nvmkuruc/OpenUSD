@@ -34,8 +34,7 @@
 
 shader UsdUVTexture
 [[ 
-    string category = "generator",
-    string role = "texture",
+    string category="generator"
 ]]
 (
     // Details : Image source
@@ -58,10 +57,7 @@ shader UsdUVTexture
     ]],
 
     // Details : Fallback value used when no texture is connected.
-    float fallback[4] = {0.0, 0.0, 0.0, 1.0}
-    [[
-        string __SDR__defaultinput = "1",
-    ]],
+    float fallback[4] = {0.0, 0.0, 0.0, 1.0},
 
     // Details : Scale to be applied to all components of the texture.
     //            value * scale + bias

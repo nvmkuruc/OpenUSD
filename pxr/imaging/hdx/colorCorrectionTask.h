@@ -53,23 +53,23 @@ public:
     HdxColorCorrectionTask(HdSceneDelegate* delegate, SdfPath const& id);
 
     HDX_API
-    ~HdxColorCorrectionTask() override;
+    virtual ~HdxColorCorrectionTask();
 
     /// Prepare the tasks resources
     HDX_API
-    void Prepare(HdTaskContext* ctx,
-                 HdRenderIndex* renderIndex) override;
+    virtual void Prepare(HdTaskContext* ctx,
+                         HdRenderIndex* renderIndex) override;
 
     /// Execute the color correction task
     HDX_API
-    void Execute(HdTaskContext* ctx) override;
+    virtual void Execute(HdTaskContext* ctx) override;
 
 protected:
     /// Sync the render pass resources
     HDX_API
-    void _Sync(HdSceneDelegate* delegate,
-               HdTaskContext* ctx,
-               HdDirtyBits* dirtyBits) override;
+    virtual void _Sync(HdSceneDelegate* delegate,
+                       HdTaskContext* ctx,
+                       HdDirtyBits* dirtyBits) override;
 
 private:
     HdxColorCorrectionTask() = delete;
@@ -94,9 +94,6 @@ private:
     // Utility to create a pipeline
     bool _CreatePipeline(HgiTextureHandle const& aovTexture);
 
-    // Utility to create a texture sampler
-    bool _CreateSampler();
-
     // Apply color correction to the currently bound framebuffer.
     void _ApplyColorCorrection(HgiTextureHandle const& aovTexture);
 
@@ -110,7 +107,6 @@ private:
     HgiBufferHandle _indexBuffer;
     HgiBufferHandle _vertexBuffer;
     HgiTextureHandle _texture3dLUT;
-    HgiSamplerHandle _sampler;
     HgiShaderProgramHandle _shaderProgram;
     HgiResourceBindingsHandle _resourceBindings;
     HgiGraphicsPipelineHandle _pipeline;
@@ -121,8 +117,6 @@ private:
     std::string _colorspaceOCIO;
     std::string _looksOCIO;
     int _lut3dSizeOCIO;
-
-    float _screenSize[2];
 
     TfToken _aovName;
 };

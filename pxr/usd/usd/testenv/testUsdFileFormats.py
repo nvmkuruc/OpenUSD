@@ -226,10 +226,6 @@ class TestUsdFileFormats(unittest.TestCase):
         assert s.GetPrimAtPath('/foo')
         assert s.GetPrimAtPath('/foo/bar')
         assert s.GetPrimAtPath('/foo/bar/baz')
-        s.GetRootLayer().Save(force=True)
-        assert s.GetPrimAtPath('/foo')
-        assert s.GetPrimAtPath('/foo/bar')
-        assert s.GetPrimAtPath('/foo/bar/baz')
 
 if __name__ == "__main__":
     unittest.main()

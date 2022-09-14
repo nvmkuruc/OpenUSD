@@ -4,7 +4,6 @@ set(PXR_PACKAGE hdMtlx)
 pxr_library(hdMtlx
     LIBRARIES
         gf
-        hd
         sdf
         sdr
         tf

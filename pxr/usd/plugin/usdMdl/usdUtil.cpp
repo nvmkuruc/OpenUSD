@@ -8,7 +8,7 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-int UsdShadeMaterialToMdl(const UsdShadeMaterial & usdMaterial, const char * mdlMaterialInstanceName)
+USDMDL_API int UsdShadeMaterialToMdl(const UsdShadeMaterial & usdMaterial, const char * mdlMaterialInstanceName)
 {
     return ConvertUsdMaterialToMdl(usdMaterial, mi::neuraylib::Mdl::Get().GetNeuray(), mdlMaterialInstanceName);
 }

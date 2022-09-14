@@ -29,14 +29,40 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 
 HdStDrawTargetRenderPassState::HdStDrawTargetRenderPassState()
- : _depthPriority(HdDepthPriorityNearest)
+ : _colorClearValues()
+ , _depthClearValue(1.0f)
+ , _depthPriority(HdDepthPriorityNearest)
  , _cameraId()
  , _rprimCollection()
  , _rprimCollectionVersion(1) // Clients start at 0
 {
+
 }
 
-HdStDrawTargetRenderPassState::~HdStDrawTargetRenderPassState() = default;
+HdStDrawTargetRenderPassState::~HdStDrawTargetRenderPassState()
+{
+}
+
+
+void
+HdStDrawTargetRenderPassState::SetNumColorAttachments(size_t numAttachments)
+{
+    _colorClearValues.resize(numAttachments);
+}
+
+void
+HdStDrawTargetRenderPassState::SetColorClearValue(size_t attachmentIdx,
+                                           const VtValue &clearValue)
+{
+    TF_DEV_AXIOM(attachmentIdx < _colorClearValues.size());
+    _colorClearValues[attachmentIdx] = clearValue;
+}
+
+void
+HdStDrawTargetRenderPassState::SetDepthClearValue(float clearValue)
+{
+    _depthClearValue = clearValue;
+}
 
 void
 HdStDrawTargetRenderPassState::SetDepthPriority(HdDepthPriority priority)

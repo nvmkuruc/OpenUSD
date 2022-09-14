@@ -21,6 +21,8 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/imaging/glf/glew.h"
+
 #include "pxr/imaging/plugin/hdEmbree/instancer.h"
 
 #include "pxr/imaging/plugin/hdEmbree/sampler.h"
@@ -38,8 +40,9 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 
 HdEmbreeInstancer::HdEmbreeInstancer(HdSceneDelegate* delegate,
-                                     SdfPath const& id)
-    : HdInstancer(delegate, id)
+                                     SdfPath const& id,
+                                     SdfPath const &parentId)
+    : HdInstancer(delegate, id, parentId)
 {
 }
 
@@ -52,39 +55,46 @@ HdEmbreeInstancer::~HdEmbreeInstancer()
 }
 
 void
-HdEmbreeInstancer::Sync(HdSceneDelegate* delegate,
-                        HdRenderParam* renderParam,
-                        HdDirtyBits* dirtyBits)
-{
-    _UpdateInstancer(delegate, dirtyBits);
-
-    if (HdChangeTracker::IsAnyPrimvarDirty(*dirtyBits, GetId())) {
-        _SyncPrimvars(delegate, *dirtyBits);
-    }
-}
-
-void
-HdEmbreeInstancer::_SyncPrimvars(HdSceneDelegate* delegate,
-                                 HdDirtyBits dirtyBits)
+HdEmbreeInstancer::_SyncPrimvars()
 {
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
 
+    HdChangeTracker &changeTracker = 
+        GetDelegate()->GetRenderIndex().GetChangeTracker();
     SdfPath const& id = GetId();
 
-    HdPrimvarDescriptorVector primvars =
-        delegate->GetPrimvarDescriptors(id, HdInterpolationInstance);
+    // Use the double-checked locking pattern to check if this instancer's
+    // primvars are dirty.
+    int dirtyBits = changeTracker.GetInstancerDirtyBits(id);
+    if (HdChangeTracker::IsAnyPrimvarDirty(dirtyBits, id)) {
+        std::lock_guard<std::mutex> lock(_instanceLock);
 
-    for (HdPrimvarDescriptor const& pv: primvars) {
-        if (HdChangeTracker::IsPrimvarDirty(dirtyBits, id, pv.name)) {
-            VtValue value = delegate->Get(id, pv.name);
-            if (!value.IsEmpty()) {
-                if (_primvarMap.count(pv.name) > 0) {
-                    delete _primvarMap[pv.name];
+        dirtyBits = changeTracker.GetInstancerDirtyBits(id);
+        if (HdChangeTracker::IsAnyPrimvarDirty(dirtyBits, id)) {
+
+            // If this instancer has dirty primvars, get the list of
+            // primvar names and then cache each one.
+
+            TfTokenVector primvarNames;
+            HdPrimvarDescriptorVector primvars = GetDelegate()
+                ->GetPrimvarDescriptors(id, HdInterpolationInstance);
+
+            for (HdPrimvarDescriptor const& pv: primvars) {
+                if (HdChangeTracker::IsPrimvarDirty(dirtyBits, id, pv.name)) {
+                    VtValue value = GetDelegate()->Get(id, pv.name);
+                    if (!value.IsEmpty()) {
+                        if (_primvarMap.count(pv.name) > 0) {
+                            delete _primvarMap[pv.name];
+                        }
+                        _primvarMap[pv.name] =
+                            new HdVtBufferSource(pv.name, value);
+                    }
                 }
-                _primvarMap[pv.name] =
-                    new HdVtBufferSource(pv.name, value);
             }
+
+            // Mark the instancer as clean
+            changeTracker.MarkInstancerClean(id);
         }
     }
 }
@@ -94,6 +104,8 @@ HdEmbreeInstancer::ComputeInstanceTransforms(SdfPath const &prototypeId)
 {
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
+
+    _SyncPrimvars();
 
     // The transforms for this level of instancer are computed by:
     // foreach(index : indices) {
@@ -133,8 +145,8 @@ HdEmbreeInstancer::ComputeInstanceTransforms(SdfPath const &prototypeId)
             GfVec4f quat;
             if (sampler.Sample(instanceIndices[i], &quat)) {
                 GfMatrix4d rotateMat(1);
-                rotateMat.SetRotate(GfQuatd(
-                    quat[0], quat[1], quat[2], quat[3]));
+                rotateMat.SetRotate(GfRotation(GfQuaternion(
+                    quat[0], GfVec3d(quat[1], quat[2], quat[3]))));
                 transforms[i] = rotateMat * transforms[i];
             }
         }

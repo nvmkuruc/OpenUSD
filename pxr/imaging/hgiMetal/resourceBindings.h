@@ -30,15 +30,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-/// Fixed indexes within the argument buffer for resource types.
-/// Chosen to be at the top of the range of indexs to not interfere
-/// with the vertex attributes.
-enum HgiMetalArgumentIndex {
-    HgiMetalArgumentIndexConstants = 27,
-    HgiMetalArgumentIndexSamplers = 28,
-    HgiMetalArgumentIndexTextures = 29,
-    HgiMetalArgumentIndexBuffers = 30,
-};
 
 ///
 /// \class HgiMetalResourceBindings
@@ -57,22 +48,10 @@ public:
 
     /// Binds the resources to GPU.
     HGIMETAL_API
-    void BindResources(HgiMetal *hgi,
-                       id<MTLRenderCommandEncoder> renderEncoder,
-                       id<MTLBuffer> argBuffer);
+    void BindResources(id<MTLRenderCommandEncoder> renderEncoder);
 
     HGIMETAL_API
-    void BindResources(HgiMetal *hgi,
-                       id<MTLComputeCommandEncoder> computeEncoder,
-                       id<MTLBuffer> argBuffer);
-    
-    HGIMETAL_API
-    static void SetConstantValues(
-        id<MTLBuffer> argumentBuffer,
-        HgiShaderStage stages,
-        uint32_t bindIndex,
-        uint32_t byteSize,
-        const void* data);
+    void BindResources(id<MTLComputeCommandEncoder> computeEncoder);
 
 private:
     HgiMetalResourceBindings() = delete;

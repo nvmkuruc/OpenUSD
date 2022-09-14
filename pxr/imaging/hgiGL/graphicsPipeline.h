@@ -31,7 +31,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-class HgiGL;
 
 /// \class HgiGLPipeline
 ///
@@ -51,15 +50,13 @@ protected:
     friend class HgiGL;
 
     HGIGL_API
-    HgiGLGraphicsPipeline(HgiGL const* hgi,
-                          HgiGraphicsPipelineDesc const& desc);
+    HgiGLGraphicsPipeline(HgiGraphicsPipelineDesc const& desc);
 
 private:
     HgiGLGraphicsPipeline() = delete;
     HgiGLGraphicsPipeline & operator=(const HgiGLGraphicsPipeline&) = delete;
     HgiGLGraphicsPipeline(const HgiGLGraphicsPipeline&) = delete;
 
-    HgiGL const *_hgi;
     uint32_t _vao;
 };
 

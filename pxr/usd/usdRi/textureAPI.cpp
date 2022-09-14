@@ -62,17 +62,8 @@ UsdRiTextureAPI::Get(const UsdStagePtr &stage, const SdfPath &path)
 
 
 /* virtual */
-UsdSchemaKind UsdRiTextureAPI::_GetSchemaKind() const
-{
-    return UsdRiTextureAPI::schemaKind;
-}
-
-/* static */
-bool
-UsdRiTextureAPI::CanApply(
-    const UsdPrim &prim, std::string *whyNot)
-{
-    return prim.CanApplyAPI<UsdRiTextureAPI>(whyNot);
+UsdSchemaType UsdRiTextureAPI::_GetSchemaType() const {
+    return UsdRiTextureAPI::schemaType;
 }
 
 /* static */

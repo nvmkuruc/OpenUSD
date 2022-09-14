@@ -25,7 +25,7 @@
 
 #include "pxr/imaging/glf/simpleLight.h"
 
-#include "pxr/imaging/garch/glApi.h"
+#include "pxr/imaging/garch/gl.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -40,7 +40,6 @@ GlfSimpleLight::GlfSimpleLight(GfVec4f const & position) :
     _spotFalloff(0.0),
     _attenuation(1.0, 0.0, 0.0),
     _isCameraSpaceLight(false),
-    _hasIntensity(true),
     _hasShadow(false),
     _shadowResolution(512),
     _shadowBias(0.0),
@@ -164,18 +163,6 @@ void
 GlfSimpleLight::SetAttenuation(GfVec3f const & attenuation)
 {
     _attenuation = attenuation;
-}
-
-void
-GlfSimpleLight::SetHasIntensity(bool hasIntensity)
-{
-    _hasIntensity = hasIntensity;
-}
-
-bool
-GlfSimpleLight::HasIntensity() const
-{
-    return _hasIntensity;
 }
 
 bool
@@ -309,35 +296,6 @@ GlfSimpleLight::SetDomeLightTextureFile(const SdfAssetPath &path)
     _domeLightTextureFile = path;
 }
 
-TfToken const &
-GlfSimpleLight::GetPostSurfaceIdentifier() const
-{
-    return _postSurfaceIdentifier;
-}
-
-std::string const &
-GlfSimpleLight::GetPostSurfaceShaderSource() const
-{
-    return _postSurfaceShaderSource;
-}
-
-
-VtUCharArray const &
-GlfSimpleLight::GetPostSurfaceShaderParams() const
-{
-    return _postSurfaceShaderParams;
-}
-
-void
-GlfSimpleLight::SetPostSurfaceParams(TfToken const & identifier,
-                                     std::string const & shaderSource,
-                                     VtUCharArray const & shaderParams)
-{
-    _postSurfaceIdentifier = identifier;
-    _postSurfaceShaderSource = shaderSource;
-    _postSurfaceShaderParams = shaderParams;
-}
-
 // -------------------------------------------------------------------------- //
 // VtValue requirements
 // -------------------------------------------------------------------------- //
@@ -353,7 +311,6 @@ GlfSimpleLight::operator==(const GlfSimpleLight& other) const
         &&  _spotCutoff == other._spotCutoff
         &&  _spotFalloff == other._spotFalloff
         &&  _attenuation == other._attenuation
-        &&  _hasIntensity == other._hasIntensity
         &&  _hasShadow == other._hasShadow
         &&  _shadowResolution == other._shadowResolution
         &&  _shadowBias == other._shadowBias
@@ -365,9 +322,6 @@ GlfSimpleLight::operator==(const GlfSimpleLight& other) const
         &&  _isCameraSpaceLight == other._isCameraSpaceLight
         &&  _isDomeLight == other._isDomeLight
         &&  _domeLightTextureFile == other._domeLightTextureFile
-        &&  _postSurfaceIdentifier == other._postSurfaceIdentifier
-        &&  _postSurfaceShaderSource == other._postSurfaceShaderSource
-        &&  _postSurfaceShaderParams == other._postSurfaceShaderParams
         &&  _id == other._id;
 }
 
@@ -387,7 +341,6 @@ std::ostream& operator<<(std::ostream& out, const GlfSimpleLight& v)
         << v._spotCutoff
         << v._spotFalloff
         << v._attenuation
-        << v._hasIntensity
         << v._hasShadow
         << v._shadowResolution
         << v._shadowBias
@@ -398,9 +351,6 @@ std::ostream& operator<<(std::ostream& out, const GlfSimpleLight& v)
         << v._isCameraSpaceLight
         << v._isDomeLight
         << v._domeLightTextureFile
-        << v._postSurfaceIdentifier
-        << v._postSurfaceShaderSource
-        << v._postSurfaceShaderParams
         << v._id;
     for (auto const& m : v._shadowMatrices) {
         out << m;

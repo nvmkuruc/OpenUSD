@@ -66,9 +66,6 @@ class TestSdfParsing(unittest.TestCase):
         # failures much quicker.
         testFiles = '''
         205_bad_assetPaths.sdf
-        204_really_empty.sdf
-        203_newlines.sdf
-        202_displayGroups.sdf
         201_format_specifiers_in_strings.sdf
         200_bad_emptyFile.sdf
         199_bad_colorSpace_metadata.sdf
@@ -231,24 +228,17 @@ class TestSdfParsing(unittest.TestCase):
         # 34_bad_relationship_duplicate_target_attr.sdf
 
         # Create a temporary file for diffs and choose where to get test data.
-        def CreateTempFile(name):
-            import tempfile
-            layerFileOut = tempfile.NamedTemporaryFile(
-                suffix='_' + name + '_testSdfParsing1.sdf', delete=False)
-            # Close the temporary file.  We only wanted a temporary file name
-            # and we'll open/close/remove this file once per test file.  On
-            # Unix this isn't necessary because holding a file open doesn't
-            # prevent unlinking it but on Windows we'll get access denied if
-            # we don't close our handle.
-            layerFileOut.close()
-            return layerFileOut
-        
-        layerFileOut = CreateTempFile('Export')
-        layerFileOut2 = CreateTempFile('ExportToString')
-        layerFileOut3 = CreateTempFile('MetadataOnly')
-
+        import tempfile
+        layerFileOut = tempfile.NamedTemporaryFile(suffix='testSdfParsing1.sdf', delete=False)
         layerDir = os.path.join(os.getcwd(), 'testSdfParsing.testenv')
         baselineDir = os.path.join(layerDir, 'baseline')
+
+        # Close the temporary file.  We only wanted a temporary file name
+        # and we'll open/close/remove this file once per test file.  On
+        # Unix this isn't necessary because holding a file open doesn't
+        # prevent unlinking it but on Windows we'll get access denied if
+        # we don't close our handle.
+        layerFileOut.close()
 
         print("LAYERDIR: %s"%layerDir)
 
@@ -317,24 +307,9 @@ class TestSdfParsing(unittest.TestCase):
             layer = Sdf.Layer.FindOrOpen(layerFile)
             self.assertTrue(layer is not None,
                             "failed to open @%s@" % layerFile)
-
-            metadataOnlyLayer = Sdf.Layer.OpenAsAnonymous(
-                layerFile, metadataOnly=True)
-            self.assertTrue(metadataOnlyLayer is not None,
-                            "failed to open @%s@ for metadata only" % layerFile)
-
             print('\tWriting...')
             try:
-                # Use Sdf.Layer.Export to write out the layer contents directly.
-                self.assertTrue(layer.Export( layerFileOut.name ))
-
-                # Use Sdf.Layer.ExportToString and write out the returned layer
-                # string to a file.
-                with _open(layerFileOut2.name, 'w') as f:
-                    f.write(layer.ExportToString())
-
-                self.assertTrue(metadataOnlyLayer.Export(layerFileOut3.name))
-                    
+                self.assertTrue(layer.Export( layerFileOut.name ))                    
             except Exception as e:
                 if '_badwrite_' in file:
                     # Write errors should always be Tf.ErrorExceptions
@@ -384,13 +359,9 @@ class TestSdfParsing(unittest.TestCase):
                         print(line, end=' ')
                     sys.exit(1)
 
-            doDiff(layerFileOut.name, expectedFile)
-            doDiff(layerFileOut2.name, expectedFile)
-            doDiff(layerFileOut3.name, expectedFile, metadataOnly=True)
-            
             print('\tPassed')
 
-        removeFiles(layerFileOut.name, layerFileOut2.name)
+        removeFiles(layerFileOut.name)
 
         self.assertEqual(None, Sdf.Layer.FindOrOpen(''))
 

@@ -29,7 +29,6 @@
 #include "pxr/base/tf/fileUtils.h"
 #include "pxr/base/tf/staticData.h"
 #include "pxr/base/tf/stringUtils.h"
-#include "pxr/imaging/hio/imageRegistry.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -64,25 +63,9 @@ HdxPackageFullscreenShader()
 }
 
 TfToken
-HdxPackageRenderPassColorShader()
+HdxPackageRenderPassShader()
 {
-    static TfToken shader = _GetShaderPath("renderPassColorShader.glslfx");
-    return shader;
-}
-
-TfToken
-HdxPackageRenderPassColorAndSelectionShader()
-{
-    static TfToken shader =
-        _GetShaderPath("renderPassColorAndSelectionShader.glslfx");
-    return shader;
-}
-
-TfToken
-HdxPackageRenderPassColorWithOccludedSelectionShader()
-{
-    static TfToken shader =
-        _GetShaderPath("renderPassColorWithOccludedSelectionShader.glslfx");
+    static TfToken shader = _GetShaderPath("renderPassShader.glslfx");
     return shader;
 }
 
@@ -122,13 +105,6 @@ HdxPackageColorCorrectionShader()
 }
 
 TfToken
-HdxPackageVisualizeAovShader()
-{
-    static TfToken shader = _GetShaderPath("visualize.glslfx");
-    return shader;
-}
-
-TfToken
 HdxPackageRenderPassOitShader()
 {
     static TfToken shader = _GetShaderPath("renderPassOitShader.glslfx");
@@ -164,22 +140,9 @@ HdxPackageOutlineShader()
 }
 
 TfToken
-HdxPackageSkydomeShader()
-{
-    static TfToken shader = _GetShaderPath("skydome.glslfx");
-    return shader;
-}
-
-TfToken
 HdxPackageDefaultDomeLightTexture()
 {
-    // Use the tex version of the Domelight's environment map if supported
-    HioImageRegistry &hioImageReg = HioImageRegistry::GetInstance();
-    static bool useTex = hioImageReg.IsSupportedImageFile("StinsonBeach.tex");
-
-    static TfToken domeLightTexture = (useTex)
-        ? _GetTexturePath("StinsonBeach.tex")
-        : _GetTexturePath("StinsonBeach.hdr");
+    static TfToken domeLightTexture = _GetTexturePath("StinsonBeach.exr");
     return domeLightTexture;
 }
 

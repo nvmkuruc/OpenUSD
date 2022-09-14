@@ -78,10 +78,8 @@ bool
 UsdContrivedPublicMultipleApplyAPI::IsSchemaPropertyBaseName(const TfToken &baseName)
 {
     static TfTokenVector attrsAndRels = {
-        UsdSchemaRegistry::GetMultipleApplyNameTemplateBaseName(
-            UsdContrivedTokens->testo_MultipleApplyTemplate_TestAttrOne),
-        UsdSchemaRegistry::GetMultipleApplyNameTemplateBaseName(
-            UsdContrivedTokens->testo_MultipleApplyTemplate_TestAttrTwo),
+        UsdContrivedTokens->testAttrOne,
+        UsdContrivedTokens->testAttrTwo,
     };
 
     return find(attrsAndRels.begin(), attrsAndRels.end(), baseName)
@@ -119,17 +117,8 @@ UsdContrivedPublicMultipleApplyAPI::IsPublicMultipleApplyAPIPath(
 }
 
 /* virtual */
-UsdSchemaKind UsdContrivedPublicMultipleApplyAPI::_GetSchemaKind() const
-{
-    return UsdContrivedPublicMultipleApplyAPI::schemaKind;
-}
-
-/* static */
-bool
-UsdContrivedPublicMultipleApplyAPI::CanApply(
-    const UsdPrim &prim, const TfToken &name, std::string *whyNot)
-{
-    return prim.CanApplyAPI<UsdContrivedPublicMultipleApplyAPI>(name, whyNot);
+UsdSchemaType UsdContrivedPublicMultipleApplyAPI::_GetSchemaType() const {
+    return UsdContrivedPublicMultipleApplyAPI::schemaType;
 }
 
 /* static */
@@ -172,7 +161,9 @@ static inline
 TfToken
 _GetNamespacedPropertyName(const TfToken instanceName, const TfToken propName)
 {
-    return UsdSchemaRegistry::MakeMultipleApplyNameInstance(propName, instanceName);
+    TfTokenVector identifiers =
+        {_schemaTokens->testo, instanceName, propName};
+    return TfToken(SdfPath::JoinIdentifier(identifiers));
 }
 
 UsdAttribute
@@ -181,7 +172,7 @@ UsdContrivedPublicMultipleApplyAPI::GetTestAttrOneAttr() const
     return GetPrim().GetAttribute(
         _GetNamespacedPropertyName(
             GetName(),
-            UsdContrivedTokens->testo_MultipleApplyTemplate_TestAttrOne));
+            UsdContrivedTokens->testAttrOne));
 }
 
 UsdAttribute
@@ -190,7 +181,7 @@ UsdContrivedPublicMultipleApplyAPI::CreateTestAttrOneAttr(VtValue const &default
     return UsdSchemaBase::_CreateAttr(
                        _GetNamespacedPropertyName(
                             GetName(),
-                           UsdContrivedTokens->testo_MultipleApplyTemplate_TestAttrOne),
+                           UsdContrivedTokens->testAttrOne),
                        SdfValueTypeNames->Int,
                        /* custom = */ false,
                        SdfVariabilityVarying,
@@ -204,7 +195,7 @@ UsdContrivedPublicMultipleApplyAPI::GetTestAttrTwoAttr() const
     return GetPrim().GetAttribute(
         _GetNamespacedPropertyName(
             GetName(),
-            UsdContrivedTokens->testo_MultipleApplyTemplate_TestAttrTwo));
+            UsdContrivedTokens->testAttrTwo));
 }
 
 UsdAttribute
@@ -213,7 +204,7 @@ UsdContrivedPublicMultipleApplyAPI::CreateTestAttrTwoAttr(VtValue const &default
     return UsdSchemaBase::_CreateAttr(
                        _GetNamespacedPropertyName(
                             GetName(),
-                           UsdContrivedTokens->testo_MultipleApplyTemplate_TestAttrTwo),
+                           UsdContrivedTokens->testAttrTwo),
                        SdfValueTypeNames->Double,
                        /* custom = */ false,
                        SdfVariabilityVarying,
@@ -223,11 +214,19 @@ UsdContrivedPublicMultipleApplyAPI::CreateTestAttrTwoAttr(VtValue const &default
 
 namespace {
 static inline TfTokenVector
-_ConcatenateAttributeNames(const TfTokenVector& left,const TfTokenVector& right)
+_ConcatenateAttributeNames(
+    const TfToken instanceName,
+    const TfTokenVector& left,
+    const TfTokenVector& right)
 {
     TfTokenVector result;
     result.reserve(left.size() + right.size());
     result.insert(result.end(), left.begin(), left.end());
+
+    for (const TfToken attrName : right) {
+        result.push_back(
+            _GetNamespacedPropertyName(instanceName, attrName));
+    }
     result.insert(result.end(), right.begin(), right.end());
     return result;
 }
@@ -235,14 +234,16 @@ _ConcatenateAttributeNames(const TfTokenVector& left,const TfTokenVector& right)
 
 /*static*/
 const TfTokenVector&
-UsdContrivedPublicMultipleApplyAPI::GetSchemaAttributeNames(bool includeInherited)
+UsdContrivedPublicMultipleApplyAPI::GetSchemaAttributeNames(
+    bool includeInherited, const TfToken instanceName)
 {
     static TfTokenVector localNames = {
-        UsdContrivedTokens->testo_MultipleApplyTemplate_TestAttrOne,
-        UsdContrivedTokens->testo_MultipleApplyTemplate_TestAttrTwo,
+        UsdContrivedTokens->testAttrOne,
+        UsdContrivedTokens->testAttrTwo,
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(
+            instanceName,
             UsdAPISchemaBase::GetSchemaAttributeNames(true),
             localNames);
 
@@ -250,24 +251,6 @@ UsdContrivedPublicMultipleApplyAPI::GetSchemaAttributeNames(bool includeInherite
         return allNames;
     else
         return localNames;
-}
-
-/*static*/
-TfTokenVector
-UsdContrivedPublicMultipleApplyAPI::GetSchemaAttributeNames(
-    bool includeInherited, const TfToken &instanceName)
-{
-    const TfTokenVector &attrNames = GetSchemaAttributeNames(includeInherited);
-    if (instanceName.IsEmpty()) {
-        return attrNames;
-    }
-    TfTokenVector result;
-    result.reserve(attrNames.size());
-    for (const TfToken &attrName : attrNames) {
-        result.push_back(
-            UsdSchemaRegistry::MakeMultipleApplyNameInstance(attrName, instanceName));
-    }
-    return result;
 }
 
 }}}

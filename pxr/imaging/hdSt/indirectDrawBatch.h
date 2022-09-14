@@ -29,6 +29,7 @@
 #include "pxr/imaging/hdSt/api.h"
 #include "pxr/imaging/hdSt/dispatchBuffer.h"
 #include "pxr/imaging/hdSt/drawBatch.h"
+#include "pxr/imaging/hdSt/persistentBuffer.h"
 
 #include <vector>
 
@@ -41,22 +42,20 @@ using HdBindingRequestVector = std::vector<HdBindingRequest>;
 /// Drawing batch that is executed from an indirect dispatch buffer.
 ///
 /// An indirect drawing batch accepts draw items that have the same
-/// primitive type and that share aggregated drawing resources,
+/// primitive mode and that share aggregated drawing resources,
 /// e.g. uniform and non uniform primvar buffers.
 ///
 class HdSt_IndirectDrawBatch : public HdSt_DrawBatch
 {
 public:
     HDST_API
-    HdSt_IndirectDrawBatch(HdStDrawItemInstance * drawItemInstance,
-                           bool const allowGpuFrustumCulling = true);
+    HdSt_IndirectDrawBatch(HdStDrawItemInstance * drawItemInstance);
     HDST_API
     ~HdSt_IndirectDrawBatch() override;
 
     // HdSt_DrawBatch overrides
     HDST_API
-    ValidationResult
-    Validate(bool deepValidation) override;
+    bool Validate(bool deepValidation) override;
 
     /// Prepare draw commands and apply view frustum culling for this batch.
     HDST_API
@@ -67,7 +66,6 @@ public:
     /// Executes the drawing commands for this batch.
     HDST_API
     void ExecuteDraw(
-        HgiGraphicsCmds *gfxCmds,
         HdStRenderPassStateSharedPtr const &renderPassState,
         HdStResourceRegistrySharedPtr const &resourceRegistry) override;
 
@@ -96,31 +94,26 @@ protected:
     void _Init(HdStDrawItemInstance * drawItemInstance) override;
 
 private:
-    void _ExecuteDraw(
-        HdStRenderPassStateSharedPtr const &renderPassState,
-        HdStResourceRegistrySharedPtr const &resourceRegistry);
-
     void _ValidateCompatibility(
-        HdStBufferArrayRangeSharedPtr const& constantBar,
-        HdStBufferArrayRangeSharedPtr const& indexBar,
-        HdStBufferArrayRangeSharedPtr const& topologyVisibilityBar,
-        HdStBufferArrayRangeSharedPtr const& elementBar,
-        HdStBufferArrayRangeSharedPtr const& fvarBar,
-        HdStBufferArrayRangeSharedPtr const& varyingBar,
-        HdStBufferArrayRangeSharedPtr const& vertexBar,
+        HdStBufferArrayRangeGLSharedPtr const& constantBar,
+        HdStBufferArrayRangeGLSharedPtr const& indexBar,
+        HdStBufferArrayRangeGLSharedPtr const& topologyVisibilityBar,
+        HdStBufferArrayRangeGLSharedPtr const& elementBar,
+        HdStBufferArrayRangeGLSharedPtr const& fvarBar,
+        HdStBufferArrayRangeGLSharedPtr const& vertexBar,
         int instancerNumLevels,
-        HdStBufferArrayRangeSharedPtr const& instanceIndexBar,
-        std::vector<HdStBufferArrayRangeSharedPtr> const& instanceBars) const;
+        HdStBufferArrayRangeGLSharedPtr const& instanceIndexBar,
+        std::vector<HdStBufferArrayRangeGLSharedPtr> const& instanceBars) const;
 
     // Culling requires custom resource binding.
     class _CullingProgram : public _DrawingProgram
     {
     public:
         _CullingProgram()
-            : _useDrawIndexed(true)
+            : _useDrawArrays(false)
             , _useInstanceCulling(false)
             , _bufferArrayHash(0) { }
-        void Initialize(bool useDrawIndexed, bool useInstanceCulling,
+        void Initialize(bool useDrawArrays, bool useInstanceCulling,
                         size_t bufferArrayHash);
     protected:
         // _DrawingProgram overrides
@@ -128,7 +121,7 @@ private:
             HdBindingRequestVector *customBindings,
             bool *enableInstanceDraw) const override;
     private:
-        bool _useDrawIndexed;
+        bool _useDrawArrays;
         bool _useInstanceCulling;
         size_t _bufferArrayHash;
     };
@@ -138,39 +131,29 @@ private:
 
     void _CompileBatch(HdStResourceRegistrySharedPtr const &resourceRegistry);
 
-    bool _HasNothingToDraw() const;
+    void _GPUFrustumInstanceCulling(HdStDrawItem const *item,
+        HdStRenderPassStateSharedPtr const &renderPassState,
+        HdStResourceRegistrySharedPtr const &resourceRegistry);
 
-    void _ExecuteDrawIndirect(
-                HdSt_GeometricShaderSharedPtr const & geometricShader,
-                HdStDispatchBufferSharedPtr const & dispatchBuffer,
-                HdStBufferArrayRangeSharedPtr const & indexBar);
-
-    void _ExecuteDrawImmediate(
-                HdSt_GeometricShaderSharedPtr const & geometricShader,
-                HdStDispatchBufferSharedPtr const & dispatchBuffer,
-                HdStBufferArrayRangeSharedPtr const & indexBar);
-
-    void _ExecuteFrustumCull(
-                bool updateDispatchBuffer,
-                HdStRenderPassStateSharedPtr const & renderPassState,
-                HdStResourceRegistrySharedPtr const & resourceRegistry);
+    void _GPUFrustumNonInstanceCulling(HdStDrawItem const *item,
+        HdStRenderPassStateSharedPtr const &renderPassState,
+        HdStResourceRegistrySharedPtr const &resourceRegistry);
 
     void _BeginGPUCountVisibleInstances(
         HdStResourceRegistrySharedPtr const &resourceRegistry);
 
-    void _EndGPUCountVisibleInstances(
-        HdStResourceRegistrySharedPtr const &resourceRegistry, 
-        size_t * result);
+    // GLsync is not defined in gl.h. It's defined in spec as an opaque pointer:
+    typedef struct __GLsync *GLsync;
+    void _EndGPUCountVisibleInstances(GLsync resultSync, size_t * result);
 
     HdStDispatchBufferSharedPtr _dispatchBuffer;
     HdStDispatchBufferSharedPtr _dispatchBufferCullInput;
 
-    std::vector<uint32_t> _drawCommandBuffer;
+    std::vector<GLuint> _drawCommandBuffer;
     bool _drawCommandBufferDirty;
     size_t _bufferArraysHash;
-    size_t _barElementOffsetsHash;
 
-    HdStBufferResourceSharedPtr _resultBuffer;
+    HdStPersistentBufferSharedPtr _resultBuffer;
 
     size_t _numVisibleItems;
     size_t _numTotalVertices;
@@ -180,14 +163,17 @@ private:
     bool _useTinyPrimCulling;
     bool _dirtyCullingProgram;
 
-    bool _useDrawIndexed;
+    bool _useDrawArrays;
     bool _useInstancing;
     bool _useGpuCulling;
-    bool _useInstanceCulling;
-    bool const _allowGpuFrustumCulling;
+    bool _useGpuInstanceCulling;
 
     int _instanceCountOffset;
     int _cullInstanceCountOffset;
+
+    // We'll use this fence to signal when GPU frustum culling is
+    // complete if we need to read back result data from the GPU.
+    GLsync _cullResultSync;
 };
 
 

@@ -144,7 +144,6 @@ WRAP_CUSTOM {
              (arg("name")))
         .def("GetOutputs",
              &UsdShadeNodeGraph::GetOutputs,
-             (arg("onlyAuthored") = true),
              return_value_policy<TfPySequenceToList>())
         .def("ComputeOutputSource", _WrapComputeOutputSource, 
              (arg("outputName")))
@@ -153,7 +152,6 @@ WRAP_CUSTOM {
              (arg("name"), arg("type")))
         .def("GetInput", &UsdShadeNodeGraph::GetInput, arg("name"))
         .def("GetInputs", &UsdShadeNodeGraph::GetInputs,
-             (arg("onlyAuthored") = true),
              return_value_policy<TfPySequenceToList>())
         .def("GetInterfaceInputs", &UsdShadeNodeGraph::GetInterfaceInputs,
              return_value_policy<TfPySequenceToList>())

@@ -21,65 +21,55 @@
 # KIND, either express or implied. See the Apache License for the specific
 # language governing permissions and limitations under the Apache License.
 #
-
-# pylint: disable=round-builtin
-
-from __future__ import division
 from __future__ import print_function
 
 from .qt import QtCore, QtGui, QtWidgets
 import os, time, sys, platform, math
 from pxr import Ar, Tf, Sdf, Kind, Usd, UsdGeom, UsdShade
 from .customAttributes import CustomAttribute
-from pxr.UsdUtils.constantsGroup import ConstantsGroup
+from .constantGroup import ConstantGroup
 
 DEBUG_CLIPPING = "USDVIEWQ_DEBUG_CLIPPING"
 
-class ClearColors(ConstantsGroup):
+class ClearColors(ConstantGroup):
     """Names of available background colors."""
     BLACK = "Black"
     DARK_GREY = "Grey (Dark)"
     LIGHT_GREY = "Grey (Light)"
     WHITE = "White"
 
-class DefaultFontFamily(ConstantsGroup):
-    """Names of the default font family and monospace font family to be used
-    with usdview"""
-    FONT_FAMILY = "Roboto"
-    MONOSPACE_FONT_FAMILY = "Roboto Mono"
-
-class HighlightColors(ConstantsGroup):
+class HighlightColors(ConstantGroup):
     """Names of available highlight colors for selected objects."""
     WHITE = "White"
     YELLOW = "Yellow"
     CYAN = "Cyan"
 
-class UIBaseColors(ConstantsGroup):
+class UIBaseColors(ConstantGroup):
     RED = QtGui.QBrush(QtGui.QColor(230, 132, 131))
     LIGHT_SKY_BLUE = QtGui.QBrush(QtGui.QColor(135, 206, 250))
     DARK_YELLOW = QtGui.QBrush(QtGui.QColor(222, 158, 46))
 
-class UIPrimTypeColors(ConstantsGroup):
+class UIPrimTypeColors(ConstantGroup):
     HAS_ARCS = UIBaseColors.DARK_YELLOW
     NORMAL = QtGui.QBrush(QtGui.QColor(227, 227, 227))
     INSTANCE = UIBaseColors.LIGHT_SKY_BLUE
-    PROTOTYPE = QtGui.QBrush(QtGui.QColor(118, 136, 217))
+    MASTER = QtGui.QBrush(QtGui.QColor(118, 136, 217))
 
-class UIPrimTreeColors(ConstantsGroup):
+class UIPrimTreeColors(ConstantGroup):
     SELECTED = QtGui.QBrush(QtGui.QColor(189, 155, 84))
     SELECTED_HOVER = QtGui.QBrush(QtGui.QColor(227, 186, 101))
     ANCESTOR_OF_SELECTED = QtGui.QBrush(QtGui.QColor(189, 155, 84, 50))
     ANCESTOR_OF_SELECTED_HOVER = QtGui.QBrush(QtGui.QColor(189, 155, 84, 100))
     UNSELECTED_HOVER = QtGui.QBrush(QtGui.QColor(70, 70, 70))
 
-class UIPropertyValueSourceColors(ConstantsGroup):
+class UIPropertyValueSourceColors(ConstantGroup):
     FALLBACK = UIBaseColors.DARK_YELLOW
     TIME_SAMPLE = QtGui.QBrush(QtGui.QColor(177, 207, 153))
     DEFAULT = UIBaseColors.LIGHT_SKY_BLUE
     NONE = QtGui.QBrush(QtGui.QColor(140, 140, 140))
     VALUE_CLIPS = QtGui.QBrush(QtGui.QColor(230, 150, 230))
 
-class UIFonts(ConstantsGroup):
+class UIFonts(ConstantGroup):
     # Font constants.  We use font in the prim browser to distinguish
     # "resolved" prim specifier
     # XXX - the use of weight here may need to be revised depending on font family
@@ -108,10 +98,10 @@ class UIFonts(ConstantsGroup):
     INHERITED.setWeight(QtGui.QFont.Normal)
     INHERITED.setItalic(True)
 
-class KeyboardShortcuts(ConstantsGroup):
+class KeyboardShortcuts(ConstantGroup):
     FramingKey = QtCore.Qt.Key_F
 
-class PropertyViewIndex(ConstantsGroup):
+class PropertyViewIndex(ConstantGroup):
     TYPE, NAME, VALUE = range(3)
 
 ICON_DIR_ROOT = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'icons')
@@ -128,7 +118,7 @@ def _DeferredIconLoad(path):
         _icons[fullPath] = icon
     return icon
 
-class PropertyViewIcons(ConstantsGroup):
+class PropertyViewIcons(ConstantGroup):
     ATTRIBUTE                  = lambda: _DeferredIconLoad('usd-attr-plain-icon.png')
     ATTRIBUTE_WITH_CONNECTIONS = lambda: _DeferredIconLoad('usd-attr-with-conn-icon.png')
     RELATIONSHIP               = lambda: _DeferredIconLoad('usd-rel-plain-icon.png')
@@ -137,7 +127,7 @@ class PropertyViewIcons(ConstantsGroup):
     CONNECTION                 = lambda: _DeferredIconLoad('usd-conn-icon.png')
     COMPOSED                   = lambda: _DeferredIconLoad('usd-cmp-icon.png')
 
-class PropertyViewDataRoles(ConstantsGroup):
+class PropertyViewDataRoles(ConstantGroup):
     ATTRIBUTE = "Attr"
     RELATIONSHIP = "Rel"
     ATTRIBUTE_WITH_CONNNECTIONS = "Attr_"
@@ -146,7 +136,7 @@ class PropertyViewDataRoles(ConstantsGroup):
     CONNECTION = "Conn"
     COMPOSED = "Cmp"
 
-class RenderModes(ConstantsGroup):
+class RenderModes(ConstantGroup):
     # Render modes
     WIREFRAME = "Wireframe"
     WIREFRAME_ON_SURFACE = "WireframeOnSurface"
@@ -158,7 +148,7 @@ class RenderModes(ConstantsGroup):
     GEOM_SMOOTH = "Geom Smooth"
     HIDDEN_SURFACE_WIREFRAME = "Hidden Surface Wireframe"
 
-class ShadedRenderModes(ConstantsGroup):
+class ShadedRenderModes(ConstantGroup):
     # Render modes which use shading
     SMOOTH_SHADED = RenderModes.SMOOTH_SHADED
     FLAT_SHADED = RenderModes.FLAT_SHADED
@@ -166,32 +156,32 @@ class ShadedRenderModes(ConstantsGroup):
     GEOM_FLAT = RenderModes.GEOM_FLAT
     GEOM_SMOOTH = RenderModes.GEOM_SMOOTH
 
-class ColorCorrectionModes(ConstantsGroup):
+class ColorCorrectionModes(ConstantGroup):
     # Color correction used when render is presented to screen
     # These strings should match HdxColorCorrectionTokens
     DISABLED = "disabled"
     SRGB = "sRGB"
     OPENCOLORIO = "openColorIO"
 
-class PickModes(ConstantsGroup):
+class PickModes(ConstantGroup):
     # Pick modes
     PRIMS = "Prims"
     MODELS = "Models"
     INSTANCES = "Instances"
     PROTOTYPES = "Prototypes"
 
-class SelectionHighlightModes(ConstantsGroup):
+class SelectionHighlightModes(ConstantGroup):
     # Selection highlight modes
     NEVER = "Never"
     ONLY_WHEN_PAUSED = "Only when paused"
     ALWAYS = "Always"
 
-class CameraMaskModes(ConstantsGroup):
+class CameraMaskModes(ConstantGroup):
     NONE = "none"
     PARTIAL = "partial"
     FULL = "full"
 
-class IncludedPurposes(ConstantsGroup):
+class IncludedPurposes(ConstantGroup):
     DEFAULT = UsdGeom.Tokens.default_
     PROXY = UsdGeom.Tokens.proxy
     GUIDE = UsdGeom.Tokens.guide
@@ -430,17 +420,16 @@ class Timer(object):
        t.PrintTime("did some stuff")
     """
     def __enter__(self):
-        self._stopwatch = Tf.Stopwatch()
-        self._stopwatch.Start()
+        self._start = time.time()
         self.interval = 0
         return self
 
     def __exit__(self, *args):
-        self._stopwatch.Stop()
-        self.interval = self._stopwatch.seconds
+        self._end = time.time()
+        self.interval = self._end - self._start
 
     def PrintTime(self, action):
-        print("Time to %s: %2.6fs" % (action, self.interval))
+        print("Time to %s: %2.3fs" % (action, self.interval))
 
 
 class BusyContext(object):
@@ -551,23 +540,24 @@ def GetFileOwner(path):
 # we will change this function to accept a prim rather than a primStack.
 def GetAssetCreationTime(primStack, assetIdentifier):
     """Finds the weakest layer in which assetInfo.identifier is set to
-    'assetIdentifier', and considers that an "asset-defining layer".
-    If assetInfo.identifier is not set in any layer, assumes the weakest
-    layer is the defining layer.  We then retrieve the creation time for
-    the asset by stat'ing the defining layer's real path.
+    'assetIdentifier', and considers that an "asset-defining layer".  We then
+    retrieve the creation time for the asset by stat'ing the layer's
+    real path.
 
     Returns a triple of strings: (fileDisplayName, creationTime, owner)"""
     definingLayer = None
     for spec in reversed(primStack):
         if spec.HasInfo('assetInfo'):
-            identifier = spec.GetInfo('assetInfo').get('identifier')
-            if identifier and identifier.path == assetIdentifier.path:
+            identifier = spec.GetInfo('assetInfo')['identifier']
+            if identifier.path == assetIdentifier.path:
                 definingLayer = spec.layer
                 break
     if definingLayer:
         definingFile = definingLayer.realPath
     else:
         definingFile = primStack[-1].layer.realPath
+        print("Warning: Could not find expected asset-defining layer for %s" %
+            assetIdentifier)
 
     if Ar.IsPackageRelativePath(definingFile):
         definingFile = Ar.SplitPackageRelativePathOuter(definingFile)[0]

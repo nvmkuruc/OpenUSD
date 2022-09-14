@@ -39,8 +39,7 @@ class UsdPrim;
 ///
 /// Delegate support for UsdGeomCamera.
 ///
-class UsdImagingCameraAdapter : public UsdImagingPrimAdapter 
-{
+class UsdImagingCameraAdapter : public UsdImagingPrimAdapter {
 public:
     typedef UsdImagingPrimAdapter BaseAdapter;
 
@@ -50,26 +49,6 @@ public:
 
     USDIMAGING_API
     ~UsdImagingCameraAdapter();
-
-    // ---------------------------------------------------------------------- //
-    /// \name Scene Index Support
-    // ---------------------------------------------------------------------- //
-
-    USDIMAGING_API
-    TfTokenVector GetImagingSubprims() override;
-
-    USDIMAGING_API
-    TfToken GetImagingSubprimType(TfToken const& subprim) override;
-
-    USDIMAGING_API
-    HdContainerDataSourceHandle GetImagingSubprimData(
-            TfToken const& subprim,
-            UsdPrim const& prim,
-            const UsdImagingDataSourceStageGlobals &stageGlobals) override;
-
-    // ---------------------------------------------------------------------- //
-    /// \name Initialization
-    // ---------------------------------------------------------------------- //
 
     USDIMAGING_API
     SdfPath Populate(UsdPrim const& prim,
@@ -131,17 +110,6 @@ public:
     void MarkWindowPolicyDirty(UsdPrim const& prim,
                                SdfPath const& cachePath,
                                UsdImagingIndexProxy* index) override;
-
-    // ---------------------------------------------------------------------- //
-    /// \name Data access
-    // ---------------------------------------------------------------------- //
-
-    USDIMAGING_API
-    VtValue Get(UsdPrim const& prim,
-                SdfPath const& cachePath,
-                TfToken const& key,
-                UsdTimeCode time,
-                VtIntArray *outIndices) const override;
 
 protected:
     void _RemovePrim(SdfPath const& cachePath,

@@ -27,6 +27,7 @@
 #include "pxr/pxr.h"
 #include "pxr/imaging/hd/api.h"
 #include "pxr/imaging/hd/version.h"
+#include "pxr/imaging/hd/changeTracker.h"
 #include "pxr/imaging/hd/rprimCollection.h"
 #include "pxr/imaging/hd/task.h"
 
@@ -37,6 +38,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 class HdRenderIndex;
 class HdSceneDelegate;
 
+using HdDirtyListSharedPtr = std::shared_ptr<class HdDirtyList>;
 using HdRenderPassSharedPtr = std::shared_ptr<class HdRenderPass>;
 using HdRenderPassStateSharedPtr = std::shared_ptr<class HdRenderPassState>;
 
@@ -82,6 +84,12 @@ public:
     HD_API
     void SetRprimCollection(HdRprimCollection const& col);
 
+    /// Returns the dirty list (maintained in the change tracker) for
+    /// efficient traversal
+    HdDirtyListSharedPtr const &GetDirtyList() const {
+        return _dirtyList;
+    }
+
     /// Return the render index
     HdRenderIndex* GetRenderIndex() const { return _renderIndex; }
 
@@ -92,6 +100,14 @@ public:
     /// Sync the render pass resources
     HD_API
     void Sync();
+
+    // ---------------------------------------------------------------------- //
+    /// \name Prepare
+    // ---------------------------------------------------------------------- //
+
+    /// Prepare renderpass data
+    HD_API
+    void Prepare(TfTokenVector const &renderTags);
 
     // ---------------------------------------------------------------------- //
     /// \name Execution
@@ -120,6 +136,9 @@ protected:
     /// Optional API: let derived classes sync data.
     virtual void _Sync() {}
 
+    /// Optional API: let derived classes prepare data.
+    virtual void _Prepare(TfTokenVector const &renderTags) {}
+
 private:
 
     // Don't allow copies
@@ -132,6 +151,9 @@ private:
     // The renderIndex to which this renderPass belongs
     // (can't change after construction)
     HdRenderIndex * const _renderIndex;
+
+    // cached dirty prims list
+    HdDirtyListSharedPtr _dirtyList;
 
     // ---------------------------------------------------------------------- //
     // \name Core RenderPass State

@@ -60,8 +60,8 @@ class UsdSchemaExamplesSimple : public UsdTyped
 public:
     /// Compile time constant representing what kind of schema this class is.
     ///
-    /// \sa UsdSchemaKind
-    static const UsdSchemaKind schemaKind = UsdSchemaKind::AbstractTyped;
+    /// \sa UsdSchemaType
+    static const UsdSchemaType schemaType = UsdSchemaType::AbstractTyped;
 
     /// Construct a UsdSchemaExamplesSimple on UsdPrim \p prim .
     /// Equivalent to UsdSchemaExamplesSimple::Get(prim.GetStage(), prim.GetPath())
@@ -106,11 +106,11 @@ public:
 
 
 protected:
-    /// Returns the kind of schema this class belongs to.
+    /// Returns the type of schema this class belongs to.
     ///
-    /// \sa UsdSchemaKind
+    /// \sa UsdSchemaType
     USDSCHEMAEXAMPLES_API
-    UsdSchemaKind _GetSchemaKind() const override;
+    UsdSchemaType _GetSchemaType() const override;
 
 private:
     // needs to invoke _GetStaticTfType.

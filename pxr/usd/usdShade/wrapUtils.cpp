@@ -30,9 +30,6 @@
 #include <boost/python/tuple.hpp>
 
 #include "pxr/usd/usdShade/utils.h"
-#include "pxr/usd/usdShade/connectableAPI.h"
-#include "pxr/usd/usdShade/input.h"
-#include "pxr/usd/usdShade/output.h"
 
 using namespace boost::python;
 
@@ -51,37 +48,23 @@ _GetBaseNameAndType(const TfToken &fullName)
 
 void wrapUsdShadeUtils()
 {
-    UsdShadeAttributeVector (*GetValueProducingAttributes_Input)(
-        const UsdShadeInput &input, bool includeAuthoredValues) = 
-            &UsdShadeUtils::GetValueProducingAttributes;
-    UsdShadeAttributeVector (*GetValueProducingAttributes_Output)(
-        const UsdShadeOutput &output, bool includeAuthoredValues) = 
-            &UsdShadeUtils::GetValueProducingAttributes;
+    enum_<UsdShadeAttributeType>("AttributeType")
+        .value("Invalid", UsdShadeAttributeType::Invalid)
+        .value("Input", UsdShadeAttributeType::Input)
+        .value("Output", UsdShadeAttributeType::Output)
+        ;
 
     scope thisScope = class_<UsdShadeUtils>("Utils", no_init)
         .def("GetPrefixForAttributeType", 
             UsdShadeUtils::GetPrefixForAttributeType)
         .staticmethod("GetPrefixForAttributeType")
 
-        .def("GetConnectedSourcePath", 
-             UsdShadeUtils::GetConnectedSourcePath, 
-             (arg("connectionSourceInfo")))
-        .staticmethod("GetConnectedSourcePath")
-
         .def("GetBaseNameAndType", _GetBaseNameAndType)
         .staticmethod("GetBaseNameAndType")
 
-        .def("GetType", UsdShadeUtils::GetType)
-        .staticmethod("GetType")
-
         .def("GetFullName", UsdShadeUtils::GetFullName)
         .staticmethod("GetFullName")
-
-        .def("GetValueProducingAttributes", GetValueProducingAttributes_Input,
-            (arg("input"), arg("shaderOutputsOnly")=false))
-        .def("GetValueProducingAttributes", GetValueProducingAttributes_Output,
-            (arg("output"), arg("shaderOutputsOnly")=false))
-        .staticmethod("GetValueProducingAttributes")
-        ;
+    ;
 
 }
+

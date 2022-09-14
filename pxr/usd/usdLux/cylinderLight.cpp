@@ -34,7 +34,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_REGISTRY_FUNCTION(TfType)
 {
     TfType::Define<UsdLuxCylinderLight,
-        TfType::Bases< UsdLuxBoundableLightBase > >();
+        TfType::Bases< UsdLuxLight > >();
     
     // Register the usd prim typename as an alias under UsdSchemaBase. This
     // enables one to call
@@ -75,9 +75,8 @@ UsdLuxCylinderLight::Define(
 }
 
 /* virtual */
-UsdSchemaKind UsdLuxCylinderLight::_GetSchemaKind() const
-{
-    return UsdLuxCylinderLight::schemaKind;
+UsdSchemaType UsdLuxCylinderLight::_GetSchemaType() const {
+    return UsdLuxCylinderLight::schemaType;
 }
 
 /* static */
@@ -106,13 +105,13 @@ UsdLuxCylinderLight::_GetTfType() const
 UsdAttribute
 UsdLuxCylinderLight::GetLengthAttr() const
 {
-    return GetPrim().GetAttribute(UsdLuxTokens->inputsLength);
+    return GetPrim().GetAttribute(UsdLuxTokens->length);
 }
 
 UsdAttribute
 UsdLuxCylinderLight::CreateLengthAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdLuxTokens->inputsLength,
+    return UsdSchemaBase::_CreateAttr(UsdLuxTokens->length,
                        SdfValueTypeNames->Float,
                        /* custom = */ false,
                        SdfVariabilityVarying,
@@ -123,13 +122,13 @@ UsdLuxCylinderLight::CreateLengthAttr(VtValue const &defaultValue, bool writeSpa
 UsdAttribute
 UsdLuxCylinderLight::GetRadiusAttr() const
 {
-    return GetPrim().GetAttribute(UsdLuxTokens->inputsRadius);
+    return GetPrim().GetAttribute(UsdLuxTokens->radius);
 }
 
 UsdAttribute
 UsdLuxCylinderLight::CreateRadiusAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdLuxTokens->inputsRadius,
+    return UsdSchemaBase::_CreateAttr(UsdLuxTokens->radius,
                        SdfValueTypeNames->Float,
                        /* custom = */ false,
                        SdfVariabilityVarying,
@@ -171,14 +170,13 @@ const TfTokenVector&
 UsdLuxCylinderLight::GetSchemaAttributeNames(bool includeInherited)
 {
     static TfTokenVector localNames = {
-        UsdLuxTokens->lightShaderId,
-        UsdLuxTokens->inputsLength,
-        UsdLuxTokens->inputsRadius,
+        UsdLuxTokens->length,
+        UsdLuxTokens->radius,
         UsdLuxTokens->treatAsLine,
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(
-            UsdLuxBoundableLightBase::GetSchemaAttributeNames(true),
+            UsdLuxLight::GetSchemaAttributeNames(true),
             localNames);
 
     if (includeInherited)
@@ -197,61 +195,3 @@ PXR_NAMESPACE_CLOSE_SCOPE
 // 'PXR_NAMESPACE_OPEN_SCOPE', 'PXR_NAMESPACE_CLOSE_SCOPE'.
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
-
-#include "pxr/usd/usdGeom/boundableComputeExtent.h"
-
-PXR_NAMESPACE_OPEN_SCOPE
-
-static bool
-_ComputeLocalExtent(const float radius, 
-                    const float length, 
-                    VtVec3fArray *extent)
-{
-    extent->resize(2);
-    (*extent)[1] = GfVec3f(radius, radius, length * 0.5f);
-    (*extent)[0] = -(*extent)[1];
-    return true;
-}
-
-static bool 
-_ComputeExtent(
-    const UsdGeomBoundable &boundable,
-    const UsdTimeCode &time,
-    const GfMatrix4d *transform,
-    VtVec3fArray *extent)
-{
-    const UsdLuxCylinderLight light(boundable);
-    if (!TF_VERIFY(light)) {
-        return false;
-    }
-
-    float radius;
-    if (!light.GetRadiusAttr().Get(&radius, time)) {
-        return false;
-    }
-
-    float length;
-    if (!light.GetLengthAttr().Get(&length, time)) {
-        return false;
-    }
-
-    if (!_ComputeLocalExtent(radius, length, extent)) {
-        return false;
-    }
-
-    if (transform) {
-        GfBBox3d bbox(GfRange3d((*extent)[0], (*extent)[1]), *transform);
-        GfRange3d range = bbox.ComputeAlignedRange();
-        (*extent)[0] = GfVec3f(range.GetMin());
-        (*extent)[1] = GfVec3f(range.GetMax());
-    }
-
-    return true;
-}
-
-TF_REGISTRY_FUNCTION(UsdGeomBoundable)
-{
-    UsdGeomRegisterComputeExtentFunction<UsdLuxCylinderLight>(_ComputeExtent);
-}
-
-PXR_NAMESPACE_CLOSE_SCOPE

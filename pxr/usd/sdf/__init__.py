@@ -21,9 +21,10 @@
 # KIND, either express or implied. See the Apache License for the specific
 # language governing permissions and limitations under the Apache License.
 #
+from . import _sdf
 from pxr import Tf
-Tf.PreparePythonModule()
-del Tf
+Tf.PrepareModule(_sdf, locals())
+del _sdf, Tf
 
 def Find(layerFileName, scenePath=None):
     '''Find(layerFileName, scenePath) -> object
@@ -80,3 +81,10 @@ def _PathElemsToPrefixes(absolute, elements):
         return []
     path = Path(string)
     return path.GetPrefixes()
+
+try:
+    from . import __DOC
+    __DOC.Execute(locals())
+    del __DOC
+except Exception:
+    pass

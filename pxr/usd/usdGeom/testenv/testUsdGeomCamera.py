@@ -141,9 +141,11 @@ class TestUsdGeomCamera(unittest.TestCase):
         camera.transform = newXform
         camera.horizontalAperture = 500.0
 
-        # Verify that trying to SetFromCamera from a weaker edit target does not crash,
-        # and does not modify any existing camera attributes.
-        usdCamera.SetFromCamera(camera, 1.0)
+        # This will raise an exception from TF_CODING_ERROR
+        with self.assertRaises(Tf.ErrorException):
+            usdCamera.SetFromCamera(camera, 1.0)
+
+        # ... and it won't change the camera values
         self.assertEqual(usdCamera.GetHorizontalApertureAttr().Get(1.0), 1.0)
 
         # Now use the stronger layer

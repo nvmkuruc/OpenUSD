@@ -401,18 +401,19 @@ SdfData::Erase(const SdfPath &path, const TfToken & field)
 std::vector<TfToken>
 SdfData::List(const SdfPath &path) const
 {
-    std::vector<TfToken> names;
     _HashTable::const_iterator i = _data.find(path);
     if (i != _data.end()) {
         const _SpecData & spec = i->second;
 
-        const size_t numFields = spec.fields.size();
-        names.resize(numFields);
-        for (size_t j=0; j != numFields; ++j) {
-            names[j] = spec.fields[j].first;
+        std::vector<TfToken> names;
+        names.reserve(spec.fields.size());
+        for (size_t j=0, jEnd = spec.fields.size(); j != jEnd; ++j) {
+            names.push_back(spec.fields[j].first);
         }
+        return names;
     }
-    return names;
+
+    return std::vector<TfToken>();
 }
 
 

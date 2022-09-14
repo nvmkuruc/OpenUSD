@@ -21,6 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/imaging/glf/glew.h"
 #include "pxr/imaging/plugin/hdEmbree/renderDelegate.h"
 
 #include "pxr/imaging/plugin/hdEmbree/config.h"
@@ -307,9 +308,10 @@ HdEmbreeRenderDelegate::CreateRenderPass(HdRenderIndex *index,
 
 HdInstancer *
 HdEmbreeRenderDelegate::CreateInstancer(HdSceneDelegate *delegate,
-                                        SdfPath const& id)
+                                        SdfPath const& id,
+                                        SdfPath const& instancerId)
 {
-    return new HdEmbreeInstancer(delegate, id);
+    return new HdEmbreeInstancer(delegate, id, instancerId);
 }
 
 void
@@ -320,10 +322,11 @@ HdEmbreeRenderDelegate::DestroyInstancer(HdInstancer *instancer)
 
 HdRprim *
 HdEmbreeRenderDelegate::CreateRprim(TfToken const& typeId,
-                                    SdfPath const& rprimId)
+                                    SdfPath const& rprimId,
+                                    SdfPath const& instancerId)
 {
     if (typeId == HdPrimTypeTokens->mesh) {
-        return new HdEmbreeMesh(rprimId);
+        return new HdEmbreeMesh(rprimId, instancerId);
     } else {
         TF_CODING_ERROR("Unknown Rprim Type %s", typeId.GetText());
     }

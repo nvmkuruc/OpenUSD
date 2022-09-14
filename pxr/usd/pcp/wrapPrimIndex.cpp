@@ -96,16 +96,6 @@ void wrapPrimIndex()
         .def("GetSelectionAppliedForVariantSet",
             &This::GetSelectionAppliedForVariantSet)
 
-        .def("GetNodeProvidingSpec", 
-            (PcpNodeRef (This::*) (const SdfPrimSpecHandle&) const)
-                (&This::GetNodeProvidingSpec),
-            args("primSpec"))
-        .def("GetNodeProvidingSpec", 
-            (PcpNodeRef (This::*) (const SdfLayerHandle&, const SdfPath&) const)
-                (&This::GetNodeProvidingSpec),
-            (args("layer"),
-             args("path")))
-
         .def("PrintStatistics", &This::PrintStatistics)
         .def("DumpToString", &This::DumpToString,
              (args("includeInheritOriginInfo") = true,

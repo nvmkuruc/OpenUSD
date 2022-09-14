@@ -80,14 +80,11 @@ wrapRenderParams()
         .def_readwrite("wireframeColor", &Params::wireframeColor)
         .def_readwrite("clipPlanes", &Params::clipPlanes)
         .def_readwrite("highlight", &Params::highlight)
-        .def_readwrite("enableSceneMaterials", &Params::enableSceneMaterials)
-        .def_readwrite("enableSceneLights", &Params::enableSceneLights)
+        .def_readwrite("enableSceneMaterials", 
+            &Params::enableSceneMaterials)
         .def_readwrite("enableUsdDrawModes", &Params::enableUsdDrawModes)
         .def_readwrite("colorCorrectionMode", &Params::colorCorrectionMode)
         .def_readwrite("clearColor", &Params::clearColor)
-        .def_readwrite("ocioDisplay", &Params::ocioDisplay)
-        .def_readwrite("ocioView", &Params::ocioView)
-        .def_readwrite("ocioColorSpace", &Params::ocioColorSpace)
-        .def_readwrite("ocioLook", &Params::ocioLook)
+        .def_readwrite("lut3dSizeOCIO", &Params::lut3dSizeOCIO)
         ;
 }

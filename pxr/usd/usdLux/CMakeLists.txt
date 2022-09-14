@@ -5,69 +5,49 @@ pxr_library(usdLux
     LIBRARIES
         tf
         vt
-        ndr
         sdf
         usd
         usdGeom
-        usdShade
 
     PUBLIC_CLASSES
         blackbody
-        boundableLightBase
         cylinderLight
         diskLight
         distantLight
         domeLight
         geometryLight
-        lightAPI
-        lightFilter
-        lightListAPI
+        light
         listAPI
-        meshLightAPI
-        nonboundableLightBase
-        pluginLight
-        pluginLightFilter
-        portalLight
-        rectLight
-        shadowAPI
         shapingAPI
+        shadowAPI
+        lightFilter
+        lightPortal
+        rectLight
         sphereLight
         tokens
-        volumeLightAPI
 
     PUBLIC_HEADERS
         api.h
-
-    PRIVATE_CLASSES
-        discoveryPlugin
-        lightDefParser
 
     PYTHON_CPPFILES
         moduleDeps.cpp
 
     PYMODULE_CPPFILES
         module.cpp
-        wrapBoundableLightBase.cpp
         wrapCylinderLight.cpp
         wrapDiskLight.cpp
         wrapDistantLight.cpp
         wrapDomeLight.cpp
+        wrapLightPortal.cpp
         wrapGeometryLight.cpp
-        wrapLightAPI.cpp
-        wrapLightFilter.cpp
-        wrapLightListAPI.cpp
+        wrapLight.cpp
         wrapListAPI.cpp
-        wrapMeshLightAPI.cpp
-        wrapNonboundableLightBase.cpp
-        wrapPluginLight.cpp
-        wrapPluginLightFilter.cpp
-        wrapPortalLight.cpp
-        wrapRectLight.cpp
-        wrapShadowAPI.cpp
         wrapShapingAPI.cpp
+        wrapShadowAPI.cpp
+        wrapLightFilter.cpp
+        wrapRectLight.cpp
         wrapSphereLight.cpp
         wrapTokens.cpp
-        wrapVolumeLightAPI.cpp
 
     PYMODULE_FILES 
         __init__.py
@@ -76,15 +56,12 @@ pxr_library(usdLux
         plugInfo.json
         generatedSchema.usda
         schema.usda:usdLux/schema.usda
-
-    DOXYGEN_FILES
-        overview.dox
 )
 
 pxr_test_scripts(
     testenv/testUsdLuxLight.py
     testenv/testUsdLuxLinkingAPI.py
-    testenv/testUsdLuxLightListAPI.py
+    testenv/testUsdLuxListAPI.py
 )
 
 pxr_register_test(testUsdLuxLight
@@ -105,13 +82,13 @@ pxr_register_test(testUsdLuxLinkingAPI
 )
 
 pxr_install_test_dir(
-    DEST testUsdLuxLightListAPI
-    SRC testenv/testUsdLuxLightListAPI
+    DEST testUsdLuxListAPI
+    SRC testenv/testUsdLuxListAPI
 )
 
-pxr_register_test(testUsdLuxLightListAPI
+pxr_register_test(testUsdLuxListAPI
     PYTHON
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdLuxLightListAPI"
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdLuxListAPI"
     EXPECTED_RETURN_CODE 0
 )
 

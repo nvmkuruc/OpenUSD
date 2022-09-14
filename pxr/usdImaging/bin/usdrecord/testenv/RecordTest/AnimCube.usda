@@ -79,7 +79,7 @@ def Xform "AnimCube" (
             def Shader "PrimvarDisplayColor"
             {
                 uniform token info:id = "UsdPrimvarReader_float3"
-                string inputs:varname = "displayColor"
+                token inputs:varname = "displayColor"
                 float3 outputs:result
             }
         }

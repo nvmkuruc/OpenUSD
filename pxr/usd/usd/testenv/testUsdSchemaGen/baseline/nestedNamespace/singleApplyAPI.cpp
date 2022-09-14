@@ -62,17 +62,8 @@ UsdContrivedSingleApplyAPI::Get(const UsdStagePtr &stage, const SdfPath &path)
 
 
 /* virtual */
-UsdSchemaKind UsdContrivedSingleApplyAPI::_GetSchemaKind() const
-{
-    return UsdContrivedSingleApplyAPI::schemaKind;
-}
-
-/* static */
-bool
-UsdContrivedSingleApplyAPI::CanApply(
-    const UsdPrim &prim, std::string *whyNot)
-{
-    return prim.CanApplyAPI<UsdContrivedSingleApplyAPI>(whyNot);
+UsdSchemaType UsdContrivedSingleApplyAPI::_GetSchemaType() const {
+    return UsdContrivedSingleApplyAPI::schemaType;
 }
 
 /* static */

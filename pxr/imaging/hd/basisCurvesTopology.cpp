@@ -29,25 +29,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-namespace {
-
-static size_t
-_ComputeNumPoints(
-    VtIntArray const &curveVertexCounts,
-    VtIntArray const &indices)
-{
-    if (indices.empty()) {
-        size_t sum = 0;
-        for (int i : curveVertexCounts) {
-            sum += i;
-        }
-        return sum;
-    } else {
-        return 1 + *std::max_element(indices.begin(), indices.end());
-    }
-}
-
-}; // anon namespace
 
 HdBasisCurvesTopology::HdBasisCurvesTopology()
   : HdTopology()
@@ -58,7 +39,6 @@ HdBasisCurvesTopology::HdBasisCurvesTopology()
   , _curveIndices()
   , _invisiblePoints()
   , _invisibleCurves()
-  , _numPoints()
 {
     HD_PERF_COUNTER_INCR(HdPerfTokens->basisCurvesTopology);
 }
@@ -74,7 +54,6 @@ HdBasisCurvesTopology::HdBasisCurvesTopology(const HdBasisCurvesTopology& src)
   , _invisibleCurves(src._invisibleCurves)
 {
     HD_PERF_COUNTER_INCR(HdPerfTokens->basisCurvesTopology);
-    _numPoints = _ComputeNumPoints(_curveVertexCounts, _curveIndices);
 }
 
 HdBasisCurvesTopology::HdBasisCurvesTopology(const TfToken &curveType,
@@ -102,7 +81,6 @@ HdBasisCurvesTopology::HdBasisCurvesTopology(const TfToken &curveType,
         _curveBasis = TfToken();
     }
     HD_PERF_COUNTER_INCR(HdPerfTokens->basisCurvesTopology);
-    _numPoints = _ComputeNumPoints(_curveVertexCounts, _curveIndices);
 }
 
 HdBasisCurvesTopology::~HdBasisCurvesTopology()

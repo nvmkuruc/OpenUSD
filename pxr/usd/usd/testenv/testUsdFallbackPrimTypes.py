@@ -231,7 +231,7 @@ class TestUsdFallbackPrimTypes(unittest.TestCase):
         # effective schema type and applied schemas, that they use the same
         # prim definition even though their type names differ.
         otherPrim = stage.DefinePrim("/EmptyWithCollection", "")
-        Usd.CollectionAPI.Apply(otherPrim, "foo")
+        Usd.CollectionAPI.ApplyCollection(otherPrim, "foo")
         otherPrimTypeInfo = otherPrim.GetPrimTypeInfo()
         self.assertNotEqual(otherPrim.GetTypeName(), prim.GetTypeName())
         self.assertNotEqual(otherPrimTypeInfo, primTypeInfo)
@@ -267,7 +267,7 @@ class TestUsdFallbackPrimTypes(unittest.TestCase):
         # effective schema type and applied schemas, that they use the same
         # prim definition even though their type names differ.
         otherPrim = stage.DefinePrim("/Valid2WithCollection", "ValidType_2")
-        Usd.CollectionAPI.Apply(otherPrim, "foo")
+        Usd.CollectionAPI.ApplyCollection(otherPrim, "foo")
         otherPrimTypeInfo = otherPrim.GetPrimTypeInfo()
         self.assertNotEqual(otherPrim.GetTypeName(), prim.GetTypeName())
         self.assertNotEqual(otherPrimTypeInfo, primTypeInfo)

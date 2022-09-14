@@ -100,20 +100,8 @@ HdRendererPluginRegistry::CreateRenderDelegate(
         TF_CODING_ERROR("Couldn't find plugin for id %s", pluginId.GetText());
         return nullptr;
     }
-
-    HdPluginRenderDelegateUniqueHandle result =
-        plugin->CreateDelegate(settingsMap);
-
-    if (result) {
-        HfPluginDesc desc;
-        if (GetPluginDesc(pluginId, &desc)) {
-            // provide render delegate instance with display name to facilitate
-            // association of this renderer to other code and resources
-            result->_SetRendererDisplayName(desc.displayName);
-        }
-    }
-
-    return result;
+    
+    return plugin->CreateDelegate(settingsMap);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

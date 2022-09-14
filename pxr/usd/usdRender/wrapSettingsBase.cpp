@@ -83,13 +83,6 @@ _CreateInstantaneousShutterAttr(UsdRenderSettingsBase &self,
     return self.CreateInstantaneousShutterAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Bool), writeSparsely);
 }
-        
-static UsdAttribute
-_CreateDisableMotionBlurAttr(UsdRenderSettingsBase &self,
-                                      object defaultVal, bool writeSparsely) {
-    return self.CreateDisableMotionBlurAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Bool), writeSparsely);
-}
 
 static std::string
 _Repr(const UsdRenderSettingsBase &self)
@@ -162,13 +155,6 @@ void wrapUsdRenderSettingsBase()
              &This::GetInstantaneousShutterAttr)
         .def("CreateInstantaneousShutterAttr",
              &_CreateInstantaneousShutterAttr,
-             (arg("defaultValue")=object(),
-              arg("writeSparsely")=false))
-        
-        .def("GetDisableMotionBlurAttr",
-             &This::GetDisableMotionBlurAttr)
-        .def("CreateDisableMotionBlurAttr",
-             &_CreateDisableMotionBlurAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
 

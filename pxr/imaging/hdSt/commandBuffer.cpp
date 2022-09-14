@@ -21,16 +21,16 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+#include "pxr/imaging/glf/glew.h"
+#include "pxr/imaging/glf/contextCaps.h"
+
 #include "pxr/imaging/hdSt/commandBuffer.h"
 #include "pxr/imaging/hdSt/debugCodes.h"
 #include "pxr/imaging/hdSt/geometricShader.h"
+#include "pxr/imaging/hdSt/immediateDrawBatch.h"
 #include "pxr/imaging/hdSt/indirectDrawBatch.h"
-#include "pxr/imaging/hdSt/pipelineDrawBatch.h"
 #include "pxr/imaging/hdSt/resourceRegistry.h"
-#include "pxr/imaging/hdSt/materialNetworkShader.h"
 #include "pxr/imaging/hdSt/materialParam.h"
-
-#include "pxr/imaging/hgi/capabilities.h"
 
 #include "pxr/imaging/hd/bufferArrayRange.h"
 #include "pxr/imaging/hd/perfLog.h"
@@ -55,22 +55,27 @@ PXR_NAMESPACE_OPEN_SCOPE
 HdStCommandBuffer::HdStCommandBuffer()
     : _visibleSize(0)
     , _visChangeCount(0)
-    , _drawBatchesVersion(0)
+    , _batchVersion(0)
 {
     /*NOTHING*/
 }
 
-HdStCommandBuffer::~HdStCommandBuffer() = default;
+HdStCommandBuffer::~HdStCommandBuffer()
+{
+}
 
 static
 HdSt_DrawBatchSharedPtr
-_NewDrawBatch(HdStDrawItemInstance * drawItemInstance, 
-              HgiCapabilities const * hgiCapabilities)
+_NewDrawBatch(HdStDrawItemInstance * drawItemInstance)
 {
-    if (HdSt_PipelineDrawBatch::IsEnabled(hgiCapabilities)) {
-        return std::make_shared<HdSt_PipelineDrawBatch>(drawItemInstance);
+    GlfContextCaps const &caps = GlfContextCaps::GetInstance();
+
+    if (caps.multiDrawIndirectEnabled) {
+        return HdSt_DrawBatchSharedPtr(
+            new HdSt_IndirectDrawBatch(drawItemInstance));
     } else {
-        return std::make_shared<HdSt_IndirectDrawBatch>(drawItemInstance);
+        return HdSt_DrawBatchSharedPtr(
+            new HdSt_ImmediateDrawBatch(drawItemInstance));
     }
 }
 
@@ -88,7 +93,6 @@ HdStCommandBuffer::PrepareDraw(
 
 void
 HdStCommandBuffer::ExecuteDraw(
-    HgiGraphicsCmds *gfxCmds,
     HdStRenderPassStateSharedPtr const &renderPassState,
     HdStResourceRegistrySharedPtr const &resourceRegistry)
 {
@@ -106,40 +110,32 @@ HdStCommandBuffer::ExecuteDraw(
     // draw batches
     //
     for (auto const& batch : _drawBatches) {
-        batch->ExecuteDraw(gfxCmds, renderPassState, resourceRegistry);
+        batch->ExecuteDraw(renderPassState, resourceRegistry);
     }
     HD_PERF_COUNTER_SET(HdPerfTokens->drawBatches, _drawBatches.size());
-}
 
-void
-HdStCommandBuffer::SetDrawItems(
-    HdDrawItemConstPtrVectorSharedPtr const &drawItems,
-    unsigned currentDrawBatchesVersion,
-    HgiCapabilities const *hgiCapabilities)
-{
-    if (drawItems == _drawItems &&
-        currentDrawBatchesVersion == _drawBatchesVersion) {
-        return;
+    if (!glBindBuffer) {
+        // useful when testing with GL drawing disabled
+        HD_PERF_COUNTER_SET(HdTokens->itemsDrawn, _visibleSize);
     }
-    _drawItems = drawItems;
-    _RebuildDrawBatches(hgiCapabilities);
-    _drawBatchesVersion = currentDrawBatchesVersion;
 }
 
 void
-HdStCommandBuffer::RebuildDrawBatchesIfNeeded(unsigned currentBatchesVersion,
-    HgiCapabilities const *hgiCapabilities)
+HdStCommandBuffer::SwapDrawItems(std::vector<HdStDrawItem const*>* items,
+                               unsigned currentBatchVersion)
+{
+    _drawItems.swap(*items);
+    _RebuildDrawBatches();
+    _batchVersion = currentBatchVersion;
+}
+
+void
+HdStCommandBuffer::RebuildDrawBatchesIfNeeded(unsigned currentBatchVersion)
 {
     HD_TRACE_FUNCTION();
 
-    bool deepValidation = (currentBatchesVersion != _drawBatchesVersion);
-    _drawBatchesVersion = currentBatchesVersion;
-
-    if (TfDebug::IsEnabled(HDST_DRAW_BATCH) && !_drawBatches.empty()) {
-        TfDebug::Helper().Msg(
-            "Command buffer %p : RebuildDrawBatchesIfNeeded "
-            "(deepValidation=%d)\n", (void*)(this), deepValidation);
-    }
+    bool deepValidation = (currentBatchVersion != _batchVersion);
+    _batchVersion = currentBatchVersion;
     
     // Force rebuild of all batches for debugging purposes. This helps quickly
     // triage issues wherein the command buffer wasn't updated correctly.
@@ -147,51 +143,32 @@ HdStCommandBuffer::RebuildDrawBatchesIfNeeded(unsigned currentBatchesVersion,
         TfDebug::IsEnabled(HDST_FORCE_DRAW_BATCH_REBUILD);
 
     if (ARCH_LIKELY(!rebuildAllDrawBatches)) {
-        // Gather results of validation ...
-        std::vector<HdSt_DrawBatch::ValidationResult> results;
-        results.reserve(_drawBatches.size());
-
         for (auto const& batch : _drawBatches) {
-            const HdSt_DrawBatch::ValidationResult result =
-                batch->Validate(deepValidation);
-            
-            if (result == HdSt_DrawBatch::ValidationResult::RebuildAllBatches) {
-                // Skip validation of remaining batches since we need to rebuild
-                // all batches. We don't expect to use this hammer on a frequent
-                // basis.
-                rebuildAllDrawBatches = true;
-                break;
-            }
-            
-            results.push_back(result);
-        }
-
-        // ... and attempt to rebuild necessary batches
-        if (!rebuildAllDrawBatches) {
-            TF_VERIFY(results.size() == _drawBatches.size());
-            size_t const numBatches = results.size();
-            for (size_t i = 0; i < numBatches; i++) {
-                if (results[i] ==
-                    HdSt_DrawBatch::ValidationResult::RebuildBatch) {
-                    
-                    if (!_drawBatches[i]->Rebuild()) {
-                        // If a batch rebuild fails, we fallback to rebuilding
-                        // all draw batches. This can be improved in the future.
-                        rebuildAllDrawBatches = true;
-                        break;
-                    }
+            // Validate checks if the batch is referring to up-to-date
+            // buffer arrays (via a cheap version number hash check).
+            // If deepValidation is set, we loop over the draw items to check
+            // if they can be aggregated. If these checks fail, we need to
+            // rebuild the batch.
+            bool needToRebuildBatch = !batch->Validate(deepValidation);
+            if (needToRebuildBatch) {
+                // Attempt to rebuild the batch. If that fails, we use a big
+                // hammer and rebuilt ALL batches.
+                bool rebuildSuccess = batch->Rebuild();
+                if (!rebuildSuccess) {
+                    rebuildAllDrawBatches = true;
+                    break;
                 }
             }
         }
     }
 
     if (rebuildAllDrawBatches) {
-        _RebuildDrawBatches(hgiCapabilities);
+        _RebuildDrawBatches();
     }   
 }
 
 void
-HdStCommandBuffer::_RebuildDrawBatches(HgiCapabilities const *hgiCapabilities)
+HdStCommandBuffer::_RebuildDrawBatches()
 {
     HD_TRACE_FUNCTION();
 
@@ -202,9 +179,12 @@ HdStCommandBuffer::_RebuildDrawBatches(HgiCapabilities const *hgiCapabilities)
 
     _drawBatches.clear();
     _drawItemInstances.clear();
-    _drawItemInstances.reserve(_drawItems->size());
+    _drawItemInstances.reserve(_drawItems.size());
 
     HD_PERF_COUNTER_INCR(HdPerfTokens->rebuildBatches);
+
+    const bool bindlessTexture = GlfContextCaps::GetInstance()
+                                               .bindlessTextureEnabled;
 
     // Use a cheap bucketing strategy to reduce to number of comparison tests
     // required to figure out if a draw item can be batched.
@@ -228,17 +208,12 @@ HdStCommandBuffer::_RebuildDrawBatches(HgiCapabilities const *hgiCapabilities)
         std::unordered_map<size_t, HdSt_DrawBatchSharedPtrVector>;
     _DrawBatchMap batchMap;
 
-    // Downcast the HdDrawItem entries to HdStDrawItems:
-    std::vector<HdStDrawItem const*>* stDrawItemsPtr =
-        reinterpret_cast< std::vector<HdStDrawItem const*>* >(_drawItems.get());
-    auto const &drawItems = *stDrawItemsPtr;
-
-    for (size_t i = 0; i < drawItems.size(); i++) {
-        HdStDrawItem const * drawItem = drawItems[i];
+    for (size_t i = 0; i < _drawItems.size(); i++) {
+        HdStDrawItem const * drawItem = _drawItems[i];
 
         if (!TF_VERIFY(drawItem->GetGeometricShader(), "%s",
                        drawItem->GetRprimID().GetText()) ||
-            !TF_VERIFY(drawItem->GetMaterialNetworkShader(), "%s",
+            !TF_VERIFY(drawItem->GetMaterialShader(), "%s",
                        drawItem->GetRprimID().GetText())) {
             continue;
         }
@@ -248,16 +223,18 @@ HdStCommandBuffer::_RebuildDrawBatches(HgiCapabilities const *hgiCapabilities)
 
         size_t key = drawItem->GetGeometricShader()->ComputeHash();
         boost::hash_combine(key, drawItem->GetBufferArraysHash());
-        // Geometric, RenderPass and Lighting shaders should never break
-        // batches, however materials can. We consider the textures
-        // used by the material to be part of the batch key for that
-        // reason.
-        // Since textures can be animated and thus materials can be batched
-        // at some times but not other times, we use the texture prim path
-        // for the hash which does not vary over time.
-        // 
-        boost::hash_combine(key,
-            drawItem->GetMaterialNetworkShader()->ComputeTextureSourceHash());
+        if (!bindlessTexture) {
+            // Geometric, RenderPass and Lighting shaders should never break
+            // batches, however materials can. We consider the textures
+            // used by the material to be part of the batch key for that
+            // reason.
+            // Since textures can be animated and thus materials can be batched
+            // at some times but not other times, we use the texture prim path
+            // for the hash which does not vary over time.
+            // 
+            boost::hash_combine(
+                key, drawItem->GetMaterialShader()->ComputeTextureSourceHash());
+        }
 
         // Do a quick check to see if the draw item can be batched with the
         // previous draw item, before checking the batchMap.
@@ -282,8 +259,7 @@ HdStCommandBuffer::_RebuildDrawBatches(HgiCapabilities const *hgiCapabilities)
         }
 
         if (!batched) {
-            HdSt_DrawBatchSharedPtr batch =
-                _NewDrawBatch(drawItemInstance, hgiCapabilities);
+            HdSt_DrawBatchSharedPtr batch = _NewDrawBatch(drawItemInstance);
             _drawBatches.emplace_back(batch);
             prevBatch.Update(key, batch);
 
@@ -298,7 +274,7 @@ HdStCommandBuffer::_RebuildDrawBatches(HgiCapabilities const *hgiCapabilities)
 
     TF_DEBUG(HDST_DRAW_BATCH).Msg(
         "   %lu draw batches created for %lu draw items\n", _drawBatches.size(),
-        drawItems.size());
+        _drawItems.size());
 }
 
 void
@@ -360,7 +336,7 @@ HdStCommandBuffer::FrustumCull(GfMatrix4d const &viewProjMatrix)
 
     const bool mtCullingDisabled = 
         TfDebug::IsEnabled(HDST_DISABLE_MULTITHREADED_CULLING) || 
-        _drawItems->size() < 10000;
+        _drawItems.size() < 10000;
 
     struct _Worker {
         static

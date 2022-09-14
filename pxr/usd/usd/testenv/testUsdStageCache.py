@@ -156,8 +156,7 @@ class TestUsdStageCache(unittest.TestCase):
                 except TypeError:
                     return (x,)
             args = makeIterable(args)
-            assert sorted(cache.FindAllMatching(*args), key=lambda x: id(x)) \
-                    == sorted(expected, key=lambda x: id(x))
+            assert sorted(cache.FindAllMatching(*args)) == sorted(expected)
             assert cache.FindOneMatching(*args) in expected
             
         CheckMatching(sameRoot1.GetRootLayer(), [sameRoot1, sameRoot2])

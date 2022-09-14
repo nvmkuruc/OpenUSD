@@ -81,13 +81,9 @@ endfunction() # _copy_headers
 # our naming conventions, e.g. Tf
 function(_get_python_module_name LIBRARY_FILENAME MODULE_NAME)
     # Library names are either something like tf.so for shared libraries
-    # or _tf.pyd/_tf_d.pyd for Python module libraries.
-    # We want to strip off the leading "_" and the trailing "_d".
-    set(LIBNAME ${LIBRARY_FILENAME})
-    if (PXR_USE_DEBUG_PYTHON)
-        string(REGEX REPLACE "_d$" "" LIBNAME ${LIBNAME})
-    endif()
-    string(REGEX REPLACE "^_" "" LIBNAME ${LIBNAME})
+    # or _tf.so for Python module libraries. We want to strip the leading
+    # "_" off.
+    string(REPLACE "_" "" LIBNAME ${LIBRARY_FILENAME})
     string(SUBSTRING ${LIBNAME} 0 1 LIBNAME_FL)
     string(TOUPPER ${LIBNAME_FL} LIBNAME_FL)
     string(SUBSTRING ${LIBNAME} 1 -1 LIBNAME_SUFFIX)
@@ -265,17 +261,10 @@ function(_install_pyside_ui_files LIBRARY_NAME)
         get_filename_component(outFileName ${uiFile} NAME_WE)
         get_filename_component(uiFilePath ${uiFile} ABSOLUTE)
         set(outFilePath "${CMAKE_CURRENT_BINARY_DIR}/${outFileName}.py")
-        get_filename_component(pysideUicBinName ${PYSIDEUICBINARY} NAME_WLE)
-        if("${pysideUicBinName}" STREQUAL "uic")
-            # Newer versions of Qt have deprecated pyside2-uic. It
-            # has been replaced by "uic" which needs extra arg for
-            # generating python output (instead of default C++ ).
-            set(PYSIDEUIC_EXTRA_ARGS -g python)
-        endif()
         add_custom_command(
             OUTPUT ${outFilePath}
             COMMAND "${PYSIDEUICBINARY}"
-            ARGS ${PYSIDEUIC_EXTRA_ARGS} -o ${outFilePath} ${uiFilePath}
+            ARGS -o ${outFilePath} ${uiFilePath}
             MAIN_DEPENDENCY "${uiFilePath}"
             COMMENT "Generating Python for ${uiFilePath} ..."
             VERBATIM
@@ -616,11 +605,14 @@ function(_pxr_install_rpath rpathRef NAME)
     # Canonicalize and uniquify paths.
     set(final "")
     foreach(path ${rpath})
-        # Replace $ORIGIN with @loader_path
+        # Absolutize on Mac.  SIP disallows relative rpaths.
         if(APPLE)
             if("${path}/" MATCHES "^[$]ORIGIN/")
                 # Replace with origin path.
-                string(REPLACE "$ORIGIN/" "@loader_path/" path "${path}/")
+                string(REPLACE "$ORIGIN/" "${origin}/" path "${path}/")
+
+                # Simplify.
+                get_filename_component(path "${path}" REALPATH)
             endif()
         endif()
 
@@ -909,12 +901,7 @@ function(_pxr_python_module NAME)
         return()
     endif()
 
-    if (WIN32 AND PXR_USE_DEBUG_PYTHON)
-        # On Windows when compiling with debug python the library must be named with _d.
-        set(LIBRARY_NAME "_${NAME}_d")
-    else()
-        set(LIBRARY_NAME "_${NAME}")
-    endif()
+    set(LIBRARY_NAME "_${NAME}")
 
     # Install .py files.
     if(args_PYTHON_FILES)
@@ -1048,7 +1035,7 @@ function(_pxr_python_module NAME)
     target_include_directories(${LIBRARY_NAME}
         SYSTEM
         PUBLIC
-            ${PYTHON_INCLUDE_DIRS}
+            ${PYTHON_INCLUDE_DIR}
     )
 
     install(
@@ -1087,7 +1074,6 @@ function(_pxr_library NAME)
         LIBRARIES
         INCLUDE_DIRS
         RESOURCE_FILES
-        DOXYGEN_FILES
         LIB_INSTALL_PREFIX_RESULT
     )
     cmake_parse_arguments(args
@@ -1189,21 +1175,6 @@ function(_pxr_library NAME)
             ${args_PUBLIC_HEADERS}
             ${args_PRIVATE_HEADERS}
         )
-        if(PXR_PY_UNDEFINED_DYNAMIC_LOOKUP)
-            # When not explicitly linking to the python lib we need to allow
-            # the linker to complete without resolving all symbols. This lets
-            # python resolve at runtime, and use this to support python
-            # versions built with different compilers and point versions.
-            # This only needed on macOS; this is not an issue on Windows,
-            # and on Linux the equivalent --allow-shlib-undefined option for ld
-            # is enabled by default when creating shared libraries.
-            if(APPLE)
-                target_link_options(${NAME}
-                    PUBLIC
-                    "LINKER:SHELL:-undefined dynamic_lookup"
-                )
-            endif()
-        endif()
     endif()
 
     #
@@ -1343,44 +1314,6 @@ function(_pxr_library NAME)
         PUBLIC
             ${args_INCLUDE_DIRS}
     )
-
-    # If we're building documentation, we need to copy the files we want
-    # doxygen to process to a parallel structure in the build directory.
-    # Doxygen will be run on these files during the install step ---
-    # see pxr_build_documentation().
-    if(PXR_BUILD_DOCUMENTATION)
-        set(docBuildDir ${CMAKE_BINARY_DIR}/docs/${headerInstallPrefix})
-        set(doxygenFiles "${args_PUBLIC_HEADERS};${args_DOXYGEN_FILES}")
-
-        set(files_copied "")
-
-        foreach(doxygenFile ${doxygenFiles})
-            add_custom_command(
-                OUTPUT ${docBuildDir}/${doxygenFile}
-                COMMAND
-                    ${CMAKE_COMMAND} -E make_directory ${docBuildDir}
-                COMMAND
-                    ${CMAKE_COMMAND} -E copy 
-                    ${CMAKE_CURRENT_SOURCE_DIR}/${doxygenFile}
-                    ${docBuildDir}/${doxygenFile}
-                MAIN_DEPENDENCY
-                    ${CMAKE_CURRENT_SOURCE_DIR}/${doxygenFile}
-                VERBATIM
-            )
-
-            list(APPEND files_copied ${docBuildDir}/${doxygenFile})
-        endforeach()
-
-        add_custom_target(${NAME}_docfiles
-            DEPENDS ${files_copied}
-        )
-        add_dependencies(${NAME} ${NAME}_docfiles)
-
-        set_target_properties(${NAME}_docfiles
-            PROPERTIES
-                FOLDER "docs"
-        )
-    endif()
 
     # XXX -- May want some plugins to be baked into monolithic.
     _pxr_target_link_libraries(${NAME} ${args_LIBRARIES})

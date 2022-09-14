@@ -91,90 +91,36 @@ void wrapUsdSchemaRegistry()
              (arg("primType")))
         .staticmethod("IsTyped")
 
-        .def("GetSchemaKind",
-             (UsdSchemaKind (*)(const TfType &)) &This::GetSchemaKind,
-             (arg("primType")))
-        .def("GetSchemaKind",
-             (UsdSchemaKind (*)(const TfToken &)) &This::GetSchemaKind,
-             (arg("primType")))
-        .staticmethod("GetSchemaKind")
-
         .def("IsConcrete",
-             (bool (*)(const TfType &)) &This::IsConcrete,
+             (bool (This::*)(const TfType &) const)
+             &This::IsConcrete,
              (arg("primType")))
         .def("IsConcrete",
-             (bool (*)(const TfToken &)) &This::IsConcrete,
+             (bool (This::*)(const TfToken &) const)
+             &This::IsConcrete,
              (arg("primType")))
-        .staticmethod("IsConcrete")
-
-        .def("IsAbstract",
-             (bool (*)(const TfType &)) &This::IsAbstract,
-             (arg("primType")))
-        .def("IsAbstract",
-             (bool (*)(const TfToken&)) &This::IsAbstract,
-             (arg("primType")))
-        .staticmethod("IsAbstract")
 
         .def("IsAppliedAPISchema", 
-             (bool (*)(const TfType &)) &This::IsAppliedAPISchema,
+             (bool (This::*)(const TfType &) const)
+             &This::IsAppliedAPISchema,
              (arg("apiSchemaType")))
         .def("IsAppliedAPISchema", 
-             (bool (*)(const TfToken &)) &This::IsAppliedAPISchema,
+             (bool (This::*)(const TfToken &) const)
+             &This::IsAppliedAPISchema,
              (arg("apiSchemaType")))
-        .staticmethod("IsAppliedAPISchema")
 
         .def("IsMultipleApplyAPISchema", 
-             (bool (*)(const TfType &)) &This::IsMultipleApplyAPISchema,
+             (bool (This::*)(const TfType &) const)
+             &This::IsMultipleApplyAPISchema,
              (arg("apiSchemaType")))
         .def("IsMultipleApplyAPISchema", 
-             (bool (*)(const TfToken &)) &This::IsMultipleApplyAPISchema,
+             (bool (This::*)(const TfToken &) const)
+             &This::IsMultipleApplyAPISchema,
              (arg("apiSchemaType")))
-        .staticmethod("IsMultipleApplyAPISchema")
 
         .def("GetTypeFromName", &This::GetTypeFromName, 
             (arg("typeName")))
         .staticmethod("GetTypeFromName")
-
-        .def("GetTypeNameAndInstance", &This::GetTypeNameAndInstance,
-            (arg("typeName")), return_value_policy<TfPyPairToTuple>())
-        .staticmethod("GetTypeNameAndInstance")
-
-        .def("IsAllowedAPISchemaInstanceName", 
-             &This::IsAllowedAPISchemaInstanceName,
-             (arg("apiSchemaName"), arg("instanceName")))
-        .staticmethod("IsAllowedAPISchemaInstanceName")
-
-        .def("GetAPISchemaCanOnlyApplyToTypeNames", 
-             &This::GetAPISchemaCanOnlyApplyToTypeNames,
-             (arg("apiSchemaName"), arg("instanceName")=TfToken()),
-             return_value_policy<TfPySequenceToList>())
-        .staticmethod("GetAPISchemaCanOnlyApplyToTypeNames")
-
-        .def("GetAutoApplyAPISchemas", &This::GetAutoApplyAPISchemas,
-             return_value_policy<TfPyMapToDictionary>())
-        .staticmethod("GetAutoApplyAPISchemas")
-
-        .def("MakeMultipleApplyNameTemplate", 
-             &This::MakeMultipleApplyNameTemplate,
-             arg("namespacePrefix"),
-             arg("baseName"))
-        .staticmethod("MakeMultipleApplyNameTemplate")
-
-        .def("MakeMultipleApplyNameInstance", 
-             &This::MakeMultipleApplyNameInstance,
-             arg("nameTemplate"),
-             arg("instanceName"))
-        .staticmethod("MakeMultipleApplyNameInstance")
-
-        .def("GetMultipleApplyNameTemplateBaseName", 
-             &This::GetMultipleApplyNameTemplateBaseName,
-             arg("nameTemplate"))
-        .staticmethod("GetMultipleApplyNameTemplateBaseName")
-
-        .def("IsMultipleApplyNameTemplate", 
-             &This::IsMultipleApplyNameTemplate,
-             arg("nameTemplate"))
-        .staticmethod("IsMultipleApplyNameTemplate")
 
         .def("FindConcretePrimDefinition", 
              &This::FindConcretePrimDefinition,

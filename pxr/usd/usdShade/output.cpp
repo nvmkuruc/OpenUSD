@@ -203,14 +203,6 @@ UsdShadeOutput::CanConnect(const UsdShadeOutput &sourceOutput) const
     return CanConnect(sourceOutput.GetAttr());
 }
 
-bool
-UsdShadeOutput::ConnectToSource(
-    UsdShadeConnectionSourceInfo const &source,
-    ConnectionModification const mod) const
-{
-    return UsdShadeConnectableAPI::ConnectToSource(*this, source, mod);
-}
-
 bool 
 UsdShadeOutput::ConnectToSource(
     UsdShadeConnectableAPI const &source, 
@@ -218,8 +210,8 @@ UsdShadeOutput::ConnectToSource(
     UsdShadeAttributeType const sourceType,
     SdfValueTypeName typeName) const 
 {
-    return UsdShadeConnectableAPI::ConnectToSource(*this, source,
-        sourceName, sourceType, typeName);
+    return UsdShadeConnectableAPI::ConnectToSource(*this, source, 
+        sourceName, sourceType, typeName);   
 }
 
 bool 
@@ -238,20 +230,6 @@ bool
 UsdShadeOutput::ConnectToSource(UsdShadeOutput const &sourceOutput) const 
 {
     return UsdShadeConnectableAPI::ConnectToSource(*this, sourceOutput);
-}
-
-bool
-UsdShadeOutput::SetConnectedSources(
-    std::vector<UsdShadeConnectionSourceInfo> const &sourceInfos) const
-{
-    return UsdShadeConnectableAPI::SetConnectedSources(*this, sourceInfos);
-}
-
-UsdShadeOutput::SourceInfoVector
-UsdShadeOutput::GetConnectedSources(SdfPathVector *invalidSourcePaths) const
-{
-    return UsdShadeConnectableAPI::GetConnectedSources(*this,
-                                                       invalidSourcePaths);
 }
 
 bool 
@@ -284,29 +262,15 @@ UsdShadeOutput::IsSourceConnectionFromBaseMaterial() const
 }
 
 bool 
-UsdShadeOutput::DisconnectSource(UsdAttribute const &sourceAttr) const
+UsdShadeOutput::DisconnectSource() const
 {
-    return UsdShadeConnectableAPI::DisconnectSource(*this, sourceAttr);
-}
-
-bool
-UsdShadeOutput::ClearSources() const
-{
-    return UsdShadeConnectableAPI::ClearSources(*this);
+    return UsdShadeConnectableAPI::DisconnectSource(*this);
 }
 
 bool 
-UsdShadeOutput::ClearSource() const 
+UsdShadeOutput::ClearSource() const
 {
-    return UsdShadeConnectableAPI::ClearSources(*this);
-}
-
-UsdShadeAttributeVector
-UsdShadeOutput::GetValueProducingAttributes(
-    bool shaderOutputsOnly) const
-{
-    return UsdShadeUtils::GetValueProducingAttributes(*this,
-                                                      shaderOutputsOnly);
+    return UsdShadeConnectableAPI::ClearSource(*this);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

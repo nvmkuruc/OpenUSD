@@ -108,7 +108,7 @@ WorkParallelReduceN(
         return identity;
 
     // Don't bother with parallel_reduce, if concurrency is limited to 1.
-    if (WorkHasConcurrency()) {
+    if (WorkGetConcurrencyLimit() > 1) {
 
         class Work_Body_TBB
         {

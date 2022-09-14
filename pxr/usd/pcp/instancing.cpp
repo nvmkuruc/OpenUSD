@@ -25,7 +25,6 @@
 #include "pxr/usd/pcp/instancing.h"
 
 #include "pxr/base/tf/envSetting.h"
-#include "pxr/base/tf/smallVector.h"
 #include "pxr/base/trace/trace.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -89,32 +88,34 @@ Pcp_PrimIndexIsInstanceable(
 
     // Compose the value of the 'instanceable' metadata to see if this
     // prim has been tagged as instanceable.
-    bool isInstance = false;
-    static const TfToken instanceField = SdfFieldKeys->Instanceable;
-    // Stack of nodes left to visit, in strong-to-weak order.
-    // Strongest open node is top of the stack.
-    TfSmallVector<PcpNodeRef, 64> nodesToVisit;
-    nodesToVisit.push_back(primIndex.GetRootNode());
-    bool opinionFound = false;
-    while (!nodesToVisit.empty()) {
-        PcpNodeRef node = nodesToVisit.back();
-        nodesToVisit.pop_back();
-        if (node.CanContributeSpecs()) {
-            const PcpLayerStackSite& site = node.GetSite();
-            for (SdfLayerRefPtr const& layer: site.layerStack->GetLayers()) {
-                if (layer->HasField(site.path, instanceField, &isInstance)) {
-                    opinionFound = true;
-                    break;
+    struct _Helper {
+        static bool
+        ComposeInstance(const PcpNodeRef& node, bool* isInstance)
+        {
+            static const TfToken instanceField = SdfFieldKeys->Instanceable;
+
+            if (node.CanContributeSpecs()) {
+                const PcpLayerStackSite& site = node.GetSite();
+                TF_FOR_ALL(layer, site.layerStack->GetLayers()) {
+                    if ((*layer)->HasField(
+                            site.path, instanceField, isInstance)) {
+                        return true;
+                    }
                 }
             }
-            if (opinionFound) {
-                break;
+
+            TF_FOR_ALL(child, Pcp_GetChildrenRange(node)) {
+                if (ComposeInstance(*child, isInstance)) {
+                    return true;
+                }
             }
+
+            return false;
         }
-        TF_REVERSE_FOR_ALL(childIt, Pcp_GetChildrenRange(node)) {
-            nodesToVisit.push_back(*childIt);
-        }
-    }
+    };
+
+    bool isInstance = false;
+    _Helper::ComposeInstance(primIndex.GetRootNode(), &isInstance);
     return isInstance;
 }
 

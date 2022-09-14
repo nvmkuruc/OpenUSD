@@ -120,7 +120,7 @@ public:
         return _curveVertexCounts;
     }
 
-    /// Returns indices.
+    /// Returns indicies.
     VtIntArray const &GetCurveIndices() const {
         return _curveIndices;
     }
@@ -128,12 +128,6 @@ public:
     /// Returns the number of curves
     size_t GetNumCurves() const {
         return _curveVertexCounts.size();
-    }
-
-    /// Returns the number of points implied by vertex counts and indices
-    HD_API
-    size_t GetNumPoints() const {
-        return _numPoints;
     }
 
     /// See class documentation for valid combination of values
@@ -170,7 +164,6 @@ private:
     VtIntArray _curveIndices;
     VtIntArray _invisiblePoints;
     VtIntArray _invisibleCurves;
-    size_t _numPoints;
 };
 
 HD_API

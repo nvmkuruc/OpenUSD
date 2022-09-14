@@ -42,8 +42,6 @@ TF_INSTANTIATE_NOTICE_WRAPPER(UsdNotice::ObjectsChanged,
                                 UsdNotice::StageNotice);
 TF_INSTANTIATE_NOTICE_WRAPPER(UsdNotice::StageEditTargetChanged,
                                 UsdNotice::StageNotice);
-TF_INSTANTIATE_NOTICE_WRAPPER(UsdNotice::LayerMutingChanged,
-                                UsdNotice::StageNotice);
 
 SdfPathVector
 _GetResyncedPaths(const UsdNotice::ObjectsChanged& n)
@@ -105,16 +103,6 @@ void wrapUsdNotice()
 
     TfPyNoticeWrapper<
         UsdNotice::StageEditTargetChanged, UsdNotice::StageNotice>::Wrap()
-        ;
-
-    TfPyNoticeWrapper<
-        UsdNotice::LayerMutingChanged, UsdNotice::StageNotice>::Wrap()
-        .def("GetMutedLayers", 
-             &UsdNotice::LayerMutingChanged::GetMutedLayers,
-             return_value_policy<TfPySequenceToList>())
-        .def("GetUnmutedLayers", 
-             &UsdNotice::LayerMutingChanged::GetUnmutedLayers,
-             return_value_policy<TfPySequenceToList>())
         ;
 }
 

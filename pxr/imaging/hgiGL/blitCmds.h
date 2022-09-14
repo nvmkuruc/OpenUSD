@@ -52,31 +52,13 @@ public:
     void CopyTextureGpuToCpu(HgiTextureGpuToCpuOp const& copyOp) override;
 
     HGIGL_API
-    void CopyTextureCpuToGpu(HgiTextureCpuToGpuOp const& copyOp) override;
-
-    HGIGL_API
     void CopyBufferGpuToGpu(HgiBufferGpuToGpuOp const& copyOp) override;
 
     HGIGL_API
     void CopyBufferCpuToGpu(HgiBufferCpuToGpuOp const& copyOp) override;
 
     HGIGL_API
-    void CopyBufferGpuToCpu(HgiBufferGpuToCpuOp const& copyOp) override;
-
-    HGIGL_API
-    void CopyTextureToBuffer(HgiTextureToBufferOp const& copyOp) override;
-    
-    HGIGL_API
-    void CopyBufferToTexture(HgiBufferToTextureOp const& copyOp) override;
-
-    HGIGL_API
     void GenerateMipMaps(HgiTextureHandle const& texture) override;
-    
-    HGIGL_API
-    void FillBuffer(HgiBufferHandle const& buffer, uint8_t value) override;
-
-    HGIGL_API
-    void MemoryBarrier(HgiMemoryBarrier barrier) override;
 
 protected:
     friend class HgiGL;
@@ -85,14 +67,13 @@ protected:
     HgiGLBlitCmds();
 
     HGIGL_API
-    bool _Submit(Hgi* hgi, HgiSubmitWaitType wait) override;
+    bool _Submit(Hgi* hgi) override;
 
 private:
     HgiGLBlitCmds & operator=(const HgiGLBlitCmds&) = delete;
     HgiGLBlitCmds(const HgiGLBlitCmds&) = delete;
 
     HgiGLOpsVector _ops;
-    int _pushStack;
 
     // BlitCmds is used only one frame so storing multi-frame state here will
     // not survive.

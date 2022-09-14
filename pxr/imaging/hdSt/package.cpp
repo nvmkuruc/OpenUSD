@@ -97,9 +97,9 @@ HdStPackageFallbackLightingShader()
 }
 
 TfToken
-HdStPackageFallbackMaterialNetworkShader()
+HdStPackageFallbackSurfaceShader()
 {
-    static TfToken s = _GetShaderPath("fallbackMaterialNetwork.glslfx");
+    static TfToken s = _GetShaderPath("fallbackSurface.glslfx");
     return s;
 }
 
@@ -107,6 +107,13 @@ TfToken
 HdStPackageFallbackVolumeShader()
 {
     static TfToken s = _GetShaderPath("fallbackVolume.glslfx");
+    return s;
+}
+
+TfToken
+HdStPackageLightingIntegrationShader()
+{
+    static TfToken s = _GetShaderPath("lightingIntegrationShader.glslfx");
     return s;
 }
 
@@ -120,15 +127,9 @@ HdStPackageImageShader()
 TfToken
 HdStPackageSimpleLightingShader()
 {
-    static TfToken s = _GetShaderPath("simpleLightingShader.glslfx");
-    return s;
-}
-
-TfToken
-HdStPackageWidgetShader()
-{
-    static TfToken s = _GetShaderPath("widgetShader.glslfx");
-    return s;
+    static TfToken simpleLightingShader = 
+        _GetShaderPath("simpleLightingShader.glslfx");
+    return simpleLightingShader;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -27,43 +27,50 @@
 #include "pxr/pxr.h"
 #include "pxr/imaging/hdSt/api.h"
 #include "pxr/imaging/hdSt/lightingShader.h"
+#include "pxr/imaging/hio/glslfx.h"
+
+#include "pxr/base/gf/vec4d.h"
+
+#include "pxr/base/tf/declarePtrs.h"
+#include "pxr/base/tf/token.h"
 
 #include <memory>
+#include <vector>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-class HioGlslfx;
 
 /// \class HdSt_FallbackLightingShader
 ///
 /// A shader that provides fallback lighting behavior.
 ///
-class HdSt_FallbackLightingShader : public HdStLightingShader
-{
+class HdSt_FallbackLightingShader : public HdStLightingShader {
 public:
     HDST_API
     HdSt_FallbackLightingShader();
     HDST_API
-    ~HdSt_FallbackLightingShader() override;
+    virtual ~HdSt_FallbackLightingShader();
 
     // HdStShaderCode overrides
     HDST_API
-    ID ComputeHash() const override;
+    virtual ID ComputeHash() const;
     HDST_API
-    std::string GetSource(TfToken const &shaderStageKey) const override;
+    virtual std::string GetSource(TfToken const &shaderStageKey) const;
     HDST_API
-    void BindResources(int program,
-                       HdSt_ResourceBinder const &binder) override;
+    virtual void BindResources(int program,
+                               HdSt_ResourceBinder const &binder,
+                               HdRenderPassState const &state) override;
     HDST_API
-    void UnbindResources(int program,
-                         HdSt_ResourceBinder const &binder) override;
+    virtual void UnbindResources(int program,
+                                 HdSt_ResourceBinder const &binder,
+                                 HdRenderPassState const &state) override;
     HDST_API
-    void AddBindings(HdBindingRequestVector *customBindings) override;
+    virtual void AddBindings(HdBindingRequestVector *customBindings);
 
     // HdStLightingShader overrides
     HDST_API
-    void SetCamera(GfMatrix4d const &worldToViewMatrix,
-                   GfMatrix4d const &projectionMatrix) override;
+    virtual void SetCamera(GfMatrix4d const &worldToViewMatrix,
+                           GfMatrix4d const &projectionMatrix);
 
 private:
     std::unique_ptr<HioGlslfx> _glslfx;

@@ -53,12 +53,6 @@ PXR_NAMESPACE_OPEN_SCOPE
 ///    The filter used for combining pixels between two mipmap levels.</li>
 /// <li>addressMode***: 
 ///    Wrapping modes.</li>
-/// <li>borderColor: 
-///    The border color for clamped texture values.</li>
-/// <li>enableCompare: 
-///    Enables sampler comparison against a reference value during lookups.</li>
-/// <li>compareFunction: 
-///    The comparison function to apply if sampler compare is enabled.</li>
 /// </ul>
 ///
 struct HgiSamplerDesc
@@ -70,9 +64,6 @@ struct HgiSamplerDesc
         , addressModeU(HgiSamplerAddressModeClampToEdge)
         , addressModeV(HgiSamplerAddressModeClampToEdge)
         , addressModeW(HgiSamplerAddressModeClampToEdge)
-        , borderColor(HgiBorderColorTransparentBlack)
-        , enableCompare(false)
-        , compareFunction(HgiCompareFunctionNever)
     {}
 
     std::string debugName;
@@ -82,9 +73,6 @@ struct HgiSamplerDesc
     HgiSamplerAddressMode addressModeU;
     HgiSamplerAddressMode addressModeV;
     HgiSamplerAddressMode addressModeW;
-    HgiBorderColor borderColor;
-    bool enableCompare;
-    HgiCompareFunction compareFunction;
 };
 
 HGI_API
@@ -140,7 +128,10 @@ private:
     HgiSampler(const HgiSampler&) = delete;
 };
 
-using HgiSamplerHandle = HgiHandle<HgiSampler>;
+
+/// Explicitly instantiate and define texture handle
+template class HgiHandle<class HgiSampler>;
+using HgiSamplerHandle = HgiHandle<class HgiSampler>;
 using HgiSamplerHandleVector = std::vector<HgiSamplerHandle>;
 
 

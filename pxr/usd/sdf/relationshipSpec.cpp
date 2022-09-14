@@ -262,6 +262,10 @@ SdfRelationshipSpec::RemoveTargetPath(
     const SdfPath& path,
     bool preserveTargetOrder)
 {
+    // Csd expects to see remove property notices for all of our
+    // relational attributes.  The change below won't send them since
+    // they're implied by the removal of their owner.
+    // XXX: Csd should implicitly assume these notices.
     const SdfPath targetSpecPath = 
         GetPath().AppendTarget(_CanonicalizeTargetPath(path));
 

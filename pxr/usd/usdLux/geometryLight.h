@@ -28,7 +28,7 @@
 
 #include "pxr/pxr.h"
 #include "pxr/usd/usdLux/api.h"
-#include "pxr/usd/usdLux/nonboundableLightBase.h"
+#include "pxr/usd/usdLux/light.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
 #include "pxr/usd/usdLux/tokens.h"
@@ -52,29 +52,23 @@ class SdfAssetPath;
 
 /// \class UsdLuxGeometryLight
 ///
-/// \deprecated
 /// Light emitted outward from a geometric prim (UsdGeomGprim),
 /// which is typically a mesh.
 ///
-/// For any described attribute \em Fallback \em Value or \em Allowed \em Values below
-/// that are text/tokens, the actual token is published and defined in \ref UsdLuxTokens.
-/// So to set an attribute to the value "rightHanded", use UsdLuxTokens->rightHanded
-/// as the value.
-///
-class UsdLuxGeometryLight : public UsdLuxNonboundableLightBase
+class UsdLuxGeometryLight : public UsdLuxLight
 {
 public:
     /// Compile time constant representing what kind of schema this class is.
     ///
-    /// \sa UsdSchemaKind
-    static const UsdSchemaKind schemaKind = UsdSchemaKind::ConcreteTyped;
+    /// \sa UsdSchemaType
+    static const UsdSchemaType schemaType = UsdSchemaType::ConcreteTyped;
 
     /// Construct a UsdLuxGeometryLight on UsdPrim \p prim .
     /// Equivalent to UsdLuxGeometryLight::Get(prim.GetStage(), prim.GetPath())
     /// for a \em valid \p prim, but will not immediately throw an error for
     /// an invalid \p prim
     explicit UsdLuxGeometryLight(const UsdPrim& prim=UsdPrim())
-        : UsdLuxNonboundableLightBase(prim)
+        : UsdLuxLight(prim)
     {
     }
 
@@ -82,7 +76,7 @@ public:
     /// Should be preferred over UsdLuxGeometryLight(schemaObj.GetPrim()),
     /// as it preserves SchemaBase state.
     explicit UsdLuxGeometryLight(const UsdSchemaBase& schemaObj)
-        : UsdLuxNonboundableLightBase(schemaObj)
+        : UsdLuxLight(schemaObj)
     {
     }
 
@@ -137,11 +131,11 @@ public:
     Define(const UsdStagePtr &stage, const SdfPath &path);
 
 protected:
-    /// Returns the kind of schema this class belongs to.
+    /// Returns the type of schema this class belongs to.
     ///
-    /// \sa UsdSchemaKind
+    /// \sa UsdSchemaType
     USDLUX_API
-    UsdSchemaKind _GetSchemaKind() const override;
+    UsdSchemaType _GetSchemaType() const override;
 
 private:
     // needs to invoke _GetStaticTfType.

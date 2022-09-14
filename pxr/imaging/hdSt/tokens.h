@@ -43,15 +43,10 @@ PXR_NAMESPACE_OPEN_SCOPE
     (flatNormalsQuadFloatToPacked)              \
     (flatNormalsQuadDoubleToDouble)             \
     (flatNormalsQuadDoubleToPacked)             \
-    (flatNormalsTriQuadFloatToFloat)            \
-    (flatNormalsTriQuadFloatToPacked)           \
-    (flatNormalsTriQuadDoubleToDouble)          \
-    (flatNormalsTriQuadDoubleToPacked)          \
     (quadrangulateFloat)                        \
     (quadrangulateDouble)
 
 #define HDST_TOKENS                             \
-    (constantLighting)                          \
     (packedSmoothNormals)                       \
     (smoothNormals)                             \
     (packedFlatNormals)                         \
@@ -60,22 +55,9 @@ PXR_NAMESPACE_OPEN_SCOPE
     (bias)                                      \
     (rotation)                                  \
     (translation)                               \
-    (sRGB)                                      \
-    (raw)                                       \
-    ((_double, "double"))                       \
-    ((_float, "float"))                         \
-    ((_int, "int"))                             \
-    ((colorSpaceAuto, "auto"))                  \
-    (fvarIndices)                               \
-    (fvarPatchParam)                            \
-    (coarseFaceIndex)                           \
-    (processedFaceCounts)                       \
-    (processedFaceIndices)                      \
-    (geomSubsetFaceIndices)                     \
-    (pointSizeScale)                            \
-    (screenSpaceWidths)                         \
-    (minScreenSpaceWidths)                      \
-    (shadowCompareTextures)
+
+#define HDST_LIGHT_TOKENS                       \
+    (color)
 
 #define HDST_TEXTURE_TOKENS                     \
     (wrapS)                                     \
@@ -95,28 +77,13 @@ PXR_NAMESPACE_OPEN_SCOPE
     (nearestMipmapLinear)                       \
     (nearestMipmapNearest)
 
-#define HDST_RENDER_BUFFER_TOKENS                       \
-    ((stormMsaaSampleCount, "storm:msaaSampleCount"))
-
 #define HDST_RENDER_SETTINGS_TOKENS             \
     (enableTinyPrimCulling)                     \
     (volumeRaymarchingStepSize)                 \
-    (volumeRaymarchingStepSizeLighting)         \
-    (volumeMaxTextureMemoryPerField)
+    (volumeRaymarchingStepSizeLighting)
 
-// Material tags help bucket prims into different queues for draw submission.
-// The tags supported by Storm are:
-//    defaultMaterialTag : opaque geometry
-//    masked : opaque geometry that uses cutout masks (e.g., foliage)
-//    translucentToSelection: opaque geometry that allows occluded selection
-//                            to show through
-//    additive : transparent geometry (cheap OIT solution w/o sorting)
-//    translucent: transparent geometry (OIT solution w/ sorted fragment lists)
-//    volume : transparent geoometry (raymarched)
 #define HDST_MATERIAL_TAG_TOKENS                \
     (defaultMaterialTag)                        \
-    (masked)                                    \
-    (translucentToSelection)                    \
     (additive)                                  \
     (translucent)                               \
     (volume)
@@ -124,23 +91,14 @@ PXR_NAMESPACE_OPEN_SCOPE
 #define HDST_SDR_METADATA_TOKENS                \
     (swizzle)
 
-#define HDST_PERF_TOKENS                        \
-    (copyBufferGpuToGpu)                        \
-    (copyBufferCpuToGpu)                        \
-    (drawItemsCacheHit)                         \
-    (drawItemsCacheMiss)                        \
-    (drawItemsCacheStale)                       \
-    (drawItemsFetched)
-
 TF_DECLARE_PUBLIC_TOKENS(HdStGLSLProgramTokens, HDST_API,
                          HDST_GLSL_PROGRAM_TOKENS);
 
 TF_DECLARE_PUBLIC_TOKENS(HdStTokens, HDST_API, HDST_TOKENS);
 
-TF_DECLARE_PUBLIC_TOKENS(HdStTextureTokens, HDST_API, HDST_TEXTURE_TOKENS);
+TF_DECLARE_PUBLIC_TOKENS(HdStLightTokens, HDST_API, HDST_LIGHT_TOKENS);
 
-TF_DECLARE_PUBLIC_TOKENS(HdStRenderBufferTokens, HDST_API,
-                         HDST_RENDER_BUFFER_TOKENS);
+TF_DECLARE_PUBLIC_TOKENS(HdStTextureTokens, HDST_API, HDST_TEXTURE_TOKENS);
 
 TF_DECLARE_PUBLIC_TOKENS(HdStRenderSettingsTokens, HDST_API,
                          HDST_RENDER_SETTINGS_TOKENS);
@@ -150,8 +108,6 @@ TF_DECLARE_PUBLIC_TOKENS(HdStMaterialTagTokens, HDST_API,
 
 TF_DECLARE_PUBLIC_TOKENS(HdStSdrMetadataTokens, HDST_API, 
                          HDST_SDR_METADATA_TOKENS);   
-
-TF_DECLARE_PUBLIC_TOKENS(HdStPerfTokens, HDST_API, HDST_PERF_TOKENS);
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

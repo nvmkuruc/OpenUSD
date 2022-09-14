@@ -79,43 +79,20 @@ generally used in isolation.
 Shading networks can be organized into coherent packaged units
 (UsdShadeNodeGraph), with their own public parameters exposed and connected
 to the internal nodes.  In this scenario, the UsdShadeNodeGraph is a parent or
-ancestor prim (UsdShadeNodeGraph can be nested) to all of the UsdShadeShader 
-prims in the network, and serves as the point of encapsulation - the 
-UsdShadeNodeGraph prim can then be __referenced__ into other, larger networks 
-as a building block, with its entire network intact.  When referenced into 
-larger networks, NodeGraphs can also be 
-[instanced](http://openusd.org/docs/USD-Glossary.html#USDGlossary-Instancing)
+ancestor prim to all of the UsdShadeShader prims in the network, and serves
+as the point of encapsulation - the UsdShadeNodeGraph prim can then be 
+__referenced__ into other, larger networks as a building block, with its entire
+network intact.  When referenced into larger networks, NodeGraphs can also
+be [instanced](http://openusd.org/docs/USD-Glossary.html#USDGlossary-Instancing)
 so that they appear as a single prim in the network, and can be processed
 more efficiently when referenced from multiple locations.
 
 If the network of shading nodes is directly consumable as a "shader" of a
 type known to some client renderer (e.g. a __surface shader__), then the
 encapsulating parent/ancestor should be declared as a UsdShadeMaterial, which
-is a __container__ that can also be bound to geometries or collections.
-Materials can also be reused and instanced, retaining the same network but
-allowing top-level "Material Interface" parameters to be authored uniquely.
-
-## Containers vs Primitive Shading Nodes ## {#UsdShadeContainers}
-
-Containers are prims that are designed to have child prims, like
-UsdShadeMaterial and UsdShadeNodeGraph, and that encapsulate parts or a whole
-network. These containers are differentiated against non-containers, which are
-are shader nodes like UsdShadeShader prims.
-
-Container types are identified by their UsdShadeConnectableAPI::IsContainer()
-implementation, which is an extensible API, such that other types can work as
-containers with the other UsdShade APIs, by implementing the
-UsdShadeConnectableAPIBehavior plugin interface. 
-Refer: \ref UsdShadeRegisterConnectableAPIBehavior for more details on
-registering a UsdShadeConnectableAPIBehavior for a Type.
-
-Containers usually define an interface that establishes input and output
-attributes, which allows exposing functionality of the encapsulated part of the
-network. With such an interface definition they can be treated in many ways like
-a primitive shading node, but have an implementation that can be inspected in
-Usd.
-
-## Exposing parameters on containers ## {#UsdShadePublicUI}
+is a container that can also be bound to geometries or collections. Materials
+can also be reused and instanced, retaining the same network but allowing
+top-level "Material Interface" parameters to be authored uniquely.
 
 To expose a parameter to the container, we use the same mechanism that
 connects nodes.
@@ -203,50 +180,6 @@ UsdShadeMaterial called 'MyMaterial', and set its default value to 1.0
     }
 ~~~~~~~~~~~~~
 
-# Connectability Rules for UsdShade Types {#UsdShadeConnectability}
-
-As noted above, encapsulation is critical to UsdShade connectability rules, with
-different UsdShade nodes providing appropriate connectivity rules described
-below:
-
-- UsdShadeShader:
-  Inputs can be connected to any Input or Output of any other shader or 
-  NodeGraph encapsulated by the same nearest-in-namespace encapsulating 
-  NodeGraph or Nodegraph-derived container. Outputs cannot be connected.
-
-- UsdShadeNodeGraph:
-  Inputs follow the same rule as Shaders.  Outputs can be connected to any 
-  Output on a prim (Shader or NodeGraph) encapsulated by the NodeGraph itself, 
-  or to an Input of the same NodeGraph itself, creating a "pass through" 
-  connection.
-
-- Default behavior for NodeGraph-derived Types (e.g. UsdShadeMaterial)
-  Inputs and Outputs follow the same rule, which is that they can be connected 
-  to any Output on a prim  (Shader or NodeGraph) encapsulated by the Material 
-  itself. Note that "pass through" connections are not allowed for 
-  Nodegraph-derived container nodes.
-
-- Any new or derived Typed or single-apply API schema can register its own 
-  UsdShadeConnectableAPIBehavior to customize connectivity rules. It can also 
-  specify, in its extraPlugInfo customData, the isUsdShadeContainer and 
-  requiresUsdShadeEncapsulation booleans to customize those aspects of behavior 
-  without needing to provide a UsdShadeConnectableAPIBehavior implementation.
-
-  \anchor UsdShadeConnectableAPIBehavior_ResolutionOrder Resolution order 
-  for when multiple types and apiSchemas provide a 
-  UsdShadeConnectableAPIBehavior:
-  1. Behavior defined on an authored API schemas, wins over 
-  2. Behavior defined for a prim type, wins over
-  3. Behavior defined for the prim's ancestor types, wins over
-  4. Behavior defined for any built-in API schemas.
-  5. If no Behavior is found but an api schema adds
-     providesUsdShadeConnectableAPIBehavior plug metadata then a default
-     behavior is registered for the primTypeId, with its isContainer and
-     requiresEncapsulation driven by extraPlugInfo metadata
- 
-Note that interface-only connections can only happen between inputs and source 
-which have "interfaceOnly" connectivity.
-
 # Connections and Dataflow in UsdShade {#UsdShadeConnections}
 
 UsdShade uses UsdAttribute connections both to indicate dataflow from 
@@ -308,12 +241,12 @@ of 42 on _connected_.
 ## Resolving Interface Connections ## {#UsdShadeResolvingInterface}
 
 When we create inputs on NodeGraphs or Materials to serve as "public interface"
-for shading properties, it is common to _create_ an appropriately-typed
+for shading properties, it is common to _create_ an approrpiately-typed
 attribute, but __not provide a default value for it__.  When USD is the document
 for a material shading network, this "uninitialized interface attribute"
 allows the Material to continue to receive updates to published shaders made
-available through the SdrRegistry long after the Material has been created.
-Why? Because of the first rule of interface value propagation:
+available through the SdrShaderRegistry long after the Material has been
+created.  Why? Because of the first rule of interface value propagation:
 
 - If a Material or NodeGraph input provides no value, and one or more of its
   shader's inputs connects to the interface attribute, then the value supplied
@@ -391,106 +324,6 @@ following values to be passed to the renderer for each shader input:
     }
 ~~~~~~~~~~~~~
 
-NodeGraphs also define outputs to declare the signals that are provided for the
-rest of the network. From the outside, which is where the NodeGraph is connected
-to other shading nodes or NodeGraphs, the outputs behave conceptually like those
-on shading nodes. On the inside of the NodeGraph the outputs are connected to
-outputs of nested shading nodes or nested NodeGraphs _or_ they can be connected
-to input attributes on the same NodeGraph as a pass through mechanism.
-
-In the example below we have a NodGraph with two inputs (_ngPassThruIn_ and
-_ngToModifyIn_) and two outputs (_ngPassThruOut_ and _ngModifiedOut_).
-_ngPassThruIn_ is sent straight to _ngPassThruOut_ without modification, which
-means it is essentially forwarding connections and effectively _result1_ is
-connected to _input1_ directly. The input of _ngToModifyIn_ is fed to the
-_Modifier_ shading node, which sends a modified result to _ngModifiedOut_, which
-effectively models _result2_ -> _toModify_ (on _Modifier_) and _modified_ ->
-_input2_.
-
-~~~~~~~~~~~~~{.usd}
-    #usda 1.0
-
-    def "Model"
-    {
-        def "Materials"
-        {
-            def Material "MyMaterial"
-            {
-
-                def Shader "Generator"
-                {
-                    float outputs:result1
-                    float outputs:result2
-                }
-
-                def NodeGraph "Package"
-                {
-                    float inputs:ngPassThruIn.connect = 
-                        </Model/Materials/MyMaterial/Generator.outputs:result1>
-                    float inputs:ngToModifyIn.connect =
-                        </Model/Materials/MyMaterial/Generator.outputs:result2>
-
-                    float outputs:ngPassThruOut.connect =
-                        </Model/Materials/MyMaterial/Package.inputs:ngPassThruIn>
-                    float outputs:ngModifiedOut.connect =
-                        </Model/Materials/MyMaterial/Package/Modifier.outputs:modified>
-
-                    def Shader "Modifier"
-                    {
-                        float inputs:toModify.connect = 
-                            </Model/Materials/MyMaterial/Package.inputs:ngToModifyIn>
-
-                        float outputs:modified
-                    }
-                }
-
-                def Shader "Consumer"
-                {
-                    float inputs:input1.connect =
-                        </Model/Materials/MyMaterial/Package.outputs:ngPassThruOut>
-                    float inputs:input2.connect =
-                        </Model/Materials/MyMaterial/Package.outputs:ngModifiedOut>
-                }
-            }
-        }
-    }
-~~~~~~~~~~~~~
-
-## Connection Resolution Utilities {#UsdShadeAttributeResolution}
-
-The resolution of the rules described above are implemented in a helper function
-called \ref UsdShadeUtils::GetValueProducingAttributes, which takes either a
-UsdShadeInput or UsdShadeOutput and computes the UsdAttribute(s) that either
-carry the default value(s) that should be sent to the renderer or the
-UsdShadeOutput(s) of nodes to which connections should be established. For
-convenience and discoverability this method is also available on Inputs and
-Outputs directly as \ref UsdShadeInput::GetValueProducingAttributes and
-\ref UsdShadeOutput::GetValueProducingAttributes.
-
-This handles both the rules that connections win over default values and the
-forwarding logic to the interfaces of containers, like Materials or NodeGraphs.
-This utility function can be seen as a way to turn physical connections into
-logical ones. This can be useful for renderers ingesting a Material network
-because generally the logical connections are their only concern. This
-conversion "flattens" the network into a simple network that only contains
-Shaders with their respective input values and connections.
-
-There are situations where only valid output attributes of shading nodes are
-desired and hence we have a mode, where it will not report input or output
-attributes on containers that carry default values. This mode can be activated
-by the optional _shaderOutputsOnly_ flag.
-
-Attributes in Usd can have not just a single connection target, but potentially
-multiple attributes they target. UsdShade supports having multiple connections
-for Inputs and Outputs (of containers, only), which means that
-\ref UsdShadeUtils::GetValueProducingAttributes also handles these scenarios.
-The function is essentially performing a depth first connection tracing, which
-means that when a multi-connection is encountered along the path the tracing
-splits and potentially multiple source attributes are found. Note that invalid
-connections targets are skipped. The function will report all valid upstream
-attributes, which can be a mix of Inputs with default values and Outputs of
-Shader nodes. It is up to the client to resolve and report any inconsistencies
-based on what is supported in the target rendering system.
 
 # UsdShade Based Shader Definition {#UsdShadeShaderDefinition}
 

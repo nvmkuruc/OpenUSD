@@ -234,15 +234,11 @@ primitives.
 
 A _SkelAnimation_ is made to affect a _Skeleton_ by *binding* the animation
 to the skeleton, using the _skel:animationSource_ property of UsdSkelBindingAPI
-schema (use UsdSkelBindingAPI::Apply() to fetch a properly-applied binding 
-API object). For example:
+schema. For example:
 
 \code
 def SkelAnimation "Anim" {}
-def "Model" (
-    prepend apiSchemas = ["SkelBindingAPI"]
-)
-{
+def "Model" {
     rel skel:animationSource = </Anim>
     
     def Skeleton "Skel" {}
@@ -319,7 +315,7 @@ the weights of two blend shapes separately, using in-betweens provides a more
 convenient encoding that allows us to decouple the specification of in-betweens
 from the primary weight animation.
 
-In-between shapes can be created via UsdSkelBlendShape::CreateInbetween(), and
+In-between shapes can be created via UsdSkelBlend::CreateInbetween(), and
 are manipulated and introspected using UsdSkelInbetweenShape objects.
 The in-between shapes themselves are encoded as attributes in the 'inbetweens:'
 namespace, using the 'weight' metadata field to indicate the weight value
@@ -385,12 +381,10 @@ So at a weight value of -0.25, the shape at 0.25 is applied with a weight of -1.
 
 \section UsdSkel_BindingAPI Binding API Schema
 
-The UsdSkelBindingAPI schema provides a means of bindingboth _Skeleton_ and
-_SkelAnimation_ into a geometry hierarchy. This schema is also responsible
-for defining joint influences, as well as an optional _geomBindTransform_
-property to define the space for skinning.  Whenever using a UsdSkelBindingAPI
-to __author__ data, make sure to "apply" it properly, using 
-UsdSkelBindingAPI::Apply().
+The UsdSkelBindingAPI schema provides a means of binding a _Skeleton_ into
+a geometry hierarchy. This schema is also responsible for defining joint
+influences, as well as an optional _geomBindTransform_ property to define
+the space for skinning.
 
 Since a UsdSkelRoot primitive provides encapsulation of skeletal data, bindings
 defined on any primitives that do not have a UsdSkelRoot primitive as one of
@@ -411,10 +405,7 @@ each have unique skeletal animations, while also being
 For example:
 
 \code
-def "Character" (
-    prepend apiSchemas = ["SkelBindingAPI"]
-)
-{
+def "Character" {
     rel skel:skeleton = <Skel>
     def Skeleton "Skel" {}
 }
@@ -438,22 +429,13 @@ Although _skel:animationSource_ bindings are inherited, they only apply
 when a _skel:skeleton_ is resolved. For example:
 
 \code
-over "A" (
-    prepend apiSchemas = ["SkelBindingAPI"]
-)
-{
+over "A" {
     rel skel:animationSource = </Anim>
 
-    over "B" (
-        prepend apiSchemas = ["SkelBindingAPI"]
-    )
-    {
+    over "B" {
        rel skel:skeleton = </Skel1>
     }
-    over "C"  (
-        prepend apiSchemas = ["SkelBindingAPI"]
-    )
-    {
+    over "C" {
         rel skel:skeleton = </Skel2>
     }
 }
@@ -464,22 +446,13 @@ same animation being applied to each instance. Contrast that with the
 following case:
 
 \code
-over "A" (
-    prepend apiSchemas = ["SkelBindingAPI"]
-)
-{
+over "A" {
     rel skel:skeleton = </Skel>
 
-    over "B" (
-        prepend apiSchemas = ["SkelBindingAPI"]
-    )
-    {
+    over "B" {
        rel skel:animationSource = </Anim1>
     }
-    over "C" (
-        prepend apiSchemas = ["SkelBindingAPI"]
-    )
-    {
+    over "C" {
         rel skel:animationSource = </Anim2>
     }
 }
@@ -493,23 +466,14 @@ _skel:skeleton_ binding at or beneath the binding location in namespace.
 One final example may clarify behavior:
 
 \code
-over "A" (
-    prepend apiSchemas = ["SkelBindingAPI"]
-)
-{
+over "A" {
     rel skel:skeleton = </Skel>
     rel skel:animationSource = </Anim1>    
 
-    over "B" (
-        prepend apiSchemas = ["SkelBindingAPI"]
-    )
-    {
+    over "B" {
         rel skel:animationSource = </Anim2>
     }
-    over "C" (
-        prepend apiSchemas = ["SkelBindingAPI"]
-    )
-    {
+    over "C" {
         rel skel:animationSource = </Anim2>
         rel skel:skeleton = </Skel>
     }
@@ -604,18 +568,12 @@ an instance rather than the deforming points of that instance.
 For example:
 
 \code
-def "MeshA" (
-    prepend apiSchemas = ["SkelBindingAPI"]
-)
-{
+def "MeshA" {
     int[] primvars:skel:jointIndices = [0] (interpolation = "constant")
     float[] primvars:skel:jointWeights = [1] (interpolation = "constant")
 }
 
-def "MeshB" (
-    prepend apiSchemas = ["SkelBindingAPI"]
-)
-{
+def "MeshB" {
     int[] primvars:skel:jointIndices = [0,1] (interpolation = "constant")
     float[] primvars:skel:jointWeights = [0.5,0.5] (interpolation = "constant")
 }
@@ -703,10 +661,7 @@ def SkelAnimation "Anim"
     float[] blendShapeWeights = [1,0.75,0,0]
 }
 
-def Mesh "Mesh (
-    prepend apiSchemas = ["SkelBindingAPI"]
-)
-{
+def Mesh "Mesh {
     def BlendShape "Foo" {}
     def BlendShape "Bar" {}
 

@@ -31,7 +31,6 @@
 #include "pxr/base/tf/hash.h"
 #include "pxr/base/tf/iterator.h"
 #include "pxr/base/tf/mallocTag.h"
-#include "pxr/base/tf/pxrTslRobinMap/robin_map.h"
 #include "pxr/base/tf/staticData.h"
 #include "pxr/base/tf/stl.h"
 
@@ -39,10 +38,8 @@
 
 #include <boost/functional/hash.hpp>
 #include <tbb/concurrent_hash_map.h>
-#include <tbb/spin_mutex.h>
 
 #include <atomic>
-#include <memory>
 #include <utility>
 #include <vector>
 
@@ -84,68 +81,26 @@ typedef Sdf_PathNodePrivateAccess Access;
 
 namespace {
 
-template <class T=void>
+template <class T>
 struct _ParentAnd { const Sdf_PathNode *parent; T value; };
 
 // Allow void for 'expression' path case, which has no additional data.
 template <> struct _ParentAnd<void> { const Sdf_PathNode *parent; };
 
-template <class T=void>
-struct _ParentAndRef {
-    const Sdf_PathNode *parent; T const &value;
-    operator _ParentAnd<T>() const {
-        return { parent, value };
-    }
-};
-
-// Allow void for 'expression' path case, which has no additional data.
-template <> struct _ParentAndRef<void>
-{
-    const Sdf_PathNode *parent;
-    operator _ParentAnd<void>() const {
-        return { parent };
-    }
-};
-
-
-
 template <class T>
-inline bool operator==(_ParentAnd<T> const &x, _ParentAnd<T> const &y)
-{
-    return x.parent == y.parent && x.value == y.value;
-}
-template <class T>
-inline bool operator==(_ParentAndRef<T> const &x, _ParentAndRef<T> const &y)
-{
-    return x.parent == y.parent && x.value == y.value;
-}
-template <class T>
-inline bool operator==(_ParentAndRef<T> const &x, _ParentAnd<T> const &y)
-{
-    return x.parent == y.parent && x.value == y.value;
-}
-template <class T>
-inline bool operator==(_ParentAnd<T> const &x, _ParentAndRef<T> const &y)
-{
-    return x.parent == y.parent && x.value == y.value;
+inline _ParentAnd<T>
+_MakeParentAnd(const Sdf_PathNode *parent, const T &value) {
+    _ParentAnd<T> ret;
+    ret.parent = parent;
+    ret.value = value;
+    return ret;
 }
 
-inline bool operator==(_ParentAnd<void> const &x, _ParentAnd<void> const &y)
-{
-    return x.parent == y.parent;
-}
-inline bool operator==(_ParentAndRef<void> const &x,
-                       _ParentAndRef<void> const &y)
-{
-    return x.parent == y.parent;
-}
-inline bool operator==(_ParentAndRef<void> const &x, _ParentAnd<void> const &y)
-{
-    return x.parent == y.parent;
-}
-inline bool operator==(_ParentAnd<void> const &x, _ParentAndRef<void> const &y)
-{
-    return x.parent == y.parent;
+inline _ParentAnd<void>
+_MakeParentAnd(const Sdf_PathNode *parent) {
+    _ParentAnd<void> ret;
+    ret.parent = parent;
+    return ret;
 }
 
 inline size_t
@@ -154,66 +109,42 @@ hash_value(const Sdf_PathNode *p)
     return TfHash()(p);
 }
 
-template <class PaT>
-inline size_t _OuterHash(PaT const &pat)
+template <class T>
+struct _HashParentAnd
 {
-    return TfHash::Combine(pat.parent, pat.value);
-}
+    inline bool equal(const T &l, const T &r) const {
+        return l.parent == r.parent && l.value == r.value;
+    }
 
-inline size_t _OuterHash(_ParentAnd<void> const &pat)
+    inline size_t hash(const T &t) const {
+        size_t h = reinterpret_cast<uintptr_t>(t.parent) >> 4;
+        boost::hash_combine(h, t.value);
+        return h;
+    }
+ };
+
+template <>
+struct _HashParentAnd<_ParentAnd<void> >
 {
-    return TfHash::Combine(pat.parent);
+    inline bool equal(const _ParentAnd<void> &l,
+                      const _ParentAnd<void> &r) const {
+        return l.parent == r.parent;
+    }
+
+    inline size_t hash(const _ParentAnd<void> &t) const {
+        return reinterpret_cast<uintptr_t>(t.parent) >> 4;
+    }
 };
-
-inline size_t _OuterHash(_ParentAndRef<void> const &pat)
-{
-    return TfHash::Combine(pat.parent);
-};
-
-template <class HashState, class T>
-inline void TfHashAppend(HashState &h, _ParentAnd<T> const &pat)
-{
-    h.Append(pat.parent, pat.value);
-}
-
-template <class HashState, class T>
-inline void TfHashAppend(HashState &h, _ParentAndRef<T> const &pat)
-{
-    h.Append(pat.parent, pat.value);
-}
-
-template <class HashState>
-inline void TfHashAppend(HashState &h, _ParentAnd<void> const &pat)
-{
-    h.Append(pat.parent);
-}
-
-template <class HashState>
-inline void TfHashAppend(HashState &h, _ParentAndRef<void> const &pat)
-{
-    h.Append(pat.parent);
-}
-
-static constexpr unsigned NumNodeMaps = 128;
 
 template <class T>
 struct _PrimTable {
     using Pool = Sdf_PathPrimPartPool;
     using PoolHandle = Sdf_PathPrimHandle;
     using NodeHandle = Sdf_PathPrimNodeHandle;
-
-    struct _MapAndMutex {
-        pxr_tsl::robin_map<_ParentAnd<T>, PoolHandle, TfHash> map;
-        mutable tbb::spin_mutex mutex;
-    };
-
-    _MapAndMutex &GetMapAndMutexFor(_ParentAndRef<T> const &pat) {
-        size_t z = _OuterHash(pat);
-        return _mapsAndMutexes[z & (NumNodeMaps-1)];
-    }
+    using Type = tbb::concurrent_hash_map<
+        _ParentAnd<T>, PoolHandle, _HashParentAnd<_ParentAnd<T> > >;
     
-    _MapAndMutex _mapsAndMutexes[NumNodeMaps];
-     
+    Type map;
 };
 
 template <class T>
@@ -221,18 +152,10 @@ struct _PropTable {
     using Pool = Sdf_PathPropPartPool;
     using PoolHandle = Sdf_PathPropHandle;
     using NodeHandle = Sdf_PathPropNodeHandle;
+    using Type = tbb::concurrent_hash_map<
+        _ParentAnd<T>, PoolHandle, _HashParentAnd<_ParentAnd<T> > >;
 
-    struct _MapAndMutex {
-        pxr_tsl::robin_map<_ParentAnd<T>, PoolHandle, TfHash> map;
-        mutable tbb::spin_mutex mutex;
-    };
-
-    _MapAndMutex &GetMapAndMutexFor(_ParentAndRef<T> const &pat) {
-        size_t z = _OuterHash(pat);
-        return _mapsAndMutexes[z & (NumNodeMaps-1)];
-    }
-    
-    _MapAndMutex _mapsAndMutexes[NumNodeMaps];
+    Type map;
 };
 
 using _PrimTokenTable = _PrimTable<TfToken>;
@@ -244,38 +167,22 @@ using _PropVoidTable = _PropTable<void>;
 template <class PathNode, class Table, class ... Args>
 inline typename Table::NodeHandle
 _FindOrCreate(Table &table,
-              const TfFunctionRef<bool ()> &isValid,
               const Sdf_PathNode *parent,
               const Args & ... args)
 {
-    std::pair<_ParentAndRef<Args...>, typename Table::PoolHandle>
-        newItem { { parent, args... }, {} };
-    auto &mapAndMutex = table.GetMapAndMutexFor(newItem.first);
-    tbb::spin_mutex::scoped_lock lock(mapAndMutex.mutex);
-
-    auto iresult = mapAndMutex.map.insert(newItem);
-    if (iresult.second) {
-        // There was no entry in the table, check for validity, and back out the
-        // insertion if it's invalid.
-        if (ARCH_UNLIKELY(!isValid())) {
-            mapAndMutex.map.erase(iresult.first);
-            return typename Table::NodeHandle();
-        }
-    }
-    if (iresult.second ||
-        (Table::NodeHandle::IsCounted &&
-         Access::GetRefCount(
-             iresult.first->second).fetch_and_increment() == 0)) {
-        // There was either no entry, or there was one but it had begun dying
-        // (another client dropped its refcount to 0).  We have to create a new
-        // entry in the table.  When the client that is deleting the other node
-        // it looks for itself in the table.  It will either not find itself or
-        // will find a different node and so won't remove it.
-        iresult.first.value() =
+    typename Table::Type::accessor accessor;
+    if (table.map.insert(accessor, _MakeParentAnd(parent, args...)) ||
+        Access::GetRefCount(accessor->second).fetch_and_increment() == 0) {
+        // Either there was no entry in the table, or there was but it had begun
+        // dying (another client dropped its refcount to 0).  We have to create
+        // a new entry in the table.  When the client that is killing the other
+        // node it looks for itself in the table, it will either not find itself
+        // or will find a different node and so won't remove it.
+        typename Table::PoolHandle newNode =
             Access::New<PathNode, typename Table::Pool>(parent, args...);
+        accessor->second = newNode;
     }
-    return typename Table::NodeHandle(
-        iresult.first->second, /* add_ref = */ false);
+    return typename Table::NodeHandle(accessor->second, /* add_ref = */ false);
 }
 
 template <class Table, class ... Args>
@@ -288,14 +195,10 @@ _Remove(const Sdf_PathNode *pathNode,
     // there's an entry present it may not be pathNode, since another node may
     // have been created since we decremented our refcount and started being
     // destroyed.  If it is this node, we remove it.
-    _ParentAndRef<Args...> pat { parent.get(), args... };
-    auto &mapAndMutex = table.GetMapAndMutexFor(pat);
-    tbb::spin_mutex::scoped_lock lock(mapAndMutex.mutex);
-
-    auto iter = mapAndMutex.map.find(pat);
-    if (iter != mapAndMutex.map.end() &&
-        iter->second.GetPtr() == reinterpret_cast<char const *>(pathNode)) {
-        mapAndMutex.map.erase(iter);
+    typename Table::Type::accessor accessor;
+    if (table.map.find(accessor, _MakeParentAnd(parent.get(), args...)) &&
+        accessor->second.GetPtr() == reinterpret_cast<char const *>(pathNode)) {
+        table.map.erase(accessor);
     }
 }
 
@@ -318,11 +221,14 @@ Sdf_PropPartPathNode::operator delete(void *p)
         PoolHandle::GetHandle(reinterpret_cast<char *>(p)));
 }
 
+// Preallocate some space in the prim and prim property tables.
 TF_MAKE_STATIC_DATA(_PropTargetTable, _mapperNodes) {}
 TF_MAKE_STATIC_DATA(_PropTargetTable, _targetNodes) {}
 TF_MAKE_STATIC_DATA(_PropTokenTable, _mapperArgNodes) {}
-TF_MAKE_STATIC_DATA(_PrimTokenTable, _primNodes) {}
-TF_MAKE_STATIC_DATA(_PropTokenTable, _primPropertyNodes) {}
+TF_MAKE_STATIC_DATA(_PrimTokenTable, _primNodes) {
+    _primNodes->map.rehash(32768); }
+TF_MAKE_STATIC_DATA(_PropTokenTable, _primPropertyNodes) {
+    _primPropertyNodes->map.rehash(32768); }
 TF_MAKE_STATIC_DATA(_PropTokenTable, _relAttrNodes) {}
 TF_MAKE_STATIC_DATA(_PrimVarSelTable, _primVarSelNodes) {}
 TF_MAKE_STATIC_DATA(_PropVoidTable, _expressionNodes) {}
@@ -358,80 +264,67 @@ Sdf_PathNode::GetRelativeRootNode() {
 
 Sdf_PathPrimNodeHandle
 Sdf_PathNode::FindOrCreatePrim(Sdf_PathNode const *parent,
-                               const TfToken &name,
-                               TfFunctionRef<bool ()> isValid)
+                               const TfToken &name)
 {
-    return _FindOrCreate<Sdf_PrimPathNode>(*_primNodes, isValid, parent, name);
+    return _FindOrCreate<Sdf_PrimPathNode>(*_primNodes, parent, name);
 }
     
 Sdf_PathPropNodeHandle
 Sdf_PathNode::FindOrCreatePrimProperty(Sdf_PathNode const *parent, 
-                                       const TfToken &name,
-                                       TfFunctionRef<bool ()> isValid)
+                                       const TfToken &name)
 {
     // NOTE!  We explicitly set the parent to null here in order to create a
     // separate prefix tree for property-like paths.
 
     return _FindOrCreate<Sdf_PrimPropertyPathNode>(
-        *_primPropertyNodes, isValid, nullptr, name);
+        *_primPropertyNodes, nullptr, name);
 }
     
 Sdf_PathPrimNodeHandle
 Sdf_PathNode::FindOrCreatePrimVariantSelection(
     Sdf_PathNode const *parent, 
     const TfToken &variantSet,
-    const TfToken &variant,
-    TfFunctionRef<bool ()> isValid)
+    const TfToken &variant)
 {
     return _FindOrCreate<Sdf_PrimVariantSelectionNode>(
-        *_primVarSelNodes, isValid, parent,
-        VariantSelectionType(variantSet, variant));
+        *_primVarSelNodes, parent, VariantSelectionType(variantSet, variant));
 }
 
 Sdf_PathPropNodeHandle
 Sdf_PathNode::FindOrCreateTarget(Sdf_PathNode const *parent, 
-                                 SdfPath const &targetPath,
-                                 TfFunctionRef<bool ()> isValid)
+                                 SdfPath const &targetPath)
 {
-    return _FindOrCreate<Sdf_TargetPathNode>(
-        *_targetNodes, isValid, parent, targetPath);
+    return _FindOrCreate<Sdf_TargetPathNode>(*_targetNodes, parent, targetPath);
 }
 
 Sdf_PathPropNodeHandle
 Sdf_PathNode
 ::FindOrCreateRelationalAttribute(Sdf_PathNode const *parent, 
-                                  const TfToken &name,
-                                  TfFunctionRef<bool ()> isValid)
+                                  const TfToken &name)
 {
     return _FindOrCreate<Sdf_RelationalAttributePathNode>(
-        *_relAttrNodes, isValid, parent, name);
+        *_relAttrNodes, parent, name);
 }
 
 Sdf_PathPropNodeHandle
 Sdf_PathNode
 ::FindOrCreateMapper(Sdf_PathNode const *parent, 
-                     SdfPath const &targetPath,
-                     TfFunctionRef<bool ()> isValid)
+                     SdfPath const &targetPath)
 {
-    return _FindOrCreate<Sdf_MapperPathNode>(
-        *_mapperNodes, isValid, parent, targetPath);
+    return _FindOrCreate<Sdf_MapperPathNode>(*_mapperNodes, parent, targetPath);
 }
 
 Sdf_PathPropNodeHandle
 Sdf_PathNode::FindOrCreateMapperArg(Sdf_PathNode const *parent, 
-                                    const TfToken &name,
-                                    TfFunctionRef<bool ()> isValid)
+                                    const TfToken &name)
 {
-    return _FindOrCreate<Sdf_MapperArgPathNode>(
-        *_mapperArgNodes, isValid, parent, name);
+    return _FindOrCreate<Sdf_MapperArgPathNode>(*_mapperArgNodes, parent, name);
 }
     
 Sdf_PathPropNodeHandle
-Sdf_PathNode::FindOrCreateExpression(Sdf_PathNode const *parent,
-                                     TfFunctionRef<bool ()> isValid)
+Sdf_PathNode::FindOrCreateExpression(Sdf_PathNode const *parent)
 {
-    return _FindOrCreate<Sdf_ExpressionPathNode>(
-        *_expressionNodes, isValid, parent);
+    return _FindOrCreate<Sdf_ExpressionPathNode>(*_expressionNodes, parent);
 }
 
 Sdf_PathNode::Sdf_PathNode(bool isAbsolute) :
@@ -451,51 +344,8 @@ Sdf_PathNode::_GetEmptyVariantSelection() const {
     return _emptyVariantSelection;
 }
 
-namespace {
-// This "table" is a thread-safe mapping from property node to path token.  Each
-// entry in the _pathTokenTable points to one of these, and will have an entry
-// for the path string for the prim path itself (which will be keyed with a
-// nullptr property node pointer) plus all the properties that hang off it.
-struct _PropToTokenTable
-{
-    // Note that this function returns a TfToken lvalue reference that needs to
-    // live/be valid as long as this object is around.
-    template <class Fn>
-    TfToken const &
-    FindOrCreate(Sdf_PathNode const *prop, Fn &&makeToken) {
-        _Data &d = *_data;
-        // We try first without creating the token -- if that fails we try
-        // again.  This could be made more efficient, but getting strings for
-        // paths shouldn't be a bottleneck for clients.
-        tbb::spin_mutex::scoped_lock lock(d.mutex);
-        auto iter = d.propsToToks.find(prop);
-        if (iter == d.propsToToks.end()) {
-            // No entry yet.  Drop the lock, make the token, and try to insert
-            // it.  We *must* drop the lock since creating the token can
-            // re-enter here (e.g. if there are embedded target paths that have
-            // properties on the same prim).
-            lock.release();
-            TfToken tok = std::forward<Fn>(makeToken)();
-            lock.acquire(d.mutex);
-            // This may or may not actually insert the token, depending on
-            // whether or not a concurrent caller did, but it doesn't really
-            // matter.
-            iter = d.propsToToks.emplace(prop, std::move(tok)).first;
-        }
-        return iter->second;
-    }
-
-private:
-    struct _Data {
-        std::map<Sdf_PathNode const *, TfToken> propsToToks;
-        tbb::spin_mutex mutex;
-    };
-
-    std::shared_ptr<_Data> _data { new _Data };
-};
-
-} // anon
-
+using _PropToTokenTable = 
+    tbb::concurrent_hash_map<Sdf_PathNode const *, TfToken>;
 using _PrimToPropTokenTables =
     tbb::concurrent_hash_map<Sdf_PathNode const *, _PropToTokenTable>;
 
@@ -520,192 +370,68 @@ Sdf_PathNode::GetPathToken(Sdf_PathNode const *primPart,
     // Release the primAccessor here, since the call to _CreatePathToken below
     // can cause reentry here (for embedded target paths).
     primAccessor.release();
-
-    return propToTokenTable.FindOrCreate(
-        propPart, [primPart, propPart]() {
-            return Sdf_PathNode::_CreatePathToken(primPart, propPart);
-        });
+    _PropToTokenTable::accessor propAccessor;
+    if (propToTokenTable.insert(
+            propAccessor,std::make_pair(propPart, TfToken()))) {
+        // We won the race, build and set the token.
+        propAccessor->second = _CreatePathToken(primPart, propPart);
+    }
+    return propAccessor->second;
 }
 
-TfToken
-Sdf_PathNode::GetPathAsToken(Sdf_PathNode const *primPart,
-                             Sdf_PathNode const *propPart)
-{
-    return _CreatePathToken(primPart, propPart);
-}
-
-namespace {
-
-struct _StringBuffer
-{
-    template <class ... Ts>
-    void WriteText(Ts ... args) {
-        _eltStart = _str.size();
-        _WriteTextImpl(args ...);
-    }
-
-    std::string
-    GetString() const {
-        return std::string(_str.crbegin(), _str.crend());
-    }
-
-private:
-    template <class ... Ts>
-    void _WriteTextImpl(char const *a0, Ts ... args) {
-        _str.append(a0);
-        _WriteTextImpl(args ...);
-    }
-
-    // Base case.
-    void _WriteTextImpl(char const *aN) {
-        _str.append(aN);
-        std::reverse(_str.begin() + _eltStart, _str.end());
-    }
-
-    std::string _str;
-    size_t _eltStart = 0;
-};
-
-static constexpr size_t _DebugPathBufferSize = 1024*8;
-static char _debugPathBuffer[_DebugPathBufferSize];
-static char *_debugPathCur = _debugPathBuffer;
-static char _debugPathOverrunMsg[] =
-    "<< path text exceeds debug buffer size >>";
-
-struct _DebugBuffer
-{
-    template <class ... Ts>
-    void WriteText(Ts ... args) {
-        _eltStart = _debugPathCur;
-        _WriteTextImpl(args ...);
-    }
-
-    char const *
-    GetText() const {
-        if (_pathTextTooLong) {
-            return _debugPathOverrunMsg;
-        }
-        std::reverse(_debugPathBuffer, _debugPathCur);
-        _debugPathCur = _debugPathBuffer;
-        return _debugPathBuffer;
-    }
-
-private:
-    template <class ... Ts>
-    void _WriteTextImpl(char const *a0, Ts ... args) {
-        if (_Write(a0)) {
-            _WriteTextImpl(args ...);
-        }
-    }
-
-    // Base case.
-    void _WriteTextImpl(char const *aN) {
-        if (_Write(aN)) {
-            std::reverse(_eltStart, _debugPathCur);
-        }
-    }
-
-    // Write text to buffer if it fits.
-    bool _Write(char const *a) {
-        size_t len = strlen(a);
-        char const *end = _debugPathBuffer + _DebugPathBufferSize;
-        if (_debugPathCur + len >= end) { // >= accounts for null terminator.
-            _pathTextTooLong = true;
-            return false;
-        }
-        strcpy(_debugPathCur, a);
-        _debugPathCur += len; // leave this pointing at the null.
-        return true;
-    }
-    
-    char *_eltStart = nullptr;
-    bool _pathTextTooLong = false;
-};
-
-} // anon
-
-TfToken
-Sdf_PathNode::_GetElementImpl() const
-{
-    _StringBuffer buf;
-    _WriteText(buf);
-    return TfToken(buf.GetString());
-}
-        
 TfToken
 Sdf_PathNode::_CreatePathToken(Sdf_PathNode const *primPart,
                                Sdf_PathNode const *propPart)
 {
-    _StringBuffer buf;
-    _WriteTextToBuffer(primPart, propPart, buf);
-    return TfToken(buf.GetString());
-}
+    TRACE_FUNCTION();
 
-template <class Buffer>
-void
-Sdf_PathNode::_WriteTextToBuffer(Sdf_PathNode const *primPart,
-                                 Sdf_PathNode const *propPart,
-                                 Buffer &out)
-{
     if (primPart == GetRelativeRootNode() && !propPart) {
-        out.WriteText(SDF_PATH_RELATIVE_ROOT_STR);
-        return;
+        return SdfPathTokens->relativeRoot;
     }
 
-    // Write all the nodes in reverse order, reversing each element as we go.
-    // Then at the end we reverse the entire string, to produce the correct
-    // output.  We do it this way so we do not have to do any heap
-    // allocation/recursion/etc because we use this function to produce string
-    // representations in debuggers, and if, say, another thread is in the
-    // middle of a malloc/free and holds a lock, or if we're in a signal
-    // handler, we're in trouble.
-    
     Sdf_PathNode const * const root = (primPart->IsAbsolutePath() ?
                                        Sdf_PathNode::GetAbsoluteRootNode() : 
                                        Sdf_PathNode::GetRelativeRootNode());
-
+    
+    std::vector<const Sdf_PathNode *> nodes;
+    nodes.reserve(primPart->GetElementCount() +
+                  (propPart ? propPart->GetElementCount() : 0));
+    
     Sdf_PathNode const *curNode = propPart;
     while (curNode) {
-        curNode->_WriteText(out);
+        nodes.push_back(curNode);
         curNode = curNode->GetParentNode();
-    }
-    // This covers cases like '../.property'
-    if (propPart && primPart->GetNodeType() == Sdf_PathNode::PrimNode &&
-        primPart->GetName() == SdfPathTokens->parentPathElement) {
-        out.WriteText(SDF_PATH_CHILD_DELIMITER_STR);
     }
     curNode = primPart;
     while (curNode && (curNode != root)) {
-        curNode->_WriteText(out);
-        Sdf_PathNode const *parent = curNode->GetParentNode();
-        if (curNode->GetNodeType() == Sdf_PathNode::PrimNode &&
-            parent && parent->GetNodeType() == Sdf_PathNode::PrimNode) {
-            out.WriteText(SDF_PATH_CHILD_DELIMITER_STR);
-        }            
-        curNode = parent;
+        nodes.push_back(curNode);
+        curNode = curNode->GetParentNode();
     }
 
+    std::string str;
     if (primPart->IsAbsolutePath()) {
         // Put the leading / on absolute
-        out.WriteText(SDF_PATH_ABSOLUTE_INDICATOR_STR);
+        str.append(SdfPathTokens->absoluteIndicator.GetString());
     }
-}
 
-template <class Buffer>
-void
-Sdf_PathNode::_WriteTextToBuffer(SdfPath const &path, Buffer &out)
-{
-    _WriteTextToBuffer(path._primPart.get(),
-                       path._propPart.get(), out);
-}
+    TfToken prevElem;
+    Sdf_PathNode::NodeType prevNodeType = Sdf_PathNode::NumNodeTypes;
+    TF_REVERSE_FOR_ALL(i, nodes) {
+        const Sdf_PathNode * const node = *i;
+        Sdf_PathNode::NodeType curNodeType = node->GetNodeType();
+        if (prevNodeType == Sdf_PathNode::PrimNode && 
+            (curNodeType == Sdf_PathNode::PrimNode ||
+             // This covers cases like '../.property'
+             prevElem == SdfPathTokens->parentPathElement)) {
+            str.append(SdfPathTokens->childDelimiter.GetString());
+        }
+        TfToken elem = node->GetElement();
+        str.append(elem.GetString());
+        prevElem.Swap(elem);
+        prevNodeType = curNodeType;
+    }
 
-char const *
-Sdf_PathNode::GetDebugText(Sdf_PathNode const *primPart,
-                           Sdf_PathNode const *propPart)
-{
-    _DebugBuffer buf;
-    _WriteTextToBuffer(primPart, propPart, buf);
-    return buf.GetText();
+    return TfToken(str);
 }
 
 void
@@ -728,39 +454,38 @@ Sdf_PathNode::_IsNamespacedImpl() const
     return _HasNamespaceDelimiter(GetName().GetString());
 }
 
-template <class Buffer>
 void
-Sdf_PathNode::_WriteText(Buffer &out) const
+Sdf_PathNode::AppendText(std::string *str) const
 {
     switch (_nodeType) {
     case RootNode:
         return;
     case PrimNode:
-        out.WriteText(_Downcast<Sdf_PrimPathNode>()->_name.GetText());
+        str->append(_Downcast<Sdf_PrimPathNode>()->_name.GetString());
         return;
     case PrimPropertyNode:
-        out.WriteText(SDF_PATH_PROPERTY_DELIMITER_STR,
-                      _Downcast<Sdf_PrimPropertyPathNode>()->_name.GetText());
+        str->append(SdfPathTokens->propertyDelimiter.GetString());
+        str->append(_Downcast<Sdf_PrimPropertyPathNode>()->_name.GetString());
         return;
     case PrimVariantSelectionNode:
-        _Downcast<Sdf_PrimVariantSelectionNode>()->_WriteTextImpl(out);
+        _Downcast<Sdf_PrimVariantSelectionNode>()->_AppendText(str);
         return;
     case TargetNode:
-        _Downcast<Sdf_TargetPathNode>()->_WriteTextImpl(out);
+        _Downcast<Sdf_TargetPathNode>()->_AppendText(str);
         return;
     case RelationalAttributeNode:
-        out.WriteText(
-            SDF_PATH_PROPERTY_DELIMITER_STR,
-            _Downcast<Sdf_RelationalAttributePathNode>()->_name.GetText());
+        str->append(SdfPathTokens->propertyDelimiter.GetString());
+        str->append(_Downcast<Sdf_RelationalAttributePathNode>()->
+                    _name.GetString());
         return;
     case MapperNode:
-        _Downcast<Sdf_MapperPathNode>()->_WriteTextImpl(out);
+        _Downcast<Sdf_MapperPathNode>()->_AppendText(str);
         return;
     case MapperArgNode:
-        _Downcast<Sdf_MapperArgPathNode>()->_WriteTextImpl(out);
+        _Downcast<Sdf_MapperArgPathNode>()->_AppendText(str);
         return;
     case ExpressionNode:
-        _Downcast<Sdf_ExpressionPathNode>()->_WriteTextImpl(out);
+        _Downcast<Sdf_ExpressionPathNode>()->_AppendText(str);
         return;
     default:
         return;
@@ -783,25 +508,34 @@ Sdf_PrimVariantSelectionNode::_GetNameImpl() const
             : _variantSelection->second;
 }
 
-template <class Buffer>
 void
-Sdf_PrimVariantSelectionNode::_WriteTextImpl(Buffer &out) const
+Sdf_PrimVariantSelectionNode::_AppendText(std::string *str) const
 {
-    char const *vset = _variantSelection->first.GetText();
-    char const *vsel = _variantSelection->second.GetText();
-    out.WriteText("{", vset, "=", vsel, "}");
+    std::string const &vset = _variantSelection->first.GetString();
+    std::string const &vsel = _variantSelection->second.GetString();
+    str->reserve(str->size() + vset.size() + vsel.size() + 3);
+    str->push_back('{');
+    str->append(vset);
+    str->push_back('=');
+    str->append(vsel);
+    str->push_back('}');
 }
 
 Sdf_PrimVariantSelectionNode::~Sdf_PrimVariantSelectionNode() {
     _Remove(this, *_primVarSelNodes, GetParentNode(), *_variantSelection);
 }
 
-template <class Buffer>
 void
-Sdf_TargetPathNode::_WriteTextImpl(Buffer &out) const {
-    out.WriteText(SDF_PATH_RELATIONSHIP_TARGET_END_STR);
-    _WriteTextToBuffer(_targetPath, out);
-    out.WriteText(SDF_PATH_RELATIONSHIP_TARGET_START_STR);
+Sdf_TargetPathNode::_AppendText(std::string *str) const {
+    std::string const &open =
+        SdfPathTokens->relationshipTargetStart.GetString();
+    std::string const &target = _targetPath.GetString();
+    std::string const &close =
+        SdfPathTokens->relationshipTargetEnd.GetString();
+    str->reserve(str->size() + open.size() + target.size() + close.size());
+    str->append(open);
+    str->append(target);
+    str->append(close);
 }
 
 Sdf_TargetPathNode::~Sdf_TargetPathNode() {
@@ -812,35 +546,48 @@ Sdf_RelationalAttributePathNode::~Sdf_RelationalAttributePathNode() {
     _Remove(this, *_relAttrNodes, GetParentNode(), _name);
 }
 
-template <class Buffer>
 void
-Sdf_MapperPathNode::_WriteTextImpl(Buffer &out) const {
-    out.WriteText(SDF_PATH_RELATIONSHIP_TARGET_END_STR);
-    _WriteTextToBuffer(_targetPath, out);
-    out.WriteText(SDF_PATH_RELATIONSHIP_TARGET_START_STR);
-    out.WriteText(SdfPathTokens->mapperIndicator.GetText());
-    out.WriteText(SDF_PATH_PROPERTY_DELIMITER_STR);
+Sdf_MapperPathNode::_AppendText(std::string *str) const {
+    std::string const &delim = SdfPathTokens->propertyDelimiter.GetString();
+    std::string const &mapperIndicator =
+        SdfPathTokens->mapperIndicator.GetString();
+    std::string const &open =
+        SdfPathTokens->relationshipTargetStart.GetString();
+    std::string const &target = _targetPath.GetString();
+    std::string const &close = SdfPathTokens->relationshipTargetEnd.GetString();
+    str->reserve(str->size() + delim.size() + mapperIndicator.size() +
+                 open.size() + target.size() + close.size());
+    str->append(delim);
+    str->append(mapperIndicator);
+    str->append(open);
+    str->append(target);
+    str->append(close);
 }
 
 Sdf_MapperPathNode::~Sdf_MapperPathNode() {
     _Remove(this, *_mapperNodes, GetParentNode(), _targetPath);
 }
 
-template <class Buffer>
 void
-Sdf_MapperArgPathNode::_WriteTextImpl(Buffer &out) const {
-    out.WriteText(SDF_PATH_PROPERTY_DELIMITER_STR, _name.GetText());
+Sdf_MapperArgPathNode::_AppendText(std::string *str) const {
+    std::string const &delim = SdfPathTokens->propertyDelimiter.GetString();
+    std::string const &name = _name.GetString();
+    str->reserve(str->size() + delim.size() + name.size());
+    str->append(delim);
+    str->append(name);
 }
 
 Sdf_MapperArgPathNode::~Sdf_MapperArgPathNode() {
     _Remove(this, *_mapperArgNodes, GetParentNode(), _name);
 }
 
-template <class Buffer>
 void
-Sdf_ExpressionPathNode::_WriteTextImpl(Buffer &out) const {
-    out.WriteText(SDF_PATH_PROPERTY_DELIMITER_STR,
-                  SdfPathTokens->expressionIndicator.GetText());
+Sdf_ExpressionPathNode::_AppendText(std::string *str) const {
+    std::string const &delim = SdfPathTokens->propertyDelimiter.GetString();
+    std::string const &expr = SdfPathTokens->expressionIndicator.GetString();
+    str->reserve(str->size() + delim.size() + expr.size());
+    str->append(delim);
+    str->append(expr);
 }
 
 Sdf_ExpressionPathNode::~Sdf_ExpressionPathNode() {
@@ -864,14 +611,10 @@ _GatherChildrenFrom(Sdf_PathNode const *parent,
                     Table const &table,
                     vector<Sdf_PathNodeConstRefPtr> *result)
 {
-    for (size_t outerIndex = 0; outerIndex != NumNodeMaps; ++outerIndex) {
-        auto &mapAndMutex = table._mapsAndMutexes[outerIndex];
-        tbb::spin_mutex::scoped_lock lock(mapAndMutex.mutex);
-        TF_FOR_ALL(i, mapAndMutex.map) {
-            if (i->first.parent == parent)
-                result->emplace_back(
-                    reinterpret_cast<Sdf_PathNode const *>(i->second.GetPtr()));
-        }
+    TF_FOR_ALL(i, table.map) {
+        if (i->first.parent == parent)
+            result->emplace_back(
+                reinterpret_cast<Sdf_PathNode const *>(i->second.GetPtr()));
     }
 }
 

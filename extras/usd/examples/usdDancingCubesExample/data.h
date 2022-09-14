@@ -127,14 +127,15 @@ class UsdDancingCubesExample_Data : public SdfAbstractData
 {
 public:
     /// Factory New. We always create this data with an explicit params object.
-    static UsdDancingCubesExample_DataRefPtr New();
+    static UsdDancingCubesExample_DataRefPtr New(
+        const UsdDancingCubesExample_DataParams &params);
 
     virtual ~UsdDancingCubesExample_Data();
 
-    void SetParams(const UsdDancingCubesExample_DataParams &params);
-
     /// SdfAbstractData overrides
     bool StreamsData() const override;
+
+    bool IsEmpty() const override;
 
     void CreateSpec(const SdfPath& path, 
                     SdfSpecType specType) override;
@@ -189,7 +190,8 @@ protected:
 
 private:
     // Private constructor for factory New
-    UsdDancingCubesExample_Data();
+    UsdDancingCubesExample_Data(
+        const UsdDancingCubesExample_DataParams &params);
 
     // Pointer to the actual implementation
     std::unique_ptr<UsdDancingCubesExample_DataImpl> _impl;

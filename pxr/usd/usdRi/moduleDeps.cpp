@@ -39,6 +39,7 @@ TF_REGISTRY_FUNCTION(TfScriptModuleLoader) {
         TfToken("tf"),
         TfToken("usd"),
         TfToken("usdGeom"),
+        TfToken("usdLux"),
         TfToken("usdShade"),
         TfToken("vt")
     };

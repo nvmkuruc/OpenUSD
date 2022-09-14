@@ -133,9 +133,6 @@ pxr_library(gf
 
     PYMODULE_FILES
         __init__.py
-
-    DOXYGEN_FILES
-        overview.dox
 )
 
 # gfGenCode --validate ensures that the generated GfVec, GfMatrix, GfRange, etc.

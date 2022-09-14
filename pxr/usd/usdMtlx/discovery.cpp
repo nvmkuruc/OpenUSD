@@ -31,7 +31,6 @@
 #include "pxr/base/tf/stringUtils.h"
 #include <algorithm>
 #include <cctype>
-#include <map>
 
 namespace mx = MaterialX;
 

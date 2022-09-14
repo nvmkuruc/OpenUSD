@@ -920,8 +920,7 @@ _ValidateArrayShape(size_t size, int numInfluencesPerComponent)
 
 bool
 UsdSkelNormalizeWeights(TfSpan<float> weights,
-                        int numInfluencesPerComponent,
-                        float eps)
+                        int numInfluencesPerComponent)
 {
     TRACE_FUNCTION();
     
@@ -944,7 +943,7 @@ UsdSkelNormalizeWeights(TfSpan<float> weights,
                     sum += weightSet[j];
                 }
 
-                if (std::abs(sum) > eps) {
+                if (std::abs(sum) > std::numeric_limits<float>::epsilon()) {
                     for(int j = 0; j < numInfluencesPerComponent; ++j) {
                         weightSet[j] /= sum;
                     }
@@ -1237,34 +1236,7 @@ struct _InterleavedInfluencesFn {
 
     size_t      size() const { return influences.size(); }
 };
-
-/// Functor which returns the element index unchanged.
-/// Use when the attribute to deform has vertex or varying interpolation.
-struct _IdentityPointIndexFn
-{
-    size_t GetPointIndex(size_t index) const { return index; }
-};
-
-/// Functor which uses the faceVertexIndices attribute to find the
-/// corresponding point index. Use for deforming faceVarying normals.
-struct _FaceVaryingPointIndexFn
-{
-    TfSpan<const int> faceVertexIndices;
-    const int numPoints;
-
-    size_t GetPointIndex(size_t index) const
-    {
-        const int pointIndex = faceVertexIndices[index];
-        if (pointIndex < 0 || pointIndex >= numPoints)
-        {
-            TF_WARN("faceVertexIndices is out of range [%d] at index [%zu]",
-                    pointIndex, index);
-            return 0;
-        }
-
-        return pointIndex;
-    }
-};
+    
 
 template <typename Matrix4, typename InfluenceFn>
 bool
@@ -1508,14 +1480,11 @@ UsdSkelSkinPointsLBS(const GfMatrix4d& geomBindTransform,
 namespace {
 
 
-template <typename Matrix3,
-          typename InfluenceFn,
-          typename PointIndexFn>
+template <typename Matrix3, typename InfluenceFn>
 bool
 _SkinNormalsLBS(const Matrix3& geomBindTransform,
                 TfSpan<const Matrix3> jointXforms,
                 const InfluenceFn& influenceFn,
-                const PointIndexFn& pointIndexFn,
                 int numInfluencesPerPoint,
                 TfSpan<GfVec3f> normals,
                 bool inSerial)
@@ -1536,13 +1505,9 @@ _SkinNormalsLBS(const Matrix3& geomBindTransform,
             // considered in the future (E.g, Accurate and Efficient
             // Lighting for Skinned Models, Tarini, et. al.)
             
-            for (size_t ni = start; ni < end; ++ni) {
+            for (size_t pi = start; pi < end; ++pi) {
                 
-                const GfVec3f initialN = normals[ni]*geomBindTransform;
-                // Determine the point to read the influences from. This is not
-                // the same as the normal's index if there is faceVarying
-                // interpolation.
-                const size_t pi = pointIndexFn.GetPointIndex(ni);
+                const GfVec3f initialN = normals[pi]*geomBindTransform;
 
                 GfVec3f n(0,0,0);
                 
@@ -1572,7 +1537,7 @@ _SkinNormalsLBS(const Matrix3& geomBindTransform,
                         return;
                     }
                 }
-                normals[ni] = n.GetNormalized();
+                normals[pi] = n.GetNormalized();
             }
         });
         
@@ -1598,8 +1563,7 @@ _InterleavedSkinNormalsLBS(const Matrix3& geomBindTransform,
 
     const _InterleavedInfluencesFn influenceFn{influences};
     return _SkinNormalsLBS(geomBindTransform, jointXforms, influenceFn,
-                           _IdentityPointIndexFn(), numInfluencesPerPoint,
-                           normals, inSerial);
+                           numInfluencesPerPoint, normals, inSerial);
 }
 
 
@@ -1628,47 +1592,6 @@ _NonInterleavedSkinNormalsLBS(const Matrix3& geomBindTransform,
 
     const _NonInterleavedInfluencesFn influenceFn{jointIndices, jointWeights};
     return _SkinNormalsLBS(geomBindTransform, jointXforms, influenceFn,
-                           _IdentityPointIndexFn(), numInfluencesPerPoint,
-                           normals, inSerial);
-}
-
-
-template <typename Matrix3>
-bool
-_SkinFaceVaryingNormalsLBS(const Matrix3& geomBindTransform,
-                           TfSpan<const Matrix3> jointXforms,
-                           TfSpan<const int> jointIndices,
-                           TfSpan<const float> jointWeights,
-                           int numInfluencesPerPoint,
-                           TfSpan<const int> faceVertexIndices,
-                           TfSpan<GfVec3f> normals,
-                           bool inSerial)
-{
-    if (jointIndices.size() != jointWeights.size()) {
-        TF_WARN("Size of jointIndices [%zu] != size of jointWeights [%zu]",
-                jointIndices.size(), jointWeights.size());
-        return false;
-    }
-
-    if (jointIndices.size() % numInfluencesPerPoint != 0) {
-        TF_WARN("Size of jointIndices [%zu] is not a multiple of "
-                "numInfluencesPerPoint [%d]",
-                jointIndices.size(), numInfluencesPerPoint);
-        return false;
-    }
-
-    if (faceVertexIndices.size() != normals.size()) {
-        TF_WARN("Size of faceVertexIndices [%zu] != size of normals [%zu]",
-                faceVertexIndices.size(), normals.size());
-        return false;
-    }
-
-    const _NonInterleavedInfluencesFn influenceFn{jointIndices, jointWeights};
-
-    const int numPoints = jointIndices.size() / numInfluencesPerPoint;
-    const _FaceVaryingPointIndexFn indexFn{faceVertexIndices, numPoints};
-
-    return _SkinNormalsLBS(geomBindTransform, jointXforms, influenceFn, indexFn,
                            numInfluencesPerPoint, normals, inSerial);
 }
 
@@ -1735,37 +1658,6 @@ UsdSkelSkinNormalsLBS(const GfMatrix3f& geomBindTransform,
                                       points, inSerial);
 }
 
-
-bool
-UsdSkelSkinFaceVaryingNormalsLBS(const GfMatrix3d& geomBindTransform,
-                                 TfSpan<const GfMatrix3d> jointXforms,
-                                 TfSpan<const int> jointIndices,
-                                 TfSpan<const float> jointWeights,
-                                 int numInfluencesPerPoint,
-                                 TfSpan<const int> faceVertexIndices,
-                                 TfSpan<GfVec3f> normals,
-                                 bool inSerial)
-{
-    return _SkinFaceVaryingNormalsLBS(
-        geomBindTransform, jointXforms, jointIndices, jointWeights,
-        numInfluencesPerPoint, faceVertexIndices, normals, inSerial);
-}
-
-
-bool
-UsdSkelSkinFaceVaryingNormalsLBS(const GfMatrix3f& geomBindTransform,
-                                 TfSpan<const GfMatrix3f> jointXforms,
-                                 TfSpan<const int> jointIndices,
-                                 TfSpan<const float> jointWeights,
-                                 int numInfluencesPerPoint,
-                                 TfSpan<const int> faceVertexIndices,
-                                 TfSpan<GfVec3f> normals,
-                                 bool inSerial)
-{
-    return _SkinFaceVaryingNormalsLBS(
-        geomBindTransform, jointXforms, jointIndices, jointWeights,
-        numInfluencesPerPoint, faceVertexIndices, normals, inSerial);
-}
 
 
 namespace {

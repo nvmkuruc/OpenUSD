@@ -25,31 +25,16 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-bool
-HdBindingRequest::operator==(HdBindingRequest const &other) const
-{
-    return
-        _bindingType == other._bindingType &&
-        _dataType == other._dataType &&
-        _name == other._name &&
-        _resource == other._resource &&
-        _bar == other._bar &&
-        _isInterleaved == other._isInterleaved &&
-        _isWritable == other._isWritable &&
-        _arraySize == other._arraySize &&
-        _concatenateNames == other._concatenateNames;
-}
-
-bool
-HdBindingRequest::operator!=(HdBindingRequest const &other) const
-{
-    return !(*this == other);
-}
 
 size_t
 HdBindingRequest::ComputeHash() const
 {
-    return TfHash()(*this);
+    size_t hash = _name.Hash();
+    boost::hash_combine(hash, _bindingType);
+    boost::hash_combine(hash, _dataType);
+    boost::hash_combine(hash, _isInterleaved);
+
+    return hash;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

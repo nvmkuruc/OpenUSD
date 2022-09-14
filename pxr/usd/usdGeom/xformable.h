@@ -254,8 +254,8 @@ class UsdGeomXformable : public UsdGeomImageable
 public:
     /// Compile time constant representing what kind of schema this class is.
     ///
-    /// \sa UsdSchemaKind
-    static const UsdSchemaKind schemaKind = UsdSchemaKind::AbstractTyped;
+    /// \sa UsdSchemaType
+    static const UsdSchemaType schemaType = UsdSchemaType::AbstractTyped;
 
     /// Construct a UsdGeomXformable on UsdPrim \p prim .
     /// Equivalent to UsdGeomXformable::Get(prim.GetStage(), prim.GetPath())
@@ -300,11 +300,11 @@ public:
 
 
 protected:
-    /// Returns the kind of schema this class belongs to.
+    /// Returns the type of schema this class belongs to.
     ///
-    /// \sa UsdSchemaKind
+    /// \sa UsdSchemaType
     USDGEOM_API
-    UsdSchemaKind _GetSchemaKind() const override;
+    UsdSchemaType _GetSchemaType() const override;
 
 private:
     // needs to invoke _GetStaticTfType.
@@ -402,10 +402,6 @@ public:
             /// Returns whether the xform value might change over time.
             USDGEOM_API
             bool TransformMightBeTimeVarying() const;
-
-            /// Returns whether xformOpOrder is non-empty.
-            USDGEOM_API
-            bool HasNonEmptyXformOpOrder() const;
 
             /// Sets the vector of times at which xformOp samples have been 
             /// authored in the cached set of xform ops.

@@ -22,7 +22,7 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/pxr.h"
-#include "pxr/imaging/garch/glApi.h"
+#include "pxr/imaging/glf/glew.h"
 
 #include "pxr/usdImaging/usdImagingGL/legacyEngine.h"
 
@@ -61,7 +61,6 @@
 #include "pxr/imaging/glf/diagnostic.h"
 #include "pxr/imaging/glf/drawTarget.h"
 #include "pxr/imaging/glf/glContext.h"
-#include "pxr/imaging/glf/contextCaps.h"
 #include "pxr/imaging/glf/info.h"
 
 // Mesh Topology
@@ -406,7 +405,6 @@ UsdImagingGLLegacyEngine::Render(const UsdPrim& root,
         // Will need to revisit this for semi-transparent geometry.
         glDisable( GL_ALPHA_TEST );
         glDisable( GL_BLEND );
-        glDisable( GL_SAMPLE_ALPHA_TO_COVERAGE );
         drawID = true;
     } else {
         glShadeModel(GL_SMOOTH);
@@ -815,7 +813,7 @@ UsdImagingGLLegacyEngine::_ProcessGprimColor(const UsdGeomGprim *gprimSchema,
     // Get interpolation and color using UsdShadeMaterial'
     VtValue colorAsVt;
     if (UsdImagingGprimAdapter::GetColor(prim, 
-                _params.frame, interpolation, &colorAsVt, nullptr)) {
+                _params.frame, interpolation, &colorAsVt)) {
         VtVec3fArray temp = colorAsVt.Get<VtVec3fArray>();
         color->push_back(temp[0]);
     } else {
@@ -1298,20 +1296,6 @@ UsdImagingGLLegacyEngine::_RenderPrimitive(const UsdPrim &prim,
     }
 }
 
-static GfVec3d
-_UnProject(
-    GfVec3d Pwin,
-    const GfMatrix4d &modelViewMatrix,
-    const GfMatrix4d &projMatrix,
-    const GfVec4i &viewport)
-{
-    GfVec3d Pndc(((Pwin[0] - viewport[0]) / viewport[2]) * 2.0 - 1.0,
-                 ((Pwin[1] - viewport[1]) / viewport[3]) * 2.0 - 1.0,
-                   Pwin[2] * 2.0 - 1.0);
-    GfMatrix4d MVP = modelViewMatrix * projMatrix;
-    return MVP.GetInverse().Transform(Pndc);
-}
-
 bool
 UsdImagingGLLegacyEngine::TestIntersection(
     const GfMatrix4d &viewMatrix,
@@ -1330,16 +1314,17 @@ UsdImagingGLLegacyEngine::TestIntersection(
     const int width = 128;
     const int height = width;
 
-    // Use a separate drawTarget (framebuffer object) for each GL context
-    // that uses this renderer, but the drawTargets can share attachments.
-    GlfGLContextSharedPtr context = GlfGLContext::GetCurrentGLContext();
-    if (!TF_VERIFY(context)) {
-        TF_RUNTIME_ERROR("Invalid GL context");
+    if (GlfHasLegacyGraphics()) {
+        TF_RUNTIME_ERROR("framebuffer object not supported");
         return false;
     }
 
-    if (GlfContextCaps::GetInstance().glVersion < 200) {
-        TF_RUNTIME_ERROR("framebuffer object not supported");
+    // Use a separate drawTarget (framebuffer object) for each GL context
+    // that uses this renderer, but the drawTargets can share attachments.
+    
+    GlfGLContextSharedPtr context = GlfGLContext::GetCurrentGLContext();
+    if (!TF_VERIFY(context)) {
+        TF_RUNTIME_ERROR("Invalid GL context");
         return false;
     }
 
@@ -1468,11 +1453,15 @@ UsdImagingGLLegacyEngine::TestIntersection(
     bool didHit = (zMin < 1.0);
 
     if (didHit) {
-        GfVec4i viewport = { 0, 0, width, height };
+        GLint viewport[4] = { 0, 0, width, height };
 
-        *outHitPoint = _UnProject(
-                GfVec3d(xMin, yMin, zMin),
-                viewMatrix, projectionMatrix, viewport);
+        gluUnProject( xMin, yMin, zMin,
+                      viewMatrix.GetArray(),
+                      projectionMatrix.GetArray(),
+                      viewport,
+                      &((*outHitPoint)[0]),
+                      &((*outHitPoint)[1]),
+                      &((*outHitPoint)[2]));
 
         if (outHitPrimPath) {
             int idIndex = zMinIndex*4;

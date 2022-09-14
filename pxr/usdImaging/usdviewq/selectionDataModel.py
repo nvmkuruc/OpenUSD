@@ -760,10 +760,10 @@ class SelectionDataModel(QtCore.QObject):
             if not prim.IsActive():
                 self.removePrim(prim)
     
-    def removePrototypePrims(self):
-        """Remove all prototype prims"""
+    def removeMasterPrims(self):
+        """Remove all master prims"""
         for prim in self.getPrims():
-            if prim.IsPrototype() or prim.IsInPrototype():
+            if prim.IsMaster() or prim.IsInMaster():
                 self.removePrim(prim)
 
     def removeAbstractPrims(self):

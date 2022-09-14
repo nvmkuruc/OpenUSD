@@ -28,7 +28,6 @@
 #include "pxr/usd/sdf/api.h"
 #include "pxr/usd/sdf/path.h"
 #include "pxr/base/tf/pointerAndBits.h"
-#include "pxr/base/tf/functionRef.h"
 
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/noncopyable.hpp>
@@ -39,9 +38,9 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-// Parallel visitation helper function.
+// Helper function for clearing path tables.
 SDF_API
-void Sdf_VisitPathTableInParallel(void **, size_t, TfFunctionRef<void(void*&)>);
+void Sdf_ClearPathTableInParallel(void **, size_t, void (*)(void *));
 
 /// \class SdfPathTable
 ///
@@ -232,12 +231,6 @@ public:
                 }
             }
             return result;
-        }
-
-        /// Returns true if incrementing this iterator would move to a child
-        /// entry, false otherwise.
-        bool HasChild() const {
-            return bool(_entry->firstChild);
         }
 
     protected:
@@ -512,18 +505,8 @@ public:
     /// Equivalent to clear(), but destroy contained objects in parallel.  This
     /// requires that running the contained objects' destructors is thread-safe.
     void ClearInParallel() {
-        auto visitFn =
-            [](void*& voidEntry) {
-                _Entry *entry = static_cast<_Entry *>(voidEntry);
-                while (entry) {
-                    _Entry *next = entry->next;
-                    delete entry;
-                    entry = next;
-                }
-                voidEntry = nullptr;
-            };
-        Sdf_VisitPathTableInParallel(reinterpret_cast<void **>(_buckets.data()),
-                                     _buckets.size(), visitFn);
+        Sdf_ClearPathTableInParallel(reinterpret_cast<void **>(_buckets.data()),
+                                     _buckets.size(), _DeleteEntryChain);
         _size = 0;
     }        
 
@@ -566,48 +549,19 @@ public:
             erase(oldName);
     }
 
-    /// ParallelForEach: parallel iteration over all of the key-value pairs
-    /// in the path table.  The type of \p visitFn should be a callable,
-    /// taking a (const SdfPath&, mapped_type&), representing the loop 
-    /// body.  Note: since this function is run in parallel, visitFn is
-    /// responsible for synchronizing access to any non-pathtable state.
-    template <typename Callback>
-    void ParallelForEach(Callback const& visitFn) {
-        auto lambda =
-            [&visitFn](void*& voidEntry) {
-                _Entry *entry = static_cast<_Entry *>(voidEntry);
-                while (entry) {
-                    visitFn(std::cref(entry->value.first),
-                            std::ref(entry->value.second));
-                    entry = entry->next;
-                }
-            };
-        Sdf_VisitPathTableInParallel(reinterpret_cast<void **>(_buckets.data()),
-                                     _buckets.size(), lambda);
-    }
-
-    /// ParallelForEach: const version, runnable on a const path table and
-    /// taking a (const SdfPath&, const mapped_type&) input.
-    template <typename Callback>
-    void ParallelForEach(Callback const& visitFn) const {
-        auto lambda =
-            [&visitFn](void*& voidEntry) {
-                const _Entry *entry = static_cast<const _Entry *>(voidEntry);
-                while (entry) {
-                    visitFn(std::cref(entry->value.first),
-                            std::cref(entry->value.second));
-                    entry = entry->next;
-                }
-            };
-        Sdf_VisitPathTableInParallel(
-            // Note: the const cast here is undone by the static cast above...
-            reinterpret_cast<void **>(const_cast<_Entry**>(_buckets.data())),
-            _buckets.size(), lambda);
-    }
-
     /// @}
 
 private:
+
+    // Helper to delete entries.
+    static void _DeleteEntryChain(void *voidEntry) {
+        _Entry *entry = static_cast<_Entry *>(voidEntry);
+        while (entry) {
+            _Entry *next = entry->next;
+            delete entry;
+            entry = next;
+        }
+    }            
 
     // Helper to get parent paths.
     static SdfPath _GetParentPath(SdfPath const &path) {

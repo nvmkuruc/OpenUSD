@@ -135,7 +135,7 @@ UsdUtilsComputeUsdStageStats(const UsdStageWeakPtr &stage,
            modelCount=0,
            instancedModelCount=0,
            assetCount=0,
-           prototypeCount=0, 
+           masterCount=0, 
            totalInstanceCount=0;
 
     size_t primaryPrimCount=0, 
@@ -159,59 +159,59 @@ UsdUtilsComputeUsdStageStats(const UsdStageWeakPtr &stage,
     }
     totalInstanceCount = primaryInstanceCount;
 
-    std::vector<UsdPrim> prototypes = stage->GetPrototypes();
-    prototypeCount = prototypes.size();
-    if (prototypeCount > 0) {
-        size_t prototypesPrimCount=0, prototypesActivePrimCount=0, 
-            prototypesInactivePrimCount=0, prototypesPureOverCount=0,
-            prototypesInstanceCount=0;
+    std::vector<UsdPrim> masters = stage->GetMasters();
+    masterCount = masters.size();
+    if (masterCount > 0) {
+        size_t mastersPrimCount=0, mastersActivePrimCount=0, 
+            mastersInactivePrimCount=0, mastersPureOverCount=0,
+            mastersInstanceCount=0;
 
-        PrimTypeAndCountMap prototypesPrimCountsByType;
+        PrimTypeAndCountMap mastersPrimCountsByType;
 
-        for (const UsdPrim &prototypePrim : prototypes) {
-            for (UsdPrim prim: UsdPrimRange(prototypePrim)) {
+        for (const UsdPrim &masterPrim : masters) {
+            for (UsdPrim prim: UsdPrimRange(masterPrim)) {
                 _UpdateCountsHelper(prim, &seenAssetNames, 
-                    &totalPrimCount, &prototypesPrimCount, 
+                    &totalPrimCount, &mastersPrimCount, 
                     &modelCount, &instancedModelCount, 
-                    &assetCount, &prototypesActivePrimCount, 
-                    &prototypesInactivePrimCount, &prototypesPureOverCount, 
-                    &prototypesInstanceCount, &prototypesPrimCountsByType);
+                    &assetCount, &mastersActivePrimCount, 
+                    &mastersInactivePrimCount, &mastersPureOverCount, 
+                    &mastersInstanceCount, &mastersPrimCountsByType);
             }
         }
 
-        totalInstanceCount += prototypesInstanceCount;
+        totalInstanceCount += mastersInstanceCount;
 
-        VtDictionary prototypesDict;
+        VtDictionary mastersDict;
 
         VtDictionary primCounts;
-        primCounts[UsdUtilsUsdStageStatsKeys->totalPrimCount] = prototypesPrimCount;
+        primCounts[UsdUtilsUsdStageStatsKeys->totalPrimCount] = mastersPrimCount;
         primCounts[UsdUtilsUsdStageStatsKeys->activePrimCount] =
-                   prototypesActivePrimCount;
+                   mastersActivePrimCount;
         primCounts[UsdUtilsUsdStageStatsKeys->inactivePrimCount] =
-                   prototypesInactivePrimCount;
+                   mastersInactivePrimCount;
         primCounts[UsdUtilsUsdStageStatsKeys->pureOverCount] =
-                   prototypesPureOverCount;
+                   mastersPureOverCount;
         primCounts[UsdUtilsUsdStageStatsKeys->instanceCount] = 
-                   prototypesInstanceCount;
+                   mastersInstanceCount;
 
-        prototypesDict[UsdUtilsUsdStageStatsKeys->primCounts] = primCounts;
+        mastersDict[UsdUtilsUsdStageStatsKeys->primCounts] = primCounts;
 
         VtDictionary primCountsByTypeDict;
-        for (const auto &typeNameAndCount : prototypesPrimCountsByType) {
+        for (const auto &typeNameAndCount : mastersPrimCountsByType) {
             primCountsByTypeDict[typeNameAndCount.first] = 
                 typeNameAndCount.second;
         }
-        prototypesDict[UsdUtilsUsdStageStatsKeys->primCountsByType] =
+        mastersDict[UsdUtilsUsdStageStatsKeys->primCountsByType] =
                     primCountsByTypeDict;
 
-        (*stats)[UsdUtilsUsdStageStatsKeys->prototypes] = prototypesDict;
+        (*stats)[UsdUtilsUsdStageStatsKeys->masters] = mastersDict;
     }
 
     (*stats)[UsdUtilsUsdStageStatsKeys->totalPrimCount] = totalPrimCount;
     (*stats)[UsdUtilsUsdStageStatsKeys->modelCount] = modelCount;
     (*stats)[UsdUtilsUsdStageStatsKeys->instancedModelCount] = instancedModelCount;
     (*stats)[UsdUtilsUsdStageStatsKeys->assetCount] = assetCount;
-    (*stats)[UsdUtilsUsdStageStatsKeys->prototypeCount] = prototypeCount;
+    (*stats)[UsdUtilsUsdStageStatsKeys->masterCount] = masterCount;
     (*stats)[UsdUtilsUsdStageStatsKeys->totalInstanceCount] = totalInstanceCount;
     
     // VtDictionary does not support initialization using an initializer list.

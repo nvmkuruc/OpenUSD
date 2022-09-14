@@ -75,9 +75,8 @@ UsdGeomMesh::Define(
 }
 
 /* virtual */
-UsdSchemaKind UsdGeomMesh::_GetSchemaKind() const
-{
-    return UsdGeomMesh::schemaKind;
+UsdSchemaType UsdGeomMesh::_GetSchemaType() const {
+    return UsdGeomMesh::schemaType;
 }
 
 /* static */
@@ -407,14 +406,5 @@ UsdGeomMesh::IsSharpnessInfinite(const float sharpness)
 
 
 const float UsdGeomMesh::SHARPNESS_INFINITE = 10.0f;
-
-size_t
-UsdGeomMesh::GetFaceCount(UsdTimeCode timeCode) const
-{
-    UsdAttribute vertexCountsAttr = GetFaceVertexCountsAttr();
-    VtIntArray vertexCounts;
-    vertexCountsAttr.Get(&vertexCounts, timeCode);
-    return vertexCounts.size();
-}
 
 PXR_NAMESPACE_CLOSE_SCOPE

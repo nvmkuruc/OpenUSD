@@ -44,6 +44,9 @@ TF_REGISTRY_FUNCTION(TfDebug)
     TF_DEBUG_ENVIRONMENT_SYMBOL(HD_CACHE_HITS, "Report every cache hit");
     TF_DEBUG_ENVIRONMENT_SYMBOL(HD_CACHE_MISSES, "Report every cache miss");
 
+    TF_DEBUG_ENVIRONMENT_SYMBOL(HD_COLLECTION_CHANGED,
+        "Report when cached collections change");
+    
     TF_DEBUG_ENVIRONMENT_SYMBOL(HD_COUNTER_CHANGED,
         "Report values when counters change");
 
@@ -56,6 +59,8 @@ TF_REGISTRY_FUNCTION(TfDebug)
     TF_DEBUG_ENVIRONMENT_SYMBOL(HD_DISABLE_MULTITHREADED_RPRIM_SYNC,
         "Run RPrim sync on a single thread");
 
+    TF_DEBUG_ENVIRONMENT_SYMBOL(HD_DRAWITEM_DRAWN,
+        "Report each draw item as it is drawn");
     TF_DEBUG_ENVIRONMENT_SYMBOL(HD_DRAWITEMS_CULLED,
         "Report the number of draw items culled in each render pass");
     TF_DEBUG_ENVIRONMENT_SYMBOL(HD_ENGINE_PHASE_INFO,
@@ -82,6 +87,9 @@ TF_REGISTRY_FUNCTION(TfDebug)
     TF_DEBUG_ENVIRONMENT_SYMBOL(HD_INSTANCER_UPDATED,
         "Report when instancers are updated");
 
+    TF_DEBUG_ENVIRONMENT_SYMBOL(HD_MDI,
+        "Report info related to multi-draw-indirect batches");
+
     TF_DEBUG_ENVIRONMENT_SYMBOL(HD_RENDER_SETTINGS,
         "Report render settings changes");
 
@@ -107,9 +115,6 @@ TF_REGISTRY_FUNCTION(TfDebug)
         "Report when sprims are added");
     TF_DEBUG_ENVIRONMENT_SYMBOL(HD_SPRIM_REMOVED,
         "Report when sprims are removed");
-
-    TF_DEBUG_ENVIRONMENT_SYMBOL(HD_SYNC_ALL,
-        "Report debugging info for the sync all algorithm.");
 
     TF_DEBUG_ENVIRONMENT_SYMBOL(HD_TASK_ADDED,
         "Report when tasks are added");

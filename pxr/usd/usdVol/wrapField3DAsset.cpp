@@ -50,9 +50,9 @@ WRAP_CUSTOM;
 
         
 static UsdAttribute
-_CreateFieldDataTypeAttr(UsdVolField3DAsset &self,
+_CreateFieldNameAttr(UsdVolField3DAsset &self,
                                       object defaultVal, bool writeSparsely) {
-    return self.CreateFieldDataTypeAttr(
+    return self.CreateFieldNameAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Token), writeSparsely);
 }
         
@@ -61,6 +61,13 @@ _CreateFieldPurposeAttr(UsdVolField3DAsset &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreateFieldPurposeAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Token), writeSparsely);
+}
+        
+static UsdAttribute
+_CreateFieldIndexAttr(UsdVolField3DAsset &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateFieldIndexAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Int), writeSparsely);
 }
 
 static std::string
@@ -105,10 +112,10 @@ void wrapUsdVolField3DAsset()
         .def(!self)
 
         
-        .def("GetFieldDataTypeAttr",
-             &This::GetFieldDataTypeAttr)
-        .def("CreateFieldDataTypeAttr",
-             &_CreateFieldDataTypeAttr,
+        .def("GetFieldNameAttr",
+             &This::GetFieldNameAttr)
+        .def("CreateFieldNameAttr",
+             &_CreateFieldNameAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
         
@@ -116,6 +123,13 @@ void wrapUsdVolField3DAsset()
              &This::GetFieldPurposeAttr)
         .def("CreateFieldPurposeAttr",
              &_CreateFieldPurposeAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
+        
+        .def("GetFieldIndexAttr",
+             &This::GetFieldIndexAttr)
+        .def("CreateFieldIndexAttr",
+             &_CreateFieldIndexAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
 

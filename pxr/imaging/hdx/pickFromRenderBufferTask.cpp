@@ -32,14 +32,13 @@ HdxPickFromRenderBufferTask::HdxPickFromRenderBufferTask(
     , _primId(nullptr)
     , _instanceId(nullptr)
     , _elementId(nullptr)
-    , _normal(nullptr)
-    , _depth(nullptr)
-    , _camera(nullptr)
     , _converged(false)
 {
 }
 
-HdxPickFromRenderBufferTask::~HdxPickFromRenderBufferTask() = default;
+HdxPickFromRenderBufferTask::~HdxPickFromRenderBufferTask()
+{
+}
 
 bool
 HdxPickFromRenderBufferTask::IsConverged() const
@@ -80,9 +79,6 @@ HdxPickFromRenderBufferTask::Prepare(HdTaskContext* ctx,
     _elementId = static_cast<HdRenderBuffer*>(
         renderIndex->GetBprim(HdPrimTypeTokens->renderBuffer,
                               _params.elementIdBufferPath));
-    _normal = static_cast<HdRenderBuffer*>(
-        renderIndex->GetBprim(HdPrimTypeTokens->renderBuffer,
-                              _params.normalBufferPath));
     _depth = static_cast<HdRenderBuffer*>(
         renderIndex->GetBprim(HdPrimTypeTokens->renderBuffer,
                               _params.depthBufferPath));
@@ -90,32 +86,6 @@ HdxPickFromRenderBufferTask::Prepare(HdTaskContext* ctx,
     _camera = static_cast<const HdCamera *>(
         renderIndex->GetSprim(HdPrimTypeTokens->camera,
                               _params.cameraId));
-}
-
-GfMatrix4d
-HdxPickFromRenderBufferTask::_ComputeProjectionMatrix() const
-{
-    // Same logic as in HdRenderPassState::GetProjectionMatrix().
-
-    if (_params.framing.IsValid()) {
-        const CameraUtilConformWindowPolicy policy =
-            _params.overrideWindowPolicy.first
-                ?_params.overrideWindowPolicy.second
-                : _camera->GetWindowPolicy();
-        return
-            _params.framing.ApplyToProjectionMatrix(
-                _camera->ComputeProjectionMatrix(), policy);
-    } else {
-        const double aspect =
-            _params.viewport[3] != 0.0
-                ? _params.viewport[2] / _params.viewport[3]
-                : 1.0;
-        return
-            CameraUtilConformedWindow(
-                _camera->ComputeProjectionMatrix(),
-                _camera->GetWindowPolicy(),
-                aspect);
-    }
 }
 
 void
@@ -146,18 +116,6 @@ HdxPickFromRenderBufferTask::Execute(HdTaskContext* ctx)
         return;
     }
 
-    if (_normal) {
-        _normal->Resolve();
-        _converged = _converged && _normal->IsConverged();
-        if (_normal->GetWidth() != _primId->GetWidth() ||
-            _normal->GetHeight() != _primId->GetHeight()) {
-            TF_WARN("Normal buffer %s has different dimensions "
-                    "than Prim Id buffer %s",
-                    _params.normalBufferPath.GetText(),
-                    _params.primIdBufferPath.GetText());
-            return;
-        }
-    }
     if (_elementId) {
         _elementId->Resolve();
         _converged = _converged && _elementId->IsConverged();
@@ -185,9 +143,6 @@ HdxPickFromRenderBufferTask::Execute(HdTaskContext* ctx)
 
     uint8_t *primIdPtr = reinterpret_cast<uint8_t*>(_primId->Map());
     uint8_t *depthPtr = reinterpret_cast<uint8_t*>(_depth->Map());
-    uint8_t *normalPtr = _normal ?
-                         reinterpret_cast<uint8_t*>(_normal->Map()) :
-                         nullptr;
     uint8_t *elementIdPtr = _elementId ? 
                             reinterpret_cast<uint8_t*>(_elementId->Map()) : 
                             nullptr;
@@ -195,8 +150,8 @@ HdxPickFromRenderBufferTask::Execute(HdTaskContext* ctx)
                              reinterpret_cast<uint8_t*>(_instanceId->Map()) : 
                              nullptr;
 
-    const GfVec2i renderBufferSize(_primId->GetWidth(),
-                                   _primId->GetHeight());
+    GfVec2i renderBufferSize = GfVec2i(_primId->GetWidth(),
+                                       _primId->GetHeight());
 
     // A bit of trickiness: instead of being given an (x,y,radius) tuple,
     // we're given a pick frustum with which to generate an id render.
@@ -206,8 +161,13 @@ HdxPickFromRenderBufferTask::Execute(HdTaskContext* ctx)
     // buffer to look at.
 
     // Get the view, projection used to generate the ID buffers.
-    const GfMatrix4d renderView = _camera->GetTransform().GetInverse();
-    const GfMatrix4d renderProj = _ComputeProjectionMatrix();
+    GfMatrix4d renderView = _camera->GetViewMatrix();
+    GfMatrix4d renderProj = _camera->GetProjectionMatrix();
+    CameraUtilConformWindowPolicy const& policy =
+        _camera->GetWindowPolicy();
+    renderProj = CameraUtilConformedWindow(renderProj, policy,
+        _params.viewport[3] != 0.0 ?
+            _params.viewport[2] / _params.viewport[3] : 1.0);
 
     // renderBufferXf transforms renderbuffer NDC to integer renderbuffer
     // indices, assuming (-1,-1) maps to 0,0 and (1,1) maps to w,h.
@@ -256,7 +216,7 @@ HdxPickFromRenderBufferTask::Execute(HdTaskContext* ctx)
             reinterpret_cast<int32_t*>(elementIdPtr),
             nullptr,
             nullptr,
-            reinterpret_cast<int32_t*>(normalPtr),
+            nullptr,
             reinterpret_cast<float*>(depthPtr),
             _index, _contextParams.pickTarget,
             renderView, renderProj, depthRange,
@@ -282,8 +242,6 @@ HdxPickFromRenderBufferTask::Execute(HdTaskContext* ctx)
 
     if (primIdPtr)
         _primId->Unmap();
-    if (normalPtr)
-        _normal->Unmap();
     if (elementIdPtr)
         _elementId->Unmap();
     if (instanceIdPtr)
@@ -303,7 +261,6 @@ std::ostream& operator<<(std::ostream& out,
         << pv.primIdBufferPath << " "
         << pv.instanceIdBufferPath << " "
         << pv.elementIdBufferPath << " "
-        << pv.normalBufferPath << " "
         << pv.depthBufferPath << " "
         << pv.cameraId;
     return out;
@@ -315,7 +272,6 @@ bool operator==(const HdxPickFromRenderBufferTaskParams& lhs,
     return lhs.primIdBufferPath     == rhs.primIdBufferPath     &&
            lhs.instanceIdBufferPath == rhs.instanceIdBufferPath &&
            lhs.elementIdBufferPath  == rhs.elementIdBufferPath  &&
-           lhs.normalBufferPath     == rhs.normalBufferPath     &&
            lhs.depthBufferPath      == rhs.depthBufferPath      &&
            lhs.cameraId             == rhs.cameraId;
 }

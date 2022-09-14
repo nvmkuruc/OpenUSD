@@ -100,9 +100,7 @@ public:
     /// assetPath contains invalid characters, issue an error and set this
     /// reference's asset path to the empty asset path.
     void SetAssetPath(const std::string &assetPath) {
-        // Go through SdfAssetPath() to raise an error if \p assetPath contains
-        // illegal characters (i.e. control characters).
-        _assetPath = SdfAssetPath(assetPath).GetAssetPath();
+        _assetPath = assetPath;
     }
 
     /// Returns the path of the referenced prim.

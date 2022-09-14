@@ -27,7 +27,6 @@
 #include "pxr/base/tf/diagnosticMgr.h"
 #include "pxr/base/tf/getenv.h"
 #include "pxr/base/tf/enum.h"
-#include "pxr/base/tf/exception.h"
 #include "pxr/base/tf/scopeDescriptionPrivate.h"
 #include "pxr/base/tf/stringUtils.h"
 #include "pxr/base/arch/demangle.h"
@@ -118,11 +117,8 @@ _BadThrowHandler()
 void
 Tf_TerminateHandler()
 {
-    string reason("<unknown reason>");
-    string type("<unknown type>");
-
-    std::vector<uintptr_t> throwStack;
-    TfCallContext throwContext;
+    string reason;
+    string type;
 
     try {
         /*
@@ -131,25 +127,15 @@ Tf_TerminateHandler()
         std::set_terminate(_BadThrowHandler);
         throw;
     }
-    catch (std::bad_alloc const &exc) {
+    catch (std::bad_alloc&) {
         std::set_terminate(Tf_TerminateHandler);
         reason = "allocation failed (you've run out of memory)";
-        type = ArchGetDemangled(typeid(exc));
+        type = "bad_alloc";
     }
-    catch (TfBaseException &exc) {
+    catch (std::exception& exc) {
         std::set_terminate(Tf_TerminateHandler);
         reason = exc.what();
-        type = ArchGetDemangled(typeid(exc));
-        if (type.empty()) {
-            type = "<unknown TfBaseException subclass>";
-        }
-        throwContext = exc.GetThrowContext();
-        exc.MoveThrowStackTo(throwStack);
-    }
-    catch (std::exception const &exc) {
-        std::set_terminate(Tf_TerminateHandler);
-        reason = exc.what();
-        type = ArchGetDemangled(typeid(exc));
+        type = typeid(exc).name();
     }
     catch (...) {
         std::set_terminate(Tf_TerminateHandler);
@@ -159,34 +145,13 @@ Tf_TerminateHandler()
          * of the exception.  Add this to arch at some point, and then make
          * use of it here.
          */
+        reason = "reason unknown";
+        type = "";
     }
 
-    // This needs to live through the TF_FATAL_ERROR below, since
-    // ArchSetExtraLogInfoForErrors() holds a _pointer_ to this object.
-    std::vector<std::string> throwStackMsg;
-    if (!throwStack.empty()) {
-        std::stringstream throwStackText;
-        ArchPrintStackFrames(throwStackText, throwStack);
-        throwStackMsg = TfStringSplit(throwStackText.str(), "\n");
-        std::string throwContextMsg = throwContext ?
-            TfStringPrintf("at %s (%s:%zu) ",
-                           throwContext.GetFunction(),
-                           throwContext.GetFile(),
-                           throwContext.GetLine()) : std::string();
-        ArchSetExtraLogInfoForErrors(
-            TfStringPrintf("Unhandled %s exception: %s; "
-                           "thrown %sfrom ",
-                           type.c_str(), reason.c_str(),
-                           throwContextMsg.empty() ? 
-                           "" : throwContextMsg.c_str()),
-            &throwStackMsg);
-    }
-
-    TF_FATAL_ERROR(
-        throwStack.empty() ?
-        "Unhandled exception %s - '%s'" :
-        "Unhandled exception %s - '%s' (throw stack in crash report)", 
-        reason.c_str(), type.c_str());
+    TF_FATAL_ERROR("%s : uncaught exception! : '%s'", 
+        reason.empty() ? "<empty>" : reason.c_str(),
+        type.empty() ? "<empty>" : type.c_str() ) ;
 }
 
 void TfSetProgramNameForErrors(string const& programName)

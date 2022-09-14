@@ -21,10 +21,10 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef USDMDLAPI_TOKENS_H
-#define USDMDLAPI_TOKENS_H
+#ifndef USDMDL_TOKENS_H
+#define USDMDL_TOKENS_H
 
-/// \file usdMdlAPI/tokens.h
+/// \file usdMdl/tokens.h
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 // 
@@ -42,9 +42,9 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 
-/// \class UsdMdlAPITokensType
+/// \class UsdMdlTokensType
 ///
-/// \link UsdMdlAPITokens \endlink provides static, efficient
+/// \link UsdMdlTokens \endlink provides static, efficient
 /// \link TfToken TfTokens\endlink for use in all public USD API.
 ///
 /// These tokens are auto-generated from the module's schema, representing
@@ -53,32 +53,32 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// manner, and allow the compiler to verify that you spelled the name
 /// correctly.
 ///
-/// UsdMdlAPITokens also contains all of the \em allowedTokens values
+/// UsdMdlTokens also contains all of the \em allowedTokens values
 /// declared for schema builtin attributes of 'token' scene description type.
-/// Use UsdMdlAPITokens like so:
+/// Use UsdMdlTokens like so:
 ///
 /// \code
-///     gprim.GetMyTokenValuedAttr().Set(UsdMdlAPITokens->infoMdlSourceAsset);
+///     gprim.GetMyTokenValuedAttr().Set(UsdMdlTokens->infoMdlSourceAsset);
 /// \endcode
-struct UsdMdlAPITokensType {
-    USDMDLAPI_API UsdMdlAPITokensType();
+struct UsdMdlTokensType {
+    USDMDL_API UsdMdlTokensType();
     /// \brief "info:mdl:sourceAsset"
     /// 
-    /// UsdMdlAPIMdlAPI
+    /// UsdMdlMdlAPI
     const TfToken infoMdlSourceAsset;
     /// \brief "info:mdl:sourceAsset:subIdentifier"
     /// 
-    /// UsdMdlAPIMdlAPI
+    /// UsdMdlMdlAPI
     const TfToken infoMdlSourceAssetSubIdentifier;
     /// A vector of all of the tokens listed above.
     const std::vector<TfToken> allTokens;
 };
 
-/// \var UsdMdlAPITokens
+/// \var UsdMdlTokens
 ///
 /// A global variable with static, efficient \link TfToken TfTokens\endlink
-/// for use in all public USD API.  \sa UsdMdlAPITokensType
-extern USDMDLAPI_API TfStaticData<UsdMdlAPITokensType> UsdMdlAPITokens;
+/// for use in all public USD API.  \sa UsdMdlTokensType
+extern USDMDL_API TfStaticData<UsdMdlTokensType> UsdMdlTokens;
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

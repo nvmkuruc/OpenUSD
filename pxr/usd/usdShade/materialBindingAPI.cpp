@@ -62,17 +62,8 @@ UsdShadeMaterialBindingAPI::Get(const UsdStagePtr &stage, const SdfPath &path)
 
 
 /* virtual */
-UsdSchemaKind UsdShadeMaterialBindingAPI::_GetSchemaKind() const
-{
-    return UsdShadeMaterialBindingAPI::schemaKind;
-}
-
-/* static */
-bool
-UsdShadeMaterialBindingAPI::CanApply(
-    const UsdPrim &prim, std::string *whyNot)
-{
-    return prim.CanApplyAPI<UsdShadeMaterialBindingAPI>(whyNot);
+UsdSchemaType UsdShadeMaterialBindingAPI::_GetSchemaType() const {
+    return UsdShadeMaterialBindingAPI::schemaType;
 }
 
 /* static */
@@ -464,7 +455,7 @@ UsdShadeMaterialBindingAPI::UnbindDirectBinding(
 {
     UsdRelationship bindingRel = GetPrim().CreateRelationship(
         _GetDirectBindingRelName(materialPurpose), /*custom*/ false);
-    return bindingRel && bindingRel.SetTargets({});
+    return bindingRel && bindingRel.BlockTargets();
 }
 
 bool 
@@ -475,7 +466,7 @@ UsdShadeMaterialBindingAPI::UnbindCollectionBinding(
     UsdRelationship collBindingRel = GetPrim().CreateRelationship(
         _GetCollectionBindingRelName(bindingName, materialPurpose), 
         /*custom*/ false);
-    return collBindingRel && collBindingRel.SetTargets({});
+    return collBindingRel && collBindingRel.BlockTargets();
 }
 
 bool
@@ -497,7 +488,7 @@ UsdShadeMaterialBindingAPI::UnbindAllBindings() const
     std::vector<UsdRelationship> result;
     for (const UsdProperty &prop : allBindingProperties) {
         if (UsdRelationship bindingRel = prop.As<UsdRelationship>()) {
-            success = bindingRel.SetTargets({}) && success;
+            success = bindingRel.BlockTargets() && success;
         }
     }
 
@@ -644,14 +635,6 @@ UsdShadeMaterialBindingAPI::BindingsAtPrim::BindingsAtPrim(
         allPurposeCollBindings = 
             bindingAPI._GetCollectionBindings(collBindingPropertyNames);
     }
-}
-
-/* static */
-TfTokenVector
-UsdShadeMaterialBindingAPI::GetMaterialPurposes()
-{
-    return { UsdShadeTokens->allPurpose, UsdShadeTokens->preview, 
-             UsdShadeTokens->full };
 }
 
 UsdShadeMaterial 
@@ -880,13 +863,6 @@ UsdShadeMaterialBindingAPI::GetMaterialBindSubsetsFamilyType()
 {
     UsdGeomImageable geom(GetPrim());
     return UsdGeomSubset::GetFamilyType(geom, UsdShadeTokens->materialBind);
-}
-
-/* static */
-bool
-UsdShadeMaterialBindingAPI::CanContainPropertyName(const TfToken &name)
-{
-    return TfStringStartsWith(name, UsdShadeTokens->materialBinding);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

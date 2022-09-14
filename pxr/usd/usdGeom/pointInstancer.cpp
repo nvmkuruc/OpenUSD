@@ -75,9 +75,8 @@ UsdGeomPointInstancer::Define(
 }
 
 /* virtual */
-UsdSchemaKind UsdGeomPointInstancer::_GetSchemaKind() const
-{
-    return UsdGeomPointInstancer::schemaKind;
+UsdSchemaType UsdGeomPointInstancer::_GetSchemaType() const {
+    return UsdGeomPointInstancer::schemaType;
 }
 
 /* static */
@@ -497,7 +496,10 @@ UsdGeomPointInstancer::DeactivateIds(VtInt64Array const &ids) const
 bool
 UsdGeomPointInstancer::VisId(int64_t id, UsdTimeCode const &time) const
 {
-    return VisIds({id}, time);
+    VtInt64Array ids(1);
+    
+    ids.push_back(id);
+    return VisIds(ids, time);
 }
 
 bool
@@ -518,9 +520,8 @@ UsdGeomPointInstancer::VisIds(VtInt64Array const &ids, UsdTimeCode const &time) 
     if (numRemoved){
         invised.clear();
         invised.reserve(invisSet.size());
-        for ( int64_t id : invisSet ) {
+        for ( int64_t id : invisSet )
             invised.push_back(id);
-        }
     }
 
     return CreateInvisibleIdsAttr().Set(invised, time);
@@ -541,7 +542,10 @@ UsdGeomPointInstancer::VisAllIds(UsdTimeCode const &time) const
 bool
 UsdGeomPointInstancer::InvisId(int64_t id, UsdTimeCode const &time) const
 {
-    return InvisIds({id}, time);
+    VtInt64Array ids(1);
+    
+    ids.push_back(id);
+    return InvisIds(ids, time);
 }
 
 bool
@@ -770,6 +774,7 @@ UsdGeomPointInstancer::ComputeInstanceTransformsAtTimes(
     UsdTimeCode angularVelocitiesSampleTime;
     SdfPathVector protoPaths;
     std::vector<bool> mask;
+    float velocityScale;
 
     if (!_ComputePointInstancerAttributesPreamble(
             baseTime,
@@ -793,6 +798,7 @@ UsdGeomPointInstancer::ComputeInstanceTransformsAtTimes(
             &velocities,
             &velocitiesSampleTime,
             &accelerations,
+            &velocityScale,
             GetPrim())) {
         return false;
     }
@@ -872,7 +878,8 @@ UsdGeomPointInstancer::ComputeInstanceTransformsAtTimes(
                 angularVelocities,
                 angularVelocitiesSampleTime,
                 protoPaths,
-                mask)) {
+                mask,
+                velocityScale)) {
             return false;
         }
     }
@@ -897,21 +904,23 @@ UsdGeomPointInstancer::ComputeInstanceTransformsAtTime(
     UsdTimeCode angularVelocitiesSampleTime,
     const SdfPathVector& protoPaths,
     const std::vector<bool>& mask,
-    float /* velocityScale */)
+    float velocityScale)
 {
     TRACE_FUNCTION();
 
     size_t numInstances = protoIndices.size();
 
     const double timeCodesPerSecond = stage->GetTimeCodesPerSecond();
-    const double velocityTimeDelta = UsdGeom_CalculateTimeDelta(
+    const float velocityTimeDelta = UsdGeom_CalculateTimeDelta(
+                                      velocityScale,
                                       time,
                                       velocitiesSampleTime,
                                       timeCodesPerSecond);
-    const double angularVelocityTimeDelta = UsdGeom_CalculateTimeDelta(
+    const float angularVelocityTimeDelta = UsdGeom_CalculateTimeDelta(
+                                      velocityScale,
                                       time,
                                       angularVelocitiesSampleTime,
-                                      timeCodesPerSecond);
+                                      timeCodesPerSecond);\
 
     xforms->resize(numInstances);
 
@@ -934,38 +943,29 @@ UsdGeomPointInstancer::ComputeInstanceTransformsAtTime(
     const auto computeInstanceXforms = [&mask, &velocityTimeDelta, 
         &angularVelocityTimeDelta, &scales, 
         &orientations, &positions, &velocities, &accelerations, 
-        &angularVelocities, &protoXforms, &protoIndices, 
+        &angularVelocities, &identity, &protoXforms, &protoIndices, 
         &protoPaths, &xforms] (size_t start, size_t end) {
         for (size_t instanceId = start ; instanceId < end ; ++instanceId) {
             if (!mask.empty() && !mask[instanceId]) {
                 continue;
             }
 
-            bool identity = true;
-            GfMatrix4d instanceTransform(1.0);
+            GfTransform instanceTransform;
 
             if (!scales.empty()) {
                 instanceTransform.SetScale(scales[instanceId]);
-                identity = false;
             }
 
             if (!orientations.empty()) {
-                if (identity) {
-                    instanceTransform.SetRotate(orientations[instanceId]);
-                    identity = false;
-                } else {
-                    GfMatrix4d rotation;
-                    rotation.SetRotate(orientations[instanceId]);
-                    instanceTransform *= rotation;
-                }
-
+                GfRotation rotation = GfRotation(orientations[instanceId]);
                 if (angularVelocities.size() != 0) {
                     GfVec3f angularVelocity = angularVelocities[instanceId];
-                    GfMatrix4d rotation;
-                    rotation.SetRotate(GfRotation(angularVelocity,
-                        angularVelocityTimeDelta * angularVelocity.GetLength()));
-                    instanceTransform *= rotation;
+                    rotation *= GfRotation(
+                        angularVelocity,
+                        angularVelocityTimeDelta * 
+                            angularVelocity.GetLength());
                 }
+                instanceTransform.SetRotation(rotation);
             }
 
             GfVec3f translation = positions[instanceId];
@@ -976,16 +976,14 @@ UsdGeomPointInstancer::ComputeInstanceTransformsAtTime(
                 }
                 translation += velocityTimeDelta * velocity;
             }
-            instanceTransform.SetTranslateOnly(translation);
+            instanceTransform.SetTranslation(translation);
 
             const int protoIndex = protoIndices[instanceId];
+            const GfMatrix4d &protoXform = (protoPaths.size() != 0) ? 
+                protoXforms[protoIndex] : identity;
 
-            if (protoPaths.size() != 0) {
-                (*xforms)[instanceId] =
-                    protoXforms[protoIndex] * instanceTransform;
-            } else {
-                (*xforms)[instanceId] = instanceTransform;
-            }
+            (*xforms)[instanceId] = protoXform * 
+                                    instanceTransform.GetMatrix();
         }
     };
 
@@ -1318,16 +1316,6 @@ _ComputeExtentForPointInstancer(
         return pointInstancerSchema.ComputeExtentAtTime(extent, time, time);
     }
 }
-
-size_t
-UsdGeomPointInstancer::GetInstanceCount(UsdTimeCode timeCode) const
-{
-    UsdAttribute indicesAttr = GetProtoIndicesAttr();
-    VtIntArray indices;
-    indicesAttr.Get(&indices, timeCode);
-    return indices.size();
-}
-
 
 TF_REGISTRY_FUNCTION(UsdGeomBoundable)
 {

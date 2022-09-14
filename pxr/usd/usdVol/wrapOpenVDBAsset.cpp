@@ -50,16 +50,9 @@ WRAP_CUSTOM;
 
         
 static UsdAttribute
-_CreateFieldDataTypeAttr(UsdVolOpenVDBAsset &self,
+_CreateFieldNameAttr(UsdVolOpenVDBAsset &self,
                                       object defaultVal, bool writeSparsely) {
-    return self.CreateFieldDataTypeAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Token), writeSparsely);
-}
-        
-static UsdAttribute
-_CreateFieldClassAttr(UsdVolOpenVDBAsset &self,
-                                      object defaultVal, bool writeSparsely) {
-    return self.CreateFieldClassAttr(
+    return self.CreateFieldNameAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Token), writeSparsely);
 }
 
@@ -105,17 +98,10 @@ void wrapUsdVolOpenVDBAsset()
         .def(!self)
 
         
-        .def("GetFieldDataTypeAttr",
-             &This::GetFieldDataTypeAttr)
-        .def("CreateFieldDataTypeAttr",
-             &_CreateFieldDataTypeAttr,
-             (arg("defaultValue")=object(),
-              arg("writeSparsely")=false))
-        
-        .def("GetFieldClassAttr",
-             &This::GetFieldClassAttr)
-        .def("CreateFieldClassAttr",
-             &_CreateFieldClassAttr,
+        .def("GetFieldNameAttr",
+             &This::GetFieldNameAttr)
+        .def("CreateFieldNameAttr",
+             &_CreateFieldNameAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
 

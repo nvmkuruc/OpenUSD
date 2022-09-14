@@ -22,7 +22,6 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/imaging/hdx/colorChannelTask.h"
-#include "pxr/imaging/hdx/fullscreenShader.h"
 #include "pxr/imaging/hdx/package.h"
 
 #include "pxr/imaging/hd/perfLog.h"
@@ -47,12 +46,22 @@ TF_DEFINE_PRIVATE_TOKENS(
 HdxColorChannelTask::HdxColorChannelTask(
     HdSceneDelegate* delegate, 
     SdfPath const& id)
-  : HdxTask(id)
-  , _channel(HdxColorChannelTokens->color)
+    : HdxTask(id)
+    , _channel(HdxColorChannelTokens->color)
 {
 }
 
-HdxColorChannelTask::~HdxColorChannelTask() = default;
+HdxColorChannelTask::~HdxColorChannelTask()
+{
+    // #nv begin gl-errors
+    // still needed?
+    //bool performedGLOperation = false;
+    // nv end
+
+    if (_parameterBuffer) {
+        _GetHgi()->DestroyBuffer(&_parameterBuffer);
+    }
+}
 
 void
 HdxColorChannelTask::_Sync(HdSceneDelegate* delegate,
@@ -63,8 +72,7 @@ HdxColorChannelTask::_Sync(HdSceneDelegate* delegate,
     HF_MALLOC_TAG_FUNCTION();
 
     if (!_compositor) {
-        _compositor = std::make_unique<HdxFullscreenShader>(
-            _GetHgi(), "ColorChannel");
+        _compositor.reset(new HdxFullscreenShader(_GetHgi(), "ColorChannel"));
     }
 
     if ((*dirtyBits) & HdChangeTracker::DirtyParams) {
@@ -80,7 +88,7 @@ HdxColorChannelTask::_Sync(HdSceneDelegate* delegate,
 
 void
 HdxColorChannelTask::Prepare(HdTaskContext* ctx,
-                             HdRenderIndex* renderIndex)
+                                HdRenderIndex* renderIndex)
 {
 }
 
@@ -92,35 +100,13 @@ HdxColorChannelTask::Execute(HdTaskContext* ctx)
 
     HgiTextureHandle aovTexture;
     _GetTaskContextData(ctx, HdAovTokens->color, &aovTexture);
-    
-    HgiShaderFunctionDesc fragDesc;
-    fragDesc.debugName = _tokens->colorChannelFrag.GetString();
-    fragDesc.shaderStage = HgiShaderStageFragment;
-    HgiShaderFunctionAddStageInput(
-        &fragDesc, "uvOut", "vec2");
-    HgiShaderFunctionAddTexture(
-        &fragDesc, "colorIn");
-    HgiShaderFunctionAddStageOutput(
-        &fragDesc, "hd_FragColor", "vec4", "color");
-
-    // The order of the constant parameters has to match the order in the 
-    // _ParameterBuffer struct
-    HgiShaderFunctionAddConstantParam(
-        &fragDesc, "screenSize", "vec2");
-    HgiShaderFunctionAddConstantParam(
-        &fragDesc, "channel", "int");
 
     _compositor->SetProgram(
         HdxPackageColorChannelShader(), 
-        _tokens->colorChannelFrag,
-        fragDesc);
-    const auto &aovDesc = aovTexture->GetDescriptor();
-    if (_UpdateParameterBuffer(
-            static_cast<float>(aovDesc.dimensions[0]),
-            static_cast<float>(aovDesc.dimensions[1]))) {
-        size_t byteSize = sizeof(_ParameterBuffer);
-        _compositor->SetShaderConstants(byteSize, &_parameterData);
-    }
+        _tokens->colorChannelFrag);
+
+    _CreateParameterBuffer();
+    _compositor->BindBuffer(_parameterBuffer, 0);
 
     _compositor->BindTextures(
         {_tokens->colorIn}, 
@@ -129,9 +115,8 @@ HdxColorChannelTask::Execute(HdTaskContext* ctx)
     _compositor->Draw(aovTexture, /*no depth*/HgiTextureHandle());
 }
 
-bool
-HdxColorChannelTask::_UpdateParameterBuffer(
-    float screenSizeX, float screenSizeY)
+void
+HdxColorChannelTask::_CreateParameterBuffer()
 {
     _ParameterBuffer pb;
 
@@ -145,17 +130,33 @@ HdxColorChannelTask::_UpdateParameterBuffer(
         ++i;
     }
     pb.channel = i;
-    pb.screenSize[0] = screenSizeX;
-    pb.screenSize[1] = screenSizeY;
 
     // All data is still the same, no need to update the storage buffer
-    if (pb == _parameterData) {
-        return false;
+    if (_parameterBuffer && pb == _parameterData) {
+        return;
     }
-
     _parameterData = pb;
 
-    return true;
+    if (!_parameterBuffer) {
+        // Create a new (storage) buffer for shader parameters
+        HgiBufferDesc bufDesc;
+        bufDesc.debugName = "HdxColorChannelTask parameter buffer";
+        bufDesc.usage = HgiBufferUsageStorage;
+        bufDesc.initialData = &_parameterData;
+        bufDesc.byteSize = sizeof(_parameterData);
+        _parameterBuffer = _GetHgi()->CreateBuffer(bufDesc);
+    } else {
+        // Update the existing storage buffer with new values.
+        HgiBlitCmdsUniquePtr blitCmds = _GetHgi()->CreateBlitCmds();
+        HgiBufferCpuToGpuOp copyOp;
+        copyOp.byteSize = sizeof(_parameterData);
+        copyOp.cpuSourceBuffer = &_parameterData;
+        copyOp.sourceByteOffset = 0;
+        copyOp.destinationByteOffset = 0;
+        copyOp.gpuDestinationBuffer = _parameterBuffer;
+        blitCmds->CopyBufferCpuToGpu(copyOp);
+        _GetHgi()->SubmitCmds(blitCmds.get());
+    }
 }
 
 

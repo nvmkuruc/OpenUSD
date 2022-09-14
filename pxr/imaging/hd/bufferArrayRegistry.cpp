@@ -24,8 +24,6 @@
 #include "pxr/imaging/hd/bufferArrayRegistry.h"
 #include "pxr/imaging/hd/bufferArray.h"
 
-#include <tuple>
-
 PXR_NAMESPACE_OPEN_SCOPE
 
 
@@ -44,13 +42,13 @@ HdBufferArrayRangeSharedPtr HdBufferArrayRegistry::AllocateRange(
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
 
-    if (!strategy) {
-        TF_CODING_ERROR("Aggregation strategy is set to null");
+    // early out for empty source
+    if (!TF_VERIFY(!bufferSpecs.empty())) {
         return HdBufferArrayRangeSharedPtr();
     }
 
-    // early out for empty specs
-    if (bufferSpecs.empty()) {
+    if (!strategy) {
+        TF_CODING_ERROR("Aggregation strategy is set to null");
         return HdBufferArrayRangeSharedPtr();
     }
 
@@ -59,17 +57,12 @@ HdBufferArrayRangeSharedPtr HdBufferArrayRegistry::AllocateRange(
         strategy->ComputeAggregationId(bufferSpecs, usageHint);
 
     // We use insert to do a find and insert operation
-    auto iter = _entries.find(aggrId);
-    bool inserted = false;
-    if (iter == _entries.end()) {
-        // _Entry()'s dtor is very expensive due to std::list member, so avoid
-        // constructing one unless we didn't find one.
-        std::tie(iter, inserted) = _entries.emplace(aggrId, _Entry());
-    }
+    std::pair<_BufferArrayIndex::iterator, bool> result =
+            _entries.insert(std::make_pair(aggrId, _Entry()));
 
-    _Entry &entry = iter->second;
+    _Entry &entry = (result.first)->second;
 
-    if (inserted) {
+    if (result.second) {
         // We just created a new entry so make sure it has a buffer in it.
         _InsertNewBufferArray(entry,
                               HdBufferArraySharedPtr(),

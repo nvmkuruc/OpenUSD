@@ -7,16 +7,11 @@ add_subdirectory(glf)
 add_subdirectory(hgi)
 add_subdirectory(hgiGL)
 add_subdirectory(hgiMetal)
-add_subdirectory(hgiVulkan)
 add_subdirectory(hgiInterop)
 add_subdirectory(hd)
 
 if (${PXR_ENABLE_MATERIALX_SUPPORT})
     add_subdirectory(hdMtlx)
-endif()
-
-if (${PXR_ENABLE_OPENVDB_SUPPORT})
-    add_subdirectory(hioOpenVDB)
 endif()
 
 add_subdirectory(hdSt)

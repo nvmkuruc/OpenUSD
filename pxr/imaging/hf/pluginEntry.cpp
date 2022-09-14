@@ -92,12 +92,7 @@ Hf_PluginEntry::IncRefCount()
     if (_refCount == 0) {
         _Factory *factory = _type.GetFactory<_Factory>();
 
-        if (factory) {
-            _instance = factory->New();
-        } else {
-            TF_CODING_ERROR("Plugin %s is missing TfType registration",
-                    GetId().data());
-        }
+        _instance = factory->New();
     }
 
     ++_refCount;

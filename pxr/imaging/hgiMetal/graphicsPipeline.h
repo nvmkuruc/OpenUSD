@@ -66,7 +66,6 @@ private:
     MTLVertexDescriptor *_vertexDescriptor;
     id<MTLDepthStencilState> _depthStencilState;
     id<MTLRenderPipelineState> _renderPipelineState;
-    id<MTLBuffer> _constantTessFactors;
 };
 
 

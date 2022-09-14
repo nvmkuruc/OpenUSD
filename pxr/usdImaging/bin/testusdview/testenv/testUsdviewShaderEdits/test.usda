@@ -14,7 +14,7 @@ def Scope "Scene" (
     {
         def Material "MainMaterial_1"
         {
-            string inputs:coords = "st"
+            token inputs:coords = "st"
             token outputs:surface.connect = </Scene/Looks/MainMaterial_1/PbrPreview.outputs:surface>
 
             def Shader "PbrPreview"
@@ -36,14 +36,14 @@ def Scope "Scene" (
             def Shader "Primvar"
             {
                 uniform token info:id = "UsdPrimvarReader_float2"
-                string inputs:varname.connect = </Scene/Looks/MainMaterial_1.inputs:coords>
+                token inputs:varname.connect = </Scene/Looks/MainMaterial_1.inputs:coords>
                 float2 outputs:result
             }
 
             def Shader "ColorPrimvar"
             {
                 uniform token info:id = "UsdPrimvarReader_float3"
-                string inputs:varname = "displayColor"
+                token inputs:varname = "displayColor"
                 float3 outputs:result
             }
         }
@@ -83,13 +83,6 @@ def Scope "Scene" (
             int[] faceVertexCounts = [4]
             int[] faceVertexIndices = [0, 1, 2, 3]
             point3f[] points = [(-2,-2,-2), (2, -2,-2), (2, 2, -2), (-2, 2, -2)]
-        }
-    }
-
-    def Xform "Lights"
-    {
-        def DomeLight "DomeLight"
-        {
         }
     }
 }

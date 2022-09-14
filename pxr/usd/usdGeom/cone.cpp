@@ -75,9 +75,8 @@ UsdGeomCone::Define(
 }
 
 /* virtual */
-UsdSchemaKind UsdGeomCone::_GetSchemaKind() const
-{
-    return UsdGeomCone::schemaKind;
+UsdSchemaType UsdGeomCone::_GetSchemaType() const {
+    return UsdGeomCone::schemaType;
 }
 
 /* static */
@@ -288,17 +287,17 @@ _ComputeExtentForCone(
     }
 
     double height;
-    if (!coneSchema.GetHeightAttr().Get(&height, time)) {
+    if (!coneSchema.GetHeightAttr().Get(&height)) {
         return false;
     }
 
     double radius;
-    if (!coneSchema.GetRadiusAttr().Get(&radius, time)) {
+    if (!coneSchema.GetRadiusAttr().Get(&radius)) {
         return false;
     }
 
     TfToken axis;
-    if (!coneSchema.GetAxisAttr().Get(&axis, time)) {
+    if (!coneSchema.GetAxisAttr().Get(&axis)) {
         return false;
     }
 

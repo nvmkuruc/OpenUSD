@@ -22,8 +22,14 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/imaging/hd/light.h"
+#include "pxr/imaging/hd/perfLog.h"
+#include "pxr/imaging/hd/sceneDelegate.h"
+#include "pxr/imaging/hd/rprimCollection.h"
+
+#include "pxr/base/gf/matrix4d.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
+
 
 TF_DEFINE_PUBLIC_TOKENS(HdLightTokens, HD_LIGHT_TOKENS);
 
@@ -32,6 +38,8 @@ HdLight::HdLight(SdfPath const &id)
 {
 }
 
-HdLight::~HdLight() = default;
+HdLight::~HdLight()
+{
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE

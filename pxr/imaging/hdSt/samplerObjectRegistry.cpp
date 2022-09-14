@@ -24,18 +24,14 @@
 #include "pxr/imaging/hdSt/samplerObjectRegistry.h"
 
 #include "pxr/imaging/hdSt/samplerObject.h"
-#include "pxr/imaging/hdSt/ptexTextureObject.h"
 #include "pxr/imaging/hdSt/textureObject.h"
-#include "pxr/imaging/hdSt/udimTextureObject.h"
 
 #include "pxr/base/trace/trace.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-HdSt_SamplerObjectRegistry::HdSt_SamplerObjectRegistry(
-    HdStResourceRegistry * registry)
-  : _garbageCollectionNeeded(false)
-  , _resourceRegistry(registry)
+HdSt_SamplerObjectRegistry::HdSt_SamplerObjectRegistry(Hgi * const hgi)
+  : _hgi(hgi)
 {
 }
 
@@ -47,6 +43,7 @@ HdStSamplerObjectSharedPtr
 _MakeTypedSamplerObject(
     HdStTextureObjectSharedPtr const &texture,
     HdSamplerParameters const &samplerParameters,
+    const bool createBindlessHandle,
     HdSt_SamplerObjectRegistry * const samplerObjectRegistry)
 {
     // e.g. HdStUvTextureObject
@@ -64,6 +61,7 @@ _MakeTypedSamplerObject(
     return std::make_shared<SamplerObject>(
         *typedTexture,
         samplerParameters,
+        createBindlessHandle,
         samplerObjectRegistry);
 }
 
@@ -72,6 +70,7 @@ HdStSamplerObjectSharedPtr
 _MakeSamplerObject(
     HdStTextureObjectSharedPtr const &texture,
     HdSamplerParameters const &samplerParameters,
+    const bool createBindlessHandle,
     HdSt_SamplerObjectRegistry * const samplerObjectRegistry)
 {
     switch(texture->GetTextureType()) {
@@ -79,21 +78,25 @@ _MakeSamplerObject(
         return _MakeTypedSamplerObject<HdTextureType::Uv>(
             texture,
             samplerParameters,
+            createBindlessHandle,
             samplerObjectRegistry);
     case HdTextureType::Field:
         return _MakeTypedSamplerObject<HdTextureType::Field>(
             texture,
             samplerParameters,
+            createBindlessHandle,
             samplerObjectRegistry);
     case HdTextureType::Ptex:
         return _MakeTypedSamplerObject<HdTextureType::Ptex>(
             texture,
             samplerParameters,
+            createBindlessHandle,
             samplerObjectRegistry);
     case HdTextureType::Udim:
         return _MakeTypedSamplerObject<HdTextureType::Udim>(
             texture,
             samplerParameters,
+            createBindlessHandle,
             samplerObjectRegistry);
     }
 
@@ -104,12 +107,13 @@ _MakeSamplerObject(
 HdStSamplerObjectSharedPtr
 HdSt_SamplerObjectRegistry::AllocateSampler(
     HdStTextureObjectSharedPtr const &texture,
-    HdSamplerParameters const &samplerParameters)
+    HdSamplerParameters const &samplerParameters,
+    bool const createBindlessHandle)
 {
     TRACE_FUNCTION();
 
     HdStSamplerObjectSharedPtr const result = _MakeSamplerObject(
-        texture, samplerParameters, this);
+        texture, samplerParameters, createBindlessHandle, this);
 
     if (result) {
         // Record sampler object
@@ -119,27 +123,11 @@ HdSt_SamplerObjectRegistry::AllocateSampler(
     return result;
 }
 
-void
-HdSt_SamplerObjectRegistry::MarkGarbageCollectionNeeded()
-{
-    _garbageCollectionNeeded = true;
-}
-
-HdStResourceRegistry *
-HdSt_SamplerObjectRegistry::GetResourceRegistry() const
-{
-    return _resourceRegistry;
-}
-
 // Remove all shared pointers to objects not referenced by any client.
 void
 HdSt_SamplerObjectRegistry::GarbageCollect()
 {
     TRACE_FUNCTION();
-
-    if (!_garbageCollectionNeeded) {
-        return;
-    }
 
     // Go from left to right, filling slots that became empty
     // with "shared" shared pointers from the right.
@@ -161,8 +149,6 @@ HdSt_SamplerObjectRegistry::GarbageCollect()
     }
     
     _samplerObjects.resize(last);
-
-    _garbageCollectionNeeded = false;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

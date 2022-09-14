@@ -29,9 +29,6 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 TF_WRAP_MODULE
 {
-    TF_WRAP(ResolvedPath);
-    TF_WRAP(Timestamp);
-
     TF_WRAP(Resolver);
     TF_WRAP(ResolverContext);
     TF_WRAP(ResolverContextBinder);
@@ -41,5 +38,4 @@ TF_WRAP_MODULE
     TF_WRAP(DefaultResolverContext);
 
     TF_WRAP(PackageUtils);
-    TF_WRAP(Notice);
 }

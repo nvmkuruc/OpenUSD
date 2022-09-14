@@ -171,8 +171,8 @@ def PrintPrim(args, acc, prim, prefix, isLast):
 
     attrs = []
     if args.metadata:
-        attrs.extend('({})'.format(md) for md in sorted(acc.GetMetadata(prim))
-                                           if md not in METADATA_KEYS_TO_SKIP)
+        mdKeys = filter(lambda x: x not in METADATA_KEYS_TO_SKIP, sorted(acc.GetMetadata(prim)))
+        attrs.extend('({})'.format(md) for md in mdKeys)
     
     if args.attributes:
         attrs.extend('.{}'.format(acc.GetPropertyName(prop)) for prop in acc.GetProperties(prim))
@@ -288,12 +288,11 @@ Special metadata "kind" and "active" are always shown if authored unless --simpl
     resolver = Ar.GetResolver()
 
     try:
-        if hasattr(Ar.Resolver, "ConfigureResolverForAsset"):
-            resolver.ConfigureResolverForAsset(args.inputPath)
+        resolver.ConfigureResolverForAsset(args.inputPath)
         resolverContext = resolver.CreateDefaultContextForAsset(args.inputPath)
         with Ar.ResolverContextBinder(resolverContext):
             resolved = resolver.Resolve(args.inputPath)
-            if not resolved:
+            if not resolved or not os.path.exists(resolved):
                 _Err('Cannot resolve inputPath %r'%resolved)
                 return 1
             PrintTree(args, resolved)

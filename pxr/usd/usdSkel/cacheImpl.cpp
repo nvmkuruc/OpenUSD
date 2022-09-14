@@ -37,7 +37,9 @@
 #include "pxr/usd/usdSkel/root.h"
 #include "pxr/usd/usdSkel/utils.h"
 
+
 PXR_NAMESPACE_OPEN_SCOPE
+
 
 // ------------------------------------------------------------
 // UsdSkel_CacheImpl::WriteScope
@@ -78,7 +80,7 @@ UsdSkel_CacheImpl::ReadScope::FindOrCreateAnimQuery(const UsdPrim& prim)
         return UsdSkelAnimQuery();
 
     if (prim.IsInstanceProxy())
-        return FindOrCreateAnimQuery(prim.GetPrimInPrototype());
+        return FindOrCreateAnimQuery(prim.GetPrimInMaster());
 
     {
         _PrimToAnimMap::const_accessor a;
@@ -106,7 +108,7 @@ UsdSkel_CacheImpl::ReadScope::FindOrCreateSkelDefinition(const UsdPrim& prim)
         return nullptr;
 
     if (prim.IsInstanceProxy())
-        return FindOrCreateSkelDefinition(prim.GetPrimInPrototype());
+        return FindOrCreateSkelDefinition(prim.GetPrimInMaster());
 
     {
         _PrimToSkelDefinitionMap::const_accessor a;
@@ -206,36 +208,11 @@ _DeprecatedBindingCheck(bool hasBindingAPI, const UsdProperty& prop)
     }
 }
 
-/// If \p attr is an attribute on an instance proxy, return the attr on the
-/// instance prototype. Otherwise return the original attr.
-UsdAttribute
-_GetAttrInPrototype(const UsdAttribute& attr)
-{
-    if (attr && attr.GetPrim().IsInstanceProxy()) {
-        return attr.GetPrim().GetPrimInPrototype().GetAttribute(
-            attr.GetName());
-    }
-    return attr;
-}
-
-/// If \p rel is an attribute on an instance proxy, return the rel on the
-/// instance prototype. Otherwise return the original rel.
-UsdRelationship
-_GetRelInPrototype(const UsdRelationship& rel)
-{
-    if (rel && rel.GetPrim().IsInstanceProxy()) {
-        return rel.GetPrim().GetPrimInPrototype().GetRelationship(
-            rel.GetName());
-    }
-    return rel;
-}
-
 } // namespace
 
 
 bool
-UsdSkel_CacheImpl::ReadScope::Populate(const UsdSkelRoot& root,
-                                       Usd_PrimFlagsPredicate predicate)
+UsdSkel_CacheImpl::ReadScope::Populate(const UsdSkelRoot& root)
 {
     TRACE_FUNCTION();
 
@@ -249,8 +226,13 @@ UsdSkel_CacheImpl::ReadScope::Populate(const UsdSkelRoot& root,
 
     std::vector<std::pair<_SkinningQueryKey,UsdPrim> > stack(1);
 
+    // TODO: Consider traversing instance proxies at this point.
+    // But when doing so, must ensure that UsdSkelBakeSkinning, et.al.,
+    // take instancing into account.
     const UsdPrimRange range =
-        UsdPrimRange::PreAndPostVisit(root.GetPrim(), predicate);
+        UsdPrimRange::PreAndPostVisit(root.GetPrim(),
+                                      UsdPrimDefaultPredicate);
+                                      // UsdTraverseInstanceProxies());
 
     for (auto it = range.begin(); it != range.end(); ++it) {
         
@@ -290,32 +272,28 @@ UsdSkel_CacheImpl::ReadScope::Populate(const UsdSkelRoot& root,
         // properties that have an authored value. Properties with
         // no authored value are treated as if they do not exist.
 
-        if (UsdAttribute attr = _GetAttrInPrototype(
-                binding.GetJointIndicesAttr())) {
+        if (UsdAttribute attr = binding.GetJointIndicesAttr()) {
             if (attr.HasAuthoredValue()) {
                 _DeprecatedBindingCheck(hasBindingAPI, attr);
                 key.jointIndicesAttr = std::move(attr);
             }
         }
 
-        if (UsdAttribute attr = _GetAttrInPrototype(
-                binding.GetJointWeightsAttr())) {
+        if (UsdAttribute attr = binding.GetJointWeightsAttr()) {
             if (attr.HasAuthoredValue()) {
                 _DeprecatedBindingCheck(hasBindingAPI, attr);
                 key.jointWeightsAttr = std::move(attr);
             }
         }
         
-        if (UsdAttribute attr = _GetAttrInPrototype(
-                binding.GetGeomBindTransformAttr())) {
+        if (UsdAttribute attr = binding.GetGeomBindTransformAttr()) {
             if (attr.HasAuthoredValue()) {
                 _DeprecatedBindingCheck(hasBindingAPI, attr);
                 key.geomBindTransformAttr = std::move(attr);
             }
         }
 
-        if (UsdAttribute attr = _GetAttrInPrototype(
-                binding.GetJointsAttr())) {
+        if (UsdAttribute attr = binding.GetJointsAttr()) {
             if (attr.HasAuthoredValue()) {
                 _DeprecatedBindingCheck(hasBindingAPI, attr);
                 key.jointsAttr = std::move(attr);
@@ -337,16 +315,15 @@ UsdSkel_CacheImpl::ReadScope::Populate(const UsdSkelRoot& root,
         // skel:blendShapeTargets are *not* inherited, so we only check
         // for them on skinnable prims.
         if (isSkinnable) {
-            if (UsdAttribute attr = _GetAttrInPrototype(
-                    binding.GetBlendShapesAttr())) {
+            if (UsdAttribute attr = binding.GetBlendShapesAttr()) {
                 if (attr.HasAuthoredValue()) {
                     _DeprecatedBindingCheck(hasBindingAPI, attr);
                     key.blendShapesAttr = std::move(attr);
                 }
             }
 
-            if (UsdRelationship rel = _GetRelInPrototype(
-                    binding.GetBlendShapeTargetsRel())) {
+            if (UsdRelationship rel =
+                binding.GetBlendShapeTargetsRel()) {
                 if (rel.HasAuthoredTargets()) {
                     _DeprecatedBindingCheck(hasBindingAPI, rel);
                     key.blendShapeTargetsRel = std::move(rel);
@@ -367,13 +344,14 @@ UsdSkel_CacheImpl::ReadScope::Populate(const UsdSkelRoot& root,
                 _MakeIndent(stack.size()).c_str(),
                 it->GetPath().GetText());
 
-            // Don't allow skinnable prims to be nested.
-            it.PruneChildren();
+            // TODO: How should nested skinnable primitives be handled?
+            // Should we prune traversal at this point?
         }
 
         stack.emplace_back(key, *it);
     }
     return true;
 }
+
 
 PXR_NAMESPACE_CLOSE_SCOPE

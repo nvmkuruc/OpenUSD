@@ -75,9 +75,8 @@ UsdVolField3DAsset::Define(
 }
 
 /* virtual */
-UsdSchemaKind UsdVolField3DAsset::_GetSchemaKind() const
-{
-    return UsdVolField3DAsset::schemaKind;
+UsdSchemaType UsdVolField3DAsset::_GetSchemaType() const {
+    return UsdVolField3DAsset::schemaType;
 }
 
 /* static */
@@ -104,15 +103,15 @@ UsdVolField3DAsset::_GetTfType() const
 }
 
 UsdAttribute
-UsdVolField3DAsset::GetFieldDataTypeAttr() const
+UsdVolField3DAsset::GetFieldNameAttr() const
 {
-    return GetPrim().GetAttribute(UsdVolTokens->fieldDataType);
+    return GetPrim().GetAttribute(UsdVolTokens->fieldName);
 }
 
 UsdAttribute
-UsdVolField3DAsset::CreateFieldDataTypeAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdVolField3DAsset::CreateFieldNameAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdVolTokens->fieldDataType,
+    return UsdSchemaBase::_CreateAttr(UsdVolTokens->fieldName,
                        SdfValueTypeNames->Token,
                        /* custom = */ false,
                        SdfVariabilityVarying,
@@ -137,6 +136,23 @@ UsdVolField3DAsset::CreateFieldPurposeAttr(VtValue const &defaultValue, bool wri
                        writeSparsely);
 }
 
+UsdAttribute
+UsdVolField3DAsset::GetFieldIndexAttr() const
+{
+    return GetPrim().GetAttribute(UsdVolTokens->fieldIndex);
+}
+
+UsdAttribute
+UsdVolField3DAsset::CreateFieldIndexAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdVolTokens->fieldIndex,
+                       SdfValueTypeNames->Int,
+                       /* custom = */ false,
+                       SdfVariabilityVarying,
+                       defaultValue,
+                       writeSparsely);
+}
+
 namespace {
 static inline TfTokenVector
 _ConcatenateAttributeNames(const TfTokenVector& left,const TfTokenVector& right)
@@ -154,8 +170,9 @@ const TfTokenVector&
 UsdVolField3DAsset::GetSchemaAttributeNames(bool includeInherited)
 {
     static TfTokenVector localNames = {
-        UsdVolTokens->fieldDataType,
+        UsdVolTokens->fieldName,
         UsdVolTokens->fieldPurpose,
+        UsdVolTokens->fieldIndex,
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(

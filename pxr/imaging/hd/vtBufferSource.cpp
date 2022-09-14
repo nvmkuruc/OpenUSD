@@ -46,15 +46,6 @@ HdVtBufferSource::_SetValue(const VtValue &v, int arraySize)
     _value = v;
     _tupleType = HdGetValueTupleType(_value);
 
-    // For the common case of a default value that is an empty
-    // VtArray<T>, interpret it as one T per element rather than
-    // a zero-sized tuple.
-    if (_value.IsArrayValued() && _value.GetArraySize() == 0) {
-        _tupleType.count = 1;
-        _numElements = 0;
-        return;
-    }
-
     // XXX: The following is a bit weird and could use reconsideration.
     // The GL backend has specific alignment requirement for bools.
     // Currently that is implemented by having HdVtBufferSource promote
@@ -62,18 +53,20 @@ HdVtBufferSource::_SetValue(const VtValue &v, int arraySize)
     // HdTypeBool (so that shader codegen can emit the right typenames).
     // It would be better for this kind of concern to be handled closer
     // to the specific backend.
-    // Componented bools are not currently supported.
+    // Array and componented bools are not currently supported.
     if (_value.IsHolding<bool>()) {
         int intValue = _value.UncheckedGet<bool>() ? 1 : 0;
         _value = VtValue(intValue);
         // Intentionally leave _tupleType as HdTypeBool; see comment above.
-    } else if (_value.IsHolding<VtBoolArray>()) {
-        VtBoolArray boolValues = _value.UncheckedGet<VtBoolArray>();
-        VtIntArray intValues(_value.GetArraySize());
-        for (size_t i = 0; i < _value.GetArraySize(); i++) {
-            intValues[i] = boolValues[i] ? 1 : 0;
-        }
-        _value = VtValue(intValues);
+    }
+
+    // For the common case of a default value that is an empty
+    // VtArray<T>, interpret it as one T per element rather than
+    // a zero-sized tuple.
+    if (_value.IsArrayValued() && _value.GetArraySize() == 0) {
+        _tupleType.count = 1;
+        _numElements = 0;
+        return;
     }
 
     // Factor the VtArray length into numElements and tuple count.

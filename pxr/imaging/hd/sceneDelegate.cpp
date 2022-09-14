@@ -42,7 +42,7 @@ HdSceneDelegate::HdSceneDelegate(HdRenderIndex *parentIndex,
                         delegateID.GetText());
 
 
-        _delegateID = _delegateID.MakeAbsolutePath(SdfPath::AbsoluteRootPath());
+        _delegateID.MakeAbsolutePath(SdfPath::AbsoluteRootPath());
     }
 }
 
@@ -207,18 +207,6 @@ HdSceneDelegate::Get(SdfPath const& id, TfToken const& key)
 }
 
 /*virtual*/
-VtValue
-HdSceneDelegate::GetIndexedPrimvar(SdfPath const& id, TfToken const& key, 
-                                        VtIntArray *outIndices) 
-{
-    // We return an empty value here rather than returning the result of 
-    // Get(id, key) since that would leave callers of this method with an 
-    // empty outIndices which is semantically different than a non-indexed 
-    // primvar.
-    return VtValue();
-}
-
-/*virtual*/
 size_t
 HdSceneDelegate::SamplePrimvar(SdfPath const& id, 
                                TfToken const& key,
@@ -229,23 +217,6 @@ HdSceneDelegate::SamplePrimvar(SdfPath const& id,
     if (maxSampleCount > 0) {
         sampleTimes[0] = 0.0;
         sampleValues[0] = Get(id, key);
-        return 1;
-    }
-    return 0;
-}
-
-/*virtual*/
-size_t
-HdSceneDelegate::SampleIndexedPrimvar(SdfPath const& id, 
-                               TfToken const& key,
-                               size_t maxSampleCount,
-                               float *sampleTimes,
-                               VtValue *sampleValues,
-                               VtIntArray *sampleIndices)
-{
-    if (maxSampleCount > 0) {
-        sampleTimes[0] = 0.0;
-        sampleValues[0] = GetIndexedPrimvar(id, key, &sampleIndices[0]);
         return 1;
     }
     return 0;
@@ -345,20 +316,6 @@ HdSceneDelegate::GetSkelAnimXformValues(SdfPath const& id, VtValue& skinningXfor
 //-NV_CHANGE FRZHANG
 
 /*virtual*/
-SdfPath
-HdSceneDelegate::GetInstancerId(SdfPath const& primId)
-{
-    return SdfPath();
-}
-
-/*virtual*/
-SdfPathVector
-HdSceneDelegate::GetInstancerPrototypes(SdfPath const& instancerId)
-{
-    return SdfPathVector();
-}
-
-/*virtual*/
 size_t
 HdSceneDelegate::SampleInstancerTransform(SdfPath const &instancerId,
                                           size_t maxSampleCount,
@@ -388,8 +345,7 @@ HdSceneDelegate::GetScenePrimPaths(SdfPath const& rprimId,
                                    std::vector<int> instanceIndices,
                                    std::vector<HdInstancerContext> *instancerContexts)
 {
-    return SdfPathVector(instanceIndices.size(),
-            rprimId.ReplacePrefix(_delegateID, SdfPath::AbsoluteRootPath()));
+    return SdfPathVector(instanceIndices.size());
 }
 
 
@@ -409,6 +365,24 @@ VtValue
 HdSceneDelegate::GetMaterialResource(SdfPath const &materialId)
 {
     return VtValue();
+}
+
+// -----------------------------------------------------------------------//
+/// \name Texture Aspects
+// -----------------------------------------------------------------------//
+
+/*virtual*/
+HdTextureResource::ID
+HdSceneDelegate::GetTextureResourceID(SdfPath const& textureId)
+{
+    return HdTextureResource::ID();
+}
+
+/*virtual*/
+HdTextureResourceSharedPtr
+HdSceneDelegate::GetTextureResource(SdfPath const& textureId)
+{
+    return HdTextureResourceSharedPtr();
 }
 
 // -----------------------------------------------------------------------//
@@ -519,22 +493,6 @@ HdSceneDelegate::GetExtComputationInput(SdfPath const& computationId,
                                         TfToken const& input)
 {
     return VtValue();
-}
-
-/*virtual*/
-size_t
-HdSceneDelegate::SampleExtComputationInput(SdfPath const& computationId,
-                                           TfToken const& input,
-                                           size_t maxSampleCount,
-                                           float *sampleTimes,
-                                           VtValue *sampleValues)
-{
-    if (maxSampleCount > 0) {
-        sampleTimes[0] = 0.0;
-        sampleValues[0] = GetExtComputationInput(computationId, input);
-        return 1;
-    }
-    return 0;
 }
 
 /*virtual*/

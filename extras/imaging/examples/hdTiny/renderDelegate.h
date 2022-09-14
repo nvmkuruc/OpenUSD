@@ -65,11 +65,13 @@ public:
         HdRprimCollection const& collection) override;
 
     HdInstancer *CreateInstancer(HdSceneDelegate *delegate,
-                                         SdfPath const& id) override;
+                                         SdfPath const& id,
+                                         SdfPath const& instancerId) override;
     void DestroyInstancer(HdInstancer *instancer) override;
 
     HdRprim *CreateRprim(TfToken const& typeId,
-                                 SdfPath const& rprimId) override;
+                                 SdfPath const& rprimId,
+                                 SdfPath const& instancerId) override;
     void DestroyRprim(HdRprim *rPrim) override;
 
     HdSprim *CreateSprim(TfToken const& typeId,

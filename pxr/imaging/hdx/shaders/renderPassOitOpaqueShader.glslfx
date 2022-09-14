@@ -25,7 +25,7 @@
 //
 
 --- This is what an import might look like.
---- #import $TOOLS/hdx/shaders/renderPassOitOpaqueShader.glslfx
+--- #import $TOOLS/hdx/shaders/renderPassOitShader.glslfx
 
 #import $TOOLS/hdSt/shaders/renderPass.glslfx
 #import $TOOLS/hdx/shaders/renderPass.glslfx
@@ -36,10 +36,6 @@
     "techniques": {
         "default": {
             "vertexShader" : {
-                "source": [ "RenderPass.Camera",
-                            "RenderPass.ApplyClipPlanes" ]
-            },
-            "postTessVertexShader" : {
                 "source": [ "RenderPass.Camera",
                             "RenderPass.ApplyClipPlanes" ]
             },
@@ -57,6 +53,7 @@
             },
             "fragmentShader" : {
                 "source": [ "RenderPass.Camera",
+                            "RenderPass.ShouldCullFace",
                             "Selection.DecodeUtils",
                             "Selection.ComputeColor",
                             "RenderPass.ApplyColorOverrides",

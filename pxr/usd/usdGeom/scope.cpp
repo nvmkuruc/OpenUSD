@@ -75,9 +75,8 @@ UsdGeomScope::Define(
 }
 
 /* virtual */
-UsdSchemaKind UsdGeomScope::_GetSchemaKind() const
-{
-    return UsdGeomScope::schemaKind;
+UsdSchemaType UsdGeomScope::_GetSchemaType() const {
+    return UsdGeomScope::schemaType;
 }
 
 /* static */

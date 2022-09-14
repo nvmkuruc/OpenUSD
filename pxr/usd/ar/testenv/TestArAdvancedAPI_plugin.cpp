@@ -27,18 +27,10 @@
 #include "pxr/usd/ar/defineResolver.h"
 #include "pxr/usd/ar/resolver.h"
 
-#include "pxr/base/tf/diagnosticLite.h"
-
 PXR_NAMESPACE_USING_DIRECTIVE
 
 class _TestResolver1;
 class _TestResolver2;
-
-static bool
-_HasType(const TfType& type, const std::vector<TfType>& types)
-{
-    return std::find(types.begin(), types.end(), type) != types.end();
-}
 
 class _TestResolver1 : public ArDefaultResolver
 {
@@ -52,12 +44,11 @@ public:
         // _TestResolver1 should appear in the result of 
         // ArGetAvailableResolvers().
         const std::vector<TfType> resolvers = ArGetAvailableResolvers();
-        TF_AXIOM(!_HasType(TfType::Find<_TestResolver1>(), resolvers));
-        TF_AXIOM(!_HasType(TfType::Find<_TestResolver2>(), resolvers));
+        const std::vector<TfType> expected = {
+            TfType::Find<ArDefaultResolver>()
+        };
 
-        // ArDefaultResolver should always be the last element
-        // in the available resolvers list.
-        TF_AXIOM(resolvers.back() == TfType::Find<ArDefaultResolver>());
+        TF_AXIOM(resolvers == expected);
     }
 };
 
@@ -71,15 +62,15 @@ public:
         // When _TestResolver1 is being constructed, it should not 
         // appear in the result of ArGetAvailableResolvers().
         const std::vector<TfType> resolvers = ArGetAvailableResolvers();
-        TF_AXIOM(_HasType(TfType::Find<_TestResolver1>(), resolvers));
-        TF_AXIOM(!_HasType(TfType::Find<_TestResolver2>(), resolvers));
+        const std::vector<TfType> expected = {
+            TfType::Find<_TestResolver1>(), 
+            TfType::Find<ArDefaultResolver>()
+        };
 
-        // ArDefaultResolver should always be the last element
-        // in the available resolvers list.
-        TF_AXIOM(resolvers.back() == TfType::Find<ArDefaultResolver>());
+        TF_AXIOM(resolvers == expected);
 
         std::unique_ptr<ArResolver> subresolver = 
-            ArCreateResolver(TfType::Find<_TestResolver1>());
+            ArCreateResolver(resolvers.front());
         TF_AXIOM(dynamic_cast<_TestResolver1*>(subresolver.get()));
     }
 };

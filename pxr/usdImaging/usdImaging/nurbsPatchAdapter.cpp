@@ -100,32 +100,42 @@ UsdImagingNurbsPatchAdapter::TrackVariability(UsdPrim const& prim,
                UsdImagingTokens->usdVaryingPrimvar,
                timeVaryingBits,
                /*isInherited*/false);
+
+    // Discover time-varying topology.
+    _IsVarying(prim, UsdGeomTokens->curveVertexCounts,
+                       HdChangeTracker::DirtyTopology,
+                       UsdImagingTokens->usdVaryingTopology,
+                       timeVaryingBits,
+                       /*isInherited*/false);
+}
+
+// Thread safe.
+//  * Populate dirty bits for the given \p time.
+void 
+UsdImagingNurbsPatchAdapter::UpdateForTime(UsdPrim const& prim,
+                               SdfPath const& cachePath, 
+                               UsdTimeCode time,
+                               HdDirtyBits requestedBits,
+                               UsdImagingInstancerContext const* 
+                                   instancerContext) const
+{
+    BaseAdapter::UpdateForTime(
+        prim, cachePath, time, requestedBits, instancerContext);
+    UsdImagingValueCache* valueCache = _GetValueCache();
+
+    if (requestedBits & HdChangeTracker::DirtyTopology) {
+        valueCache->GetTopology(cachePath) = GetMeshTopology(prim, time);
+    }
 }
 
 /*virtual*/
 VtValue
 UsdImagingNurbsPatchAdapter::GetPoints(UsdPrim const& prim,
+                                       SdfPath const& cachePath,
                                        UsdTimeCode time) const
 {
+    TF_UNUSED(cachePath);
     return GetMeshPoints(prim, time);   
-}
-
-HdDirtyBits
-UsdImagingNurbsPatchAdapter::ProcessPropertyChange(UsdPrim const& prim,
-                                                SdfPath const& cachePath,
-                                                TfToken const& propertyName)
-{
-    if (propertyName == UsdGeomTokens->points) {
-        return HdChangeTracker::DirtyPoints;
-    }
-
-    if (propertyName == UsdGeomTokens->uVertexCount ||
-        propertyName == UsdGeomTokens->vVertexCount ||
-        propertyName == UsdGeomTokens->orientation) {
-        return HdChangeTracker::DirtyTopology;
-    }
-
-    return BaseAdapter::ProcessPropertyChange(prim, cachePath, propertyName);
 }
 
 // -------------------------------------------------------------------------- //
@@ -149,7 +159,7 @@ UsdImagingNurbsPatchAdapter::GetMeshPoints(UsdPrim const& prim,
 /*static*/
 VtValue
 UsdImagingNurbsPatchAdapter::GetMeshTopology(UsdPrim const& prim, 
-                                             UsdTimeCode time)
+                                       UsdTimeCode time)
 {
     UsdGeomNurbsPatch nurbsPatch(prim);
 
@@ -220,16 +230,5 @@ UsdImagingNurbsPatchAdapter::GetMeshTopology(UsdPrim const& prim,
     return VtValue(topo);
 }
 
-/*virtual*/ 
-VtValue
-UsdImagingNurbsPatchAdapter::GetTopology(UsdPrim const& prim,
-                                         SdfPath const& cachePath,
-                                         UsdTimeCode time) const
-{
-    HD_TRACE_FUNCTION();
-    HF_MALLOC_TAG_FUNCTION();
-
-    return GetMeshTopology(prim, time);
-}
-
 PXR_NAMESPACE_CLOSE_SCOPE
+

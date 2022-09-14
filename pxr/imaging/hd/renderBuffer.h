@@ -27,6 +27,8 @@
 #include "pxr/pxr.h"
 #include "pxr/imaging/hd/api.h"
 #include "pxr/imaging/hd/bprim.h"
+#include "pxr/imaging/hd/types.h"
+#include "pxr/imaging/hd/enums.h"
 
 #include "pxr/base/gf/vec2i.h"
 
@@ -46,8 +48,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 ///
 /// Render buffers can be targeted by render passes.  They also contain
 /// mapping functionality for reading and writing buffer data.
-class HdRenderBuffer : public HdBprim
-{
+class HdRenderBuffer : public HdBprim {
 public:
     // change tracking for HdRenderBuffer
     enum DirtyBits : HdDirtyBits {
@@ -59,7 +60,7 @@ public:
     HD_API
     HdRenderBuffer(SdfPath const& id);
     HD_API
-    ~HdRenderBuffer() override;
+    virtual ~HdRenderBuffer();
 
     // ---------------------------------------------------------------------- //
     /// \name Prim API
@@ -67,17 +68,17 @@ public:
 
     /// Get initial invalidation state.
     HD_API
-    HdDirtyBits GetInitialDirtyBitsMask() const override;
+    virtual HdDirtyBits GetInitialDirtyBitsMask() const override;
 
     /// Get allocation information from the scene delegate.
     HD_API
-    void Sync(HdSceneDelegate *sceneDelegate,
-              HdRenderParam *renderParam,
-              HdDirtyBits *dirtyBits) override;
+    virtual void Sync(HdSceneDelegate *sceneDelegate,
+                      HdRenderParam *renderParam,
+                      HdDirtyBits *dirtyBits) override;
 
     /// Deallocate before deletion.
     HD_API
-    void Finalize(HdRenderParam *renderParam) override;
+    virtual void Finalize(HdRenderParam *renderParam) override;
 
     // ---------------------------------------------------------------------- //
     /// \name Renderbuffer API

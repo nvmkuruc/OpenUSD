@@ -24,7 +24,6 @@
 #
 
 from pxr.Usdviewq.qt import QtWidgets
-import string
 
 # Remove any unwanted visuals from the view.
 def _modifySettings(appController):
@@ -41,38 +40,30 @@ def _setCameraMaskModeAction(appController, action, outline=False):
 
     QtWidgets.QApplication.processEvents()
 
-def _getRendererAppendedImageName(appController, filename):
-    rendererName = appController._stageView.rendererDisplayName.lower()
-    imageName = filename + "_" + rendererName + ".png"
-    return imageName
+# Take a shot of the viewport and save it to a file.
+def _takeShot(appController, fileName):
+    viewportShot = appController.GrabViewportShot()
+    viewportShot.save(fileName, "PNG")
 
 # Test with no masking.
 def _testNoMask(appController):
     _setCameraMaskModeAction(appController, appController._ui.actionCameraMask_None)
-    imgName = _getRendererAppendedImageName(appController, "none")
-    # We are using a progressive renderer, so wait for images to converge
-    appController._takeShot(imgName, waitForConvergence=True)
+    _takeShot(appController, "none.png")
 
 # Test with outline enabled but no masking.
 def _testOutline(appController):
     _setCameraMaskModeAction(appController, appController._ui.actionCameraMask_None, outline=True)
-    imgName = _getRendererAppendedImageName(appController, "outline")
-    # We are using a progressive renderer, so wait for images to converge
-    appController._takeShot(imgName, waitForConvergence=True)
+    _takeShot(appController, "outline.png")
 
 # Test with partial masking.
 def _testPartial(appController):
     _setCameraMaskModeAction(appController, appController._ui.actionCameraMask_Partial)
-    imgName = _getRendererAppendedImageName(appController, "partial")
-    # We are using a progressive renderer, so wait for images to converge
-    appController._takeShot(imgName, waitForConvergence=True)
+    _takeShot(appController, "partial.png")
 
 # Test with full masking.
 def _testFull(appController):
     _setCameraMaskModeAction(appController, appController._ui.actionCameraMask_Full)
-    imgName = _getRendererAppendedImageName(appController, "full")
-    # We are using a progressive renderer, so wait for images to converge
-    appController._takeShot(imgName, waitForConvergence=True)
+    _takeShot(appController, "full.png")
 
 # Test that the complexity setting works properly in usdview.
 def testUsdviewInputFunction(appController):

@@ -75,9 +75,8 @@ UsdGeomCamera::Define(
 }
 
 /* virtual */
-UsdSchemaKind UsdGeomCamera::_GetSchemaKind() const
-{
-    return UsdGeomCamera::schemaKind;
+UsdSchemaType UsdGeomCamera::_GetSchemaType() const {
+    return UsdGeomCamera::schemaType;
 }
 
 /* static */
@@ -324,23 +323,6 @@ UsdGeomCamera::CreateShutterCloseAttr(VtValue const &defaultValue, bool writeSpa
                        writeSparsely);
 }
 
-UsdAttribute
-UsdGeomCamera::GetExposureAttr() const
-{
-    return GetPrim().GetAttribute(UsdGeomTokens->exposure);
-}
-
-UsdAttribute
-UsdGeomCamera::CreateExposureAttr(VtValue const &defaultValue, bool writeSparsely) const
-{
-    return UsdSchemaBase::_CreateAttr(UsdGeomTokens->exposure,
-                       SdfValueTypeNames->Float,
-                       /* custom = */ false,
-                       SdfVariabilityVarying,
-                       defaultValue,
-                       writeSparsely);
-}
-
 namespace {
 static inline TfTokenVector
 _ConcatenateAttributeNames(const TfTokenVector& left,const TfTokenVector& right)
@@ -371,7 +353,6 @@ UsdGeomCamera::GetSchemaAttributeNames(bool includeInherited)
         UsdGeomTokens->stereoRole,
         UsdGeomTokens->shutterOpen,
         UsdGeomTokens->shutterClose,
-        UsdGeomTokens->exposure,
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(
@@ -554,13 +535,14 @@ UsdGeomCamera::SetFromCamera(const GfCamera &camera, const UsdTimeCode &time)
 
     UsdGeomXformOp xformOp = MakeMatrixXform();
     if (!xformOp) {
-        // The returned xformOp may be invalid if there are xform op
-        // opinions in the composed layer stack stronger than that of
-        // the current edit target.
+        // The returned xformOp may be invalid in rare cases of
+        // composition and edit target.
+        TF_CODING_ERROR("SetFromCamera failed, could not author xformOp for %s",
+            GetPrim().GetPath().GetText());
         return;
     }
     xformOp.Set(camMatrix, time);
-
+    
     GetProjectionAttr().Set(_ProjectionToToken(camera.GetProjection()), time);
     GetHorizontalApertureAttr().Set(camera.GetHorizontalAperture(), time);
     GetVerticalApertureAttr().Set(camera.GetVerticalAperture(), time);

@@ -32,7 +32,6 @@ pxr_library(usd
         debugCodes
         editContext
         editTarget
-        errors
         flattenUtils
         inherits
         interpolation
@@ -98,7 +97,6 @@ pxr_library(usd
         crateValueInliners.h
         listEditImpl.h
         wrapUtils.h
-        testenv/TestUsdResolverChangedResolver.h
 
     PYTHON_CPPFILES
         moduleDeps.cpp
@@ -163,25 +161,6 @@ pxr_library(usd
         codegenTemplates/tokens.h
         codegenTemplates/wrapSchemaClass.cpp
         codegenTemplates/wrapTokens.cpp
-
-    DOXYGEN_FILES
-        doxygen/advancedFeatures.dox
-        doxygen/authoringEditing.dox
-        doxygen/bestPractices.dox
-        doxygen/commonIdioms.dox
-        doxygen/datatypes.dox
-        doxygen/dynamicFileFormat.dox
-        doxygen/front.dox
-        doxygen/generatingSchemas.dox
-        doxygen/instancing.dox
-        doxygen/multiThreading.dox
-        doxygen/objectModel.dox
-        doxygen/propertiesOfSceneDescription.dox 
-        doxygen/valueClips.dox
-        doxygen/images/instancing/Instancing_Example.png
-        doxygen/images/instancing/Nested_Instancing_Example.png
-        doxygen/images/instancing/Relationship_Example.png
-        doxygen/images/instancing/Uninstanced_vs_Instanced.png
 )
 
 if (NOT PXR_ENABLE_PYTHON_SUPPORT)
@@ -201,7 +180,6 @@ pxr_test_scripts(
     testenv/testUsdAppliedAPISchemas.py
     testenv/testUsdAttributeBlocking.py
     testenv/testUsdAttributeConnections.py
-    testenv/testUsdAttributeQuery.py
     testenv/testUsdBugs.py
     testenv/testUsdBug119633.py
     testenv/testUsdBug141491.py
@@ -211,8 +189,6 @@ pxr_test_scripts(
     testenv/testUsdCratePayloadConversionFromVersion07.py
     testenv/testUsdCreateProperties.py
     testenv/testUsdDataFormats.py
-    testenv/testUsdExternalAssetDependencies.py
-    testenv/testUsdErrors.py
     testenv/testUsdFallbackPrimTypes.py
     testenv/testUsdFileFormats.py
     # nv begin #fast-updates
@@ -254,32 +230,6 @@ pxr_test_scripts(
     testenv/testUsdVariants.py
     testenv/testUsdZipFile.py
 )
-
-pxr_build_test_shared_lib(TestUsdProceduralExternalAssetsFileFormatPlugin
-    CREATE_FRAMEWORK
-    INSTALL_PREFIX UsdPlugins
-    LIBRARIES
-        sdf
-        tf
-        usd
-        
-    CPPFILES
-        testenv/TestUsdProceduralExternalAssetsFileFormatPlugin.cpp
-)
-
-if (PXR_USE_AR_2)
-    pxr_build_test_shared_lib(TestUsdResolverChangedResolver
-        CREATE_FRAMEWORK
-        INSTALL_PREFIX UsdPlugins
-        LIBRARIES
-            ar
-            plug
-            tf
-    
-        CPPFILES
-            testenv/TestUsdResolverChangedResolver.cpp
-    )
-endif()
 
 pxr_build_test(testUsdAttributeBlockingCpp
     LIBRARIES
@@ -324,19 +274,6 @@ pxr_build_test(testUsdMetadataCpp
     CPPFILES
         testenv/testUsdMetadata.cpp
 )
-
-if (PXR_USE_AR_2)
-    pxr_build_test(testUsdResolverChanged
-        LIBRARIES
-            arch
-            plug
-            sdf
-            tf
-            usd
-        CPPFILES
-            testenv/testUsdResolverChanged.cpp
-    )
-endif()
 
 pxr_build_test(testUsdInstancingCpp
     LIBRARIES
@@ -435,16 +372,6 @@ pxr_build_test(testUsdUsdzResolver
         testenv/testUsdUsdzResolver.cpp
 )
 
-pxr_build_test(testUsdZipFile_CPP
-    LIBRARIES
-        ar
-        arch
-        tf
-        usd
-    CPPFILES
-        testenv/testUsdZipFile.cpp
-)
-
 pxr_install_test_dir(
     SRC testenv/testUsdAppliedAPISchemas
     DEST testUsdAppliedAPISchemas
@@ -458,11 +385,6 @@ pxr_install_test_dir(
 # nv end
 
 pxr_install_test_dir(
-    SRC testenv/testUsdAppliedAPISchemas
-    DEST testUsdAppliedAPISchemas_AutoApplyDisabled
-)
-
-pxr_install_test_dir(
     SRC testenv/testUsdStageThreading
     DEST testUsdStageThreading
 )
@@ -470,11 +392,6 @@ pxr_install_test_dir(
 pxr_install_test_dir(
     SRC testenv/testUsdCratePayloadConversionFromVersion07.testenv
     DEST testUsdCratePayloadConversionFromVersion07
-)
-
-pxr_install_test_dir(
-    SRC testenv/testUsdExternalAssetDependencies.testenv
-    DEST testUsdExternalAssetDependencies
 )
 
 pxr_install_test_dir(
@@ -519,11 +436,6 @@ pxr_install_test_dir(
 
 pxr_install_test_dir(
     SRC testenv/testUsdFileFormats
-    DEST testUsdFileFormats_asset
-)
-
-pxr_install_test_dir(
-    SRC testenv/testUsdFileFormats
     DEST testUsdFileFormats_pread
 )
 
@@ -546,13 +458,6 @@ pxr_install_test_dir(
     SRC testenv/testUsdMetadata
     DEST testUsdMetadata
 )
-
-if (PXR_USE_AR_2)
-    pxr_install_test_dir(
-        SRC testenv/testUsdResolverChanged
-        DEST testUsdResolverChanged
-    )
-endif()
 
 pxr_install_test_dir(
     SRC testenv/testUsdNotices.testenv
@@ -656,11 +561,6 @@ pxr_install_test_dir(
 
 pxr_install_test_dir(
     SRC testenv/testUsdUsdzFileFormat
-    DEST testUsdUsdzFileFormat_asset
-)
-
-pxr_install_test_dir(
-    SRC testenv/testUsdUsdzFileFormat
     DEST testUsdUsdzFileFormat_pread
 )
 
@@ -674,23 +574,10 @@ pxr_install_test_dir(
     DEST testUsdZipFile
 )
 
-pxr_install_test_dir(
-    SRC testenv/testUsdZipFile.testenv
-    DEST testUsdZipFile_CPP
-)
-
 pxr_register_test(testUsdAppliedAPISchemas
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdAppliedAPISchemas"
     EXPECTED_RETURN_CODE 0
-)
-
-pxr_register_test(testUsdAppliedAPISchemas_AutoApplyDisabled
-    PYTHON
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdAppliedAPISchemas"
-    EXPECTED_RETURN_CODE 0
-    ENV
-        USD_DISABLE_AUTO_APPLY_API_SCHEMAS=1
 )
 
 pxr_register_test(testUsdAttributeBlocking
@@ -707,19 +594,6 @@ pxr_register_test(testUsdAttributeBlockingCpp
 pxr_register_test(testUsdAttributeConnections
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdAttributeConnections"
-    EXPECTED_RETURN_CODE 0
-)
-
-pxr_register_test(testUsdAttributeQuery
-    PYTHON
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdAttributeQuery"
-    EXPECTED_RETURN_CODE 0
-)
-
-pxr_register_test(testUsdErrors
-    PYTHON
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdErrors"
-    ENV TF_FATAL_THROW=0
     EXPECTED_RETURN_CODE 0
 )
 
@@ -749,12 +623,6 @@ pxr_register_test(testUsdVariants
 
 pxr_register_test(testUsdAttributeInterpolationCpp
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdAttributeInterpolationCpp"
-    EXPECTED_RETURN_CODE 0
-)
-
-pxr_register_test(testUsdBugs
-    PYTHON
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdBugs"
     EXPECTED_RETURN_CODE 0
 )
 
@@ -799,12 +667,6 @@ pxr_register_test(testUsdCreateAttributeCpp
     EXPECTED_RETURN_CODE 0
 )
 
-pxr_register_test(testUsdExternalAssetDependencies
-    PYTHON
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdExternalAssetDependencies"
-    EXPECTED_RETURN_CODE 0  
-)
-
 pxr_register_test(testUsdFallbackPrimTypes
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdFallbackPrimTypes"
@@ -820,7 +682,7 @@ pxr_register_test(testUsdInstancing
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdInstancing"
     ENV
-        USD_ASSIGN_PROTOTYPES_DETERMINISTICALLY=1
+        USD_ASSIGN_MASTERS_DETERMINISTICALLY=1
 )
 
 pxr_register_test(testUsdInstanceProxy
@@ -877,8 +739,6 @@ pxr_register_test(testUsdPrimGetDescendants
 pxr_register_test(testUsdInstancingCpp
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdInstancingCpp"
     EXPECTED_RETURN_CODE 0
-    ENV
-        USD_ASSIGN_PROTOTYPES_DETERMINISTICALLY=1
 )
 
 pxr_register_test(testUsdPrims
@@ -893,19 +753,6 @@ pxr_register_test(testUsdFileFormats
     EXPECTED_RETURN_CODE 0
 )
 
-# XXX:
-# Temporarily disable this test on Windows; the ArAsset-based
-# codepath in the .usdc file format code has issues.
-if (NOT WIN32)
-    pxr_register_test(testUsdFileFormats_asset
-        PYTHON
-        COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdFileFormats"
-        ENV
-            USDC_USE_ASSET=1
-        EXPECTED_RETURN_CODE 0
-    )
-endif()
-
 pxr_register_test(testUsdFileFormats_pread
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdFileFormats"
@@ -918,18 +765,6 @@ pxr_register_test(testUsdMetadataCpp
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdMetadataCpp"
     EXPECTED_RETURN_CODE 0
 )
-
-if (PXR_USE_AR_2)
-    # This test relies on a plugin built specifically for this test.
-    # The build system currently doesn't support this for static library
-    # builds, so we only enable this test on shared library builds.
-    if (BUILD_SHARED_LIBS)
-        pxr_register_test(testUsdResolverChanged
-            COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdResolverChanged"
-            EXPECTED_RETURN_CODE 0
-        )
-    endif()
-endif()
 
 pxr_register_test(testUsdStageNoPython
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdStageNoPython"
@@ -955,18 +790,6 @@ pxr_register_test(testUsdTimeCodeStream
 pxr_register_test(testUsdStage
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdStage"
-    EXPECTED_RETURN_CODE 0
-)
-
-pxr_register_test(testUsdStageCache
-    PYTHON
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdStageCache"
-    EXPECTED_RETURN_CODE 0
-)
-
-pxr_register_test(testUsdStagePopulationMasks
-    PYTHON
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdStagePopulationMasks"
     EXPECTED_RETURN_CODE 0
 )
 
@@ -1051,8 +874,6 @@ pxr_register_test(testUsdFlatten2
     STDOUT_REDIRECT flat_BasicInstancingAndVariants.usda
     DIFF_COMPARE flat_BasicInstancingAndVariants.usda
     EXPECTED_RETURN_CODE 0
-    ENV
-        USD_ASSIGN_PROTOTYPES_DETERMINISTICALLY=1
 )
 
 pxr_register_test(testUsdFlatten3
@@ -1061,8 +882,6 @@ pxr_register_test(testUsdFlatten3
     STDOUT_REDIRECT flat_BasicInstancing.usda
     DIFF_COMPARE flat_BasicInstancing.usda
     EXPECTED_RETURN_CODE 0
-    ENV
-        USD_ASSIGN_PROTOTYPES_DETERMINISTICALLY=1
 )
 
 pxr_register_test(testUsdFlatten4
@@ -1072,7 +891,7 @@ pxr_register_test(testUsdFlatten4
     DIFF_COMPARE flat_BasicInstancingAndNestedInstances.usda
     EXPECTED_RETURN_CODE 0
     ENV
-        USD_ASSIGN_PROTOTYPES_DETERMINISTICALLY=1
+        USD_ASSIGN_MASTERS_DETERMINISTICALLY=1
 )
 
 pxr_register_test(testUsdFlattenLayerStack
@@ -1131,14 +950,6 @@ pxr_register_test(testUsdUsdzFileFormat
     EXPECTED_RETURN_CODE 0
 )
 
-pxr_register_test(testUsdUsdzFileFormat_asset
-    PYTHON
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUsdzFileFormat"
-    ENV
-        USDC_USE_ASSET=1
-    EXPECTED_RETURN_CODE 0
-)
-
 pxr_register_test(testUsdUsdzFileFormat_pread
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUsdzFileFormat"
@@ -1152,12 +963,6 @@ pxr_register_test(testUsdZipFile
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdZipFile"
     EXPECTED_RETURN_CODE 0
 )
-
-pxr_register_test(testUsdZipFile_CPP
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdZipFile_CPP"
-    EXPECTED_RETURN_CODE 0
-)
-
 pxr_register_test(testUsdUsdzResolver
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUsdzResolver"
     EXPECTED_RETURN_CODE 0

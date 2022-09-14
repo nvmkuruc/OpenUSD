@@ -25,9 +25,9 @@
 from pxr import Usd, UsdGeom, UsdShade
 from .qt import QtCore
 from .common import Timer, IncludedPurposes
-from pxr.UsdUtils.constantsGroup import ConstantsGroup
+from .constantGroup import ConstantGroup
 
-class ChangeNotice(ConstantsGroup):
+class ChangeNotice(ConstantGroup):
     NONE = 0
     RESYNC = 1
     INFOCHANGES = 2
@@ -103,7 +103,7 @@ class RootDataModel(QtCore.QObject):
         propertyChange = ChangeNotice.NONE
 
         for p in notice.GetResyncedPaths():
-            if p.IsAbsoluteRootOrPrimPath():
+            if p.IsPrimPath():
                 primChange = ChangeNotice.RESYNC
             if p.IsPropertyPath():
                 propertyChange = ChangeNotice.RESYNC
