@@ -303,6 +303,7 @@ pxr_build_test(testUsdCreateAttributeCpp
         testenv/testUsdCreateAttributeCpp.cpp
 )
 
+
 pxr_build_test(testUsdHardToReach
     LIBRARIES
         usd
@@ -448,6 +449,13 @@ pxr_install_test_dir(
     SRC testenv/testUsdAppliedAPISchemas
     DEST testUsdAppliedAPISchemas
 )
+
+# nv begin #url-encoded-layer-ids
+pxr_install_test_dir(
+    SRC testenv/testUsdStage
+    DEST testUsdStage
+)
+# nv end
 
 pxr_install_test_dir(
     SRC testenv/testUsdAppliedAPISchemas
