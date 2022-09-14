@@ -75,8 +75,9 @@ UsdContrivedDerived::Define(
 }
 
 /* virtual */
-UsdSchemaType UsdContrivedDerived::_GetSchemaType() const {
-    return UsdContrivedDerived::schemaType;
+UsdSchemaKind UsdContrivedDerived::_GetSchemaKind() const
+{
+    return UsdContrivedDerived::schemaKind;
 }
 
 /* static */

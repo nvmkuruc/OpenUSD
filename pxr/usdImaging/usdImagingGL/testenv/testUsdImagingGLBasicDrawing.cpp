@@ -24,7 +24,8 @@
 
 #include "pxr/pxr.h"
 
-#include "pxr/imaging/glf/glew.h"
+#include "pxr/imaging/garch/glApi.h"
+
 #include "pxr/usdImaging/usdImagingGL/unitTestGLDrawing.h"
 
 #include "pxr/base/arch/systemInfo.h"
@@ -97,9 +98,10 @@ My_TestGLDrawing::InitTest()
     TRACE_FUNCTION();
     
     std::cout << "My_TestGLDrawing::InitTest()\n";
-    _stage = UsdStage::Open(GetStageFilePath());
-    SdfPathVector excludedPaths;
+    _stage = UsdStage::Open(GetStageFilePath(),
+        IsEnabledUnloadedAsBounds() ? UsdStage::LoadNone : UsdStage::LoadAll);
 
+    SdfPathVector excludedPaths;
     if (UsdImagingGLEngine::IsHydraEnabled()) {
         std::cout << "Using HD Renderer.\n";
         _engine.reset(new UsdImagingGLEngine(
@@ -133,7 +135,15 @@ My_TestGLDrawing::InitTest()
     if (_ShouldFrameAll()) {
         TfTokenVector purposes;
         purposes.push_back(UsdGeomTokens->default_);
-        purposes.push_back(UsdGeomTokens->proxy);
+        if (IsShowGuides()) {
+            purposes.push_back(UsdGeomTokens->guide);
+        }
+        if (IsShowProxy()) {
+            purposes.push_back(UsdGeomTokens->proxy);
+        }
+        if (IsShowRender()) {
+            purposes.push_back(UsdGeomTokens->render);
+        }
 
         // Extent hints are sometimes authored as an optimization to avoid
         // computing bounds, they are particularly useful for some tests where
@@ -232,8 +242,6 @@ My_TestGLDrawing::DrawTest(bool offscreen)
     const int width = GetWidth();
     const int height = GetHeight();
 
-    GfVec4d viewport(0, 0, width, height);
-
     if (GetCameraPath().empty()) {
         GfMatrix4d viewMatrix(1.0);
         viewMatrix *= GfMatrix4d().SetRotate(GfRotation(GfVec3d(0, 1, 0), _rotate[0]));
@@ -257,7 +265,17 @@ My_TestGLDrawing::DrawTest(bool offscreen)
     } else {
         _engine->SetCameraPath(SdfPath(GetCameraPath()));
     }
-    _engine->SetRenderViewport(viewport);
+
+    const CameraUtilFraming framing(
+        GetDisplayWindow(), GetDataWindow(), GetPixelAspectRatio());
+    if (framing.IsValid()) {
+        _engine->SetRenderBufferSize(GfVec2i(width, height));
+        _engine->SetFraming(framing);
+        _engine->SetOverrideWindowPolicy({true, CameraUtilFit});
+    } else {
+        const GfVec4d viewport(0, 0, width, height);
+        _engine->SetRenderViewport(viewport);
+    }
  
     bool const useAovs = !GetRendererAov().IsEmpty();
     GfVec4f fboClearColor = useAovs? GfVec4f(0.0f) : GetClearColor();
@@ -269,14 +287,17 @@ My_TestGLDrawing::DrawTest(bool offscreen)
     params.drawMode = GetDrawMode();
     params.enableLighting = IsEnabledTestLighting();
     params.enableIdRender = IsEnabledIdRender();
+    params.enableSceneMaterials = IsEnabledSceneMaterials();
     params.complexity = _GetComplexity();
-    params.cullStyle = IsEnabledCullBackfaces() ?
-                        UsdImagingGLCullStyle::CULL_STYLE_BACK :
-                        UsdImagingGLCullStyle::CULL_STYLE_NOTHING;
+    params.cullStyle = GetCullStyle();
     params.showGuides = IsShowGuides();
     params.showRender = IsShowRender();
     params.showProxy = IsShowProxy();
     params.clearColor = GetClearColor();
+
+    if (IsEnabledUnloadedAsBounds()) {
+        _SetDisplayUnloadedPrimsWithBounds(_engine.get(), true);
+    }
 
     glViewport(0, 0, width, height);
 
@@ -292,6 +313,10 @@ My_TestGLDrawing::DrawTest(bool offscreen)
         } else {
             _engine->SetLightingStateFromOpenGL();
         }
+    }
+
+    if (PresentDisabled()) {
+        _engine->SetEnablePresentation(false);
     }
 
     if (!GetClipPlanes().empty()) {
@@ -376,7 +401,6 @@ void
 My_TestGLDrawing::ShutdownTest()
 {
     std::cout << "My_TestGLDrawing::ShutdownTest()\n";
-    _engine->InvalidateBuffers();
 }
 
 void

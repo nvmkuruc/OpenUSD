@@ -24,20 +24,20 @@
 #include "pxr/imaging/hdx/unitTestDelegate.h"
 
 #include "pxr/base/gf/frustum.h"
+#include "pxr/base/tf/scoped.h"
 
 #include "pxr/imaging/hd/engine.h"
 #include "pxr/imaging/hd/mesh.h"
 #include "pxr/imaging/hd/sprim.h"
-#include "pxr/imaging/hd/texture.h"
-#include "pxr/imaging/hd/textureResource.h"
-
 #include "pxr/imaging/hd/camera.h"
+#include "pxr/imaging/hd/renderBuffer.h"
+
+#include "pxr/imaging/hdSt/hioConversions.h"
 #include "pxr/imaging/hdSt/drawTarget.h"
-#include "pxr/imaging/hdSt/drawTargetAttachmentDescArray.h"
+#include "pxr/imaging/hdSt/light.h"
 #include "pxr/imaging/hdSt/light.h"
 
 #include "pxr/imaging/hdx/drawTargetTask.h"
-#include "pxr/imaging/hdx/drawTargetResolveTask.h"
 #include "pxr/imaging/hdx/pickTask.h"
 #include "pxr/imaging/hdx/renderTask.h"
 #include "pxr/imaging/hdx/selectionTask.h"
@@ -45,8 +45,11 @@
 #include "pxr/imaging/hdx/shadowTask.h"
 #include "pxr/imaging/hdx/shadowMatrixComputation.h"
 
-#include "pxr/imaging/glf/drawTarget.h"
+#include "pxr/imaging/hio/image.h"
+
 #include "pxr/imaging/pxOsd/tokens.h"
+
+#include "pxr/base/gf/camera.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -89,7 +92,7 @@ public:
         frustum.SetProjectionType(GfFrustum::Orthographic);
         frustum.SetWindow(GfRange2d(GfVec2d(-10, -10), GfVec2d(10, 10)));
         frustum.SetNearFar(GfRange1d(0, 100));
-        GfVec4d pos = light.GetPosition();
+        const GfVec4d pos = light.GetPosition();
         frustum.SetPosition(GfVec3d(0, 0, 10));
         frustum.SetRotation(GfRotation(GfVec3d(0, 0, 1),
                                        GfVec3d(pos[0], pos[1], pos[2])));
@@ -98,57 +101,28 @@ public:
             frustum.ComputeViewMatrix() * frustum.ComputeProjectionMatrix();
     }
 
-    virtual std::vector<GfMatrix4d> Compute(
-        const GfVec4f &viewport, CameraUtilConformWindowPolicy policy) {
-        return std::vector<GfMatrix4d>(1, _shadowMatrix);
+    std::vector<GfMatrix4d> Compute(
+            const GfVec4f &viewport,
+            CameraUtilConformWindowPolicy policy) override {
+        return { _shadowMatrix };
     }
+
+    std::vector<GfMatrix4d> Compute(
+            const CameraUtilFraming &framing,
+            CameraUtilConformWindowPolicy policy) override {
+        return { _shadowMatrix };
+    }
+
 private:
     GfMatrix4d _shadowMatrix;
-};
-
-class DrawTargetTextureResource : public HdTextureResource
-{
-public:
-    DrawTargetTextureResource(GlfDrawTargetRefPtr const &drawTarget)
-        : _drawTarget(drawTarget) {
-    }
-    virtual ~DrawTargetTextureResource() {
-    };
-
-    virtual HdTextureType GetTextureType() const override {
-        return HdTextureType::Uv;
-    }
-
-    virtual GLuint GetTexelsTextureId() {
-        return _drawTarget->GetAttachment("color")->GetGlTextureName();
-    }
-    virtual GLuint GetTexelsSamplerId() {
-        return 0;
-    }
-    virtual uint64_t GetTexelsTextureHandle() {
-        return 0;
-    }
-
-    virtual GLuint GetLayoutTextureId() {
-        return 0;
-    }
-    virtual uint64_t GetLayoutTextureHandle() {
-        return 0;
-    }
-
-    size_t GetMemoryUsed() override {
-        return 0;
-    }
-
-private:
-    GlfDrawTargetRefPtr _drawTarget;
 };
 
 }
 
 // ------------------------------------------------------------------------
-Hdx_UnitTestDelegate::Hdx_UnitTestDelegate(HdRenderIndex *index)
-    : HdSceneDelegate(index, SdfPath::AbsoluteRootPath())
+Hdx_UnitTestDelegate::Hdx_UnitTestDelegate(HdRenderIndex *index, 
+                                           SdfPath const& delegateId)
+    : HdSceneDelegate(index, delegateId)
     , _refineLevel(0)
 {
     // add camera
@@ -183,15 +157,48 @@ Hdx_UnitTestDelegate::SetCamera(GfMatrix4d const &viewMatrix,
     SetCamera(_cameraId, viewMatrix, projMatrix);
 }
 
+static
+HdCamera::Projection
+_ToHd(const GfCamera::Projection projection)
+{
+    switch(projection) {
+    case GfCamera::Perspective:
+        return HdCamera::Perspective;
+    case GfCamera::Orthographic:
+        return HdCamera::Orthographic;
+    }
+    TF_CODING_ERROR("Bad GfCamera::Projection value");
+    return HdCamera::Perspective;
+}
+
 void
 Hdx_UnitTestDelegate::SetCamera(SdfPath const &cameraId,
                                 GfMatrix4d const &viewMatrix,
                                 GfMatrix4d const &projMatrix)
 {
+    GfCamera cam;
+    cam.SetFromViewAndProjectionMatrix(viewMatrix,
+                                       projMatrix);
+
+    _cameraTransforms[cameraId] = cam.GetTransform();
+
     _ValueCache &cache = _valueCacheMap[cameraId];
-    cache[HdCameraTokens->windowPolicy] = VtValue(CameraUtilFit);
-    cache[HdCameraTokens->worldToViewMatrix] = VtValue(viewMatrix);
-    cache[HdCameraTokens->projectionMatrix] = VtValue(projMatrix);
+    cache[HdCameraTokens->projection] = VtValue(_ToHd(cam.GetProjection()));
+    cache[HdCameraTokens->focalLength] = VtValue(
+        cam.GetFocalLength() * float(GfCamera::FOCAL_LENGTH_UNIT));
+    cache[HdCameraTokens->horizontalAperture] = VtValue(
+        cam.GetHorizontalAperture() * float(GfCamera::APERTURE_UNIT));
+    cache[HdCameraTokens->verticalAperture] = VtValue(
+        cam.GetVerticalAperture() * float(GfCamera::APERTURE_UNIT));
+    cache[HdCameraTokens->horizontalApertureOffset] = VtValue(
+        cam.GetHorizontalApertureOffset() * float(GfCamera::APERTURE_UNIT));
+    cache[HdCameraTokens->verticalApertureOffset] = VtValue(
+        cam.GetVerticalApertureOffset() * float(GfCamera::APERTURE_UNIT));
+    cache[HdCameraTokens->clippingRange] = VtValue(
+        cam.GetClippingRange());
+
+    cache[HdCameraTokens->windowPolicy] = VtValue(
+        CameraUtilFit);
 
     GetRenderIndex().GetChangeTracker().MarkSprimDirty(cameraId,
                                                        HdCamera::AllDirty);
@@ -204,8 +211,17 @@ Hdx_UnitTestDelegate::AddCamera(SdfPath const &id)
     GetRenderIndex().InsertSprim(HdPrimTypeTokens->camera, this, id);
     _ValueCache &cache = _valueCacheMap[id];
     cache[HdCameraTokens->windowPolicy] = VtValue(CameraUtilFit);
-    cache[HdCameraTokens->worldToViewMatrix] = VtValue(GfMatrix4d(1.0));
-    cache[HdCameraTokens->projectionMatrix] = VtValue(GfMatrix4d(1.0));
+}
+
+void
+Hdx_UnitTestDelegate::UpdateCamera(SdfPath const &id,
+                                   TfToken const &key,
+                                   VtValue value)
+{
+    _ValueCache &cache = _valueCacheMap[id];
+    cache[key] = value;
+    HdChangeTracker& tracker = GetRenderIndex().GetChangeTracker();
+    tracker.MarkSprimDirty(id, HdCamera::AllDirty);
 }
 
 void
@@ -247,7 +263,7 @@ Hdx_UnitTestDelegate::SetLight(SdfPath const &id, TfToken const &key,
         GetRenderIndex().GetChangeTracker().MarkSprimDirty(
             id, HdLight::DirtyParams|HdLight::DirtyShadowParams);
         cache[HdLightTokens->shadowParams] = shadowParams;
-    } else if (key == HdLightTokens->transform) {
+    } else if (key == HdTokens->transform) {
         GetRenderIndex().GetChangeTracker().MarkSprimDirty(
             id, HdLight::DirtyTransform);
     } else if (key == HdLightTokens->shadowCollection) {
@@ -257,75 +273,95 @@ Hdx_UnitTestDelegate::SetLight(SdfPath const &id, TfToken const &key,
 }
 
 void
+Hdx_UnitTestDelegate::RemoveLight(SdfPath const &id)
+{
+    // remove light
+    GetRenderIndex().RemoveSprim(HdPrimTypeTokens->simpleLight, id);
+    _valueCacheMap.erase(id);
+}
+
+void
+Hdx_UnitTestDelegate::UpdateTransform(SdfPath const& id,
+                                      GfMatrix4f const& mat)
+{
+    if(_meshes.find(id) != _meshes.end()) {
+        _meshes[id].transform = GfMatrix4d(mat);
+        HdChangeTracker& tracker = GetRenderIndex().GetChangeTracker();
+        tracker.MarkRprimDirty(id, HdChangeTracker::DirtyTransform);
+    }
+    if (_cameraTransforms.find(id) != _cameraTransforms.end()) {
+        _cameraTransforms[id] = GfMatrix4d(mat);
+        HdChangeTracker& tracker = GetRenderIndex().GetChangeTracker();
+        tracker.MarkSprimDirty(id, HdChangeTracker::DirtyTransform);
+    }        
+}
+
+void
+Hdx_UnitTestDelegate::AddRenderBuffer(SdfPath const &id,
+                                      HdRenderBufferDescriptor const &desc)
+{
+    GetRenderIndex().InsertBprim(HdPrimTypeTokens->renderBuffer, this, id);
+
+    _ValueCache &cache = _valueCacheMap[id];
+    cache[_tokens->renderBufferDescriptor] = desc;
+}
+
+void
+Hdx_UnitTestDelegate::UpdateRenderBuffer(SdfPath const &id,
+                                         HdRenderBufferDescriptor const &desc)
+{
+    _ValueCache &cache = _valueCacheMap[id];
+    cache[_tokens->renderBufferDescriptor] = desc;
+    GetRenderIndex().GetChangeTracker().MarkBprimDirty(id, HdRenderBuffer::DirtyDescription);
+}
+
+void
 Hdx_UnitTestDelegate::AddDrawTarget(SdfPath const &id)
 {
     GetRenderIndex().InsertSprim(HdPrimTypeTokens->drawTarget, this, id);
     _ValueCache &cache = _valueCacheMap[id];
 
-    if (HdStDrawTarget::GetUseStormTextureSystem()) {
-        HdRenderPassAovBindingVector aovBindings;
+    HdRenderPassAovBindingVector aovBindings;
 
-        {
-            const TfToken attachmentName("color");
+    {
+        const TfToken attachmentName("color");
+        
+        const SdfPath path = id.AppendProperty(attachmentName);
+        
+        HdRenderBufferDescriptor desc;
+        desc.dimensions = GfVec3i(256, 256, 1);
+        desc.format = HdFormatUNorm8Vec4;
+        desc.multiSampled = true;
 
-            const SdfPath path = id.AppendProperty(attachmentName);
-            GetRenderIndex().InsertBprim(
-                HdPrimTypeTokens->renderBuffer, this, path);
-            
-            HdRenderBufferDescriptor desc;
-            desc.dimensions = GfVec3i(256, 256, 1);
-            desc.format = HdFormatUNorm8Vec4;
-            desc.multiSampled = true;
-            
-            _ValueCache &cache = _valueCacheMap[path];
-            cache[_tokens->renderBufferDescriptor] = desc;
-            
-            HdRenderPassAovBinding aovBinding;
-            aovBinding.aovName = attachmentName;
-            aovBinding.renderBufferId = path;
-            aovBinding.clearValue = VtValue(GfVec4f(1,1,0,1));
-            aovBindings.push_back(aovBinding);
-        }
-
-        {
-            const TfToken attachmentName("depth");
-
-            const SdfPath path = id.AppendProperty(attachmentName);
-            GetRenderIndex().InsertBprim(
-                HdPrimTypeTokens->renderBuffer, this, path);
-            
-            HdRenderBufferDescriptor desc;
-            desc.dimensions = GfVec3i(256, 256, 1);
-            desc.format = HdFormatFloat32;
-            desc.multiSampled = true;
-
-            _ValueCache &cache = _valueCacheMap[path];
-            cache[_tokens->renderBufferDescriptor] = desc;
-            
-            HdRenderPassAovBinding aovBinding;
-            aovBinding.aovName = attachmentName;
-            aovBinding.renderBufferId = path;
-            aovBinding.clearValue = VtValue(GfVec4f(1,1,1,1));
-            aovBindings.push_back(aovBinding);
-        }
-
-        cache[HdStDrawTargetTokens->aovBindings] = VtValue(aovBindings);
-
-    } else {
-        HdStDrawTargetAttachmentDescArray attachments;
-        attachments.AddAttachment("color",
-                                  HdFormatUNorm8Vec4,
-                                  VtValue(GfVec4f(1,1,0,1)),
-                                  HdWrapRepeat,
-                                  HdWrapRepeat,
-                                  HdMinFilterLinear,
-                                  HdMagFilterLinear);
-        cache[HdStDrawTargetTokens->attachments]     = VtValue(attachments);
-        cache[HdStDrawTargetTokens->depthClearValue] = VtValue(1.0f);
-
-        GetRenderIndex().InsertBprim(HdPrimTypeTokens->texture, this, id);
-        _drawTargets[id] = _DrawTarget();
+        AddRenderBuffer(path, desc);
+        
+        HdRenderPassAovBinding aovBinding;
+        aovBinding.aovName = attachmentName;
+        aovBinding.renderBufferId = path;
+        aovBinding.clearValue = VtValue(GfVec4f(1,1,0,1));
+        aovBindings.push_back(aovBinding);
     }
+    
+    {
+        const TfToken attachmentName("depth");
+        
+        const SdfPath path = id.AppendProperty(attachmentName);
+        
+        HdRenderBufferDescriptor desc;
+        desc.dimensions = GfVec3i(256, 256, 1);
+        desc.format = HdFormatFloat32;
+        desc.multiSampled = true;
+
+        AddRenderBuffer(path, desc);
+        
+        HdRenderPassAovBinding aovBinding;
+        aovBinding.aovName = attachmentName;
+        aovBinding.renderBufferId = path;
+        aovBinding.clearValue = VtValue(GfVec4f(1,1,1,1));
+        aovBindings.push_back(aovBinding);
+    }
+    
+    cache[HdStDrawTargetTokens->aovBindings] = VtValue(aovBindings);
 
     cache[HdStDrawTargetTokens->resolution]      = VtValue(GfVec2i(256, 256));
     cache[HdStDrawTargetTokens->enable]          = VtValue(true);
@@ -353,18 +389,12 @@ Hdx_UnitTestDelegate::SetDrawTarget(SdfPath const &id, TfToken const &key,
     } else if (key == HdStDrawTargetTokens->resolution) {
         GetRenderIndex().GetChangeTracker().MarkSprimDirty(
             id, HdStDrawTarget::DirtyDTResolution);
-    } else if (key == HdStDrawTargetTokens->attachments) {
-        GetRenderIndex().GetChangeTracker().MarkSprimDirty(
-            id, HdStDrawTarget::DirtyDTAttachment);
     } else if (key == HdStDrawTargetTokens->aovBindings) {
         GetRenderIndex().GetChangeTracker().MarkSprimDirty(
             id, HdStDrawTarget::DirtyDTAovBindings);
     } else if (key == HdStDrawTargetTokens->depthPriority) {
         GetRenderIndex().GetChangeTracker().MarkSprimDirty(
             id, HdStDrawTarget::DirtyDTDepthPriority);
-    } else if (key == HdStDrawTargetTokens->depthClearValue) {
-        GetRenderIndex().GetChangeTracker().MarkSprimDirty(
-            id, HdStDrawTarget::DirtyDTDepthClearValue);
     } else if (key == HdStDrawTargetTokens->collection) {
         GetRenderIndex().GetChangeTracker().MarkSprimDirty(
             id, HdStDrawTarget::DirtyDTCollection);
@@ -416,8 +446,6 @@ Hdx_UnitTestDelegate::AddShadowTask(SdfPath const &id)
     GetRenderIndex().InsertTask<HdxShadowTask>(this, id);
     _ValueCache &cache = _valueCacheMap[id];
     HdxShadowTaskParams params;
-    params.camera = _cameraId;
-    params.viewport = GfVec4f(0,0,512,512);
     cache[HdTokens->params] = VtValue(params);
 }
 
@@ -436,12 +464,6 @@ Hdx_UnitTestDelegate::AddDrawTargetTask(SdfPath const &id)
     HdxDrawTargetTaskParams params;
     params.enableLighting = true;
     cache[HdTokens->params] = params;
-}
-
-void
-Hdx_UnitTestDelegate::AddDrawTargetResolveTask(SdfPath const &id)
-{
-    GetRenderIndex().InsertTask<HdxDrawTargetResolveTask>(this, id);
 }
 
 void
@@ -490,11 +512,12 @@ Hdx_UnitTestDelegate::AddInstancer(SdfPath const &id,
 
     HdRenderIndex& index = GetRenderIndex();
     // add instancer
-    index.InsertInstancer(this, id, parentId);
+    index.InsertInstancer(this, id);
     _instancers[id] = _Instancer();
     _instancers[id].rootTransform = rootTransform;
 
     if (!parentId.IsEmpty()) {
+        _instancerBindings[id] = parentId;
         _instancers[parentId].prototypes.push_back(id);
     }
 }
@@ -536,7 +559,7 @@ Hdx_UnitTestDelegate::AddMesh(SdfPath const &id,
                              bool doubleSided)
 {
     HdRenderIndex& index = GetRenderIndex();
-    index.InsertRprim(HdPrimTypeTokens->mesh, this, id, instancerId);
+    index.InsertRprim(HdPrimTypeTokens->mesh, this, id);
 
     _meshes[id] = _Mesh(scheme, orientation, transform,
                         points, numVerts, verts, PxOsdSubdivTags(),
@@ -546,6 +569,7 @@ Hdx_UnitTestDelegate::AddMesh(SdfPath const &id,
                         HdInterpolationConstant,
                         guide, doubleSided);
     if (!instancerId.IsEmpty()) {
+        _instancerBindings[id] = instancerId;
         _instancers[instancerId].prototypes.push_back(id);
     }
 }
@@ -568,13 +592,14 @@ Hdx_UnitTestDelegate::AddMesh(SdfPath const &id,
                              bool doubleSided)
 {
     HdRenderIndex& index = GetRenderIndex();
-    index.InsertRprim(HdPrimTypeTokens->mesh, this, id, instancerId);
+    index.InsertRprim(HdPrimTypeTokens->mesh, this, id);
 
     _meshes[id] = _Mesh(scheme, orientation, transform,
                         points, numVerts, verts, subdivTags,
                         color, colorInterpolation, opacity,
                         opacityInterpolation, guide, doubleSided);
     if (!instancerId.IsEmpty()) {
+        _instancerBindings[id] = instancerId;
         _instancers[instancerId].prototypes.push_back(id);
     }
 }
@@ -778,6 +803,9 @@ Hdx_UnitTestDelegate::GetTransform(SdfPath const & id)
     if(_meshes.find(id) != _meshes.end()) {
         return _meshes[id].transform;
     }
+    if (_cameraTransforms.find(id) != _cameraTransforms.end()) {
+        return _cameraTransforms[id];
+    }
     return GfMatrix4d(1);
 }
 
@@ -867,6 +895,18 @@ Hdx_UnitTestDelegate::GetInstanceIndices(SdfPath const& instancerId,
 }
 
 /*virtual*/
+SdfPathVector
+Hdx_UnitTestDelegate::GetInstancerPrototypes(SdfPath const& instancerId)
+{
+    HD_TRACE_FUNCTION();
+
+    if (_Instancer *instancer = TfMapLookupPtr(_instancers, instancerId)) {
+        return instancer->prototypes;
+    }
+    return SdfPathVector();
+}
+
+/*virtual*/
 GfMatrix4d
 Hdx_UnitTestDelegate::GetInstancerTransform(SdfPath const& instancerId)
 {
@@ -950,6 +990,15 @@ Hdx_UnitTestDelegate::GetMaterialResource(SdfPath const &materialId)
 }
 
 /*virtual*/
+SdfPath
+Hdx_UnitTestDelegate::GetInstancerId(SdfPath const& primId)
+{
+    SdfPath instancerId;
+    TfMapLookup(_instancerBindings, primId, &instancerId);
+    return instancerId;
+}
+
+/*virtual*/
 VtValue
 Hdx_UnitTestDelegate::GetCameraParamValue(SdfPath const &cameraId,
                                           TfToken const &paramName)
@@ -983,30 +1032,6 @@ Hdx_UnitTestDelegate::GetRenderBufferDescriptor(SdfPath const &id)
     return ret.UncheckedGet<HdRenderBufferDescriptor>();
 }
 
-HdTextureResourceSharedPtr
-Hdx_UnitTestDelegate::GetTextureResource(SdfPath const& textureId)
-{
-    if (_drawTargets.find(textureId) != _drawTargets.end()) {
-        HdStDrawTarget const *drawTarget = static_cast<HdStDrawTarget const *> (
-                        GetRenderIndex().GetSprim(HdPrimTypeTokens->drawTarget,
-                                                  textureId));
-
-        if (drawTarget != nullptr) {
-            HdTextureResourceSharedPtr texResource(
-                new DrawTargetTextureResource(
-                    drawTarget->GetGlfDrawTarget()));
-            return texResource;
-        }
-    }
-    return HdTextureResourceSharedPtr();
-}
-
-HdTextureResource::ID
-Hdx_UnitTestDelegate::GetTextureResourceID(SdfPath const& textureId)
-{
-    return SdfPath::Hash()(textureId);
-}
-
 TfTokenVector
 Hdx_UnitTestDelegate::GetTaskRenderTags(SdfPath const& taskId)
 {
@@ -1023,6 +1048,56 @@ Hdx_UnitTestDelegate::GetTaskRenderTags(SdfPath const& taskId)
     return it2->second.Get<TfTokenVector>();
 }
 
+bool
+Hdx_UnitTestDelegate::WriteRenderBufferToFile(SdfPath const &id,
+                                              std::string const &filePath)
+{
+    HdBprim * const prim = GetRenderIndex().GetBprim(
+        HdPrimTypeTokens->renderBuffer, id);
+    HdRenderBuffer * const renderBuffer = dynamic_cast<HdRenderBuffer*>(prim);
+    if (!renderBuffer) {
+        TF_CODING_ERROR("No HdRenderBuffer prim at path %s",
+                        id.GetText());
+        return false;
+    }
+
+    HioImage::StorageSpec storage;
+    storage.width = renderBuffer->GetWidth();
+    storage.height = renderBuffer->GetHeight();
+    storage.format =
+        HdStHioConversions::GetHioFormat(renderBuffer->GetFormat());
+    storage.flipped = true;
+    storage.data = renderBuffer->Map();
+    TfScoped<> scopedUnmap([renderBuffer](){ renderBuffer->Unmap(); });
+
+    if (storage.format == HioFormatInvalid) {
+        TF_CODING_ERROR("Render buffer %s has format not corresponding to a"
+                        "HioFormat",
+                        id.GetText());
+        return false;
+    }
+
+    if (!storage.data) {
+        TF_CODING_ERROR("No data for render buffer %s",
+                        id.GetText());
+        return false;
+    }
+    
+    HioImageSharedPtr const image = HioImage::OpenForWriting(filePath);
+    if (!image) {
+        TF_RUNTIME_ERROR("Failed toopen image for writing %s",
+                         filePath.c_str());
+        return false;
+    }
+
+    if (!image->Write(storage)) {
+        TF_RUNTIME_ERROR("Failed to write image to %s",
+                         filePath.c_str());
+        return false;
+    }
+
+    return true;
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

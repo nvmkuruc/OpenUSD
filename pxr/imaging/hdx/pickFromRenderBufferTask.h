@@ -42,20 +42,30 @@ struct HdxPickFromRenderBufferTaskParams
         : primIdBufferPath()
         , instanceIdBufferPath()
         , elementIdBufferPath()
+        , normalBufferPath()
         , depthBufferPath()
         , cameraId()
+        , overrideWindowPolicy{false, CameraUtilFit}
         , viewport()
     {}
 
     SdfPath primIdBufferPath;
     SdfPath instanceIdBufferPath;
     SdfPath elementIdBufferPath;
+    SdfPath normalBufferPath;
     SdfPath depthBufferPath;
 
     // The id of the camera used to generate the id buffers.
     SdfPath cameraId;
 
+    // The framing specifying how the camera frustum in mapped into the
+    // render buffers.
+    CameraUtilFraming framing;
+    // Is application overriding the window policy of the camera.
+    std::pair<bool, CameraUtilConformWindowPolicy> overrideWindowPolicy;
+
     // The viewport of the camera used to generate the id buffers.
+    // Only used if framing is invalid - for legacy clients.
     GfVec4d viewport;
 };
 
@@ -73,28 +83,30 @@ public:
     HdxPickFromRenderBufferTask(HdSceneDelegate *delegate, SdfPath const& id);
 
     HDX_API
-    virtual ~HdxPickFromRenderBufferTask();
+    ~HdxPickFromRenderBufferTask() override;
 
     /// Hooks for progressive rendering.
-    virtual bool IsConverged() const override;
+    bool IsConverged() const override;
 
     /// Prepare the pick task
     HDX_API
-    virtual void Prepare(HdTaskContext* ctx,
-                         HdRenderIndex* renderIndex) override;
+    void Prepare(HdTaskContext* ctx,
+                 HdRenderIndex* renderIndex) override;
 
     /// Execute the pick task
     HDX_API
-    virtual void Execute(HdTaskContext* ctx) override;
+    void Execute(HdTaskContext* ctx) override;
 
 protected:
     /// Sync the render pass resources
     HDX_API
-    virtual void _Sync(HdSceneDelegate* delegate,
-                       HdTaskContext* ctx,
-                       HdDirtyBits* dirtyBits) override;
+    void _Sync(HdSceneDelegate* delegate,
+               HdTaskContext* ctx,
+               HdDirtyBits* dirtyBits) override;
 
 private:
+    GfMatrix4d _ComputeProjectionMatrix() const;
+
     HdxPickFromRenderBufferTaskParams _params;
     HdxPickTaskContextParams _contextParams;
     // We need to cache a pointer to the render index so Execute() can
@@ -104,6 +116,7 @@ private:
     HdRenderBuffer *_primId;
     HdRenderBuffer *_instanceId;
     HdRenderBuffer *_elementId;
+    HdRenderBuffer *_normal;
     HdRenderBuffer *_depth;
     const HdCamera *_camera;
 

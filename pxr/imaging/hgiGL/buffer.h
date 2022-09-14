@@ -47,7 +47,14 @@ public:
     HGIGL_API
     uint64_t GetRawResource() const override;
 
+    HGIGL_API
+    void* GetCPUStagingAddress() override;
+
     uint32_t GetBufferId() const {return _bufferId;}
+
+    /// Returns the bindless gpu address (caller must verify extension support)
+    HGIGL_API
+    uint64_t GetBindlessGPUAddress();
 
 protected:
     friend class HgiGL;
@@ -62,6 +69,8 @@ private:
 
     uint32_t _bufferId;
     void* _mapped;
+    void* _cpuStaging;
+    uint64_t _bindlessGPUAddress;
 };
 
 

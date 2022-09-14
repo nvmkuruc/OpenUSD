@@ -28,8 +28,11 @@ import sys
 import pxr.Usdviewq as Usdviewq
 
 if __name__ == '__main__':
+    # Let Ctrl-C kill the app.
+    import signal
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
     try:
         Usdviewq.Launcher().Run()
     except Usdviewq.InvalidUsdviewOption as e:
-        print("ERROR: " + e.message, file=sys.stderr)
+        print("ERROR: " + str(e), file=sys.stderr)
         sys.exit(1)

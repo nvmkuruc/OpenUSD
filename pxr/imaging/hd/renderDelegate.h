@@ -28,6 +28,7 @@
 #include "pxr/imaging/hd/api.h"
 #include "pxr/imaging/hd/aov.h"
 #include "pxr/imaging/hd/changeTracker.h"
+#include "pxr/imaging/hd/command.h"
 #include "pxr/base/vt/dictionary.h"
 #include "pxr/base/tf/token.h"
 
@@ -195,6 +196,13 @@ public:
     virtual bool IsPauseSupported() const;
 
     ///
+    /// Query the delegate's pause state. Returns true if the background
+    /// rendering threads are currently paused.
+    ///
+    HD_API
+    virtual bool IsPaused() const;
+
+    ///
     /// Pause all of this delegate's background rendering threads. Default
     /// implementation does nothing.
     ///
@@ -220,13 +228,21 @@ public:
     virtual bool IsStopSupported() const;
 
     ///
-    /// Stop all of this delegate's background rendering threads. Default
-    /// implementation does nothing.
-    ///
-    /// Returns \c true if successful.
+    /// Query the delegate's stop state. Returns true if the background
+    /// rendering threads are not currently active.
     ///
     HD_API
-    virtual bool Stop();
+    virtual bool IsStopped() const;
+
+    ///
+    /// Stop all of this delegate's background rendering threads; if blocking
+    /// is true, the function waits until they exit.
+    /// Default implementation does nothing.
+    ///
+    /// Returns \c true if successfully stopped.
+    ///
+    HD_API
+    virtual bool Stop(bool blocking = true);
 
     ///
     /// Restart all of this delegate's background rendering threads previously
@@ -272,13 +288,10 @@ public:
     ///
     /// Request to create a new instancer.
     /// \param id The unique identifier of this instancer.
-    /// \param instancerId The unique identifier for the parent instancer that
-    ///                    uses this instancer as a prototype (may be empty).
     /// \return A pointer to the new instancer or nullptr on error.
     ///
     virtual HdInstancer *CreateInstancer(HdSceneDelegate *delegate,
-                                         SdfPath const& id,
-                                         SdfPath const& instancerId) = 0;
+                                         SdfPath const& id) = 0;
 
     virtual void DestroyInstancer(HdInstancer *instancer) = 0;
 
@@ -293,13 +306,10 @@ public:
     /// Request to Allocate and Construct a new Rprim.
     /// \param typeId the type identifier of the prim to allocate
     /// \param rprimId a unique identifier for the prim
-    /// \param instancerId the unique identifier for the instancer that uses
-    ///                    the prim (optional: May be empty).
     /// \return A pointer to the new prim or nullptr on error.
     ///                     
     virtual HdRprim *CreateRprim(TfToken const& typeId,
-                                 SdfPath const& rprimId,
-                                 SdfPath const& instancerId) = 0;
+                                 SdfPath const& rprimId) = 0;
 
     ///
     /// Request to Destruct and deallocate the prim.
@@ -396,7 +406,7 @@ public:
     virtual TfToken GetMaterialNetworkSelector() const;
 
     ///
-    /// Returns a list, in decending order of preference, that can be used to
+    /// Returns a list, in descending order of preference, that can be used to
     /// select among multiple material network implementations. The default 
     /// list contains an empty token.
     ///
@@ -434,6 +444,38 @@ public:
     HD_API
     virtual HdAovDescriptor GetDefaultAovDescriptor(TfToken const& name) const;
 
+    ////////////////////////////////////////////////////////////////////////////
+    ///
+    /// Commands API
+    ///
+    ////////////////////////////////////////////////////////////////////////////
+    
+    ///
+    /// Get the descriptors for the commands supported by this render delegate.
+    ///
+    HD_API
+    virtual HdCommandDescriptors GetCommandDescriptors() const;
+
+    ///
+    /// Invokes the command described by the token \p command with optional
+    /// \p args.
+    ///
+    /// If the command succeeds, returns \c true, otherwise returns \c false.
+    /// A command will generally fail if it is not among those returned by
+    /// GetCommandDescriptors().
+    ///
+    HD_API
+    virtual bool InvokeCommand(
+        const TfToken &command,
+        const HdCommandArgs &args = HdCommandArgs());
+
+    ///
+    /// Populated when instantiated via the HdRendererPluginRegistry
+    HD_API
+    const std::string &GetRendererDisplayName() {
+        return _displayName;
+    }
+
 protected:
     /// This class must be derived from.
     HD_API
@@ -455,6 +497,19 @@ protected:
     /// Render settings state.
     HdRenderSettingsMap _settingsMap;
     unsigned int _settingsVersion;
+
+private:
+
+    friend class HdRendererPluginRegistry;
+    ///
+    /// Populated when instantiated via the HdRendererPluginRegistry and
+    /// currently used to associate a renderer delegate instance with related
+    /// code and resources. 
+    void _SetRendererDisplayName(const std::string &displayName) {
+        _displayName = displayName;
+    }
+    std::string _displayName;
+
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

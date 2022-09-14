@@ -704,7 +704,7 @@ _NodeGraphBuilder::Build(ShaderNamesByOutputName* outputs)
         // Create the interface.
         if (_mtlxNodeDef) {
             for (auto& i: _GetInheritanceStack(_mtlxNodeDef)) {
-                _CreateInterface(i, usdNodeGraph);
+                _CreateInterface(i, usdNodeGraph.ConnectableAPI());
             }
         }
     }
@@ -719,7 +719,7 @@ _NodeGraphBuilder::Build(ShaderNamesByOutputName* outputs)
     _ConnectNodes();
 
     if (isInsideNodeGraph) {
-        _ConnectTerminals(_mtlxContainer,  UsdShadeNodeGraph(usdPrim));
+        _ConnectTerminals(_mtlxContainer, UsdShadeConnectableAPI(usdPrim));
     }
     else if (outputs) {
         // Collect the outputs on the existing shader nodes.
@@ -1299,7 +1299,8 @@ _Context::BeginMaterial(const mx::ConstNodePtr& mtlxMaterial)
             _SetCoreUIAttributes(usdMaterial.GetPrim(), mtlxMaterial);
 
             // Record the material for later variants.
-            _shaders[_Name(mtlxMaterial)][""] = usdMaterial;
+            _shaders[_Name(mtlxMaterial)][""] =
+                UsdShadeConnectableAPI(usdMaterial);
 
             // Cut over.
             _mtlxMaterial = mtlxMaterial;
@@ -1414,7 +1415,7 @@ _Context::AddShaderNode(const mx::ConstNodePtr& mtlxShaderNode)
     // Translate bindings.
     for (auto mtlxInput: mtlxShaderNode->getInputs()) {
         // Simple binding.
-        _AddInputWithValue(mtlxInput, _usdMaterial);
+        _AddInputWithValue(mtlxInput, UsdShadeConnectableAPI(_usdMaterial));
 
         // Check if this input references an output.
         if (auto outputName = _Attr(mtlxInput, names.output)) {
@@ -1429,7 +1430,8 @@ _Context::AddShaderNode(const mx::ConstNodePtr& mtlxShaderNode)
                         ? AddNodeGraph(mtlxNodeGraph)
                         : AddImplicitNodeGraph(mtlxInput->getDocument())) {
                 _BindNodeGraph(mtlxInput, _usdMaterial.GetPath(),
-                               usdShader, usdNodeGraph);
+                               UsdShadeConnectableAPI(usdShader),
+                               usdNodeGraph);
             }
         }
     }
@@ -1579,8 +1581,7 @@ _Context::_AddCollection(
     // Create the collection.
     auto& usdCollection =
         _collections[_Name(mtlxCollection)] =
-            UsdCollectionAPI::ApplyCollection(usdPrim,
-                                    _MakeName(mtlxCollection));
+            UsdCollectionAPI::Apply(usdPrim, _MakeName(mtlxCollection));
     _SetCoreUIAttributes(usdCollection.CreateIncludesRel(), mtlxCollection);
 
     // Add the included collections (recursively creating them if necessary)
@@ -1650,8 +1651,7 @@ _Context::_AddGeomExpr(const mx::ConstGeomElementPtr& mtlxGeomElement)
     // Create the collection.
     auto& usdCollection =
         i.first->second =
-            UsdCollectionAPI::ApplyCollection(usdPrim,
-                                    TfToken(name + std::to_string(k)));
+            UsdCollectionAPI::Apply(usdPrim, TfToken(name + std::to_string(k)));
 
     // Add the geometry expressions.
     auto& geomprefix = mtlxGeomElement->getActiveGeomPrefix();

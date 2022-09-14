@@ -75,8 +75,9 @@ UsdMediaSpatialAudio::Define(
 }
 
 /* virtual */
-UsdSchemaType UsdMediaSpatialAudio::_GetSchemaType() const {
-    return UsdMediaSpatialAudio::schemaType;
+UsdSchemaKind UsdMediaSpatialAudio::_GetSchemaKind() const
+{
+    return UsdMediaSpatialAudio::schemaKind;
 }
 
 /* static */

@@ -156,7 +156,7 @@
             <addaction name="menuPrim_View_Depth"/>
             <addaction name="separator"/>
             <addaction name="actionShow_Inactive_Prims"/>
-            <addaction name="actionShow_All_Master_Prims"/>
+            <addaction name="actionShow_All_Prototype_Prims"/>
             <addaction name="actionShow_Undefined_Prims"/>
             <addaction name="actionShow_Abstract_Prims"/>
            </widget>
@@ -168,7 +168,7 @@
           <widget class="PrimTreeWidget" name="primView">
            <property name="font">
             <font>
-             <family>Gotham Rounded</family>
+             <family>Roboto</family>
              <pointsize>9</pointsize>
              <weight>50</weight>
              <italic>false</italic>
@@ -205,11 +205,11 @@
            <attribute name="headerCascadingSectionResizes">
             <bool>true</bool>
            </attribute>
-           <attribute name="headerDefaultSectionSize">
-            <number>150</number>
-           </attribute>
            <attribute name="headerMinimumSectionSize">
             <number>20</number>
+           </attribute>
+           <attribute name="headerDefaultSectionSize">
+            <number>150</number>
            </attribute>
            <attribute name="headerStretchLastSection">
             <bool>false</bool>
@@ -263,7 +263,7 @@
              </property>
              <property name="font">
               <font>
-               <family>Gotham Rounded</family>
+               <family>Roboto</family>
                <pointsize>9</pointsize>
                <weight>75</weight>
                <bold>true</bold>
@@ -302,7 +302,7 @@
              </property>
              <property name="font">
               <font>
-               <family>Gotham Rounded</family>
+               <family>Roboto</family>
                <pointsize>9</pointsize>
                <weight>50</weight>
                <italic>false</italic>
@@ -330,7 +330,7 @@
              </property>
              <property name="font">
               <font>
-               <family>Gotham Rounded</family>
+               <family>Roboto</family>
                <pointsize>9</pointsize>
                <weight>50</weight>
                <italic>false</italic>
@@ -467,7 +467,7 @@
              </property>
              <property name="font">
               <font>
-               <family>Gotham Rounded</family>
+               <family>Roboto</family>
                <pointsize>9</pointsize>
                <weight>50</weight>
                <italic>false</italic>
@@ -507,7 +507,7 @@
              </property>
              <property name="font">
               <font>
-               <family>Gotham Rounded</family>
+               <family>Roboto</family>
                <pointsize>9</pointsize>
                <weight>50</weight>
                <italic>false</italic>
@@ -535,7 +535,7 @@
              </property>
              <property name="font">
               <font>
-               <family>Gotham Rounded</family>
+               <family>Roboto</family>
                <pointsize>9</pointsize>
                <weight>50</weight>
                <italic>false</italic>
@@ -704,11 +704,11 @@
                      <attribute name="horizontalHeaderCascadingSectionResizes">
                       <bool>true</bool>
                      </attribute>
-                     <attribute name="horizontalHeaderDefaultSectionSize">
-                      <number>220</number>
-                     </attribute>
                      <attribute name="horizontalHeaderMinimumSectionSize">
                       <number>30</number>
+                     </attribute>
+                     <attribute name="horizontalHeaderDefaultSectionSize">
+                      <number>220</number>
                      </attribute>
                      <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
                       <bool>false</bool>
@@ -719,11 +719,11 @@
                      <attribute name="verticalHeaderVisible">
                       <bool>false</bool>
                      </attribute>
-                     <attribute name="verticalHeaderDefaultSectionSize">
-                      <number>30</number>
-                     </attribute>
                      <attribute name="verticalHeaderMinimumSectionSize">
                       <number>20</number>
+                     </attribute>
+                     <attribute name="verticalHeaderDefaultSectionSize">
+                      <number>30</number>
                      </attribute>
                      <attribute name="verticalHeaderStretchLastSection">
                       <bool>false</bool>
@@ -812,11 +812,11 @@
                      <attribute name="horizontalHeaderCascadingSectionResizes">
                       <bool>true</bool>
                      </attribute>
-                     <attribute name="horizontalHeaderDefaultSectionSize">
-                      <number>220</number>
-                     </attribute>
                      <attribute name="horizontalHeaderMinimumSectionSize">
                       <number>30</number>
+                     </attribute>
+                     <attribute name="horizontalHeaderDefaultSectionSize">
+                      <number>220</number>
                      </attribute>
                      <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
                       <bool>false</bool>
@@ -827,11 +827,11 @@
                      <attribute name="verticalHeaderVisible">
                       <bool>false</bool>
                      </attribute>
-                     <attribute name="verticalHeaderDefaultSectionSize">
-                      <number>30</number>
-                     </attribute>
                      <attribute name="verticalHeaderMinimumSectionSize">
                       <number>20</number>
+                     </attribute>
+                     <attribute name="verticalHeaderDefaultSectionSize">
+                      <number>30</number>
                      </attribute>
                      <attribute name="verticalHeaderStretchLastSection">
                       <bool>false</bool>
@@ -1353,7 +1353,7 @@
             </property>
             <property name="font">
              <font>
-              <family>Gotham Rounded</family>
+              <family>Roboto</family>
               <pointsize>9</pointsize>
               <weight>50</weight>
               <italic>false</italic>
@@ -1593,6 +1593,11 @@
       <string>Hydra AOVs</string>
      </property>
     </widget>
+    <widget class="QMenu" name="menuRendererCommands">
+     <property name="title">
+      <string>Hydra Commands</string>
+     </property>
+    </widget>
     <widget class="QMenu" name="menuComplexity">
      <property name="title">
       <string>Complexity</string>
@@ -1607,13 +1612,13 @@
     <addaction name="menuRendererPlugin"/>
     <addaction name="menuRendererSettings"/>
     <addaction name="menuRendererAovs"/>
+    <addaction name="menuRendererCommands"/>
     <addaction name="actionPause"/>
     <addaction name="actionStop"/>
     <addaction name="separator"/>
     <addaction name="actionReset_View"/>
-    <addaction name="actionAdjust_FOV"/>
     <addaction name="actionAuto_Compute_Clipping_Planes"/>
-    <addaction name="actionAdjust_Clipping"/>
+    <addaction name="actionAdjust_Free_Camera"/>
     <addaction name="actionAdjust_Default_Material"/>
     <addaction name="menuComplexity"/>
     <addaction name="menuBBox"/>
@@ -1638,6 +1643,7 @@
     <addaction name="actionRollover_Prim_Info"/>
     <addaction name="separator"/>
     <addaction name="actionEnable_Scene_Materials"/>
+    <addaction name="actionEnable_Scene_Lights"/>
     <addaction name="actionDisplay_PrimId"/>
     <addaction name="actionCull_Backfaces"/>
    </widget>
@@ -1762,17 +1768,6 @@
   <action name="actionFrame_Backwards">
    <property name="text">
     <string>Frame Backward</string>
-   </property>
-  </action>
-  <action name="actionAdjust_FOV">
-   <property name="text">
-    <string>Adjust FO&amp;V...</string>
-   </property>
-   <property name="shortcut">
-    <string/>
-   </property>
-   <property name="shortcutContext">
-    <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
   <action name="actionReopen_Stage">
@@ -2357,6 +2352,17 @@
     <string>Enable Scene Materials</string>
    </property>
   </action>
+  <action name="actionEnable_Scene_Lights">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Enable Scene Lights</string>
+   </property>
+  </action>
   <action name="actionShow_Inactive_Prims">
    <property name="checkable">
     <bool>true</bool>
@@ -2423,12 +2429,12 @@
     <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
-  <action name="actionAdjust_Clipping">
+  <action name="actionAdjust_Free_Camera">
    <property name="checkable">
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Adjust Clipping Planes...</string>
+    <string>Adjust Free Camera...</string>
    </property>
   </action>
   <action name="actionIncrementComplexity2">
@@ -2549,12 +2555,12 @@
     <string>Geom Id</string>
    </property>
   </action>
-  <action name="actionShow_All_Master_Prims">
+  <action name="actionShow_All_Prototype_Prims">
    <property name="checkable">
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Master Prims</string>
+    <string>Prototype Prims</string>
    </property>
   </action>
   <action name="actionShow_Undefined_Prims">

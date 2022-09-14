@@ -27,14 +27,14 @@
 #include "pxr/pxr.h"
 #include "pxr/imaging/hd/api.h"
 #include "pxr/imaging/hd/sprim.h"
-#include "pxr/imaging/hd/sceneDelegate.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 ///
 /// Hydra Schema for a material object.
 ///
-class HdMaterial : public HdSprim {
+class HdMaterial : public HdSprim
+{
 public:
     // change tracking for HdMaterial prim
     enum DirtyBits : HdDirtyBits {
@@ -42,15 +42,11 @@ public:
         // XXX: Got to skip varying and force sync bits for now
         DirtyParams           = 1 << 2,
         DirtyResource         = 1 << 3,
-        AllDirty              = (DirtyParams
-                                 |DirtyResource)
+        AllDirty              = (DirtyParams | DirtyResource)
     };
 
     HD_API
-    virtual ~HdMaterial();
-
-    /// Causes the shader to be reloaded.
-    virtual void Reload() = 0;
+    ~HdMaterial() override;
 
 protected:
     HD_API
@@ -83,7 +79,8 @@ private:
 /// A guideline to remember this terminology is that inputs
 /// are always upstream of outputs in the dataflow.
 /// 
-struct HdMaterialRelationship {
+struct HdMaterialRelationship
+{
     SdfPath inputId;
     TfToken inputName;
     SdfPath outputId;
@@ -100,7 +97,8 @@ bool operator==(const HdMaterialRelationship& lhs,
 ///
 /// Describes a material node which is made of a path, an identifier and
 /// a list of parameters.
-struct HdMaterialNode {
+struct HdMaterialNode
+{
     SdfPath path;
     TfToken identifier;
 // #nv begin #new-MDL-schema    
@@ -121,7 +119,8 @@ bool operator==(const HdMaterialNode& lhs, const HdMaterialNode& rhs);
 ///
 /// Describes a material network composed of nodes, primvars, and relationships
 /// between the nodes and terminals of those nodes.
-struct HdMaterialNetwork {
+struct HdMaterialNetwork
+{
     std::vector<HdMaterialRelationship> relationships;
     std::vector<HdMaterialNode> nodes;
     TfTokenVector primvars;
@@ -130,7 +129,8 @@ struct HdMaterialNetwork {
 /// \struct HdMaterialNetworkMap
 ///
 /// Describes a map from network type to network.
-struct HdMaterialNetworkMap {
+struct HdMaterialNetworkMap
+{
     std::map<TfToken, HdMaterialNetwork> map;
     std::vector<SdfPath> terminals;
 };
@@ -148,8 +148,9 @@ struct HdMaterialNetworkMap {
 /// \struct HdMaterialConnection2
 ///
 /// Describes a single connection to an upsream node and output port 
-/// Replacement for HdRelationship.
-struct HdMaterialConnection2 {
+/// Replacement for HdMaterialRelationship.
+struct HdMaterialConnection2
+{
     SdfPath upstreamNode;
     TfToken upstreamOutputName;
 
@@ -165,7 +166,8 @@ struct HdMaterialConnection2 {
 /// A node contains a (shader) type identifier, parameter values, and 
 /// connections to upstream nodes. A single input (mapped by TfToken) may have
 /// multiple upstream connections to describe connected array elements.
-struct HdMaterialNode2 {
+struct HdMaterialNode2
+{
     TfToken nodeTypeId;
     std::map<TfToken, VtValue> parameters;
     std::map<TfToken, std::vector<HdMaterialConnection2>> inputConnections;
@@ -182,7 +184,8 @@ struct HdMaterialNode2 {
 /// Container of nodes and top-level terminal connections. This is the mutable
 /// representation of a shading network sent to filtering functions by a
 /// MatfiltFilterChain.
-struct HdMaterialNetwork2 {
+struct HdMaterialNetwork2
+{
     std::map<SdfPath, HdMaterialNode2> nodes;
     std::map<TfToken, HdMaterialConnection2> terminals;
     TfTokenVector primvars;
@@ -196,9 +199,8 @@ struct HdMaterialNetwork2 {
 
 /// Converts a HdMaterialNetworkMap to a HdMaterialNetwork2
 HD_API
-void HdMaterialNetwork2ConvertFromHdMaterialNetworkMap(
+HdMaterialNetwork2 HdConvertToHdMaterialNetwork2(
     const HdMaterialNetworkMap & hdNetworkMap,
-    HdMaterialNetwork2 *result, 
     bool *isVolume = nullptr);
 
 

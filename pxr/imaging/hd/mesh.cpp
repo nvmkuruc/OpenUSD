@@ -29,17 +29,13 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 TF_DEFINE_PUBLIC_TOKENS(HdMeshReprDescTokens, HD_MESH_REPR_DESC_TOKENS);
 
-HdMesh::HdMesh(SdfPath const& id,
-               SdfPath const& instancerId)
-    : HdRprim(id, instancerId)
+HdMesh::HdMesh(SdfPath const& id)
+    : HdRprim(id)
 {
     /*NOTHING*/
 }
 
-HdMesh::~HdMesh()
-{
-    /*NOTHING*/
-}
+HdMesh::~HdMesh() = default;
 
 /* virtual */
 TfTokenVector const &

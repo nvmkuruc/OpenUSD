@@ -32,17 +32,21 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 
 TfToken HdxPackageFullscreenShader();
-TfToken HdxPackageRenderPassShader();
+TfToken HdxPackageRenderPassColorShader();
+TfToken HdxPackageRenderPassColorAndSelectionShader();
+TfToken HdxPackageRenderPassColorWithOccludedSelectionShader();
 TfToken HdxPackageRenderPassIdShader();
 TfToken HdxPackageRenderPassPickingShader();
 TfToken HdxPackageRenderPassShadowShader();
 TfToken HdxPackageColorChannelShader();
 TfToken HdxPackageColorCorrectionShader();
+TfToken HdxPackageVisualizeAovShader();
 TfToken HdxPackageRenderPassOitShader();
 TfToken HdxPackageRenderPassOitOpaqueShader();
 TfToken HdxPackageRenderPassOitVolumeShader();
 TfToken HdxPackageOitResolveImageShader();
 TfToken HdxPackageOutlineShader();
+TfToken HdxPackageSkydomeShader();
 
 TfToken HdxPackageDefaultDomeLightTexture();
 

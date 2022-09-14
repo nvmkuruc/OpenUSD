@@ -117,6 +117,10 @@ TF_REGISTRY_FUNCTION(TfEnum)
     // SdfVariability
     TF_ADD_ENUM_NAME(SdfVariabilityVarying, "Varying");
     TF_ADD_ENUM_NAME(SdfVariabilityUniform, "Uniform");
+
+    // SdfAuthoringError
+    TF_ADD_ENUM_NAME(SdfAuthoringErrorUnrecognizedFields);
+    TF_ADD_ENUM_NAME(SdfAuthoringErrorUnrecognizedSpecType);
 }
 
 // Register all units with the TfEnum registry.
@@ -303,7 +307,7 @@ SdfGetNameForUnit( const TfEnum &unit )
 
     // get indices
     std::pair<uint32_t, uint32_t> indices = Sdf_GetUnitIndices(unit);
-    // look up menva name in our table
+    // look up sdf name in our table
     return info._UnitNameTable[indices.first][indices.second];
 }
 

@@ -60,7 +60,6 @@ void HdSt_ApplyMaterialXFilter(
     HdSt_MaterialParamVector* materialParams,
     bool const bindlessTexturesEnabled);
 
-
 // Generates the glsfx shader for the given MaterialX Document
 MaterialX::ShaderPtr HdSt_GenMaterialXShader(
     MaterialX::DocumentPtr const& mxDoc,

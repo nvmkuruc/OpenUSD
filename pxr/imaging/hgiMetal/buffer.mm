@@ -43,7 +43,7 @@ HgiMetalBuffer::HgiMetalBuffer(HgiMetal *hgi, HgiBufferDesc const & desc)
     }
 
     MTLResourceOptions options = MTLResourceCPUCacheModeDefaultCache |
-        hgi->GetCapabilities().defaultStorageMode;
+        hgi->GetCapabilities()->defaultStorageMode;
     
     if (desc.initialData) {
         _bufferId = [hgi->GetPrimaryDevice() newBufferWithBytes:desc.initialData
@@ -80,4 +80,13 @@ HgiMetalBuffer::GetRawResource() const
     return (uint64_t) _bufferId;
 }
 
+void*
+HgiMetalBuffer::GetCPUStagingAddress()
+{
+    if (_bufferId) {
+        return [_bufferId contents];
+    }
+
+    return nullptr;
+}
 PXR_NAMESPACE_CLOSE_SCOPE

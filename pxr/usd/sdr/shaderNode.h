@@ -47,7 +47,9 @@ PXR_NAMESPACE_OPEN_SCOPE
     ((Pages, "pages"))             \
     ((Primvars, "primvars"))       \
     ((ImplementationName, "__SDR__implementationName"))\
-    ((Target, "__SDR__target"))
+    ((Target, "__SDR__target"))    \
+    ((SdrUsdEncodingVersion, "sdrUsdEncodingVersion")) \
+    ((SdrDefinitionNameFallbackPrefix, "sdrDefinitionNameFallbackPrefix"))
 
 // Note: The concept of context is defined on NdrNode and can be queried with
 // the GetContext() method. Sdr categorizes shaders by the context in which they
@@ -149,11 +151,11 @@ public:
     /// volume fields (like extinction or scattering). This is done to identify
     /// resources used by a shading network.
     SDR_API
-    const std::string &GetRole() const;
+    std::string GetRole() const;
 
     /// The help message assigned to this node, if any.
     SDR_API
-    const std::string& GetHelp() const;
+    std::string GetHelp() const;
 
     /// The departments this node is associated with, if any.
     SDR_API
@@ -195,7 +197,7 @@ public:
     /// this method to get the correct name;  using \c getName() is not
     /// correct.
     SDR_API
-    const std::string& GetImplementationName() const;
+    std::string GetImplementationName() const;
 
     /// @}
 

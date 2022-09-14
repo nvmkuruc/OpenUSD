@@ -27,6 +27,10 @@
 #include "pxr/imaging/hd/renderIndex.h"
 #include "pxr/imaging/hd/tokens.h"
 
+#include "pxr/imaging/hd/dataSourceLocator.h"
+#include "pxr/imaging/hd/dirtyBitsTranslator.h"
+#include "pxr/imaging/hd/sceneIndex.h"
+
 #include "pxr/base/tf/debug.h"
 #include "pxr/base/tf/token.h"
 
@@ -43,10 +47,10 @@ HdChangeTracker::HdChangeTracker()
     , _bprimState()
     , _generalState()
     , _collectionState()
-    , _needsGarbageCollection(false)
-    , _needsBprimGarbageCollection(false)
     , _instancerRprimDependencies()
     , _instancerInstancerDependencies()
+    , _sprimSprimTargetDependencies()
+    , _sprimSprimSourceDependencies()
     // Note: Version numbers start at 1, with observers resetting theirs to 0.
     // This is to cause a version mismatch during first-time processing.
     , _varyingStateVersion(1)
@@ -56,8 +60,9 @@ HdChangeTracker::HdChangeTracker()
     , _instancerIndexVersion(1)
     , _sceneStateVersion(1)
     , _visChangeCount(1)
-    , _renderTagVersion(1)
-    , _batchVersion(1)
+    , _rprimRenderTagVersion(1)
+    , _taskRenderTagsVersion(1)
+    , _emulationSceneIndex(nullptr)
 {
     /*NOTHING*/
 }
@@ -95,14 +100,10 @@ HdChangeTracker::RprimRemoved(SdfPath const& id)
 {
     TF_DEBUG(HD_RPRIM_REMOVED).Msg("Rprim Removed: %s\n", id.GetText());
     _rprimState.erase(id);
-    // Make sure cached DrawItems get flushed out and their buffers are
-    // reclaimed.
-    _needsGarbageCollection = true;
 
     ++_sceneStateVersion;
     ++_rprimIndexVersion;
 }
-
 
 void 
 HdChangeTracker::MarkRprimDirty(SdfPath const& id, HdDirtyBits bits)
@@ -112,6 +113,45 @@ HdChangeTracker::MarkRprimDirty(SdfPath const& id, HdDirtyBits bits)
         return;
     }
 
+    if (_emulationSceneIndex) {
+
+        // There's a set of dirty bits that are used as internal signalling
+        // in hydra, and aren't related to scene data.  These, we need to
+        // pass through directly.
+        const HdDirtyBits internalDirtyBits =
+            HdChangeTracker::InitRepr |
+            HdChangeTracker::Varying |
+            HdChangeTracker::NewRepr |
+            HdChangeTracker::CustomBitsMask;
+
+        if (bits & internalDirtyBits) {
+            _MarkRprimDirty(id, bits & internalDirtyBits);
+        }
+
+         // If we're only processing internal bits, skip calling DirtyPrims.
+        if ((bits & ~internalDirtyBits) == 0) {
+            return;
+        }
+
+        // We need to dispatch based on prim type.
+        HdSceneIndexPrim prim = _emulationSceneIndex->GetPrim(id);
+        HdDataSourceLocatorSet locators;
+        HdDirtyBitsTranslator::RprimDirtyBitsToLocatorSet(
+                prim.primType, bits, &locators);
+        if (!locators.IsEmpty()) {
+            _emulationSceneIndex->DirtyPrims({{id, locators}});
+        }
+    } else {
+        // XXX: During the migration, "DirtyPrimvar" implies DirtyPoints/etc.
+        if (bits & DirtyPrimvar) {
+            bits |= DirtyPoints | DirtyNormals | DirtyWidths;
+        }
+        _MarkRprimDirty(id, bits);
+    }
+}
+
+void HdChangeTracker::_MarkRprimDirty(SdfPath const& id, HdDirtyBits bits)
+{
     _IDStateMap::iterator it = _rprimState.find(id);
     if (!TF_VERIFY(it != _rprimState.end(), "%s\n", id.GetText())) {
         return;
@@ -130,7 +170,7 @@ HdChangeTracker::MarkRprimDirty(SdfPath const& id, HdDirtyBits bits)
         }
     }
 
-    // used ensure the repr has been created. don't touch scene state version
+    // Used to ensure the repr has been created. Don't touch scene state version
     if (bits == HdChangeTracker::InitRepr) {
         it->second |= HdChangeTracker::InitRepr;
         return;
@@ -155,7 +195,7 @@ HdChangeTracker::MarkRprimDirty(SdfPath const& id, HdDirtyBits bits)
     }
 
     if ((bits & DirtyRenderTag) != 0) {
-        ++_renderTagVersion;
+        ++_rprimRenderTagVersion;
     }
 
     if ((bits & (DirtyRenderTag | DirtyRepr)) != 0) {
@@ -174,7 +214,13 @@ HdChangeTracker::MarkRprimDirty(SdfPath const& id, HdDirtyBits bits)
 
 void
 HdChangeTracker::ResetVaryingState()
-{ 
+{
+    TRACE_FUNCTION();
+
+    TF_DEBUG(HD_VARYING_STATE).Msg(
+        "Resetting Rprim Varying State: varyingStateVersion (%d -> %d)\n",
+        _varyingStateVersion, _varyingStateVersion + 1);
+
     ++_varyingStateVersion;
 
     // reset all variability bit
@@ -215,10 +261,10 @@ HdChangeTracker::MarkRprimClean(SdfPath const& id, HdDirtyBits newBits)
 }
 
 void
-HdChangeTracker::InstancerInserted(SdfPath const& id)
+HdChangeTracker::InstancerInserted(SdfPath const& id, HdDirtyBits initialDirtyState)
 {
     TF_DEBUG(HD_INSTANCER_ADDED).Msg("Instancer Added: %s\n", id.GetText());
-    _instancerState[id] = AllDirty;
+    _instancerState[id] = initialDirtyState;
     ++_sceneStateVersion;
     ++_instancerIndexVersion;
 }
@@ -266,26 +312,75 @@ HdChangeTracker::RemoveInstancerInstancerDependency(SdfPath const& parentId,
 }
 
 void
+HdChangeTracker::AddSprimSprimDependency(SdfPath const& parentSprimId,
+                                         SdfPath const& sprimId)
+{
+    _AddDependency(_sprimSprimTargetDependencies, parentSprimId, sprimId);
+    _AddDependency(_sprimSprimSourceDependencies, sprimId, parentSprimId);
+}
+
+void
+HdChangeTracker::RemoveSprimSprimDependency(SdfPath const& parentSprimId,
+                                            SdfPath const& sprimId)
+{
+    _RemoveDependency(_sprimSprimTargetDependencies, parentSprimId, sprimId);
+    _RemoveDependency(_sprimSprimSourceDependencies, sprimId, parentSprimId);
+}
+
+void
+HdChangeTracker::RemoveSprimFromSprimSprimDependencies(SdfPath const& sprimId)
+{
+    if (_sprimSprimTargetDependencies.empty()) {
+        return;
+    }
+    
+    // Remove sprim as parent
+    {
+        _DependencyMap::accessor a;
+        if (_sprimSprimTargetDependencies.find(a, sprimId)) {
+            // If sprim is parent, mark its children dirty before removing.
+            for (const SdfPath & childPath : a->second) {
+                MarkSprimDirty(childPath, ~Clean);
+                _RemoveDependency(
+                    _sprimSprimSourceDependencies, childPath, sprimId);
+            }
+            _sprimSprimTargetDependencies.erase(a);
+        }
+    }
+
+    // Remove sprim as child
+    {
+        _DependencyMap::accessor a;
+        if (_sprimSprimSourceDependencies.find(a, sprimId)) {
+            for (const SdfPath & parentPath : a->second) {
+                _RemoveDependency(
+                    _sprimSprimTargetDependencies, parentPath, sprimId);
+            }
+            _sprimSprimSourceDependencies.erase(a);
+        }
+    }
+}
+
+void
 HdChangeTracker::_AddDependency(HdChangeTracker::_DependencyMap &depMap,
         SdfPath const& parent, SdfPath const& child)
 {
-    depMap[parent].insert(child);
+    _DependencyMap::accessor a;
+    depMap.insert(a, parent);
+    a->second.insert(child);
 }
 
 void
 HdChangeTracker::_RemoveDependency(HdChangeTracker::_DependencyMap &depMap,
         SdfPath const& parent, SdfPath const& child)
 {
-    _DependencyMap::iterator it = depMap.find(parent);
-    if (!TF_VERIFY(it != depMap.end()))
+    _DependencyMap::accessor a;
+    if(!depMap.find(a, parent)) {
         return;
-
-    SdfPathSet &childSet = it->second;
-    TF_VERIFY(childSet.erase(child) != 0);
-
-    if (childSet.empty())
-    {
-        depMap.erase(it);
+    }
+    a->second.erase(child);
+    if (a->second.empty()) {
+        depMap.erase(a);
     }
 }
 
@@ -322,9 +417,8 @@ HdChangeTracker::MarkTaskDirty(SdfPath const& id, HdDirtyBits bits)
         return;
     }
 
-    if (((bits & DirtyRenderTags) != 0) &&
-        ((it->second & DirtyRenderTags) == 0)) {
-        MarkRenderTagsDirty();
+    if ((bits & DirtyRenderTags) && (it->second & DirtyRenderTags) == 0) {
+        ++_taskRenderTagsVersion;
     }
 
     it->second = it->second | bits;
@@ -350,17 +444,16 @@ HdChangeTracker::MarkTaskClean(SdfPath const& id, HdDirtyBits newBits)
     it->second = (it->second & Varying) | newBits;
 }
 
-void
-HdChangeTracker::MarkRenderTagsDirty()
-{
-    ++_renderTagVersion;
-    ++_sceneStateVersion;
-}
-
 unsigned
 HdChangeTracker::GetRenderTagVersion() const
 {
-    return _renderTagVersion;
+    return _rprimRenderTagVersion;
+}
+
+unsigned
+HdChangeTracker::GetTaskRenderTagsVersion() const
+{
+    return _taskRenderTagsVersion;
 }
 
 // -------------------------------------------------------------------------- //
@@ -384,6 +477,23 @@ HdChangeTracker::MarkInstancerDirty(SdfPath const& id, HdDirtyBits bits)
         return;
     }
 
+    if (_emulationSceneIndex) {
+        // We need to dispatch based on prim type.
+        HdSceneIndexPrim prim = _emulationSceneIndex->GetPrim(id);
+        HdDataSourceLocatorSet locators;
+        HdDirtyBitsTranslator::InstancerDirtyBitsToLocatorSet(
+                prim.primType, bits, &locators);
+        if (!locators.IsEmpty()) {
+            _emulationSceneIndex->DirtyPrims({{id, locators}});
+        }
+    } else {
+        _MarkInstancerDirty(id, bits);
+    }
+}
+
+void
+HdChangeTracker::_MarkInstancerDirty(SdfPath const& id, HdDirtyBits bits)
+{
     _IDStateMap::iterator it = _instancerState.find(id);
     if (!TF_VERIFY(it != _instancerState.end()))
         return;
@@ -392,32 +502,45 @@ HdChangeTracker::MarkInstancerDirty(SdfPath const& id, HdDirtyBits bits)
     // scale, translate, rotate primvars and there's no dependency between them
     // unlike points and normals on rprim.
 
-#if 0
     // Early out if no new bits are being set.
-    // XXX: First, we need to get rid of the usage of DirtyInstancer
-    // in usdImaging.
     if ((bits & (~it->second)) == 0) {
         return;
     }
-#endif
 
     it->second = it->second | bits;
     ++_sceneStateVersion;
 
+    // We propagate dirty bits as follows:
+    // * -> DirtyInstancer.
+    // DirtyInstanceIndex -> DirtyInstanceIndex.
+    // DirtyTransform -> DirtyTransform.
+    //
+    // Both DirtyInstanceIndex and DirtyTransform are consumed at the rprim
+    // level, so this gives the rprim a signal that upstream instancer data
+    // relevant to transform composition or instance indices has changed.
+    // XXX: The DirtyTransform dependency here is technically an hdSt dependency
+    // and we should find a better way to express it, although it won't harm
+    // other known backends.
+    HdDirtyBits toPropagate = DirtyInstancer;
+    if (bits & DirtyTransform) {
+        toPropagate |= DirtyTransform;
+    }
+    if (bits & DirtyInstanceIndex) {
+        toPropagate |= DirtyInstanceIndex;
+    }
+
     // Now mark any associated rprims or instancers dirty.
-    _DependencyMap::iterator instancerDepIt =
-        _instancerInstancerDependencies.find(id);
-    if (instancerDepIt != _instancerInstancerDependencies.end()) {
-        for (SdfPath const& dep : instancerDepIt->second) {
-            MarkInstancerDirty(dep, DirtyInstancer);
+    _DependencyMap::const_accessor aII;
+    if (_instancerInstancerDependencies.find(aII, id)) {
+        for (SdfPath const& dep : aII->second) {
+            _MarkInstancerDirty(dep, toPropagate);
         }
     }
 
-    _DependencyMap::iterator rprimDepIt =
-        _instancerRprimDependencies.find(id);
-    if (rprimDepIt != _instancerRprimDependencies.end()) {
-        for (SdfPath const& dep : rprimDepIt->second) {
-            MarkRprimDirty(dep, DirtyInstancer);
+    _DependencyMap::const_accessor aIR;
+    if (_instancerRprimDependencies.find(aIR, id)) {
+        for (SdfPath const& dep : aIR->second) {
+            _MarkRprimDirty(dep, toPropagate);
         }
     }
 }
@@ -451,8 +574,6 @@ HdChangeTracker::SprimRemoved(SdfPath const& id)
 {
     TF_DEBUG(HD_SPRIM_REMOVED).Msg("Sprim Removed: %s\n", id.GetText());
     _sprimState.erase(id);
-    // Make sure sprim resources are reclaimed.
-    _needsGarbageCollection = true;
     ++_sceneStateVersion;
     ++_sprimIndexVersion;
 }
@@ -474,10 +595,38 @@ HdChangeTracker::MarkSprimDirty(SdfPath const& id, HdDirtyBits bits)
         return;
     }
 
+    if (_emulationSceneIndex) {
+        // We need to dispatch based on prim type.
+        HdSceneIndexPrim prim = _emulationSceneIndex->GetPrim(id);
+        HdDataSourceLocatorSet locators;
+        HdDirtyBitsTranslator::SprimDirtyBitsToLocatorSet(
+                prim.primType, bits, &locators);
+        if (!locators.IsEmpty()) {
+            _emulationSceneIndex->DirtyPrims({{id, locators}});
+        }
+    } else {
+        _MarkSprimDirty(id, bits);
+    }
+}
+
+void
+HdChangeTracker::_MarkSprimDirty(SdfPath const& id, HdDirtyBits bits)
+{
     _IDStateMap::iterator it = _sprimState.find(id);
     if (!TF_VERIFY(it != _sprimState.end()))
         return;
     it->second = it->second | bits;
+
+    // Mark any associated sprims dirty. Unfortunately, we don't know what to 
+    // set dirty, so we resort to ~Clean (as we can't use the rprim AllDirty for
+    // sprims).
+    _DependencyMap::const_accessor aIR;
+    if (_sprimSprimTargetDependencies.find(aIR, id)) {
+        for (SdfPath const& dep : aIR->second) {
+            MarkSprimDirty(dep, ~Clean);
+        }
+    }
+
     ++_sceneStateVersion;
 }
 
@@ -508,7 +657,6 @@ HdChangeTracker::BprimRemoved(SdfPath const& id)
 {
     TF_DEBUG(HD_BPRIM_REMOVED).Msg("Bprim Removed: %s\n", id.GetText());
     _bprimState.erase(id);
-    _needsBprimGarbageCollection = true;
     ++_sceneStateVersion;
     ++_bprimIndexVersion;
 }
@@ -530,6 +678,23 @@ HdChangeTracker::MarkBprimDirty(SdfPath const& id, HdDirtyBits bits)
         return;
     }
 
+    if (_emulationSceneIndex) {
+        // We need to dispatch based on prim type.
+        HdSceneIndexPrim prim = _emulationSceneIndex->GetPrim(id);
+        HdDataSourceLocatorSet locators;
+        HdDirtyBitsTranslator::BprimDirtyBitsToLocatorSet(
+                prim.primType, bits, &locators);
+        if (!locators.IsEmpty()) {
+            _emulationSceneIndex->DirtyPrims({{id, locators}});
+        }
+    } else {
+        _MarkBprimDirty(id, bits);
+    }
+}
+
+void
+HdChangeTracker::_MarkBprimDirty(SdfPath const& id, HdDirtyBits bits)
+{
     _IDStateMap::iterator it = _bprimState.find(id);
     if (!TF_VERIFY(it != _bprimState.end()))
         return;
@@ -746,6 +911,8 @@ HdChangeTracker::IsPrimvarDirty(HdDirtyBits dirtyBits, SdfPath const& id,
         isDirty = (dirtyBits & DirtyPoints) != 0;
     } else if (name == HdTokens->accelerations) {
         isDirty = (dirtyBits & DirtyPoints) != 0;
+    } else if (name == HdTokens->nonlinearSampleCount) {
+        isDirty = (dirtyBits & DirtyPoints) != 0;
     } else if (name == HdTokens->normals) {
         isDirty = (dirtyBits & DirtyNormals) != 0;
     } else if (name == HdTokens->widths) {
@@ -802,11 +969,21 @@ HdChangeTracker::MarkAllRprimsDirty(HdDirtyBits bits)
         return;
     }
 
+    if (_emulationSceneIndex) {
+        // Since bit -> locator translation is dependent on prim type,
+        // we can't do much better than devolving to MarkRprimDirty.
+        for (_IDStateMap::iterator it  = _rprimState.begin();
+                                   it != _rprimState.end(); ++it) {
+            MarkRprimDirty(it->first, bits);
+        }
+        return;
+    }
+
     //
     // This function runs similar to calling MarkRprimDirty on every prim.
     // First it checks to see if the request will set any new dirty bits that
     // are not already set on the prim.  If there are, it will set the new bits
-    // as see if the prim is in the varying state.  If it is not it will
+    // as see if the prim is in the varying state.  If i t is not it will
     // transition the prim to varying.
     //
     // If any prim was transitioned to varying then the varying state version
@@ -855,7 +1032,7 @@ HdChangeTracker::MarkAllRprimsDirty(HdDirtyBits bits)
         ++_visChangeCount;
     }
     if ((bits & DirtyRenderTag) != 0) {
-        ++_renderTagVersion;
+        ++_rprimRenderTagVersion;
     }
     if ((bits & (DirtyRenderTag | DirtyRepr)) != 0) {
         // Render tags affect dirty lists and batching, so they need to be
@@ -940,18 +1117,6 @@ unsigned
 HdChangeTracker::GetVisibilityChangeCount() const
 {
     return _visChangeCount;
-}
-
-void
-HdChangeTracker::MarkBatchesDirty()
-{
-    ++_batchVersion;
-}
-
-unsigned
-HdChangeTracker::GetBatchVersion() const
-{
-    return _batchVersion;
 }
 
 void
@@ -1090,6 +1255,12 @@ HdChangeTracker::DumpDirtyBits(HdDirtyBits dirtyBits)
         << "DirtyBits:"
         << HdChangeTracker::StringifyDirtyBits(dirtyBits)
         << "\n";
+}
+
+void
+HdChangeTracker::_SetTargetSceneIndex(HdRetainedSceneIndex *emulationSceneIndex)
+{
+    _emulationSceneIndex = emulationSceneIndex;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

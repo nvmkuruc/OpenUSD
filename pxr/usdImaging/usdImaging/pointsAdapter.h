@@ -38,16 +38,38 @@ PXR_NAMESPACE_OPEN_SCOPE
 ///
 /// Delegate support for UsdGeomPoints.
 ///
-class UsdImagingPointsAdapter : public UsdImagingGprimAdapter {
+class UsdImagingPointsAdapter : public UsdImagingGprimAdapter 
+{
 public:
-    typedef UsdImagingGprimAdapter BaseAdapter;
+    using BaseAdapter = UsdImagingGprimAdapter;
 
     UsdImagingPointsAdapter()
         : UsdImagingGprimAdapter()
     {}
-    USDIMAGING_API
-    virtual ~UsdImagingPointsAdapter();
 
+    USDIMAGING_API
+    ~UsdImagingPointsAdapter() override;
+
+    // ---------------------------------------------------------------------- //
+    /// \name Scene Index Support
+    // ---------------------------------------------------------------------- //
+
+    USDIMAGING_API
+    TfTokenVector GetImagingSubprims() override;
+
+    USDIMAGING_API
+    TfToken GetImagingSubprimType(TfToken const& subprim) override;
+
+    USDIMAGING_API
+    HdContainerDataSourceHandle GetImagingSubprimData(
+            TfToken const& subprim,
+            UsdPrim const& prim,
+            const UsdImagingDataSourceStageGlobals &stageGlobals) override;
+
+    // ---------------------------------------------------------------------- //
+    /// \name Initialization
+    // ---------------------------------------------------------------------- //
+    
     USDIMAGING_API
     SdfPath Populate(
         UsdPrim const& prim,
@@ -93,6 +115,17 @@ public:
     HdDirtyBits ProcessPropertyChange(UsdPrim const& prim,
                                       SdfPath const& cachePath,
                                       TfToken const& propertyName) override;
+
+    // ---------------------------------------------------------------------- //
+    /// \name Data access
+    // ---------------------------------------------------------------------- //
+
+    USDIMAGING_API
+    VtValue Get(UsdPrim const& prim,
+                SdfPath const& cachePath,
+                TfToken const& key,
+                UsdTimeCode time,
+                VtIntArray *outIndices) const override;
 
 protected:
     USDIMAGING_API

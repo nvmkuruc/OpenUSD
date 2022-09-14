@@ -30,7 +30,7 @@ import os, unittest
 class TestUsdUtilsFlattenLayerStack(unittest.TestCase):
     def test_Basic(self):
         src_stage = Usd.Stage.Open('root.usda')
-        layer = UsdUtils.FlattenLayerStack(src_stage, tag="test.usda")
+        layer = UsdUtils.FlattenLayerStack(src_stage, tag='test.usda')
         result_stage = Usd.Stage.Open(layer)
 
         # Confirm that the tag makde it into the display name.
@@ -127,6 +127,28 @@ class TestUsdUtilsFlattenLayerStack(unittest.TestCase):
         self.assertTrue(layer.GetObjectAtPath(
             '/Sphere{vset_1=default}{vset_2=default}ChildFromNestedVariant'))
 
+    def test_ClipAssetPaths(self):
+        src_stage = Usd.Stage.Open('root.usda')
+
+        def replaceWithFoo(layer, s):
+            return 'foo'
+        layer = UsdUtils.FlattenLayerStack(src_stage, 
+                resolveAssetPathFn=replaceWithFoo)
+        result_stage = Usd.Stage.Open(layer)
+
+        # Confirm offsets have been folded into value clips.
+        p = layer.GetPrimAtPath('/SphereUsingClip')
+        self.assertEqual( p.GetInfo('clips')['default']['active'],
+           Vt.Vec2dArray(1, [(-9.0, 0)]) )
+        self.assertEqual( p.GetInfo('clips')['default']['times'],
+           Vt.Vec2dArray(2, [(-9.0, 1), (0.0, 10)]) )
+
+        # And confirm clip asset paths have been updated.
+        self.assertEqual( p.GetInfo('clips')['default']['manifestAssetPath'],
+           Sdf.AssetPath('foo') )
+        self.assertEqual( list(p.GetInfo('clips')['default']['assetPaths']),
+           [Sdf.AssetPath('foo')] )
+
     def test_EmptyAssetPaths(self):
         src_stage = Usd.Stage.Open('emptyAssetPaths.usda')
         layer = UsdUtils.FlattenLayerStack(src_stage, tag='emptyAssetPaths')
@@ -181,16 +203,14 @@ class TestUsdUtilsFlattenLayerStack(unittest.TestCase):
         for time_sample in time_samples:
             time_sample_array_value = attr.Get(Usd.TimeCode(time_sample))
             for time_sample_value in time_sample_array_value:
-                self.assertFalse(Ar.GetResolver().IsRelativePath(
-                    time_sample_value.path))
+                self.assertTrue(os.path.isabs(time_sample_value.path))
 
         prim = result_stage.GetPrimAtPath('/volume/density')
         attr = prim.GetAttribute('filePath')
         time_samples = attr.GetTimeSamples()
         for time_sample in time_samples:
             time_sample_value = attr.Get(Usd.TimeCode(time_sample))
-            self.assertFalse(Ar.GetResolver().IsRelativePath(
-                time_sample_value.path))
+            self.assertTrue(os.path.isabs(time_sample_value.path))
 
 if __name__=="__main__":
     unittest.main()

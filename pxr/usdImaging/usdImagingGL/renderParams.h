@@ -95,11 +95,17 @@ public:
     float alphaThreshold; // threshold < 0 implies automatic
     ClipPlanesVector clipPlanes;
     bool enableSceneMaterials;
+    bool enableSceneLights;
     // Respect USD's model:drawMode attribute...
     bool enableUsdDrawModes;
     GfVec4f clearColor;
     TfToken colorCorrectionMode;
+    // Optional OCIO color setings, only valid when colorCorrectionMode==HdxColorCorrectionTokens->openColorIO
     int lut3dSizeOCIO;
+    TfToken ocioDisplay;
+    TfToken ocioView;
+    TfToken ocioColorSpace;
+    TfToken ocioLook;
 
     inline UsdImagingGLRenderParams();
 
@@ -112,7 +118,7 @@ public:
 
 
 UsdImagingGLRenderParams::UsdImagingGLRenderParams() :
-    frame(UsdTimeCode::Default()),
+    frame(UsdTimeCode::EarliestTime()),
     complexity(1.0),
     drawMode(UsdImagingGLDrawMode::DRAW_SHADED_SMOOTH),
     showGuides(false),
@@ -132,6 +138,7 @@ UsdImagingGLRenderParams::UsdImagingGLRenderParams() :
     alphaThreshold(-1),
     clipPlanes(),
     enableSceneMaterials(true),
+    enableSceneLights(true),
     enableUsdDrawModes(true),
     clearColor(0,0,0,1),
     lut3dSizeOCIO(65)
@@ -162,9 +169,14 @@ UsdImagingGLRenderParams::operator==(const UsdImagingGLRenderParams &other)
         && alphaThreshold              == other.alphaThreshold
         && clipPlanes                  == other.clipPlanes
         && enableSceneMaterials        == other.enableSceneMaterials
+        && enableSceneLights           == other.enableSceneLights
         && enableUsdDrawModes          == other.enableUsdDrawModes
         && clearColor                  == other.clearColor
         && colorCorrectionMode         == other.colorCorrectionMode
+        && ocioDisplay                 == other.ocioDisplay
+        && ocioView                    == other.ocioView
+        && ocioColorSpace              == other.ocioColorSpace
+        && ocioLook                    == other.ocioLook
         && lut3dSizeOCIO               == other.lut3dSizeOCIO;
 }
 

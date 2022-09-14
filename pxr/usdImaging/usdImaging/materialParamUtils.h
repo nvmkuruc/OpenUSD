@@ -47,11 +47,9 @@ UsdImagingBuildHdMaterialNetworkFromTerminal(
     UsdPrim const& usdTerminal,
     TfToken const& terminalIdentifier,
     TfTokenVector const& shaderSourceTypes,
+    TfTokenVector const& renderContexts,
     HdMaterialNetworkMap *materialNetworkMap,
-    UsdTimeCode time,
-// #nv begin #materialx-backport
-    TfTokenVector const* contexts=nullptr);
-// #nv end
+    UsdTimeCode time);
 
 /// Returns whether the material network built by 
 /// UsdImagingBuildHdMaterialNetworkFromTerminal for the given usdTerminal 

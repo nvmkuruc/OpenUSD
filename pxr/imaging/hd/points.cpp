@@ -28,17 +28,13 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 
-HdPoints::HdPoints(SdfPath const& id,
-                   SdfPath const& instancerId)
-    : HdRprim(id, instancerId)
+HdPoints::HdPoints(SdfPath const& id)
+    : HdRprim(id)
 {
     /*NOTHING*/
 }
 
-HdPoints::~HdPoints()
-{
-    /*NOTHING*/
-}
+HdPoints::~HdPoints() = default;
 
 /* virtual */
 TfTokenVector const &

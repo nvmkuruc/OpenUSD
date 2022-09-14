@@ -28,7 +28,7 @@
 #include "pxr/imaging/hdSt/api.h"
 #include "pxr/imaging/hd/bufferSource.h"
 #include "pxr/imaging/hdSt/resourceBinder.h"
-#include "pxr/imaging/hdSt/computeShader.h"
+#include "pxr/imaging/hdSt/extCompComputeShader.h"
 #include "pxr/imaging/hdSt/resourceRegistry.h"
 
 #include <vector>
@@ -45,18 +45,11 @@ using HdBufferArrayRangeSharedPtrVector =
 ///
 /// A resource that represents the persistent GPU resources of an ExtComputation.
 ///
-/// The persistent resources are shared between the ephemeral
-/// HdStExtCompGpuComputationBufferSource and the actual
-/// HdStExtCompGpuComputation. Once the buffer source is resolved the resource
-/// is configured for the computation and it will then persist until the
-/// computation is released.
-///
 /// All program and binding data required for compiling and loading HdRprim and
 /// internal primvar data is held by this object. The companion source and
 /// computation appeal to this object to access the GPU resources.
 ///
 /// \see HdStExtCompGpuComputation
-/// \see HdStExtCompGpuComputationBufferSource
 class HdStExtCompGpuComputationResource final {
 public:
     /// Creates a GPU computation resource that can bind resources matching
@@ -79,7 +72,7 @@ public:
     /// will cache and de-duplicate its compute shader instance with.
     HdStExtCompGpuComputationResource(
         HdBufferSpecVector const &outputBufferSpecs,
-        HdStComputeShaderSharedPtr const &kernel,
+        HdSt_ExtCompComputeShaderSharedPtr const &kernel,
         HdBufferArrayRangeSharedPtrVector const &inputs,
         HdStResourceRegistrySharedPtr const &registry
     );
@@ -96,26 +89,31 @@ public:
     /// This may have been shared with many other instances in the same
     /// registry.
     /// The program is only valid for execution after Resolve has been called.
-    HdStGLSLProgramSharedPtr const &GetProgram() const {
+    HdStGLSLProgramSharedPtr const &GetProgram() {
+        if (!_computeProgram) {
+            _Resolve();
+        }
         return _computeProgram;
     }
 
     /// Gets the resource binder that matches the layout of the compute program.
     /// The binder is only valid for resolving layouts after Resolve has been
     /// called.
-    HdSt_ResourceBinder const &GetResourceBinder() const {
+    HdSt_ResourceBinder const &GetResourceBinder() {
+        if (!_computeProgram) {
+            _Resolve();
+        }
         return _resourceBinder;
     }
 
+private:
     /// Resolve the resource bindings and program for use by a computation.
     /// The compute program is resolved and linked against the input and output
     /// resource bindings and the kernel source in this step.
-    HDST_API
-    bool Resolve();
+    bool _Resolve();
 
-private:
     HdBufferSpecVector                    _outputBufferSpecs;
-    HdStComputeShaderSharedPtr            _kernel;
+    HdSt_ExtCompComputeShaderSharedPtr    _kernel;
     HdStResourceRegistrySharedPtr         _registry;
     
     size_t                                _shaderSourceHash;

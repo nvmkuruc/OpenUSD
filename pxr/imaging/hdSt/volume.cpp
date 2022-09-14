@@ -24,18 +24,19 @@
 #include "pxr/imaging/hdSt/volume.h"
 
 #include "pxr/imaging/hdSt/drawItem.h"
-#include "pxr/imaging/hdSt/material.h"
-#include "pxr/imaging/hdSt/package.h"
 #include "pxr/imaging/hdSt/field.h"
+#include "pxr/imaging/hdSt/material.h"
+#include "pxr/imaging/hdSt/materialNetworkShader.h"
+#include "pxr/imaging/hdSt/materialParam.h"
+#include "pxr/imaging/hdSt/package.h"
+#include "pxr/imaging/hdSt/primUtils.h"
+#include "pxr/imaging/hdSt/renderParam.h"
+#include "pxr/imaging/hdSt/resourceBinder.h"
 #include "pxr/imaging/hdSt/resourceRegistry.h"
-#include "pxr/imaging/hdSt/rprimUtils.h"
-#include "pxr/imaging/hdSt/surfaceShader.h"
+#include "pxr/imaging/hdSt/textureBinder.h"
 #include "pxr/imaging/hdSt/tokens.h"
 #include "pxr/imaging/hdSt/volumeShader.h"
 #include "pxr/imaging/hdSt/volumeShaderKey.h"
-#include "pxr/imaging/hdSt/textureBinder.h"
-#include "pxr/imaging/hdSt/materialParam.h"
-#include "pxr/imaging/hdSt/resourceBinder.h"
 
 #include "pxr/imaging/hd/sceneDelegate.h"
 #include "pxr/imaging/hd/vtBufferSource.h"
@@ -43,8 +44,6 @@
 #include "pxr/imaging/hf/diagnostic.h"
 
 #include "pxr/imaging/hio/glslfx.h"
-
-#include "pxr/imaging/glf/contextCaps.h"
 
 #include "pxr/base/tf/staticTokens.h"
 
@@ -57,10 +56,11 @@ TF_DEFINE_PRIVATE_TOKENS(
     (emission)
 );
 
-const float HdStVolume::defaultStepSize         = 1.0f;
-const float HdStVolume::defaultStepSizeLighting = 2.0f;
+const float HdStVolume::defaultStepSize                 =   1.0f;
+const float HdStVolume::defaultStepSizeLighting         =  10.0f;
+const float HdStVolume::defaultMaxTextureMemoryPerField = 128.0f;
 
-HdStVolume::HdStVolume(SdfPath const& id, SdfPath const & instancerId)
+HdStVolume::HdStVolume(SdfPath const& id)
     : HdVolume(id)
 {
 }
@@ -81,17 +81,13 @@ static const int _initialDirtyBitsMask =
     | HdChangeTracker::DirtyPrimID
     | HdChangeTracker::DirtyPrimvar
     | HdChangeTracker::DirtyTransform
-    | HdChangeTracker::DirtyVisibility;
+    | HdChangeTracker::DirtyVisibility
+    | HdChangeTracker::DirtyInstancer;
 
 HdDirtyBits 
 HdStVolume::GetInitialDirtyBitsMask() const
 {
     int mask = _initialDirtyBitsMask;
-
-    if (!GetInstancerId().IsEmpty()) {
-        mask |= HdChangeTracker::DirtyInstancer;
-    }
-
     return (HdDirtyBits)mask;
 }
 
@@ -123,21 +119,30 @@ HdStVolume::_InitRepr(TfToken const &reprToken, HdDirtyBits* dirtyBits)
 }
 
 void
+HdStVolume::UpdateRenderTag(HdSceneDelegate *delegate,
+                            HdRenderParam *renderParam)
+{
+    HdStUpdateRenderTag(delegate, renderParam, this);
+}
+
+void
 HdStVolume::Sync(HdSceneDelegate *delegate,
                  HdRenderParam   *renderParam,
                  HdDirtyBits     *dirtyBits,
                  TfToken const   &reprToken)
 {
-    TF_UNUSED(renderParam);
+    _UpdateVisibility(delegate, dirtyBits);
 
     if (*dirtyBits & HdChangeTracker::DirtyMaterialId) {
-        _SetMaterialId(delegate->GetRenderIndex().GetChangeTracker(),
-                       delegate->GetMaterialId(GetId()));
+        HdStSetMaterialId(delegate, renderParam, this);
 
-        _sharedData.materialTag = _GetMaterialTag(delegate->GetRenderIndex());
+        HdStDrawItem * const drawItem = static_cast<HdStDrawItem*>(
+            _volumeRepr->GetDrawItem(0));
+        HdStSetMaterialTag(renderParam, drawItem, 
+            HdStMaterialTagTokens->volume);
     }
 
-    _UpdateRepr(delegate, reprToken, dirtyBits);
+    _UpdateRepr(delegate, renderParam, reprToken, dirtyBits);
 
     // This clears all the non-custom dirty bits. This ensures that the rprim
     // doesn't have pending dirty bits that add it to the dirty list every
@@ -147,14 +152,22 @@ HdStVolume::Sync(HdSceneDelegate *delegate,
     *dirtyBits &= ~HdChangeTracker::AllSceneDirtyBits;
 }
 
-const TfToken&
-HdStVolume::_GetMaterialTag(const HdRenderIndex &renderIndex) const
+void
+HdStVolume::Finalize(HdRenderParam *renderParam)
 {
-    return HdStMaterialTagTokens->volume;
+    HdStMarkGarbageCollectionNeeded(renderParam);
+
+    HdStRenderParam * const stRenderParam =
+        static_cast<HdStRenderParam*>(renderParam);
+
+    // Decrement material tag count for volume material tag
+    stRenderParam->DecreaseMaterialTagCount(HdStMaterialTagTokens->volume);
+    stRenderParam->DecreaseRenderTagCount(GetRenderTag());
 }
 
 void
 HdStVolume::_UpdateRepr(HdSceneDelegate *sceneDelegate,
+                        HdRenderParam *renderParam,
                         TfToken const &reprToken,
                         HdDirtyBits *dirtyBits)
 {
@@ -171,7 +184,7 @@ HdStVolume::_UpdateRepr(HdSceneDelegate *sceneDelegate,
         curRepr->GetDrawItem(0));
 
     if (HdChangeTracker::IsDirty(*dirtyBits)) {
-        _UpdateDrawItem(sceneDelegate, drawItem, dirtyBits);
+        _UpdateDrawItem(sceneDelegate, renderParam, drawItem, dirtyBits);
     }
 
     *dirtyBits &= ~HdChangeTracker::NewRepr;
@@ -179,61 +192,51 @@ HdStVolume::_UpdateRepr(HdSceneDelegate *sceneDelegate,
 
 namespace {
 
-// Fallback volume shader created from shaders/fallbackVolume.glslfx
-HdStShaderCodeSharedPtr
-_MakeFallbackVolumeShader()
+// Fallback volume data created from shaders/fallbackVolume.glslfx
+HdStMaterial::VolumeMaterialData
+_MakeFallbackVolumeMaterialData()
 {
     const HioGlslfx glslfx(HdStPackageFallbackVolumeShader());
 
-    // Note that we use HdStSurfaceShader for a volume shader.
-    // Despite its name, HdStSurfaceShader is really just a pair of
-    // GLSL code and bindings and not specific to surface shading.
-    HdStSurfaceShaderSharedPtr const result =
-        std::make_shared<HdStSurfaceShader>();
-    
-    result->SetFragmentSource(glslfx.GetVolumeSource());
-    result->SetParams(
+    return
         {
-            HdSt_MaterialParam(
-                HdSt_MaterialParam::ParamTypeFieldRedirect,
-                _fallbackShaderTokens->density,
-                VtValue(GfVec3f(0.0, 0.0, 0.0)),
-                { _fallbackShaderTokens->density }),
-            HdSt_MaterialParam(
-                HdSt_MaterialParam::ParamTypeFieldRedirect,
-                _fallbackShaderTokens->emission,
-                VtValue(GfVec3f(0.0, 0.0, 0.0)),
-                { _fallbackShaderTokens->emission })});
-
-    return result;
+            glslfx.GetVolumeSource(),
+            {
+                HdSt_MaterialParam(
+                    HdSt_MaterialParam::ParamTypeFieldRedirect,
+                    _fallbackShaderTokens->density,
+                    VtValue(0.0f),
+                    { _fallbackShaderTokens->density }),
+                HdSt_MaterialParam(
+                    HdSt_MaterialParam::ParamTypeFieldRedirect,
+                    _fallbackShaderTokens->emission,
+                    VtValue(GfVec3f(0.0, 0.0, 0.0)),
+                    { _fallbackShaderTokens->emission })
+            }
+        };
 }
 
-HdStShaderCodeSharedPtr
-_ComputeVolumeShader(const HdStMaterial * const material)
+const
+HdStMaterial::VolumeMaterialData &
+_ComputeVolumeMaterialData(const HdStMaterial * const material)
 {
+    // Try to use volume material data from material.
     if (material) {
-        // Use the shader from the HdStMaterial as volume shader.
-        //
-        // Note that rprims should query the material whether they want
-        // a surface or volume shader instead of just asking for "some"
-        // shader with HdStMaterial::GetShaderCode().
-        // We can use HdStMaterial::GetShaderCode() here because the
-        // UsdImagingGLHydraMaterialAdapter is following the outputs:volume
-        // input of a material if the outputs:surface is unconnected.
-        //
-        // We should revisit the API an rprim is using to ask HdStMaterial
-        // for a shader once we switched over to HdMaterialNetworkMap's.
-        return material->GetShaderCode();
-    } else {
-        // Instantiate fallback volume shader only once
-        //
-        // Note that the default HdStMaterial provides a fallback surface
-        // shader and we need a volume shader, so we create the shader here
-        // ourselves.
-        static const HdStShaderCodeSharedPtr fallbackVolumeShader =
-            _MakeFallbackVolumeShader();
-        return fallbackVolumeShader;
+        const HdStMaterial::VolumeMaterialData &data =
+            material->GetVolumeMaterialData();
+        if (!data.source.empty()) {
+            return data;
+        }
     }
+
+    // Instantiate fallback volume shader only once
+    //
+    // Note that the default HdStMaterial provides a fallback surface
+    // shader and we need a volume shader, so we create the shader here
+    // ourselves.
+    static const HdStMaterial::VolumeMaterialData fallbackData =
+        _MakeFallbackVolumeMaterialData();
+    return fallbackData;
 }
 
 // A map from name to HdStVolumeFieldDescriptor (identifying a
@@ -305,10 +308,10 @@ private:
 // from the bounding box of the volume.
 //
 HdSt_VolumeShaderSharedPtr
-_ComputeMaterialShader(
+_ComputeMaterialNetworkShader(
     HdSceneDelegate * const sceneDelegate,
     const SdfPath &id,
-    const HdStShaderCodeSharedPtr &volumeShader,
+    const HdStMaterial::VolumeMaterialData &volumeMaterialData,
     const GfRange3d &authoredExtents)
 {
     TRACE_FUNCTION();
@@ -319,8 +322,7 @@ _ComputeMaterialShader(
 
     // Generate new shader from volume shader
     HdSt_VolumeShaderSharedPtr const result =
-        std::make_shared<HdSt_VolumeShader>(
-            sceneDelegate->GetRenderIndex().GetRenderDelegate());
+        std::make_shared<HdSt_VolumeShader>();
 
     // Buffer specs and source for the shader BAR
     HdBufferSpecVector bufferSpecs;
@@ -329,16 +331,13 @@ _ComputeMaterialShader(
     // The names of the fields read by field readers.
     std::set<TfToken> fieldNames;
 
-    // Make a copy of the original params
-    HdSt_MaterialParamVector params = volumeShader->GetParams();
-
-    for (const auto & param : params) {
+    for (const auto & param : volumeMaterialData.params) {
         // Scan original parameters...
         if ( param.IsFieldRedirect() ||
              param.IsPrimvarRedirect() ||
              param.IsFallback() ) {
             // Add fallback values for parameters
-            HdStSurfaceShader::AddFallbackValueToSpecsAndSources(
+            HdSt_MaterialNetworkShader::AddFallbackValueToSpecsAndSources(
                 param, &bufferSpecs, &bufferSources);
 
             if (param.IsFieldRedirect()) {
@@ -351,6 +350,9 @@ _ComputeMaterialShader(
         }
         // Ignoring 2D texture parameters for volumes.
     }
+
+    // Make a copy of the original params
+    HdSt_MaterialParamVector params = volumeMaterialData.params;
 
     // Note that it is a requirement of HdSt_VolumeShader that
     // namedTextureHandles and fieldDescs line up.
@@ -393,27 +395,34 @@ _ComputeMaterialShader(
             TfTokenVector(),
             textureType);
 
-        HdStSurfaceShader::AddFallbackValueToSpecsAndSources(
+        HdSt_MaterialNetworkShader::AddFallbackValueToSpecsAndSources(
             param, &bufferSpecs, &bufferSources);
 
         params.push_back(param);
 
         namedTextureHandles.push_back(
-            { textureName, textureType, nullptr, desc->fieldId });
+            { textureName, textureType, nullptr, desc->fieldId.GetHash() });
     }
 
-    const bool bindlessTextureEnabled
-        = GlfContextCaps::GetInstance().bindlessTextureEnabled;
+    result->SetNamedTextureHandles(namedTextureHandles);
+    result->SetFieldDescriptors(fieldDescs);
+    result->UpdateTextureHandles(sceneDelegate);
+    // Get now allocated texture handles
+    namedTextureHandles = result->GetNamedTextureHandles();
+
+    const bool doublesSupported = resourceRegistry->GetHgi()->
+        GetCapabilities()->IsSet(
+            HgiDeviceCapabilitiesBitsShaderDoublePrecision);
 
     // Get buffer specs for textures (i.e., for
     // field sampling transforms and bindless texture handles).
-    HdSt_TextureBinder::GetBufferSpecs(
-        namedTextureHandles, bindlessTextureEnabled, &bufferSpecs);
+    HdSt_TextureBinder::GetBufferSpecs(namedTextureHandles, &bufferSpecs,
+        doublesSupported);
 
     // Create params (so that HdGet_... are created) and buffer specs,
-    // to communicate volume bounding box to shader.
-    HdSt_VolumeShader::GetParamsAndBufferSpecsForBBox(
-        &params, &bufferSpecs);
+    // to communicate volume bounding box and sample distance to shader.
+    HdSt_VolumeShader::GetParamsAndBufferSpecsForBBoxAndSampleDistance(
+        &params, &bufferSpecs, doublesSupported);
 
     const bool hasField = !namedTextureHandles.empty();
 
@@ -421,8 +430,10 @@ _ComputeMaterialShader(
     // the volume bounding box until after the textures have been
     // committed.
     if (!hasField) {
-        HdSt_VolumeShader::GetBufferSourcesForBBox(
-            GfBBox3d(authoredExtents), &bufferSources);
+        HdSt_VolumeShader::GetBufferSourcesForBBoxAndSampleDistance(
+            { GfBBox3d(authoredExtents), 1.0f },
+            &bufferSources,
+            doublesSupported);
     }
 
     // Make volume shader responsible if we have fields with bounding
@@ -431,13 +442,10 @@ _ComputeMaterialShader(
     result->SetParams(params);
     result->SetBufferSources(
         bufferSpecs, std::move(bufferSources), resourceRegistry);
-    result->SetNamedTextureHandles(namedTextureHandles);
-    result->SetFieldDescriptors(fieldDescs);
-
+    
     // Append the volume shader (calling into the GLSL functions
     // generated above)
-    result->SetFragmentSource(
-        volumeShader->GetSource(HdShaderTokens->fragmentShader));
+    result->SetFragmentSource(volumeMaterialData.source);
 
     return result;
 }
@@ -448,7 +456,7 @@ _ComputeBBoxVertices(GfRange3d const &range)
     VtVec3fArray result(8);
 
     const GfVec3d min = HdSt_VolumeShader::GetSafeMin(range);
-    const GfVec3d&max = HdSt_VolumeShader::GetSafeMax(range);
+    const GfVec3d max = HdSt_VolumeShader::GetSafeMax(range);
 
     int i = 0;
 
@@ -494,24 +502,28 @@ _GetCubeTriangleIndices()
 
 void
 HdStVolume::_UpdateDrawItem(HdSceneDelegate *sceneDelegate,
+                            HdRenderParam *renderParam,
                             HdStDrawItem *drawItem,
                             HdDirtyBits *dirtyBits)
 {
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
 
-    /* VISIBILITY */
-    _UpdateVisibility(sceneDelegate, dirtyBits);
-
     if (HdStShouldPopulateConstantPrimvars(dirtyBits, GetId())) {
         /* CONSTANT PRIMVARS, TRANSFORM AND EXTENT */
         const HdPrimvarDescriptorVector constantPrimvars =
             HdStGetPrimvarDescriptors(this, drawItem, sceneDelegate,
                                       HdInterpolationConstant);
-        HdStPopulateConstantPrimvars(this, &_sharedData, sceneDelegate,
-                                     drawItem, dirtyBits, constantPrimvars);
+        HdStPopulateConstantPrimvars(this,
+                                     &_sharedData,
+                                     sceneDelegate,
+                                     renderParam,
+                                     drawItem,
+                                     dirtyBits,
+                                     constantPrimvars);
     }
-        
+
+    bool updatedTextureHandles = false;
     if ((*dirtyBits) & HdChangeTracker::DirtyMaterialId) {
         /* MATERIAL SHADER (may affect subsequent primvar population) */
 
@@ -535,33 +547,37 @@ HdStVolume::_UpdateDrawItem(HdSceneDelegate *sceneDelegate,
         // GLSL functions such as "float scattering(vec3)" in the volume shader
         // to evaluate physical properties of a volume at the point p.
         
-        drawItem->SetMaterialShader(
-            _ComputeMaterialShader(
+        drawItem->SetMaterialNetworkShader(
+            _ComputeMaterialNetworkShader(
                 sceneDelegate,
                 GetId(),
-                _ComputeVolumeShader(material),
+                _ComputeVolumeMaterialData(material),
                 _sharedData.bounds.GetRange()));
+        updatedTextureHandles = true;
     }        
 
     HdStResourceRegistrySharedPtr resourceRegistry =
         std::static_pointer_cast<HdStResourceRegistry>(
             sceneDelegate->GetRenderIndex().GetResourceRegistry());
 
-    HdSt_VolumeShaderSharedPtr const materialShader =
+    HdSt_VolumeShaderSharedPtr const materialNetworkShader =
         std::dynamic_pointer_cast<HdSt_VolumeShader>(
-            drawItem->GetMaterialShader());
+            drawItem->GetMaterialNetworkShader());
 
-    if (!materialShader) {
+    if (!materialNetworkShader) {
         TF_CODING_ERROR("Expected valid volume shader for draw item.");
         return;
     }
 
-    if ((*dirtyBits) & (HdChangeTracker::DirtyVolumeField |
-                        HdChangeTracker::DirtyMaterialId)) {
+    // We do not need to call UpdateTextureHandles() on the 
+    // materialNetworkShader if DirtyMaterialId, as it was already called
+    // during _ComputeMaterialNetworkShader().
+    if (((*dirtyBits) & (HdChangeTracker::DirtyVolumeField)) && 
+        !updatedTextureHandles) {
         /* FIELD TEXTURES */
         
         // (Re-)Allocate the textures associated with the field prims.
-        materialShader->UpdateTextureHandles(sceneDelegate);
+        materialNetworkShader->UpdateTextureHandles(sceneDelegate);
     }
 
     /* VERTICES */
@@ -584,11 +600,11 @@ HdStVolume::_UpdateDrawItem(HdSceneDelegate *sceneDelegate,
 
         // Let HdSt_VolumeShader know about the points bar so that it
         // can fill it with the vertices of the volume bounding box.
-        materialShader->SetPointsBar(drawItem->GetVertexPrimvarRange());
+        materialNetworkShader->SetPointsBar(drawItem->GetVertexPrimvarRange());
         
         // If HdSt_VolumeShader is not in charge of filling the points bar
         // from the volume bounding box computed from the fields, ...
-        if (!materialShader->GetFillsPointsBar()) {
+        if (!materialNetworkShader->GetFillsPointsBar()) {
             // ... fill the points from the authored extents.
             resourceRegistry->AddSource(
                 drawItem->GetVertexPrimvarRange(),

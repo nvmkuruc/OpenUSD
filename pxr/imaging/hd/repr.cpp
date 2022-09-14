@@ -22,7 +22,7 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/imaging/hd/repr.h"
-#include <boost/functional/hash.hpp>
+#include "pxr/base/tf/hash.h"
 #include <tuple>
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -95,14 +95,7 @@ HdReprSelector::operator<(const HdReprSelector &rhs) const
 size_t
 HdReprSelector::Hash() const
 { 
-    size_t hash = 0;
-    boost::hash_combine(hash,
-                        refinedToken);
-    boost::hash_combine(hash,
-                        unrefinedToken);
-    boost::hash_combine(hash,
-                        pointsToken);
-    return hash;
+    return TfHash()(*this);
 }
 
 char const*
@@ -130,7 +123,7 @@ HdReprSelector::operator[](size_t topologyIndex) const
     }
 }
 
-HdRepr::HdRepr() = default;
+HdRepr::HdRepr() : _geomSubsetsStart(0) {};
 
 HdRepr::~HdRepr() = default;
 

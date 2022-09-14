@@ -122,8 +122,10 @@ class TestDiscovery(unittest.TestCase):
         self.assertTrue(node)
         trueInput = node.GetInput("inTrue")
         self.assertTrue(trueInput.GetDefaultValue())
+        self.assertTrue(trueInput.GetDefaultValueAsSdfType())
         falseInput = node.GetInput("inFalse")
         self.assertFalse(falseInput.GetDefaultValue())
+        self.assertFalse(falseInput.GetDefaultValueAsSdfType())
 
 
 if __name__ == '__main__':

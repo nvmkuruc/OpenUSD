@@ -45,6 +45,15 @@ class SdfPath;
 class VtValue;
 struct HdMaterialNetwork2;
 struct HdMaterialNode2;
+class HdMaterialNetworkInterface;
+
+/// Return the MaterialX search paths. In order, this includes:
+/// - Paths set in the environment variable 'PXR_MTLX_PLUGIN_SEARCH_PATHS'
+/// - Paths set in the environment variable 'PXR_MTLX_STDLIB_SEARCH_PATHS'
+/// - Path to the MaterialX standard library discovered at build time.
+HDMTLX_API
+const MaterialX::FileSearchPath&
+HdMtlxSearchPaths();
 
 /// Return the MaterialX search paths. In order, this includes:
 /// - Paths set in the environment variable 'PXR_MTLX_PLUGIN_SEARCH_PATHS'
@@ -65,10 +74,22 @@ HdMtlxConvertToString(VtValue const& hdParameterValue);
 HDMTLX_API
 MaterialX::DocumentPtr
 HdMtlxCreateMtlxDocumentFromHdNetwork(
-    HdMaterialNetwork2 & hdNetwork,
+    HdMaterialNetwork2 const& hdNetwork,
     HdMaterialNode2 const& hdMaterialXNode,
     SdfPath const& hdMaterialXNodePath,
     SdfPath const& materialPath,
+    MaterialX::DocumentPtr const& libraries,
+    std::set<SdfPath> * hdTextureNodes = nullptr,
+    MaterialX::StringMap * mxHdTextureMap = nullptr,
+    std::set<SdfPath> * hdPrimvarNodes = nullptr);
+
+/// Implementation that uses the material network interface.
+HDMTLX_API
+MaterialX::DocumentPtr
+HdMtlxCreateMtlxDocumentFromHdMaterialNetworkInterface(
+    HdMaterialNetworkInterface *netInterface,
+    TfToken const& terminalNodeName,
+    TfTokenVector const& terminalNodeConnectionNames,
     MaterialX::DocumentPtr const& libraries,
     std::set<SdfPath> * hdTextureNodes = nullptr,
     MaterialX::StringMap * mxHdTextureMap = nullptr,

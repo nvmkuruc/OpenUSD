@@ -17,7 +17,7 @@ pxr_library(tf
         ${TBB_tbb_LIBRARY}
 
     INCLUDE_DIRS
-        ${PYTHON_INCLUDE_DIR}
+        ${PYTHON_INCLUDE_DIRS}
         ${Boost_INCLUDE_DIRS}
         ${TBB_INCLUDE_DIRS}
 
@@ -40,6 +40,7 @@ pxr_library(tf
         error
         errorMark
         errorTransport
+        exception
         expiryNotifier
         fastCompression
         fileUtils
@@ -54,6 +55,8 @@ pxr_library(tf
         patternMatcher
         pointerAndBits
         pyLock
+        pyObjWrapper
+        pyTracing
         refBase
         refCount
         refPtr
@@ -97,18 +100,17 @@ pxr_library(tf
         pyFunction
         pyIdentity
         pyInterpreter
+        pyInvoke
         pyModule
         pyModuleNotice
         pyNoticeWrapper
         pyObjectFinder
-        pyObjWrapper
         pyOptional
         pyOverride
         pyPolymorphic
         pyPtrHelpers
         pyResultConversions
         pySingleton
-        pyTracing
         pyUtils
         pyWrapContext
         scriptModuleLoader
@@ -126,6 +128,10 @@ pxr_library(tf
         instantiateSingleton.h
         instantiateStacked.h
         instantiateType.h
+        pxrTslRobinMap/robin_growth_policy.h
+        pxrTslRobinMap/robin_hash.h
+        pxrTslRobinMap/robin_map.h
+        pxrTslRobinMap/robin_set.h
         preprocessorUtils.h
         preprocessorUtilsLite.h
         safeTypeCompare.h
@@ -190,6 +196,7 @@ pxr_library(tf
         wrapEnum.cpp
         wrapEnvSetting.cpp
         wrapError.cpp
+        wrapException.cpp
         wrapFileUtils.cpp
         wrapFunction.cpp
         wrapMallocTag.cpp
@@ -228,6 +235,15 @@ pxr_library(tf
         testenv/testTfScriptModuleLoader_Other.py
         testenv/testTfScriptModuleLoader_Test.py
         testenv/testTfScriptModuleLoader_Unknown.py
+        testenv/testTfPyInvoke_callees.py
+
+    DOXYGEN_FILES
+        diagnosticOverview.dox
+        errorOverview.dox
+        mallocTagOverview.dox
+        noteOverview.dox
+        overview.dox
+        registryOverview.dox
 )
 
 if(PXR_ENABLE_PYTHON_SUPPORT)
@@ -244,6 +260,13 @@ if(PXR_ENABLE_PYTHON_SUPPORT)
             tf
         CPPFILES
             testenv/testTfPyInterpreter.cpp
+    )
+
+    pxr_build_test(testTfPyInvoke
+        LIBRARIES
+            tf
+        CPPFILES
+            testenv/testTfPyInvoke.cpp
     )
 
     pxr_build_test(testTfPyLock
@@ -318,6 +341,7 @@ pxr_build_test(testTf
         testenv/enum.cpp
         testenv/error.cpp
         testenv/envSetting.cpp
+        testenv/exception.cpp
         testenv/fastCompression.cpp
         testenv/fileUtils.cpp
         testenv/functionRef.cpp
@@ -466,6 +490,10 @@ pxr_register_test(TfEnvSetting
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTf TfEnvSetting"
     STDERR_REDIRECT debugTfEnvSettingStderr.txt
     DIFF_COMPARE debugTfEnvSettingStderr.txt
+)
+pxr_register_test(TfException
+    ENV TF_FATAL_THROW=0
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTf TfException"
 )
 pxr_register_test(TfFileUtils
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTf TfFileUtils"
@@ -628,6 +656,10 @@ if(PXR_ENABLE_PYTHON_SUPPORT)
     )
 	pxr_register_test(testTfPyInterpreter
         COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTfPyInterpreter"
+    )
+    pxr_register_test(testTfPyInvoke
+        REQUIRES_PYTHON_MODULES
+        COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTfPyInvoke"
     )
     pxr_register_test(testTfPyLock
         COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTfPyLock"

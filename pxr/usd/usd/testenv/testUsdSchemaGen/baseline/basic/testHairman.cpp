@@ -75,8 +75,9 @@ UsdContrivedTestHairman::Define(
 }
 
 /* virtual */
-UsdSchemaType UsdContrivedTestHairman::_GetSchemaType() const {
-    return UsdContrivedTestHairman::schemaType;
+UsdSchemaKind UsdContrivedTestHairman::_GetSchemaKind() const
+{
+    return UsdContrivedTestHairman::schemaKind;
 }
 
 /* static */

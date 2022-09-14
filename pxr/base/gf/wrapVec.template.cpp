@@ -49,6 +49,7 @@
 #include <boost/python/make_constructor.hpp>
 #include <boost/python/operators.hpp>
 #include <boost/python/overloads.hpp>
+#include <boost/python/return_arg.hpp>
 #include <boost/python/tuple.hpp>
 #include <boost/python/slice.hpp>
 
@@ -101,7 +102,8 @@ getsegcount(PyObject *self, Py_ssize_t *lenp) {
 // Python's getcharbuf interface function.
 static Py_ssize_t
 getcharbuf(PyObject *self, Py_ssize_t segment, const char **ptrptr) {
-    return getreadbuf(self, segment, (void **) ptrptr);
+    PyErr_SetString(PyExc_ValueError, "cannot treat binary data as text");
+    return -1;
 }
 #endif
 
@@ -356,17 +358,15 @@ static bool __contains__(const {{ VEC }} &self, {{ SCL }} value) {
     return false;
 }
 
-#if PY_MAJOR_VERSION == 2
 static {{ VEC }} __truediv__(const {{ VEC }} &self, {{ SCL }} value)
 {
     return self / value;
 }
 
-static {{ VEC }} __itruediv__({{ VEC }} &self, {{ SCL }} value)
+static {{ VEC }}& __itruediv__({{ VEC }} &self, {{ SCL }} value)
 {
     return self /= value;
 }
-#endif
 
 template <class V>
 static V *__init__() {
@@ -512,13 +512,6 @@ void wrapVec{{ SUFFIX }}()
         .def(self * self)
         .def(str(self))
 
-#if PY_MAJOR_VERSION == 2
-        // Needed only to support "from __future__ import division" in
-        // python 2. In python 3 builds boost::python adds this for us.
-        .def("__truediv__", __truediv__ )
-        .def("__itruediv__", __itruediv__ )
-#endif
-
         .def("Axis", &Vec::Axis).staticmethod("Axis")
 
 {% for X in 'XYZW'[:DIM] %}
@@ -567,4 +560,19 @@ void wrapVec{{ SUFFIX }}()
     TfPyContainerConversions::from_python_sequence<
         std::vector<{{ VEC }}>,
         TfPyContainerConversions::variable_capacity_policy >();
+
+    if (!PyObject_HasAttrString(cls.ptr(), "__truediv__")) {
+        // __truediv__ not added by .def( self / double() ) above, which
+        // happens when building with python 2, but we need it to support
+        // "from __future__ import division"
+        cls.def("__truediv__", __truediv__);
+    }
+    if (!PyObject_HasAttrString(cls.ptr(), "__itruediv__")) {
+        // __itruediv__ not added by .def( self /= double() ) above, which
+        // happens when building with python 2, but we need it to support
+        // "from __future__ import division". This is also a workaround for a 
+        // bug in the current version of boost::python that incorrectly wraps
+        // in-place division with __idiv__ when building with python 3.
+        cls.def("__itruediv__", __itruediv__, return_self<>{});
+    }
 }

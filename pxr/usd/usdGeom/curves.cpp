@@ -56,8 +56,9 @@ UsdGeomCurves::Get(const UsdStagePtr &stage, const SdfPath &path)
 
 
 /* virtual */
-UsdSchemaType UsdGeomCurves::_GetSchemaType() const {
-    return UsdGeomCurves::schemaType;
+UsdSchemaKind UsdGeomCurves::_GetSchemaKind() const
+{
+    return UsdGeomCurves::schemaKind;
 }
 
 /* static */
@@ -297,6 +298,15 @@ TF_REGISTRY_FUNCTION(UsdGeomBoundable)
 {
     UsdGeomRegisterComputeExtentFunction<UsdGeomCurves>(
         _ComputeExtentForCurves);
+}
+
+size_t
+UsdGeomCurves::GetCurveCount(UsdTimeCode timeCode) const
+{
+    UsdAttribute vertexCountsAttr = GetCurveVertexCountsAttr();
+    VtIntArray vertexCounts;
+    vertexCountsAttr.Get(&vertexCounts, timeCode);
+    return vertexCounts.size();
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

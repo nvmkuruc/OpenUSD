@@ -75,8 +75,9 @@ UsdGeomHermiteCurves::Define(
 }
 
 /* virtual */
-UsdSchemaType UsdGeomHermiteCurves::_GetSchemaType() const {
-    return UsdGeomHermiteCurves::schemaType;
+UsdSchemaKind UsdGeomHermiteCurves::_GetSchemaKind() const
+{
+    return UsdGeomHermiteCurves::schemaKind;
 }
 
 /* static */

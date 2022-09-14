@@ -38,16 +38,38 @@ PXR_NAMESPACE_OPEN_SCOPE
 ///
 /// Delegate support for UsdGeomBasisCurves.
 ///
-class UsdImagingBasisCurvesAdapter : public UsdImagingGprimAdapter {
+class UsdImagingBasisCurvesAdapter : public UsdImagingGprimAdapter 
+{
 public:
-    typedef UsdImagingGprimAdapter BaseAdapter;
+    using BaseAdapter = UsdImagingGprimAdapter;
 
     UsdImagingBasisCurvesAdapter()
         : UsdImagingGprimAdapter()
     {}
-    USDIMAGING_API
-    virtual ~UsdImagingBasisCurvesAdapter();
 
+    USDIMAGING_API
+    ~UsdImagingBasisCurvesAdapter() override;
+
+    // ---------------------------------------------------------------------- //
+    /// \name Scene Index Support
+    // ---------------------------------------------------------------------- //
+
+    USDIMAGING_API
+    TfTokenVector GetImagingSubprims() override;
+
+    USDIMAGING_API
+    TfToken GetImagingSubprimType(TfToken const& subprim) override;
+
+    USDIMAGING_API
+    HdContainerDataSourceHandle GetImagingSubprimData(
+            TfToken const& subprim,
+            UsdPrim const& prim,
+            const UsdImagingDataSourceStageGlobals &stageGlobals) override;
+
+    // ---------------------------------------------------------------------- //
+    /// \name Initialization
+    // ---------------------------------------------------------------------- //
+    
     USDIMAGING_API
     SdfPath Populate(
         UsdPrim const& prim,
@@ -93,14 +115,29 @@ public:
                                       SdfPath const& cachePath,
                                       TfToken const& propertyName) override;
 
+    // ---------------------------------------------------------------------- //
+    /// \name Data access
+    // ---------------------------------------------------------------------- //
+
+    USDIMAGING_API
+    VtValue GetTopology(UsdPrim const& prim,
+                        SdfPath const& cachePath,
+                        UsdTimeCode time) const override;
+
+    USDIMAGING_API
+    VtValue Get(UsdPrim const& prim,
+                SdfPath const& cachePath,
+                TfToken const& key,
+                UsdTimeCode time,
+                VtIntArray *outIndices) const override;
+
 protected:
     USDIMAGING_API
     bool _IsBuiltinPrimvar(TfToken const& primvarName) const override;
 
-private:
-    void _GetBasisCurvesTopology(UsdPrim const& prim, 
-                                 VtValue* topoHolder, 
-                                 UsdTimeCode time) const;
+    USDIMAGING_API
+    TfTokenVector const& _GetRprimPrimvarNames() const override;
+
 };
 
 

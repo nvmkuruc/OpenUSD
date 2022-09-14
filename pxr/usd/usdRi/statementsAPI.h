@@ -61,8 +61,6 @@ class SdfAssetPath;
 /// for inherited attributes.  Anticpating this, StatementsAPI
 /// can smooth the way via a few environment variables:
 /// 
-/// * USDRI_STATEMENTS_WRITE_NEW_ENCODING: Causes StatementsAPI to write
-/// attributes to primvars in the "ri:" namespace.
 /// * USDRI_STATEMENTS_READ_OLD_ENCODING: Causes StatementsAPI to read
 /// old-style attributes instead of primvars in the "ri:"
 /// namespace.
@@ -73,8 +71,8 @@ class UsdRiStatementsAPI : public UsdAPISchemaBase
 public:
     /// Compile time constant representing what kind of schema this class is.
     ///
-    /// \sa UsdSchemaType
-    static const UsdSchemaType schemaType = UsdSchemaType::SingleApplyAPI;
+    /// \sa UsdSchemaKind
+    static const UsdSchemaKind schemaKind = UsdSchemaKind::SingleApplyAPI;
 
     /// Construct a UsdRiStatementsAPI on UsdPrim \p prim .
     /// Equivalent to UsdRiStatementsAPI::Get(prim.GetStage(), prim.GetPath())
@@ -118,6 +116,26 @@ public:
     Get(const UsdStagePtr &stage, const SdfPath &path);
 
 
+    /// Returns true if this <b>single-apply</b> API schema can be applied to 
+    /// the given \p prim. If this schema can not be a applied to the prim, 
+    /// this returns false and, if provided, populates \p whyNot with the 
+    /// reason it can not be applied.
+    /// 
+    /// Note that if CanApply returns false, that does not necessarily imply
+    /// that calling Apply will fail. Callers are expected to call CanApply
+    /// before calling Apply if they want to ensure that it is valid to 
+    /// apply a schema.
+    /// 
+    /// \sa UsdPrim::GetAppliedSchemas()
+    /// \sa UsdPrim::HasAPI()
+    /// \sa UsdPrim::CanApplyAPI()
+    /// \sa UsdPrim::ApplyAPI()
+    /// \sa UsdPrim::RemoveAPI()
+    ///
+    USDRI_API
+    static bool 
+    CanApply(const UsdPrim &prim, std::string *whyNot=nullptr);
+
     /// Applies this <b>single-apply</b> API schema to the given \p prim.
     /// This information is stored by adding "StatementsAPI" to the 
     /// token-valued, listOp metadata \em apiSchemas on the prim.
@@ -129,6 +147,7 @@ public:
     /// 
     /// \sa UsdPrim::GetAppliedSchemas()
     /// \sa UsdPrim::HasAPI()
+    /// \sa UsdPrim::CanApplyAPI()
     /// \sa UsdPrim::ApplyAPI()
     /// \sa UsdPrim::RemoveAPI()
     ///
@@ -137,11 +156,11 @@ public:
     Apply(const UsdPrim &prim);
 
 protected:
-    /// Returns the type of schema this class belongs to.
+    /// Returns the kind of schema this class belongs to.
     ///
-    /// \sa UsdSchemaType
+    /// \sa UsdSchemaKind
     USDRI_API
-    UsdSchemaType _GetSchemaType() const override;
+    UsdSchemaKind _GetSchemaKind() const override;
 
 private:
     // needs to invoke _GetStaticTfType.

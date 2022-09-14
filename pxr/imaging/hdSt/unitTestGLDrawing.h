@@ -54,6 +54,8 @@ public:
     int GetHeight() const;
     HDST_API
     void RunTest(int argc, char *argv[]);
+    HDST_API
+    void RunOffscreenTest();
 
     virtual void InitTest() = 0;
     HDST_API virtual void UninitTest();
@@ -73,8 +75,9 @@ public:
     virtual void Idle();
 
     HDST_API
-    bool WriteToFile(std::string const & attachment,
-                     std::string const & filename) const;
+    virtual void Present(uint32_t framebuffer) {
+        // do nothing
+    }
 
 protected:
     HDST_API

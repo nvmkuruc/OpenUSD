@@ -540,7 +540,7 @@ main(int argc, char **argv)
     _TestSdfFpsAndTcps();
 
     // #nv begin #fast-updates
-    _TestSdfFieldDataAccess();
+    //_TestSdfFieldDataAccess();
     // nv end
 
     return 0;

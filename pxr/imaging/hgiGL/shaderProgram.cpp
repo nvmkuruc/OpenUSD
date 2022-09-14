@@ -21,12 +21,13 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include <GL/glew.h>
-#include "pxr/base/tf/diagnostic.h"
+#include "pxr/imaging/garch/glApi.h"
 
 #include "pxr/imaging/hgiGL/diagnostic.h"
 #include "pxr/imaging/hgiGL/shaderProgram.h"
 #include "pxr/imaging/hgiGL/shaderFunction.h"
+
+#include "pxr/base/tf/diagnostic.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -41,7 +42,7 @@ HgiGLShaderProgram::HgiGLShaderProgram(HgiShaderProgramDesc const& desc)
     _programId = glCreateProgram();
 
     if (!_descriptor.debugName.empty()) {
-        glObjectLabel(GL_PROGRAM, _programId,-1, _descriptor.debugName.c_str());
+        HgiGLObjectLabel(GL_PROGRAM, _programId, _descriptor.debugName);
     }
 
     for (HgiShaderFunctionHandle const& shd : desc.shaderFunctions) {

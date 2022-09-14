@@ -33,7 +33,9 @@
 #include "pxr/usd/usd/stage.h"
 #include "pxr/usd/usdLux/tokens.h"
 
-#include "pxr/usd/usd/collectionAPI.h" 
+#include "pxr/usd/usd/collectionAPI.h"
+#include "pxr/usd/usdShade/input.h"
+#include "pxr/usd/usdShade/output.h" 
 
 #include "pxr/base/vt/value.h"
 
@@ -66,20 +68,20 @@ class SdfAssetPath;
 /// 
 /// Linking is specified as a collection (UsdCollectionAPI) which can
 /// be accessed via GetFilterLinkCollection().
-/// Note however that there are extra semantics in how UsdLuxLightFilter
-/// uses its collection: if a collection is empty, the filter is treated
-/// as linked to <i>all</i> geometry for the respective purpose.
-/// UsdCollectionAPI and UsdCollectionAPI::MembershipQuery are unaware
-/// of this filter-specific interpretation.
 /// 
+///
+/// For any described attribute \em Fallback \em Value or \em Allowed \em Values below
+/// that are text/tokens, the actual token is published and defined in \ref UsdLuxTokens.
+/// So to set an attribute to the value "rightHanded", use UsdLuxTokens->rightHanded
+/// as the value.
 ///
 class UsdLuxLightFilter : public UsdGeomXformable
 {
 public:
     /// Compile time constant representing what kind of schema this class is.
     ///
-    /// \sa UsdSchemaType
-    static const UsdSchemaType schemaType = UsdSchemaType::ConcreteTyped;
+    /// \sa UsdSchemaKind
+    static const UsdSchemaKind schemaKind = UsdSchemaKind::ConcreteTyped;
 
     /// Construct a UsdLuxLightFilter on UsdPrim \p prim .
     /// Equivalent to UsdLuxLightFilter::Get(prim.GetStage(), prim.GetPath())
@@ -149,11 +151,11 @@ public:
     Define(const UsdStagePtr &stage, const SdfPath &path);
 
 protected:
-    /// Returns the type of schema this class belongs to.
+    /// Returns the kind of schema this class belongs to.
     ///
-    /// \sa UsdSchemaType
+    /// \sa UsdSchemaKind
     USDLUX_API
-    UsdSchemaType _GetSchemaType() const override;
+    UsdSchemaKind _GetSchemaKind() const override;
 
 private:
     // needs to invoke _GetStaticTfType.
@@ -168,6 +170,37 @@ private:
     const TfType &_GetTfType() const override;
 
 public:
+    // --------------------------------------------------------------------- //
+    // SHADERID 
+    // --------------------------------------------------------------------- //
+    /// Default ID for the light filter's shader. 
+    /// This defines the shader ID for this light filter when a render context 
+    /// specific shader ID is not available. 
+    /// 
+    /// \see GetShaderId
+    /// \see GetShaderIdAttrForRenderContext
+    /// \see SdrRegistry::GetShaderNodeByIdentifier
+    /// \see SdrRegistry::GetShaderNodeByIdentifierAndType
+    /// 
+    ///
+    /// | ||
+    /// | -- | -- |
+    /// | Declaration | `uniform token lightFilter:shaderId = ""` |
+    /// | C++ Type | TfToken |
+    /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Token |
+    /// | \ref SdfVariability "Variability" | SdfVariabilityUniform |
+    USDLUX_API
+    UsdAttribute GetShaderIdAttr() const;
+
+    /// See GetShaderIdAttr(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    USDLUX_API
+    UsdAttribute CreateShaderIdAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+
+public:
     // ===================================================================== //
     // Feel free to add custom code below this line, it will be preserved by 
     // the code generator. 
@@ -179,11 +212,149 @@ public:
     // ===================================================================== //
     // --(BEGIN CUSTOM CODE)--
 
+    // -------------------------------------------------------------------------
+    /// \name Conversion to and from UsdShadeConnectableAPI
+    /// 
+    /// @{
+
+    /// Constructor that takes a ConnectableAPI object.
+    /// Allow implicit conversion of UsdShadeConnectableAPI to
+    /// UsdLuxLightFilter.
+    USDLUX_API
+    UsdLuxLightFilter(const UsdShadeConnectableAPI &connectable);
+
+    /// Contructs and returns a UsdShadeConnectableAPI object with this light
+    /// filter.
+    ///
+    /// Note that most tasks can be accomplished without explicitly constructing 
+    /// a UsdShadeConnectable API, since connection-related API such as
+    /// UsdShadeConnectableAPI::ConnectToSource() are static methods, and 
+    /// UsdLuxLightFilter will auto-convert to a UsdShadeConnectableAPI when 
+    /// passed to functions that want to act generically on a connectable
+    /// UsdShadeConnectableAPI object.
+    USDLUX_API
+    UsdShadeConnectableAPI ConnectableAPI() const;
+
+    /// @}
+
+    // -------------------------------------------------------------------------
+    /// \name Outputs API
+    ///
+    /// Outputs represent a typed attribute on a light filter whose value is 
+    /// computed externally. 
+    /// 
+    /// @{
+
+    /// Create an output which can either have a value or can be connected.
+    /// The attribute representing the output is created in the "outputs:" 
+    /// namespace. Outputs on a light filter cannot be connected, as their 
+    /// value is assumed to be computed externally.
+    /// 
+    USDLUX_API
+    UsdShadeOutput CreateOutput(const TfToken& name,
+                                const SdfValueTypeName& typeName);
+
+    /// Return the requested output if it exists.
+    /// 
+    USDLUX_API
+    UsdShadeOutput GetOutput(const TfToken &name) const;
+
+    /// Outputs are represented by attributes in the "outputs:" namespace.
+    /// If \p onlyAuthored is true (the default), then only return authored
+    /// attributes; otherwise, this also returns un-authored builtins.
+    /// 
+    USDLUX_API
+    std::vector<UsdShadeOutput> GetOutputs(bool onlyAuthored=true) const;
+
+    /// @}
+
+    // ------------------------------------------------------------------------- 
+
+    /// \name Inputs API
+    ///
+    /// Inputs are connectable attribute with a typed value. 
+    /// 
+    /// Light filter parameters are encoded as inputs. 
+    /// 
+    /// @{
+
+    /// Create an input which can either have a value or can be connected.
+    /// The attribute representing the input is created in the "inputs:" 
+    /// namespace. Inputs on light filters are connectable.
+    /// 
+    USDLUX_API
+    UsdShadeInput CreateInput(const TfToken& name,
+                              const SdfValueTypeName& typeName);
+
+    /// Return the requested input if it exists.
+    /// 
+    USDLUX_API
+    UsdShadeInput GetInput(const TfToken &name) const;
+
+    /// Inputs are represented by attributes in the "inputs:" namespace.
+    /// If \p onlyAuthored is true (the default), then only return authored
+    /// attributes; otherwise, this also returns un-authored builtins.
+    /// 
+    USDLUX_API
+    std::vector<UsdShadeInput> GetInputs(bool onlyAuthored=true) const;
+
+    /// @}
+
     /// Return the UsdCollectionAPI interface used for examining and
     /// modifying the filter-linking of this light filter.  Linking
     /// controls which geometry this light filter affects.
     USDLUX_API
     UsdCollectionAPI GetFilterLinkCollectionAPI() const;
+
+    /// Returns the shader ID attribute for the given \p renderContext.
+    ///
+    /// If \p renderContext is non-empty, this will try to return an attribute
+    /// named _lightFilter:shaderId_ with the namespace prefix \p renderContext.
+    /// For example, if the passed in render context is "ri" then the attribute 
+    /// returned by this function would have the following signature:
+    /// | ||
+    /// | -- | -- |
+    /// | Declaration | `token ri:lightFilter:shaderId` |
+    /// | C++ Type | TfToken |
+    /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Token |
+    /// 
+    /// If the render context is empty, this will return the default shader ID 
+    /// attribute as returned by GetShaderIdAttr().
+    USDLUX_API
+    UsdAttribute GetShaderIdAttrForRenderContext(
+        const TfToken &renderContext) const;
+
+    /// Creates the shader ID attribute for the given \p renderContext.
+    ///
+    /// See GetShaderIdAttrForRenderContext(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    USDLUX_API
+    UsdAttribute CreateShaderIdAttrForRenderContext(
+        const TfToken &renderContext,
+        VtValue const &defaultValue = VtValue(), 
+        bool writeSparsely=false) const;
+
+    /// Return the light filter's shader ID for the given list of available 
+    /// \p renderContexts.
+    ///
+    /// The shader ID returned by this function is the identifier to use when 
+    /// looking up the shader definition for this light filter in the 
+    /// \ref SdrRegistry "shader registry".
+    /// 
+    /// The render contexts are expected to be listed in priority order, so
+    /// for each render context provided, this will try to find the shader ID 
+    /// attribute specific to that render context (see 
+    /// GetShaderIdAttrForRenderContext()) and will return the 
+    /// value of the first one found that has a non-empty value. If no shader ID
+    /// value can be found for any of the given render contexts or 
+    /// \p renderContexts is empty, then this will return the value of the 
+    /// default shader ID attribute (see GetShaderIdAttr()).
+    USDLUX_API
+    TfToken GetShaderId(const TfTokenVector &renderContexts) const;
+
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

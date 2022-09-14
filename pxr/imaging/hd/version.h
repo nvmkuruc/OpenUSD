@@ -42,12 +42,24 @@
 // 32 -> 33: Deleted GetPathForInstanceIndex; added GetScenePrimPath.
 // 32 -> 34: Added HdInstancerContext to GetScenePrimPath.
 // 34 -> 35: HdRepr is using std::unique_ptr<HdDrawItem>
-// #nv begin #materialx-backport
-//    (NVIDIA: the 41 api is from pixar - we've just skipped 36-40)
-// 35 -> 41: Renamed HdDelegate::GetMaterialNeworkselector() to 
+// 35 -> 36: InsertRprim/InsertInstancer no longer take instancerId,
+//           HdSceneDelegate now has GetInstancerId
+// 36 -> 37: Renamed HdRprim::_SetMaterialId to SetMaterialId. It no longer
+//           takes changeTracker.
+// 37 -> 38: Removed Bprim garbage collection API from HdChangeTracker and
+//           HdResourceRegistry.
+// 38 -> 39: Removed garbage collection API from HdChangeTracker and
+//           HdResourceRegistry.
+//           Added HdSceneDelegate::GetInstancerPrototypes.
+// 39 -> 40: Removed Bind and Unbind API from HdRenderPassState.
+// 40 -> 41: Renamed HdDelegate::GetMaterialNeworkselector() to 
 //           GetMaterialRenderContexts(). It now returns a TfTokenVector.
-// #nv end
-#define HD_API_VERSION 41
+// 41 -> 42: Removed GetMaterialTag() from HdRenderIndex.
+// 42 -> 43: Removed HdCamera pulling on view and projection matrix.
+// 43 -> 44: Replaced HdCamera::GetProjectionMatrix with
+//           HdComputeProjectionMatrix.
+// 44 -> 45: Added HdSceneDelegate::GetScenePrimPaths.
+#define HD_API_VERSION 45
 
 // 1  ->  2: SimpleLighting -> FallbackLighting
 #define HD_SHADER_API 2

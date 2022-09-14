@@ -449,6 +449,7 @@ class SdfAbstractDataValue
 {
 public:
     virtual bool StoreValue(const VtValue& value) = 0;
+    virtual bool StoreValue(VtValue &&value) = 0;
     
     template <class T> 
     bool StoreValue(const T& v) 
@@ -457,6 +458,7 @@ public:
             *static_cast<T*>(value) = v;
             return true;
         }
+        typeMismatch = true;
         return false;
     }
 
@@ -469,12 +471,14 @@ public:
     void* value;
     const std::type_info& valueType;
     bool isValueBlock;
+    bool typeMismatch;
 
 protected:
     SdfAbstractDataValue(void* value_, const std::type_info& valueType_)
         : value(value_)
         , valueType(valueType_)
         , isValueBlock(false)
+        , typeMismatch(false)
     { }
 };
 
@@ -499,7 +503,7 @@ public:
         : SdfAbstractDataValue(value, typeid(T))
     { }
 
-    virtual bool StoreValue(const VtValue& v)
+    virtual bool StoreValue(const VtValue& v) override
     {
         if (ARCH_LIKELY(v.IsHolding<T>())) {
             *static_cast<T*>(value) = v.UncheckedGet<T>();
@@ -513,6 +517,28 @@ public:
             isValueBlock = true;
             return true;
         }
+
+        typeMismatch = true;
+
+        return false;
+    }
+
+    virtual bool StoreValue(VtValue &&v) override
+    {
+        if (ARCH_LIKELY(v.IsHolding<T>())) {
+            *static_cast<T*>(value) = v.UncheckedRemove<T>();
+            if (std::is_same<T, SdfValueBlock>::value) {
+                isValueBlock = true;
+            }
+            return true;
+        }
+        
+        if (v.IsHolding<SdfValueBlock>()) {
+            isValueBlock = true;
+            return true;
+        }
+
+        typeMismatch = true;
 
         return false;
     }

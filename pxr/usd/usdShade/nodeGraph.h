@@ -38,6 +38,7 @@
 #include "pxr/usd/usdShade/input.h"
 #include "pxr/usd/usdShade/output.h"
 #include "pxr/usd/usdShade/shader.h"
+#include "pxr/usd/usdShade/connectableAPIBehavior.h"
 
 #include "pxr/base/vt/value.h"
 
@@ -81,8 +82,8 @@ class UsdShadeNodeGraph : public UsdTyped
 public:
     /// Compile time constant representing what kind of schema this class is.
     ///
-    /// \sa UsdSchemaType
-    static const UsdSchemaType schemaType = UsdSchemaType::ConcreteTyped;
+    /// \sa UsdSchemaKind
+    static const UsdSchemaKind schemaKind = UsdSchemaKind::ConcreteTyped;
 
     /// Construct a UsdShadeNodeGraph on UsdPrim \p prim .
     /// Equivalent to UsdShadeNodeGraph::Get(prim.GetStage(), prim.GetPath())
@@ -152,11 +153,11 @@ public:
     Define(const UsdStagePtr &stage, const SdfPath &path);
 
 protected:
-    /// Returns the type of schema this class belongs to.
+    /// Returns the kind of schema this class belongs to.
     ///
-    /// \sa UsdSchemaType
+    /// \sa UsdSchemaKind
     USDSHADE_API
-    UsdSchemaType _GetSchemaType() const override;
+    UsdSchemaKind _GetSchemaKind() const override;
 
 private:
     // needs to invoke _GetStaticTfType.
@@ -182,10 +183,13 @@ public:
     // ===================================================================== //
     // --(BEGIN CUSTOM CODE)--
 
-    /// Constructor that takes a ConnectableAPI object.
-    /// Allow implicit (auto) conversion of UsdShadeNodeGraph to 
-    /// UsdShadeConnectableAPI, so that a NodeGraph can be passed into any 
-    /// function that accepts a ConnectableAPI.
+    /// Constructor that takes a ConnectableAPI object.  Allow implicit
+    /// (auto) conversion of UsdShadeConnectableAPI to UsdShadeNodeGraph, so
+    /// that a ConnectableAPI can be passed into any function that accepts a
+    /// NodeGraph.
+    ///
+    /// \note that the conversion may produce an invalid NodeGraph object,
+    /// because not all UsdShadeConnectableAPI%s are UsdShadeNodeGraph%s
     USDSHADE_API
     UsdShadeNodeGraph(const UsdShadeConnectableAPI &connectable);
 
@@ -221,10 +225,13 @@ public:
     UsdShadeOutput GetOutput(const TfToken &name) const;
 
     /// Outputs are represented by attributes in the "outputs:" namespace.
-    /// 
+    /// If \p onlyAuthored is true (the default), then only return authored
+    /// attributes; otherwise, this also returns un-authored builtins.
+    ///
     USDSHADE_API
-    std::vector<UsdShadeOutput> GetOutputs() const;
+    std::vector<UsdShadeOutput> GetOutputs(bool onlyAuthored=true) const;
 
+    /// \deprecated in favor of GetValueProducingAttributes on UsdShadeOutput
     /// Resolves the connection source of the requested output, identified by
     /// \p outputName to a shader output.
     /// 
@@ -299,9 +306,11 @@ public:
 
     /// Returns all inputs present on the node-graph. These are represented by
     /// attributes in the "inputs:" namespace.
-    /// 
+    /// If \p onlyAuthored is true (the default), then only return authored
+    /// attributes; otherwise, this also returns un-authored builtins.
+    ///
     USDSHADE_API
-    std::vector<UsdShadeInput> GetInputs() const;
+    std::vector<UsdShadeInput> GetInputs(bool onlyAuthored=true) const;
     
     /// @}
 

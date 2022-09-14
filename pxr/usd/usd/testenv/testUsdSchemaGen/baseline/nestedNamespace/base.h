@@ -64,8 +64,8 @@ class UsdContrivedBase : public UsdTyped
 public:
     /// Compile time constant representing what kind of schema this class is.
     ///
-    /// \sa UsdSchemaType
-    static const UsdSchemaType schemaType = UsdSchemaType::AbstractTyped;
+    /// \sa UsdSchemaKind
+    static const UsdSchemaKind schemaKind = UsdSchemaKind::AbstractTyped;
 
     /// Construct a UsdContrivedBase on UsdPrim \p prim .
     /// Equivalent to UsdContrivedBase::Get(prim.GetStage(), prim.GetPath())
@@ -110,11 +110,11 @@ public:
 
 
 protected:
-    /// Returns the type of schema this class belongs to.
+    /// Returns the kind of schema this class belongs to.
     ///
-    /// \sa UsdSchemaType
+    /// \sa UsdSchemaKind
     USDCONTRIVED_API
-    UsdSchemaType _GetSchemaType() const override;
+    UsdSchemaKind _GetSchemaKind() const override;
 
 private:
     // needs to invoke _GetStaticTfType.
@@ -139,7 +139,7 @@ public:
     /// | Declaration | `token myVaryingToken = "VariableTokenDefault"` |
     /// | C++ Type | TfToken |
     /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Token |
-    /// | \ref UsdContrivedTokens "Allowed Values" | VariableTokenAllowed1, VariableTokenAllowed2, "" |
+    /// | \ref UsdContrivedTokens "Allowed Values" | VariableTokenAllowed1, VariableTokenAllowed2, VariableTokenAllowed<3>, "" |
     USDCONTRIVED_API
     UsdAttribute GetMyVaryingTokenAttr() const;
 
@@ -163,7 +163,7 @@ public:
     /// | C++ Type | VtArray<TfToken> |
     /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->TokenArray |
     /// | \ref SdfVariability "Variability" | SdfVariabilityUniform |
-    /// | \ref UsdContrivedTokens "Allowed Values" | VariableTokenArrayAllowed1, VariableTokenArrayAllowed2, "" |
+    /// | \ref UsdContrivedTokens "Allowed Values" | VariableTokenArrayAllowed1, VariableTokenArrayAllowed2, VariableTokenArrayAllowed<3>, "" |
     USDCONTRIVED_API
     UsdAttribute GetMyVaryingTokenArrayAttr() const;
 

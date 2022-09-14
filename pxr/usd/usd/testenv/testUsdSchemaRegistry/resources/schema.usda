@@ -17,11 +17,10 @@ def "GLOBAL" (
 {
 }
 
-class MetadataTest "MetadataTest" (
+class "AbstractTest" (
     inherits = </Typed>
     doc = "Testing documentation metadata"
     hidden = true
-    testCustomMetadata = "garply"
 )
 {
     string testAttr = "foo" (
@@ -32,7 +31,15 @@ class MetadataTest "MetadataTest" (
         hidden = True
         testCustomMetadata = "garply"
     )
+}
 
+class MetadataTest "MetadataTest" (
+    inherits = </AbstractTest>
+    doc = "Testing documentation metadata"
+    hidden = true
+    testCustomMetadata = "garply"
+)
+{
     rel testRel (
         displayGroup = "Display Group"
         displayName = "Display Name"

@@ -38,10 +38,11 @@ Supported Platforms
 USD is currently supported on Linux platforms and has been built and tested
 on CentOS 7 and RHEL 7.
 
-We are actively working on porting USD to both Windows and Mac platforms. 
-Support for both platforms should be considered experimental at this time.
-Currently, the tree will build on Mac and Windows, but only limited testing
-has been done on these platforms.
+We are actively working on porting USD to both Windows and Mac platforms (Please 
+see [VERSIONS.md](VERSIONS.md) for explicitly tested versions). Support for both
+platforms should be considered experimental at this time. Currently, the tree 
+will build on Mac and Windows, but only limited testing has been done on these 
+platforms.
 
 Dependencies
 ------------
@@ -69,7 +70,6 @@ The following dependencies are required:
 
 The following dependencies are optional:
 
- - [GLEW](http://glew.sourceforge.net/)
  - [OpenEXR](http://www.openexr.com)
  - [OpenImageIO](https://sites.google.com/site/openimageio/home)
  - [OpenColorIO](http://opencolorio.org/)
@@ -169,7 +169,7 @@ Set the environment variables specified by the script when it finishes and
 launch ```usdview``` with a sample asset.
 
 ```
-> usdview extras/usd/tutorials/convertingLayerFormats/Sphere.usda
+> usdview USD/extras/usd/tutorials/convertingLayerFormats/Sphere.usda
 ```
 
 Contributing

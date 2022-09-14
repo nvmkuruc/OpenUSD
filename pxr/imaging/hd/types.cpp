@@ -43,6 +43,9 @@
 #include "pxr/base/gf/vec4f.h"
 #include "pxr/base/gf/vec4i.h"
 #include "pxr/base/gf/vec4h.h"
+#include "pxr/base/gf/quath.h"
+#include "pxr/base/gf/quatf.h"
+#include "pxr/base/gf/quatd.h"
 
 #include <unordered_map>
 #include <typeinfo>
@@ -101,12 +104,40 @@ TF_REGISTRY_FUNCTION(TfEnum)
     TF_ADD_ENUM_NAME(HdFormatFloat32Vec2);
     TF_ADD_ENUM_NAME(HdFormatFloat32Vec3);
     TF_ADD_ENUM_NAME(HdFormatFloat32Vec4);
+    TF_ADD_ENUM_NAME(HdFormatInt16);
+    TF_ADD_ENUM_NAME(HdFormatInt16Vec2);
+    TF_ADD_ENUM_NAME(HdFormatInt16Vec3);
+    TF_ADD_ENUM_NAME(HdFormatInt16Vec4);
+    TF_ADD_ENUM_NAME(HdFormatUInt16);
+    TF_ADD_ENUM_NAME(HdFormatUInt16Vec2);
+    TF_ADD_ENUM_NAME(HdFormatUInt16Vec3);
+    TF_ADD_ENUM_NAME(HdFormatUInt16Vec4);
     TF_ADD_ENUM_NAME(HdFormatInt32);
     TF_ADD_ENUM_NAME(HdFormatInt32Vec2);
     TF_ADD_ENUM_NAME(HdFormatInt32Vec3);
     TF_ADD_ENUM_NAME(HdFormatInt32Vec4);
     TF_ADD_ENUM_NAME(HdFormatFloat32UInt8);
 }
+
+HdSamplerParameters::HdSamplerParameters()
+    : HdSamplerParameters(HdWrapRepeat, HdWrapRepeat, HdWrapClamp, 
+                          HdMinFilterNearest, HdMagFilterNearest)
+{}
+
+HdSamplerParameters::HdSamplerParameters(
+    HdWrap wrapS, HdWrap wrapT, HdWrap wrapR, 
+    HdMinFilter minFilter, HdMagFilter magFilter, 
+    HdBorderColor borderColor,
+    bool enableCompare, HdCompareFunction compareFunction)
+    : wrapS(wrapS)
+    , wrapT(wrapT)
+    , wrapR(wrapR)
+    , minFilter(minFilter)
+    , magFilter(magFilter)
+    , borderColor(borderColor)
+    , enableCompare(enableCompare)
+    , compareFunction(compareFunction)
+{}
 
 bool
 HdSamplerParameters::operator==(const HdSamplerParameters &other) const
@@ -116,7 +147,10 @@ HdSamplerParameters::operator==(const HdSamplerParameters &other) const
         (wrapT == other.wrapT) &&
         (wrapR == other.wrapR) &&
         (minFilter == other.minFilter) &&
-        (magFilter == other.magFilter);
+        (magFilter == other.magFilter) &&
+        (borderColor == other.borderColor) &&
+        (enableCompare == other.enableCompare) &&
+        (compareFunction == other.compareFunction);
 }
 
 bool
@@ -158,6 +192,9 @@ static inline ValueDataGetterMap _MakeValueDataGetterMap() {
         ELEM(GfVec4f),
         ELEM(GfVec4h),
         ELEM(GfVec4i),
+        ELEM(GfQuath),
+        ELEM(GfQuatf),
+        ELEM(GfQuatd),
         ELEM(HdVec4f_2_10_10_10_REV),
         ELEM(bool),
         ELEM(char),
@@ -202,6 +239,9 @@ static inline TupleTypeMap _MakeTupleTypeMap() {
         { typeid(GfVec4f), HdTypeFloatVec4 },
         { typeid(GfVec4h), HdTypeHalfFloatVec4 },
         { typeid(GfVec4i), HdTypeInt32Vec4 },
+        { typeid(GfQuath), HdTypeHalfFloatVec4 },
+        { typeid(GfQuatf), HdTypeFloatVec4 },
+        { typeid(GfQuatd), HdTypeDoubleVec4 },
         { typeid(HdVec4f_2_10_10_10_REV), HdTypeInt32_2_10_10_10_REV },
         { typeid(bool), HdTypeBool },
         { typeid(char), HdTypeInt8 },

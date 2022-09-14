@@ -25,14 +25,12 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-HdVolume::HdVolume(SdfPath const& id, SdfPath const& instancerId)
- : HdRprim(id, instancerId)
+HdVolume::HdVolume(SdfPath const& id)
+ : HdRprim(id)
 {
 }
 
-HdVolume::~HdVolume()
-{
-}
+HdVolume::~HdVolume() = default;
 
 /* virtual */
 TfTokenVector const &

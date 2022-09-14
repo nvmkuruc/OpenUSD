@@ -135,8 +135,8 @@ class UsdGeomMesh : public UsdGeomPointBased
 public:
     /// Compile time constant representing what kind of schema this class is.
     ///
-    /// \sa UsdSchemaType
-    static const UsdSchemaType schemaType = UsdSchemaType::ConcreteTyped;
+    /// \sa UsdSchemaKind
+    static const UsdSchemaKind schemaKind = UsdSchemaKind::ConcreteTyped;
 
     /// Construct a UsdGeomMesh on UsdPrim \p prim .
     /// Equivalent to UsdGeomMesh::Get(prim.GetStage(), prim.GetPath())
@@ -206,11 +206,11 @@ public:
     Define(const UsdStagePtr &stage, const SdfPath &path);
 
 protected:
-    /// Returns the type of schema this class belongs to.
+    /// Returns the kind of schema this class belongs to.
     ///
-    /// \sa UsdSchemaType
+    /// \sa UsdSchemaKind
     USDGEOM_API
-    UsdSchemaType _GetSchemaType() const override;
+    UsdSchemaKind _GetSchemaKind() const override;
 
 private:
     // needs to invoke _GetStaticTfType.
@@ -617,6 +617,15 @@ public:
     /// indicates that the crease or corner is perfectly sharp.
     USDGEOM_API
     static const float SHARPNESS_INFINITE;
+
+    /// Returns the number of faces as defined by the size of the
+    /// _faceVertexCounts_ array at _timeCode_.
+    ///
+    /// \snippetdoc snippets.dox GetCount
+    /// \sa GetFaceVertexCountsAttr()
+    USDGEOM_API
+    size_t GetFaceCount(UsdTimeCode timeCode = UsdTimeCode::Default()) const;
+
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

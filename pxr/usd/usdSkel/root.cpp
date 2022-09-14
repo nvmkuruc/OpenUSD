@@ -75,8 +75,9 @@ UsdSkelRoot::Define(
 }
 
 /* virtual */
-UsdSchemaType UsdSkelRoot::_GetSchemaType() const {
-    return UsdSkelRoot::schemaType;
+UsdSchemaKind UsdSkelRoot::_GetSchemaKind() const
+{
+    return UsdSkelRoot::schemaKind;
 }
 
 /* static */
@@ -166,10 +167,11 @@ _ComputeExtent(const UsdGeomBoundable& boundable,
     }
 
     UsdSkelCache skelCache;
-    skelCache.Populate(skelRoot);
+    skelCache.Populate(skelRoot, UsdTraverseInstanceProxies());
 
     std::vector<UsdSkelBinding> bindings;
-    if (!skelCache.ComputeSkelBindings(skelRoot, &bindings) ||
+    if (!skelCache.ComputeSkelBindings(
+            skelRoot, &bindings, UsdTraverseInstanceProxies()) ||
         bindings.size() == 0) {
 
         // XXX: The extent of a SkelRoot is intended to bound the set of

@@ -22,6 +22,9 @@
 # language governing permissions and limitations under the Apache License.
 #
 
+# pylint: disable=round-builtin
+
+from __future__ import division
 from __future__ import print_function
 
 # Qt Components
@@ -38,6 +41,7 @@ from functools import cmp_to_key
 from pxr import Usd, UsdGeom, UsdShade, UsdUtils, UsdImagingGL, Glf, Sdf, Tf, Ar
 from pxr import UsdAppUtils
 from pxr.UsdAppUtils.complexityArgs import RefinementComplexities
+from pxr.UsdUtils.constantsGroup import ConstantsGroup
 
 # UI Components
 from ._usdviewq import Utils
@@ -54,8 +58,8 @@ from .primTreeWidget import PrimTreeWidget, PrimViewColumnIndex
 from .primViewItem import PrimViewItem
 from .variantComboBox import VariantComboBox
 from .legendUtil import ToggleLegendWithBrowser
-from . import prettyPrint, adjustClipping, adjustDefaultMaterial, preferences, settings
-from .constantGroup import ConstantGroup
+from . import (prettyPrint, adjustFreeCamera, adjustDefaultMaterial,
+               preferences, settings)
 from .selectionDataModel import ALL_INSTANCES, SelectionDataModel
 
 # Common Utilities
@@ -70,7 +74,7 @@ from .common import (UIBaseColors, UIPropertyValueSourceColors, UIFonts,
                      PropTreeWidgetTypeIsRel, PrimNotFoundException,
                      GetRootLayerStackInfo, HasSessionVis, GetEnclosingModelPrim,
                      GetPrimsLoadability, ClearColors,
-                     HighlightColors, KeyboardShortcuts)
+                     HighlightColors, KeyboardShortcuts, PrintWarning)
 
 from . import settings2
 from .settings2 import StateSource
@@ -82,7 +86,7 @@ from .pythonInterpreter import Myconsole
 
 SETTINGS_VERSION = "1"
 
-class HUDEntries(ConstantGroup):
+class HUDEntries(ConstantsGroup):
     # Upper HUD entries (declared in variables for abstraction)
     PRIM = "Prims"
     CV = "CVs"
@@ -97,10 +101,10 @@ class HUDEntries(ConstantGroup):
     # Name for prims that have no type
     NOTYPE = "Typeless"
 
-class PropertyIndex(ConstantGroup):
+class PropertyIndex(ConstantsGroup):
     VALUE, METADATA, LAYERSTACK, COMPOSITION = range(4)
 
-class UIDefaults(ConstantGroup):
+class UIDefaults(ConstantsGroup):
     STAGE_VIEW_WIDTH = 604
     PRIM_VIEW_WIDTH = 521
     ATTRIBUTE_VIEW_WIDTH = 682
@@ -277,8 +281,6 @@ class MainWindow(QtWidgets.QMainWindow):
         
 class AppController(QtCore.QObject):
 
-    HYDRA_DISABLED_OPTION_STRING = "HydraDisabled"
-
     ###########
     # Signals #
     ###########
@@ -322,6 +324,13 @@ class AppController(QtCore.QObject):
             settings2Path = os.path.join(settingsPathDir, "state.json")
             self._settings2 = settings2.Settings(SETTINGS_VERSION, settings2Path)
 
+    def _setupCustomFont(self):
+        fontResourceDir = os.path.join(os.path.dirname(
+            os.path.realpath(__file__)), "fonts")
+        from glob import glob
+        for fontFile in glob(os.path.join(fontResourceDir, "*", "*.ttf")):
+            fontFilePath = os.path.join(fontResourceDir, fontFile)
+            QtGui.QFontDatabase.addApplicationFont(fontFilePath)
 
     def _setStyleSheetUsingState(self):
         # We use a style file that is actually a template, which we fill
@@ -335,12 +344,7 @@ class AppController(QtCore.QObject):
         fontSize = self._dataModel.viewSettings.fontSize
         baseFontSizeStr = "%spt" % str(fontSize)
         
-        # The choice of 8 for smallest smallSize is for performance reasons,
-        # based on the "Gotham Rounded" font used by usdviewstyle.qss . If we
-        # allow it to float, we get a 2-3 hundred millisecond hit in startup
-        # time as Qt (apparently) manufactures a suitably sized font.  
-        # Mysteriously, we don't see this cost for larger font sizes.
-        smallSize = 8 if fontSize < 12 else int(round(fontSize * 0.8))
+        smallSize = int(round(fontSize * 0.8))
         smallFontSizeStr = "%spt" % str(smallSize)
 
         # Apply the style sheet to it
@@ -348,7 +352,7 @@ class AppController(QtCore.QObject):
         sheetString = sheet.read() % {
             'RESOURCE_DIR'  : resourceDir,
             'BASE_FONT_SZ'  : baseFontSizeStr,
-            'SMALL_FONT_SZ' : smallFontSizeStr }
+            'SMALL_FONT_SZ' : smallFontSizeStr}
 
         app = QtWidgets.QApplication.instance()
         app.setStyleSheet(sheetString)
@@ -395,19 +399,19 @@ class AppController(QtCore.QObject):
             # be restored later.
             self._viewerModeEscapeSizes = None
 
-            self._rendererNameOpt = parserData.renderer
-
-            if self._rendererNameOpt:
-                if self._rendererNameOpt == \
-                            AppController.HYDRA_DISABLED_OPTION_STRING:
-                    os.environ['HD_ENABLED'] = '0'
-                else:
-                    os.environ['HD_DEFAULT_RENDERER'] = self._rendererNameOpt
+            if parserData.rendererPlugin == \
+                  UsdAppUtils.rendererArgs.HYDRA_DISABLED_OPTION_STRING:
+                os.environ['HD_ENABLED'] = '0'
+            elif parserData.rendererPlugin:
+                os.environ['HD_DEFAULT_RENDERER'] = parserData.rendererPlugin
 
             self._openSettings2(parserData.defaultSettings)
 
             self._dataModel = UsdviewDataModel(
                 self._printTiming, self._settings2)
+
+            # Setup Default bundled fonts (Roboto)
+            self._setupCustomFont()
 
             # Now that we've read in our state and applied parserData
             # overrides, we can process our styleSheet... *before* we
@@ -426,6 +430,7 @@ class AppController(QtCore.QObject):
             # statusBar saves considerable GUI configuration time.
             self._mainWindow.show()
             self._mainWindow.setFocus()
+            self._mainWindow.activateWindow()
             
             # Install our custom event filter.  The member assignment of the
             # filter is just for lifetime management
@@ -645,6 +650,10 @@ class AppController(QtCore.QObject):
                 self._ui.actionOpenColorIO)
             for action in self._colorCorrectionActions:
                 self._ui.colorCorrectionActionGroup.addAction(action)
+            # OCIO menu items are populated in _configureColorManagement()
+            self._ui.ocioDisplayMenus = []
+            self._ui.ocioColorSpacesActionGroup = None
+            self._ui.ocioLooksActionGroup = None
 
             # XXX This should be a validator in ViewSettingsDataModel.
             if self._dataModel.viewSettings.renderMode not in RenderModes:
@@ -832,8 +841,8 @@ class AppController(QtCore.QObject):
                 self._ui.actionAuto_Compute_Clipping_Planes.triggered.connect(
                     self._toggleAutoComputeClippingPlanes)
 
-            self._ui.actionAdjust_Clipping.triggered[bool].connect(
-                self._adjustClippingPlanes)
+            self._ui.actionAdjust_Free_Camera.triggered[bool].connect(
+                self._adjustFreeCamera)
 
             self._ui.actionAdjust_Default_Material.triggered[bool].connect(
                 self._adjustDefaultMaterial)
@@ -872,8 +881,6 @@ class AppController(QtCore.QObject):
 
             self._ui.actionToggle_Framed_View.triggered.connect(self._toggleFramedView)
 
-            self._ui.actionAdjust_FOV.triggered.connect(self._adjustFOV)
-
             self._ui.complexityGroup = QtWidgets.QActionGroup(self._mainWindow)
             self._ui.complexityGroup.setExclusive(True)
             self._complexityActions = (
@@ -903,6 +910,9 @@ class AppController(QtCore.QObject):
 
             self._ui.actionEnable_Scene_Materials.triggered.connect(
                 self._toggleEnableSceneMaterials)
+
+            self._ui.actionEnable_Scene_Lights.triggered.connect(
+                self._toggleEnableSceneLights)
 
             self._ui.actionCull_Backfaces.triggered.connect(
                 self._toggleCullBackfaces)
@@ -934,7 +944,7 @@ class AppController(QtCore.QObject):
             self._ui.renderModeActionGroup.triggered.connect(self._changeRenderMode)
 
             self._ui.colorCorrectionActionGroup.triggered.connect(
-                self._changeColorCorrection)
+                lambda mode: self._changeColorCorrection(str(mode.text())))
 
             self._ui.pickModeActionGroup.triggered.connect(self._changePickMode)
 
@@ -967,8 +977,8 @@ class AppController(QtCore.QObject):
             self._ui.actionShow_Inactive_Prims.triggered.connect(
                 self._toggleShowInactivePrims)
 
-            self._ui.actionShow_All_Master_Prims.triggered.connect(
-                self._toggleShowMasterPrims)
+            self._ui.actionShow_All_Prototype_Prims.triggered.connect(
+                self._toggleShowPrototypePrims)
 
             self._ui.actionShow_Undefined_Prims.triggered.connect(
                 self._toggleShowUndefinedPrims)
@@ -1355,19 +1365,6 @@ class AppController(QtCore.QObject):
 
         self._refreshCameraListAndMenu(preserveCurrCamera = preserveCamera)
 
-    @staticmethod
-    def GetRendererOptionChoices():
-        ids = UsdImagingGL.Engine.GetRendererPlugins()
-        choices = []
-        if ids:
-            choices = [UsdImagingGL.Engine.GetRendererDisplayName(x) 
-                        for x in ids]
-            choices.append(AppController.HYDRA_DISABLED_OPTION_STRING)
-        else:
-            choices = [AppController.HYDRA_DISABLED_OPTION_STRING]
-
-        return choices
-
     # Render plugin support
     def _rendererPluginChanged(self, plugin):
         if self._stageView:
@@ -1389,9 +1386,11 @@ class AppController(QtCore.QObject):
                         action.setDisabled(True)
                         break
             else:
-                # Refresh the AOV menu, settings menu, and pause menu item
+                # Refresh the AOV menu, settings menu, and pause menu item,
+                # etc.
                 self._configureRendererAovs()
                 self._configureRendererSettings()
+                self._configureRendererCommands()
                 self._configurePauseAction()
                 self._configureStopAction()
 
@@ -1429,6 +1428,7 @@ class AppController(QtCore.QObject):
             # Refresh the AOV menu, settings menu, and pause menu item
             self._configureRendererAovs()
             self._configureRendererSettings()
+            self._configureRendererCommands()
             self._configurePauseAction()
             self._configureStopAction()
 
@@ -1615,6 +1615,26 @@ class AppController(QtCore.QObject):
             if isinstance(widget, QtWidgets.QLineEdit):
                 widget.setText(widget.defValue)
 
+    # Renderer Command Support
+    def _invokeRendererCommand(self, cmd):
+        if self._stageView:
+            self._stageView.InvokeRendererCommand(cmd)
+            self._stageView.updateView()
+
+    def _configureRendererCommands(self):
+        if self._stageView:
+            self._ui.menuRendererCommands.clear()
+
+            cmds = self._stageView.GetRendererCommands()
+            for cmd in cmds:
+                action = self._ui.menuRendererCommands.addAction(
+                    cmd.commandDescription)
+                action.commandName = cmd.commandName
+                action.triggered[bool].connect(lambda _, cmd=cmd:
+                        self._invokeRendererCommand(cmd))
+
+            self._ui.menuRendererCommands.setEnabled(len(cmds) != 0)
+
     def _configurePauseAction(self):
         if self._stageView:
             # This is called when the user picks a new renderer, which
@@ -1635,10 +1655,112 @@ class AppController(QtCore.QObject):
             self._ui.actionStop.setChecked(self._stopped and
                 self._stageView.IsStopRendererSupported())
 
+    def _disableOCIOAction(self):
+        for action in self._ui.colorCorrectionActionGroup.actions():
+            if action is self._ui.actionOpenColorIO:
+                action.setEnabled(False)
+
     def _configureColorManagement(self):
         enableMenu = (not self._noRender and 
                       UsdImagingGL.Engine.IsColorCorrectionCapable())
         self._ui.menuColorCorrection.setEnabled(enableMenu)
+
+        # Usage of OCIO is driven by the OCIO env var.
+        # * Disable OCIO color management option if env var isn't set.
+        # * Populate the OCIO menu items iff PyOpenColorIO module and
+        #   a valid config file was found.
+        if not os.environ.get('OCIO'):
+            self._disableOCIOAction()
+            return
+
+        try:
+            import PyOpenColorIO as OCIO
+        except ImportError as e:
+            PrintWarning(
+                "Could not import PyOpenColorIO. OCIO may be configured via the"
+                "interpreter and will fallback to the default display, view "
+                "and color space.", e)
+            # NOTE: This only disallows population of the OCIO menu in usdview.
+            # The OCIO plugin may be enabled, so we don't disable OCIO here.
+            return
+        
+        try:
+            config = OCIO.GetCurrentConfig()
+        except Exception as e:
+            PrintWarning("OpenColorIO: ", e)
+            # Fallback to sRGB if a valid config wasn't found.
+            self._disableOCIOAction()
+            if self._dataModel.viewSettings.colorCorrectionMode ==\
+                    ColorCorrectionModes.OPENCOLORIO:
+                self._dataModel.viewSettings.colorCorrectionMode =\
+                    ColorCorrectionModes.SRGB
+            return
+        
+        def addAction(menu, name):
+            action = menu.addAction(name)
+            action.setCheckable(True)
+            return action
+
+        def setColorSpace(action):
+            self._dataModel.viewSettings.setOcioSettings(\
+                colorSpace = str(action.text()))
+            self._dataModel.viewSettings.colorCorrectionMode =\
+                ColorCorrectionModes.OPENCOLORIO
+
+        def setOcioConfig(action):
+            display = str(action.parent().title())
+            view = str(action.text())
+            colorSpace = config.getDisplayColorSpaceName(display, view)
+            self._dataModel.viewSettings.setOcioSettings(colorSpace,\
+                display, view)
+            self._dataModel.viewSettings.colorCorrectionMode =\
+                ColorCorrectionModes.OPENCOLORIO
+
+        def addLabelSeparator(text, parent):
+            label = QtWidgets.QLabel(text)
+            label.setAlignment(QtCore.Qt.AlignCenter)
+            labelAction = QtWidgets.QWidgetAction(parent)
+            labelAction.setDefaultWidget(label)
+            parent.addAction(labelAction)
+
+        ocioMenu = QtWidgets.QMenu('OCIO Config')
+
+        # Displays & Views
+        displays = config.getDisplays()
+        if displays:
+            addLabelSeparator("<i> Displays </i>", ocioMenu)
+            for d in displays:
+                displayMenu = QtWidgets.QMenu(d)
+                group = QtWidgets.QActionGroup(displayMenu)
+                group.setExclusive(True)
+
+                for v in config.getViews(d):
+                    a = addAction(displayMenu, v)
+                    group.addAction(a)
+                group.triggered.connect(setOcioConfig)
+                ocioMenu.addMenu(displayMenu)
+                self._ui.ocioDisplayMenus.append(displayMenu)
+
+        # Colorspaces
+        colorSpaces = config.getColorSpaces()
+        if colorSpaces:
+            ocioMenu.addSeparator()
+            addLabelSeparator("<i> Colorspaces </i>", ocioMenu)
+            group = QtWidgets.QActionGroup(ocioMenu)
+            group.setExclusive(True)
+            for cs in colorSpaces:
+                colorSpace = cs.getName()
+                a = addAction(ocioMenu, colorSpace)
+                group.addAction(a)
+            group.triggered.connect(setColorSpace)
+            self._ui.ocioColorSpacesActionGroup = group
+
+        # TODO Populate looks menu (config.getLooks())
+
+        self._ui.menuColorCorrection.addMenu(ocioMenu)
+        # Since this method is called from _drawFirstImage, refresh UI to
+        # account for view settings.
+        self._refreshColorCorrectionModeMenu()
 
     # Topology-dependent UI changes
     def _reloadVaryingUI(self):
@@ -1834,25 +1956,21 @@ class AppController(QtCore.QObject):
         """Update the complexity from a selected QAction."""
         self._setComplexity(RefinementComplexities.fromName(action.text()))
 
-    def _adjustFOV(self):
-        fov = QtWidgets.QInputDialog.getDouble(self._mainWindow, "Adjust FOV",
-            "Enter a value between 0 and 180", self._dataModel.viewSettings.freeCameraFOV, 0, 180)
-        if (fov[1]):
-            self._dataModel.viewSettings.freeCameraFOV = fov[0]
-
-    def _adjustClippingPlanes(self, checked):
+    def _adjustFreeCamera(self, checked):
         # Eventually, this will not be accessible when _stageView is None.
         # Until then, silently ignore.
         if self._stageView:
             if (checked):
-                self._adjustClippingDlg = adjustClipping.AdjustClipping(self._mainWindow,
-                                                                     self._stageView)
-                self._adjustClippingDlg.finished.connect(
-                    lambda status : self._ui.actionAdjust_Clipping.setChecked(False))
+                self._adjustFreeCameraDlg = adjustFreeCamera.AdjustFreeCamera(
+                    self._mainWindow, self._dataModel,
+                    self._stageView.signalFrustumChanged)
+                self._adjustFreeCameraDlg.finished.connect(
+                    lambda status :
+                    self._ui.actionAdjust_Free_Camera.setChecked(False))
 
-                self._adjustClippingDlg.show()
+                self._adjustFreeCameraDlg.show()
             else:
-                self._adjustClippingDlg.close()
+                self._adjustFreeCameraDlg.close()
 
     def _adjustDefaultMaterial(self, checked):
         if (checked):
@@ -2044,10 +2162,10 @@ class AppController(QtCore.QObject):
                                              self._displayPredicate)
                    if isMatch(prim.GetName())]
 
-        if self._dataModel.viewSettings.showAllMasterPrims:
-            for master in self._dataModel.stage.GetMasters():
+        if self._dataModel.viewSettings.showAllPrototypePrims:
+            for prototype in self._dataModel.stage.GetPrototypes():
                 matches += [prim.GetPath() for prim
-                            in Usd.PrimRange(master, self._displayPredicate)
+                            in Usd.PrimRange(prototype, self._displayPredicate)
                             if isMatch(prim.GetName())]
 
         return matches
@@ -2244,9 +2362,6 @@ class AppController(QtCore.QObject):
         """Reloads the UI and Sets up the initial settings for the
         _stageView object created in _reloadVaryingUI"""
 
-        # Seems like a good time to clear the texture registry
-        Glf.TextureRegistry.Reset()
-
         # RELOAD fixed and varying UI
         self._reloadFixedUI()
         self._reloadVaryingUI()
@@ -2287,21 +2402,32 @@ class AppController(QtCore.QObject):
             self._viewerModeEscapeSizes = None
 
     def _toggleViewerMode(self):
+        self.setViewerMode(not self.isViewerMode())
+
+    def isViewerMode(self):
+        """Returns True if the extra UI around the stage view is collapsed."""
         topHeight, bottomHeight = self._ui.topBottomSplitter.sizes()
         primViewWidth, stageViewWidth = self._ui.primStageSplitter.sizes()
-        if bottomHeight > 0 or primViewWidth > 0:
+        return bottomHeight <= 0 and primViewWidth <= 0        
+
+    def setViewerMode(self, viewerMode):
+        """Sets whether the UI should be displayed in viewer mode, where the
+        extra UI around the stage view is collapsed."""
+        topHeight, bottomHeight = self._ui.topBottomSplitter.sizes()
+        primViewWidth, stageViewWidth = self._ui.primStageSplitter.sizes()
+        if viewerMode:
             topHeight += bottomHeight
             bottomHeight = 0
             stageViewWidth += primViewWidth
             primViewWidth = 0
+        elif self._viewerModeEscapeSizes is not None:
+            topHeight, bottomHeight, primViewWidth, stageViewWidth = \
+                self._viewerModeEscapeSizes
         else:
-            if self._viewerModeEscapeSizes is not None:
-                topHeight, bottomHeight, primViewWidth, stageViewWidth = self._viewerModeEscapeSizes
-            else:
-                bottomHeight = UIDefaults.BOTTOM_HEIGHT
-                topHeight = UIDefaults.TOP_HEIGHT
-                primViewWidth = UIDefaults.PRIM_VIEW_WIDTH
-                stageViewWidth = UIDefaults.STAGE_VIEW_WIDTH
+            bottomHeight = UIDefaults.BOTTOM_HEIGHT
+            topHeight = UIDefaults.TOP_HEIGHT
+            primViewWidth = UIDefaults.PRIM_VIEW_WIDTH
+            stageViewWidth = UIDefaults.STAGE_VIEW_WIDTH
         self._ui.topBottomSplitter.setSizes([topHeight, bottomHeight])
         self._ui.primStageSplitter.setSizes([primViewWidth, stageViewWidth])
 
@@ -2341,7 +2467,7 @@ class AppController(QtCore.QObject):
         self._dataModel.viewSettings.renderMode = str(mode.text())
 
     def _changeColorCorrection(self, mode):
-        self._dataModel.viewSettings.colorCorrectionMode = str(mode.text())
+        self._dataModel.viewSettings.colorCorrectionMode = mode
 
     def _changePickMode(self, mode):
         self._dataModel.viewSettings.pickMode = str(mode.text())
@@ -2379,9 +2505,6 @@ class AppController(QtCore.QObject):
     def _toggleAutoComputeClippingPlanes(self):
         autoClip = self._ui.actionAuto_Compute_Clipping_Planes.isChecked()
         self._dataModel.viewSettings.autoComputeClippingPlanes = autoClip
-        if autoClip:
-            self._stageView.detachAndReClipFromCurrentCamera()
-        
 
     def _setUseExtentsHint(self):
         self._dataModel.useExtentsHint = self._ui.useExtentsHint.isChecked()
@@ -2441,6 +2564,10 @@ class AppController(QtCore.QObject):
         self._dataModel.viewSettings.enableSceneMaterials = (
             self._ui.actionEnable_Scene_Materials.isChecked())
 
+    def _toggleEnableSceneLights(self):
+        self._dataModel.viewSettings.enableSceneLights = (
+            self._ui.actionEnable_Scene_Lights.isChecked())
+
     def _toggleCullBackfaces(self):
         self._dataModel.viewSettings.cullBackfaces = (
             self._ui.actionCull_Backfaces.isChecked())
@@ -2492,10 +2619,11 @@ class AppController(QtCore.QObject):
 
         return windowShot
 
-    def GrabViewportShot(self):
+    def GrabViewportShot(self, cropToAspectRatio=False):
         '''Returns a QImage of the current stage view in usdview.'''
         if self._stageView:
-            return self._stageView.grabFrameBuffer()
+            return self._stageView.grabFrameBuffer(
+                cropToAspectRatio=cropToAspectRatio)
         else:
             return None
 
@@ -2964,7 +3092,7 @@ class AppController(QtCore.QObject):
     def _toggleShowInactivePrims(self):
         self._dataModel.viewSettings.showInactivePrims = (
             self._ui.actionShow_Inactive_Prims.isChecked())
-        # Note: _toggleShowInactivePrims, _toggleShowMasterPrims,
+        # Note: _toggleShowInactivePrims, _toggleShowPrototypePrims,
         #       _toggleShowUndefinedPrims, and _toggleShowAbstractPrims all call
         #       _resetPrimView after being toggled, but only from menu items.
         #       In the future, we should do this when a signal from
@@ -2973,10 +3101,10 @@ class AppController(QtCore.QObject):
         self._dataModel.selection.removeInactivePrims()
         self._resetPrimView()
 
-    def _toggleShowMasterPrims(self):
-        self._dataModel.viewSettings.showAllMasterPrims = (
-            self._ui.actionShow_All_Master_Prims.isChecked())
-        self._dataModel.selection.removeMasterPrims()
+    def _toggleShowPrototypePrims(self):
+        self._dataModel.viewSettings.showAllPrototypePrims = (
+            self._ui.actionShow_All_Prototype_Prims.isChecked())
+        self._dataModel.selection.removePrototypePrims()
         self._resetPrimView()
 
     def _toggleShowUndefinedPrims(self):
@@ -3056,9 +3184,9 @@ class AppController(QtCore.QObject):
         rootItem = self._populateItem(rootPrim)
         self._populateChildren(rootItem)
 
-        if self._dataModel.viewSettings.showAllMasterPrims:
+        if self._dataModel.viewSettings.showAllPrototypePrims:
             self._populateChildren(rootItem,
-                childrenToAdd=self._dataModel.stage.GetMasters())
+                childrenToAdd=self._dataModel.stage.GetPrototypes())
 
         # Add all descendents all at once.
         invisibleRootItem.addChild(rootItem)
@@ -4049,7 +4177,7 @@ class AppController(QtCore.QObject):
 
             item.setExpanded(True)
             item.setToolTip(0, layer.identifier)
-            if not spec:
+            if not spec or not node.CanContributeSpecs():
                 for i in range(item.columnCount()):
                     item.setForeground(i, UIPropertyValueSourceColors.NONE)
             for subtree in layerTree.childTrees:
@@ -4480,14 +4608,15 @@ class AppController(QtCore.QObject):
 
         with BusyContext():
 
-            # We can only activate/deactivate prims which are not in a master.
+            # We can only activate/deactivate prims which are not in a
+            # prototype.
             paths = []
             for item in self.getSelectedItems():
                 if item.prim.IsPseudoRoot():
                     print("WARNING: Cannot change activation of pseudoroot.")
-                elif item.isInMaster:
+                elif item.isInPrototype:
                     print("WARNING: The prim <" + str(item.prim.GetPrimPath()) +
-                        "> is in a master. Cannot change activation.")
+                        "> is in a prototype. Cannot change activation.")
                 else:
                     paths.append(item.prim.GetPrimPath())
 
@@ -4797,13 +4926,13 @@ class AppController(QtCore.QObject):
             if not gotValidMaterial:
                 materialStr += "<small><em>No assigned Material!</em></small>"
 
-            # Instance / master info, if this prim is a native instance, else
+            # Instance / prototype info, if this prim is a native instance, else
             # instance index/id if it's from a PointInstancer
             instanceStr = ""
             if prim.IsInstance():
                 instanceStr = "<hr><b>Instancing:</b><br>"
-                instanceStr += "<nobr><small><em>Instance of master:</em></small> %s</nobr>" % \
-                    str(prim.GetMaster().GetPath())
+                instanceStr += "<nobr><small><em>Instance of prototype:</em></small> %s</nobr>" % \
+                    str(prim.GetPrototype().GetPath())
             elif topLevelInstanceIndex != -1:
                 instanceStr = "<hr><b>Instance Id:</b> %d" % topLevelInstanceIndex
 
@@ -4866,9 +4995,22 @@ class AppController(QtCore.QObject):
                 str(action.text()) == self._dataModel.viewSettings.renderMode)
 
     def _refreshColorCorrectionModeMenu(self):
+        # Color correction mode
         for action in self._colorCorrectionActions:
             action.setChecked(
                 str(action.text()) == self._dataModel.viewSettings.colorCorrectionMode)
+
+        # OCIO menu
+        def setChecked(action, text):
+            action.setChecked(str(action.text()) == text)
+
+        for menu in self._ui.ocioDisplayMenus:
+            for viewAction in menu.actions():
+                setChecked(viewAction, self._dataModel.viewSettings.ocioSettings.view)
+        
+        if self._ui.ocioColorSpacesActionGroup:
+            for csAction in self._ui.ocioColorSpacesActionGroup.actions():
+                setChecked(csAction, self._dataModel.viewSettings.ocioSettings.colorSpace)
 
     def _refreshPickModeMenu(self):
         for action in self._pickModeActions:
@@ -4942,6 +5084,8 @@ class AppController(QtCore.QObject):
     def _refreshViewMenu(self):
         self._ui.actionEnable_Scene_Materials.setChecked(
             self._dataModel.viewSettings.enableSceneMaterials)
+        self._ui.actionEnable_Scene_Lights.setChecked(
+            self._dataModel.viewSettings.enableSceneLights)
         self._ui.actionDisplay_PrimId.setChecked(
             self._dataModel.viewSettings.displayPrimId)
         self._ui.actionCull_Backfaces.setChecked(
@@ -4963,8 +5107,8 @@ class AppController(QtCore.QObject):
     def _refreshShowPrimMenu(self):
         self._ui.actionShow_Inactive_Prims.setChecked(
             self._dataModel.viewSettings.showInactivePrims)
-        self._ui.actionShow_All_Master_Prims.setChecked(
-            self._dataModel.viewSettings.showAllMasterPrims)
+        self._ui.actionShow_All_Prototype_Prims.setChecked(
+            self._dataModel.viewSettings.showAllPrototypePrims)
         self._ui.actionShow_Undefined_Prims.setChecked(
             self._dataModel.viewSettings.showUndefinedPrims)
         self._ui.actionShow_Abstract_Prims.setChecked(

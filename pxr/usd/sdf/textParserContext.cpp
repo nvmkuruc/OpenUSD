@@ -33,7 +33,10 @@ Sdf_TextParserContext::Sdf_TextParserContext() :
     seenError(false),
     path(SdfPath::AbsoluteRootPath()),
     metadataOnly(false),
-    menvaLineNo(1),
+    // This parser supports the maybe-has-relocates hint.  The parser will set
+    // it to true if it encounters a relocates field.
+    layerHints{/*.mightHaveRelocates =*/ false},
+    sdfLineNo(1),
     scanner(NULL)
 {
 }

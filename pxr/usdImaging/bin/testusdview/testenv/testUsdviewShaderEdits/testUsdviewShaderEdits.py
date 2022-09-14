@@ -32,16 +32,6 @@ def _modifySettings(appController):
     appController._dataModel.viewSettings.showHUD = False
     appController._dataModel.viewSettings.autoComputeClippingPlanes = True
 
-# Take a shot of the viewport and save it to a file.
-def _takeShot(appController, fileName):
-    # Wait until the image is converged
-    while not appController._stageView._renderer.IsConverged():
-        QtWidgets.QApplication.processEvents()
-
-    # Save to disk
-    viewportShot = appController.GrabViewportShot()
-    viewportShot.save(fileName, "PNG")
-
 def _bugStep1(s):
     # Make a Material that contains a UsdPreviewSurface
     material = UsdShade.Material.Define(s, '/Scene/Looks/NewMaterial')
@@ -52,11 +42,12 @@ def _bugStep1(s):
     pbrShader.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(0.0)
     pbrShader.CreateInput("metallic", Sdf.ValueTypeNames.Float).Set(0.0)
     pbrShader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).Set((0.0, 0.0, 1.0))
-    material.CreateSurfaceOutput().ConnectToSource(pbrShader, "surface")
+    material.CreateSurfaceOutput().ConnectToSource(pbrShader.ConnectableAPI(),
+            "surface")
 
     # Now bind the Material to the card
     mesh = s.GetPrimAtPath('/Scene/Geom/Plane')
-    UsdShade.MaterialBindingAPI(mesh).Bind(material)
+    UsdShade.MaterialBindingAPI.Apply(mesh).Bind(material)
 
 def _bugStep2(s):
     # create texture coordinate reader 
@@ -68,11 +59,11 @@ def _bugStep2(s):
     diffuseTextureSampler = UsdShade.Shader.Define(s,'/Scene/Looks/NewMaterial/Texture')
     diffuseTextureSampler.CreateIdAttr('UsdUVTexture')
     diffuseTextureSampler.CreateInput('file', Sdf.ValueTypeNames.Asset).Set("test.png")
-    diffuseTextureSampler.CreateInput("st", Sdf.ValueTypeNames.Float2).ConnectToSource(stReader, 'result')
+    diffuseTextureSampler.CreateInput("st", Sdf.ValueTypeNames.Float2).ConnectToSource(stReader.ConnectableAPI(), 'result')
     diffuseTextureSampler.CreateOutput('rgb', Sdf.ValueTypeNames.Float3)
 
     pbrShader = UsdShade.ConnectableAPI(s.GetPrimAtPath('/Scene/Looks/NewMaterial/PbrPreview'))
-    pbrShader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).ConnectToSource(diffuseTextureSampler, 'rgb')
+    pbrShader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).ConnectToSource(diffuseTextureSampler.ConnectableAPI(), 'rgb')
 
 def _bugStep3(s):
     # change diffuse texture
@@ -86,19 +77,23 @@ def testUsdviewInputFunction(appController):
     l = s.GetSessionLayer()
     s.SetEditTarget(l)
 
+    # Turn off the built-in camera light
+    appController._ambientOnlyClicked(False)
+
     _bugStep1(s)
-    # Wait for usdview to catch up with changes
-    for i in range(5):
-        QtWidgets.QApplication.processEvents()
+    # Wait for usdview to catch up with changes, and since we are not interested
+    # in the final image at this point, we are fine not waiting for convergence
+    appController._processEvents()
 
     _bugStep2(s)
-    # Wait for usdview to catch up with changes
-    for i in range(5):
-        QtWidgets.QApplication.processEvents()
+    # Wait for usdview to catch up with changes, and since we are not interested
+    # in the final image at this point, we are fine not waiting for convergence
+    appController._processEvents()
 
     _bugStep3(s)
-    # Wait for usdview to catch up with changes
-    for i in range(5):
-        QtWidgets.QApplication.processEvents()
+    # Wait for usdview to catch up with changes, and since we are not interested
+    # in the final image at this point, we are fine not waiting for convergence
+    appController._processEvents()
 
-    _takeShot(appController, "0.png")
+    # wait for renderer to converge - before capturing the shot
+    appController._takeShot("0.png", waitForConvergence=True)

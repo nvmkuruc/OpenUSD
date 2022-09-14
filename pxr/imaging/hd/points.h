@@ -35,7 +35,8 @@ PXR_NAMESPACE_OPEN_SCOPE
 ///
 /// Descriptor to configure a drawItem for a repr.
 ///
-struct HdPointsReprDesc {
+struct HdPointsReprDesc
+{
     HdPointsReprDesc(
         HdPointsGeomStyle geomStyle = HdPointsGeomStyleInvalid)
         : geomStyle(geomStyle)
@@ -50,10 +51,11 @@ struct HdPointsReprDesc {
 
 /// Hydra Schema for a point cloud.
 ///
-class HdPoints: public HdRprim {
+class HdPoints: public HdRprim
+{
 public:
     HD_API
-    virtual ~HdPoints();
+    ~HdPoints() override;
 
     HD_API
     TfTokenVector const & GetBuiltinPrimvarNames() const override;
@@ -67,10 +69,9 @@ protected:
     /// Constructor. instancerId, if specified, is the instancer which uses
     /// this point cloud as a prototype.
     HD_API
-    HdPoints(SdfPath const& id,
-             SdfPath const& instancerId = SdfPath());
+    HdPoints(SdfPath const& id);
 
-    typedef _ReprDescConfigs<HdPointsReprDesc> _PointsReprConfig;
+    using _PointsReprConfig = _ReprDescConfigs<HdPointsReprDesc>;
 
     HD_API
     static _PointsReprConfig::DescArray _GetReprDesc(TfToken const &reprName);

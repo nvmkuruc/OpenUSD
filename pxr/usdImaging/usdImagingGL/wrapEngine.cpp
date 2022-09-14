@@ -52,10 +52,11 @@ _TestIntersection(
     const UsdPrim& root, 
     UsdImagingGLRenderParams params)
 {
-    GfVec3d hitPoint;
+    GfVec3d hitPoint(0);
+    GfVec3d hitNormal(0);
     SdfPath hitPrimPath;
     SdfPath hitInstancerPath;
-    int hitInstanceIndex;
+    int hitInstanceIndex = -1;
     HdInstancerContext hitInstancerContext;
 
     self.TestIntersection(
@@ -64,6 +65,7 @@ _TestIntersection(
         root,
         params,
         &hitPoint,
+        &hitNormal,
         &hitPrimPath,
         &hitInstancerPath,
         &hitInstanceIndex,
@@ -76,7 +78,7 @@ _TestIntersection(
         topLevelInstanceIndex = hitInstancerContext[0].second;
     }
 
-    return boost::python::make_tuple(hitPoint, hitPrimPath,
+    return boost::python::make_tuple(hitPoint, hitNormal, hitPrimPath,
             hitInstanceIndex, topLevelPath, topLevelInstanceIndex);
 }
 
@@ -87,6 +89,17 @@ _SetLightingState(UsdImagingGLEngine &self, GlfSimpleLightVector const &lights,
     self.SetLightingState(lights, material, sceneAmbient);
 }
 
+void _SetOverrideWindowPolicy(UsdImagingGLEngine & self,
+                              const object &pyObj)
+{
+    extract<CameraUtilConformWindowPolicy> extractor(pyObj);
+    if (extractor.check()) {
+        self.SetOverrideWindowPolicy({true, extractor()});
+    } else {
+        self.SetOverrideWindowPolicy({false, CameraUtilFit});
+    }
+}
+    
 } // anonymous namespace 
 
 void wrapEngine()
@@ -142,6 +155,13 @@ void wrapEngine()
             .def("IsColorCorrectionCapable", 
                 &UsdImagingGLEngine::IsColorCorrectionCapable)
                 .staticmethod("IsColorCorrectionCapable")
+            .def("GetRendererCommandDescriptors",
+                &UsdImagingGLEngine::GetRendererCommandDescriptors,
+                return_value_policy< TfPySequenceToList >() )
+            .def("InvokeRendererCommand",
+                &UsdImagingGLEngine::InvokeRendererCommand,
+                (boost::python::arg("command"),
+                 boost::python::arg("args") = HdCommandArgs()))
             .def("IsPauseRendererSupported", 
                 &UsdImagingGLEngine::IsPauseRendererSupported)
             .def("PauseRenderer", &UsdImagingGLEngine::PauseRenderer)
@@ -150,6 +170,9 @@ void wrapEngine()
                 &UsdImagingGLEngine::IsStopRendererSupported)
             .def("StopRenderer", &UsdImagingGLEngine::StopRenderer)
             .def("RestartRenderer", &UsdImagingGLEngine::RestartRenderer)
+            .def("SetRenderBufferSize", &UsdImagingGLEngine::SetRenderBufferSize)
+            .def("SetFraming", &UsdImagingGLEngine::SetFraming)
+            .def("SetOverrideWindowPolicy", _SetOverrideWindowPolicy)
         ;
 
     }

@@ -87,7 +87,7 @@ public:
     /// held in a registry container.
     explicit HdInstance(KeyType const &key,
                         ValueType const &value,
-                        RegistryLock registryLock,
+                        RegistryLock &&registryLock,
                         Dictionary *container)
         : _key(key)
         , _value(value)
@@ -177,6 +177,8 @@ public:
     typedef typename InstanceType::Dictionary::const_iterator const_iterator;
     const_iterator begin() const { return _dictionary.begin(); }
     const_iterator end() const { return _dictionary.end(); }
+
+    size_t size() const { return _dictionary.size(); }
 
     void Invalidate();
 

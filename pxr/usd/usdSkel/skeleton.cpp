@@ -75,8 +75,9 @@ UsdSkelSkeleton::Define(
 }
 
 /* virtual */
-UsdSchemaType UsdSkelSkeleton::_GetSchemaType() const {
-    return UsdSkelSkeleton::schemaType;
+UsdSchemaKind UsdSkelSkeleton::_GetSchemaKind() const
+{
+    return UsdSkelSkeleton::schemaKind;
 }
 
 /* static */

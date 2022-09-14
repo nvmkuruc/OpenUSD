@@ -32,10 +32,12 @@
 #include "pxr/usd/sdf/path.h"
 #include "pxr/base/tf/hashmap.h"
 
+#include <tbb/concurrent_hash_map.h>
 #include <atomic>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+class HdRetainedSceneIndex;
 
 /// \class HdChangeTracker
 ///
@@ -88,6 +90,7 @@ public:
         CustomBitsBegin             = 1 << 26,
         //-NV_CHANGE FRZHANG
         CustomBitsEnd               = 1 << 30,
+        CustomBitsMask              = 0x7f << 24,
     };
 
     // InstancerDirtybits are a subset of rprim dirty bits right now:
@@ -157,7 +160,7 @@ public:
     /// The idea is that from frame to frame (update iteration), the set of
     /// dirty rprims and their dirty bits do not change; that is, the same
     /// rprims get dirtied with the same dirty bits.. The change tracker can
-    /// leverage this and build stable sets of dirty lists and reduce the
+    /// leverage this help build a stable dirty list and reduce the
     /// overall cost of an update iteration.
     HD_API
     void ResetVaryingState();
@@ -220,7 +223,8 @@ public:
     HD_API
     bool IsPrimIdDirty(SdfPath const& id);
 
-    /// Returns true if the dirtyBits has any flags set other than the varying flag.
+    /// Returns true if the dirtyBits has any flags set other than the varying
+    /// flag.
     static bool IsDirty(HdDirtyBits dirtyBits) {
         return (dirtyBits & AllDirty) != 0;
     }
@@ -230,7 +234,7 @@ public:
         return (dirtyBits & AllDirty) == 0;
     }
 
-    /// Returns true if the dirtyBits has no flags set except the varying flag.
+    /// Returns true if the varying flag is set.
     static bool IsVarying(HdDirtyBits dirtyBits) {
         return (dirtyBits & Varying) != 0;
     }
@@ -310,17 +314,65 @@ public:
 
     // ---------------------------------------------------------------------- //
     /// @}
-    /// \name Instancer Object Tracking
+    /// \name Task Object Tracking
+    /// @{
+    // ---------------------------------------------------------------------- //
+
+    /// Start tracking Task with the given \p id.
+    HD_API
+    void TaskInserted(SdfPath const& id, HdDirtyBits initialDirtyState);
+
+    /// Stop tracking Task with the given \p id.
+    HD_API
+    void TaskRemoved(SdfPath const& id);
+
+    /// Set the dirty flags to \p bits.
+    HD_API
+    void MarkTaskDirty(SdfPath const& id, HdDirtyBits bits=AllDirty);
+
+    /// Get the dirty bits for Task with the given \p id.
+    HD_API
+    HdDirtyBits GetTaskDirtyBits(SdfPath const& id);
+
+    /// Set the dirty flags to \p newBits.
+    HD_API
+    void MarkTaskClean(SdfPath const& id, HdDirtyBits newBits=Clean);
+
+    /// Retrieve the current version number of the rprim render tag set
+    /// XXX Rename to GetRprimRenderTagVersion
+    HD_API
+    unsigned GetRenderTagVersion() const;
+
+    /// Retrieve the current version number of the task's render tags opinion.
+    HD_API
+    unsigned GetTaskRenderTagsVersion() const;
+
+    // ---------------------------------------------------------------------- //
+    /// @}
+    /// \name Instancer State Tracking
     /// @{
     // ---------------------------------------------------------------------- //
 
     /// Start tracking Instancer with the given \p id.
     HD_API
-    void InstancerInserted(SdfPath const& id);
+    void InstancerInserted(SdfPath const& id, HdDirtyBits initialDirtyState);
 
     /// Stop tracking Instancer with the given \p id.
     HD_API
     void InstancerRemoved(SdfPath const& id);
+
+    /// Returns the dirty bits for the instancer with \p id.
+    HD_API
+    HdDirtyBits GetInstancerDirtyBits(SdfPath const& id);
+
+    /// Flag the Instancer with the given \p id as being dirty. Multiple calls
+    /// with different dirty bits accumulate.
+    HD_API
+    void MarkInstancerDirty(SdfPath const& id, HdDirtyBits bits=AllDirty);
+
+    /// Clean the specified dirty bits for the instancer with \p id.
+    HD_API
+    void MarkInstancerClean(SdfPath const& id, HdDirtyBits newBits=Clean);
 
     /// Insert a dependency between \p rprimId and parent instancer
     /// \p instancerId.  Changes to the latter mark the former with
@@ -350,64 +402,6 @@ public:
 
     // ---------------------------------------------------------------------- //
     /// @}
-    /// \name Task Object Tracking
-    /// @{
-    // ---------------------------------------------------------------------- //
-
-    /// Start tracking Task with the given \p id.
-    HD_API
-    void TaskInserted(SdfPath const& id, HdDirtyBits initialDirtyState);
-
-    /// Stop tracking Task with the given \p id.
-    HD_API
-    void TaskRemoved(SdfPath const& id);
-
-    /// Set the dirty flags to \p bits.
-    HD_API
-    void MarkTaskDirty(SdfPath const& id, HdDirtyBits bits=AllDirty);
-
-    /// Get the dirty bits for Task with the given \p id.
-    HD_API
-    HdDirtyBits GetTaskDirtyBits(SdfPath const& id);
-
-    /// Set the dirty flags to \p newBits.
-    HD_API
-    void MarkTaskClean(SdfPath const& id, HdDirtyBits newBits=Clean);
-
-    /// Called to flag when the set of active render tags have changed.
-    /// This can either be because either the Task's opinion (which
-    /// resolves both view and render pass opinions) and a Prims opinion.
-    ///
-    /// Calling this means that any cached prim gathers that filter by render
-    /// tag need to invalidated.
-    HD_API
-    void MarkRenderTagsDirty();
-
-    /// Retrieve the current version number of the render tag set
-    HD_API
-    unsigned GetRenderTagVersion() const;
-
-    // ---------------------------------------------------------------------- //
-    /// @}
-    /// \name Instancer State Tracking
-    /// @{
-    // ---------------------------------------------------------------------- //
-
-    /// Returns the dirty bits for the instancer with \p id.
-    HD_API
-    HdDirtyBits GetInstancerDirtyBits(SdfPath const& id);
-
-    /// Flag the Instancer with the given \p id as being dirty. Multiple calls
-    /// with different dirty bits accumulate.
-    HD_API
-    void MarkInstancerDirty(SdfPath const& id, HdDirtyBits bits=AllDirty);
-
-    /// Clean the specified dirty bits for the instancer with \p id.
-    HD_API
-    void MarkInstancerClean(SdfPath const& id, HdDirtyBits newBits=Clean);
-
-    // ---------------------------------------------------------------------- //
-    /// @}
     /// \name Sprim (scene state prim: camera, light, ...) state Tracking
     /// @{
     // ---------------------------------------------------------------------- //
@@ -431,6 +425,22 @@ public:
     /// Set the dirty flags to \p newBits.
     HD_API
     void MarkSprimClean(SdfPath const& id, HdDirtyBits newBits=Clean);
+
+    /// Insert a dependency between \p sprimId and parent sprim
+    /// \p parentSprimId.
+    HD_API
+    void AddSprimSprimDependency(SdfPath const& parentSprimId,
+                                 SdfPath const& sprimId);
+
+    /// Remove a dependency between \p sprimId and parent sprim
+    /// \p parentSprimId.
+    HD_API
+    void RemoveSprimSprimDependency(SdfPath const& parentSprimId,
+                                    SdfPath const& sprimId);
+
+    /// Remove all dependencies involving \p sprimId as a parent or child.
+    HD_API
+    void RemoveSprimFromSprimSprimDependencies(SdfPath const& sprimId);
 
     // ---------------------------------------------------------------------- //
     /// @}
@@ -457,44 +467,6 @@ public:
     /// Set the dirty flags to \p newBits.
     HD_API
     void MarkBprimClean(SdfPath const& id, HdDirtyBits newBits=Clean);
-
-    // ---------------------------------------------------------------------- //
-    /// @}
-    /// \name GarbageCollection Tracking
-    /// @{
-    // ---------------------------------------------------------------------- //
-
-    /// Clears the garbageCollectionNeeded flag.
-    void ClearGarbageCollectionNeeded() {
-        _needsGarbageCollection = false;
-    }
-
-    /// Sets the garbageCollectionNeeded flag.
-    void SetGarbageCollectionNeeded() {
-        _needsGarbageCollection = true;
-    }
-
-    /// Returns true if garbage collection was flagged to be run.
-    /// Currently, this flag only gets set internally when Rprims are removed.
-    bool IsGarbageCollectionNeeded() const {
-        return _needsGarbageCollection;
-    }
-
-    void ClearBprimGarbageCollectionNeeded() {
-        _needsBprimGarbageCollection = false;
-    }
-
-    /// Sets the garbageCollectionNeeded flag.
-    void SetBprimGarbageCollectionNeeded() {
-        _needsBprimGarbageCollection = true;
-    }
-
-    /// Returns true if garbage collection was flagged to be run.
-    /// Currently, this flag only gets set internally when Rprims are removed.
-    bool IsBprimGarbageCollectionNeeded() const {
-        return _needsBprimGarbageCollection;
-    }
-
 
     // ---------------------------------------------------------------------- //
     /// @}
@@ -525,15 +497,6 @@ public:
     unsigned GetVaryingStateVersion() const {
         return _varyingStateVersion;
     }
-
-    /// Marks all batches dirty, meaning they need to be validated and
-    /// potentially rebuilt.
-    HD_API
-    void MarkBatchesDirty();
-
-    /// Returns the current batch version.
-    HD_API
-    unsigned GetBatchVersion() const;
 
     // ---------------------------------------------------------------------- //
     /// @}
@@ -623,8 +586,17 @@ private:
 
     typedef TfHashMap<SdfPath, HdDirtyBits, SdfPath::Hash> _IDStateMap;
     typedef TfHashMap<TfToken, int, TfToken::HashFunctor> _CollectionStateMap;
-    typedef TfHashMap<SdfPath, SdfPathSet, SdfPath::Hash> _DependencyMap;
     typedef TfHashMap<TfToken, unsigned, TfToken::HashFunctor> _GeneralStateMap;
+
+    struct _PathHashCompare {
+        static bool     equal(const SdfPath& a, const SdfPath& b)
+                        { return a == b; }
+
+        static size_t   hash(const SdfPath& path)
+                        { return hash_value(path); }
+    };
+    typedef tbb::concurrent_hash_map<SdfPath, SdfPathSet, _PathHashCompare>
+        _DependencyMap;
 
     // Core dirty state.
     _IDStateMap _rprimState;
@@ -636,14 +608,20 @@ private:
 
     // Collection versions / state.
     _CollectionStateMap _collectionState;
-    bool _needsGarbageCollection;
-    bool _needsBprimGarbageCollection;
 
     // Provides reverse-association between instancers and the child
     // instancers/rprims that use them.
     _DependencyMap _instancerRprimDependencies;
     _DependencyMap _instancerInstancerDependencies;
 
+    // Provides forward and reverse-association between sprims and the child
+    // sprims that reference them. For example, a light prim (child) who needs 
+    // to know when its light filter (parent) is modified.
+    // Maps parent sprim to child sprim.
+    _DependencyMap _sprimSprimTargetDependencies;
+    // Maps child sprim to parent sprim.
+    _DependencyMap _sprimSprimSourceDependencies;
+    
     // Dependency map helpers
     void _AddDependency(_DependencyMap &depMap,
         SdfPath const& parent, SdfPath const& child);
@@ -672,11 +650,35 @@ private:
     // Used to detect that visibility changed somewhere in the render index.
     unsigned _visChangeCount;
 
-    // Used to detect changes to the set of active render tags
-    unsigned _renderTagVersion;
+    // Used to detect changes to the render tag opinion of rprims.
+    unsigned _rprimRenderTagVersion;
 
-    // Used to validate draw batches.
-    std::atomic_uint _batchVersion;
+    // Used to detect changes to the render tags opinion of tasks.
+    unsigned _taskRenderTagsVersion;
+
+    // Allow HdRenderIndex to provide a scene index to forward dirty
+    // information. This is necessary to accommodate legacy HdSceneDelegate
+    // based applications that rely on the HdChangeTracker for invalidating
+    // state on Hydra prims.
+    friend class HdRenderIndex;
+    // Does not take ownership. The HdRenderIndex manages the lifetime of this
+    // scene index.
+    HdRetainedSceneIndex * _emulationSceneIndex;
+    void _SetTargetSceneIndex(HdRetainedSceneIndex *emulationSceneIndex);
+
+    // Private methods which implement the behaviors of their public
+    // equivalents. The public versions check to see if legacy emulation is
+    // active. If so, they dirty the HdRetainedSceneIndex member instead
+    // of directly acting. If legacy render delegate emulation is active, these
+    // will eventually make their way back to the private methods via
+    // HdSceneIndexAdapterSceneDelegate. This prevents dirtying cycles while
+    // allowing single HdRenderIndex/HdChangeTracker instances to be used for
+    // both ends of emulation.
+    friend class HdSceneIndexAdapterSceneDelegate;
+    void _MarkRprimDirty(SdfPath const& id, HdDirtyBits bits=AllDirty);
+    void _MarkSprimDirty(SdfPath const& id, HdDirtyBits bits=AllDirty);
+    void _MarkBprimDirty(SdfPath const& id, HdDirtyBits bits=AllDirty);
+    void _MarkInstancerDirty(SdfPath const& id, HdDirtyBits bits=AllDirty);
 };
 
 

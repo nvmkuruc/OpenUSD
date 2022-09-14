@@ -23,12 +23,18 @@
 //
 
 #include "pxr/imaging/hdSt/extComputation.h"
+#include "pxr/imaging/hdSt/primUtils.h"
 #include "pxr/imaging/hdSt/resourceRegistry.h"
+#include "pxr/imaging/hdSt/renderParam.h"
 #include "pxr/imaging/hd/extComputationContext.h"
 #include "pxr/imaging/hd/compExtCompInputSource.h"
 #include "pxr/imaging/hd/perfLog.h"
 #include "pxr/imaging/hd/sceneDelegate.h"
 #include "pxr/imaging/hd/vtBufferSource.h"
+
+#include "pxr/imaging/hgi/capabilities.h"
+
+#include "pxr/base/gf/matrix4f.h"
 
 #include "pxr/base/arch/hash.h"
 
@@ -39,6 +45,8 @@ HdStExtComputation::HdStExtComputation(SdfPath const &id)
  , _inputRange()
 {
 }
+
+HdStExtComputation::~HdStExtComputation() = default;
 
 //
 // De-duplicating and sharing of ExtComputation data.
@@ -81,6 +89,24 @@ _AllocateComputationDataRange(
     return inputRange;
 }
 
+static
+HdBufferSourceSharedPtr
+_GetBufferSource(TfToken const &inputName,
+                 VtValue const &inputValue,
+                 size_t arraySize,
+                 bool const convertToFloat)
+{
+    // We should probably expand this to handle other types, but
+    // the initial use case for this conversion is to deal with
+    // transform matrices passed to skinning computations.
+    if (convertToFloat && inputValue.IsHolding<GfMatrix4d>()) {
+        VtValue const floatValue(GfMatrix4f(inputValue.Get<GfMatrix4d>()));
+        return std::make_shared<HdVtBufferSource>(inputName, floatValue, 1);
+    }
+
+    return std::make_shared<HdVtBufferSource>(inputName, inputValue, arraySize);
+}
+
 void
 HdStExtComputation::Sync(HdSceneDelegate *sceneDelegate,
                          HdRenderParam   *renderParam,
@@ -114,14 +140,19 @@ HdStExtComputation::Sync(HdSceneDelegate *sceneDelegate,
         std::dynamic_pointer_cast<HdStResourceRegistry>(
                               renderIndex.GetResourceRegistry());
 
+    HgiCapabilities const * capabilities =
+        resourceRegistry->GetHgi()->GetCapabilities();
+    bool const convertToFloat =
+        !capabilities->IsSet(HgiDeviceCapabilitiesBitsShaderDoublePrecision);
+
     HdBufferSourceSharedPtrVector inputs;
     for (TfToken const & inputName: GetSceneInputNames()) {
         VtValue inputValue = sceneDelegate->GetExtComputationInput(
                                                 GetId(), inputName);
         size_t arraySize =
             inputValue.IsArrayValued() ? inputValue.GetArraySize() : 1;
-        HdBufferSourceSharedPtr inputSource = HdBufferSourceSharedPtr(
-                    new HdVtBufferSource(inputName, inputValue, arraySize));
+        HdBufferSourceSharedPtr const inputSource =
+            _GetBufferSource(inputName, inputValue, arraySize, convertToFloat);
         if (inputSource->IsValid()) {
             inputs.push_back(inputSource);
         } else {
@@ -208,11 +239,18 @@ HdStExtComputation::Sync(HdSceneDelegate *sceneDelegate,
 
         if (prevRange && (prevRange != _inputRange)) {
             // Make sure that we also release any stale input range data
-            renderIndex.GetChangeTracker().SetGarbageCollectionNeeded();
+            HdStMarkGarbageCollectionNeeded(renderParam);
         }
     }
 
     *dirtyBits &= ~DirtySceneInput;
+}
+
+void
+HdStExtComputation::Finalize(HdRenderParam *renderParam)
+{
+    // Release input range data.
+    HdStMarkGarbageCollectionNeeded(renderParam);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

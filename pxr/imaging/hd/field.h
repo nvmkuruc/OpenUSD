@@ -34,24 +34,26 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 #define HD_FIELD_TOKENS                                    \
-    (filePath)
+    (filePath)                                             \
+    (fieldName)
 
 TF_DECLARE_PUBLIC_TOKENS(HdFieldTokens, HD_API, HD_FIELD_TOKENS);
 
 class HdSceneDelegate;
-typedef std::vector<class HdField const *> HdFieldPtrConstVector;
+using HdFieldPtrConstVector = std::vector<class HdField const *>;
 
 /// \class HdField
 ///
 /// Hydra schema for a USD field primitive. Acts like a texture, combined
 /// with other fields to make up a renderable volume.
 ///
-class HdField : public HdBprim {
+class HdField : public HdBprim
+{
 public:
     HD_API
     HdField(SdfPath const & id);
     HD_API
-    virtual ~HdField();
+    ~HdField() override;
 
     // Change tracking for HdField
     enum DirtyBits : HdDirtyBits {

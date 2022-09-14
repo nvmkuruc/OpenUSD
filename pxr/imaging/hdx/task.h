@@ -41,7 +41,8 @@ class Hgi;
 /// Tasks that require neither progressive rendering nor Hgi can continue to
 /// derive directly from HdTask.
 ///
-class HdxTask : public HdTask {
+class HdxTask : public HdTask
+{
 public:
     HDX_API
     HdxTask(SdfPath const& id);
@@ -68,7 +69,7 @@ public:
     void Sync(
         HdSceneDelegate* delegate,
         HdTaskContext* ctx,
-        HdDirtyBits* dirtyBits) final;
+        HdDirtyBits* dirtyBits) override final;
 
 protected:
     // This is called during the hydra Sync Phase via HdxTask::Sync.

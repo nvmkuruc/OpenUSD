@@ -89,13 +89,8 @@ UsdImagingSphereAdapter::TrackVariability(UsdPrim const& prim,
         return;
     // nv end
 
-    // WARNING: This method is executed from multiple threads, the value cache
-    // has been carefully pre-populated to avoid mutating the underlying
-    // container during update.
-    
-    // The base adapter may already be setting that points dirty bit.
-    // _IsVarying will clear it, so check it isn't already marked as
-    // varying before checking for additional set cases.
+
+    // Check DirtyPoints before doing variability checks, to see if we can skip.
     if ((*timeVaryingBits & HdChangeTracker::DirtyPoints) == 0) {
         _IsVarying(prim, UsdGeomTokens->radius,
                       HdChangeTracker::DirtyPoints,
@@ -104,48 +99,26 @@ UsdImagingSphereAdapter::TrackVariability(UsdPrim const& prim,
     }
 }
 
-// Thread safe.
-//  * Populate dirty bits for the given \p time.
-void 
-UsdImagingSphereAdapter::UpdateForTime(UsdPrim const& prim,
-                               SdfPath const& cachePath, 
-                               UsdTimeCode time,
-                               HdDirtyBits requestedBits,
-                               UsdImagingInstancerContext const* 
-                                   instancerContext) const
+HdDirtyBits
+UsdImagingSphereAdapter::ProcessPropertyChange(UsdPrim const& prim,
+                                               SdfPath const& cachePath,
+                                               TfToken const& propertyName)
 {
-    BaseAdapter::UpdateForTime(
-        prim, cachePath, time, requestedBits, instancerContext);
-    UsdImagingValueCache* valueCache = _GetValueCache();
-    if (requestedBits & HdChangeTracker::DirtyTopology) {
-        valueCache->GetTopology(cachePath) = GetMeshTopology();
+    if (propertyName == UsdGeomTokens->radius) {
+        return HdChangeTracker::DirtyPoints;
     }
+
+    // Allow base class to handle change processing.
+    return BaseAdapter::ProcessPropertyChange(prim, cachePath, propertyName);
 }
 
 /*virtual*/
 VtValue
 UsdImagingSphereAdapter::GetPoints(UsdPrim const& prim,
-                                   SdfPath const& cachePath,
                                    UsdTimeCode time) const
 {
-    TF_UNUSED(cachePath);
     return GetMeshPoints(prim, time);   
 }
-
-// #nv begin #fast-updates
-/*virtual*/
-HdDirtyBits
-UsdImagingSphereAdapter::ProcessPropertyChange(UsdPrim const& prim,
-    SdfPath const& cachePath,
-    TfToken const& propertyName)
-{
-    if (propertyName == UsdGeomTokens->radius)
-        return HdChangeTracker::DirtyPoints;
-
-    // Allow base class to handle change processing.
-    return BaseAdapter::ProcessPropertyChange(prim, cachePath, propertyName);
-}
-// nv end
 
 static GfMatrix4d
 _GetImplicitGeomScaleTransform(UsdPrim const& prim, UsdTimeCode time)
@@ -184,6 +157,17 @@ UsdImagingSphereAdapter::GetMeshTopology()
     return VtValue(HdMeshTopology(UsdImagingGetUnitSphereMeshTopology()));
 }
 
+/*virtual*/ 
+VtValue
+UsdImagingSphereAdapter::GetTopology(UsdPrim const& prim,
+                                     SdfPath const& cachePath,
+                                     UsdTimeCode time) const
+{
+    TRACE_FUNCTION();
+    HF_MALLOC_TAG_FUNCTION();
+
+    return GetMeshTopology();
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

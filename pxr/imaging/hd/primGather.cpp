@@ -25,7 +25,8 @@
 #include "pxr/imaging/hd/primGather.h"
 #include "pxr/imaging/hd/perfLog.h"
 #include "pxr/base/tf/diagnostic.h"
-#include "pxr/base/work/arenaDispatcher.h"
+#include "pxr/base/work/dispatcher.h"
+#include "pxr/base/work/withScopedParallelism.h"
 #include <tbb/parallel_for.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -72,20 +73,21 @@ HdPrimGather::PredicatedFilter(const SdfPathVector &paths,
 
         size_t numRanges = _gatheredRanges.size();
         if (numRanges > MIN_RANGES_FOR_PARALLEL) {
-            WorkArenaDispatcher rangeDispatcher;
 
-            for (size_t rangeNum = 0; rangeNum < numRanges; ++rangeNum) {
-                const _Range &range = _gatheredRanges[rangeNum];
+            WorkWithScopedParallelism([&]() {
+                WorkDispatcher rangeDispatcher;
 
-                rangeDispatcher.Run(&HdPrimGather::_DoPredicateTestOnRange,
-                                    this,
-                                    std::cref(paths),
-                                    range,
-                                    predicateFn,
-                                    predicateParam);
-            }
+                for (size_t rangeNum = 0; rangeNum < numRanges; ++rangeNum) {
+                    const _Range &range = _gatheredRanges[rangeNum];
 
-            rangeDispatcher.Wait();
+                    rangeDispatcher.Run(&HdPrimGather::_DoPredicateTestOnRange,
+                                        this,
+                                        std::cref(paths),
+                                        range,
+                                        predicateFn,
+                                        predicateParam);
+                }
+            });
         } else {
             size_t numRanges = _gatheredRanges.size();
             for (size_t rangeNum = 0; rangeNum < numRanges; ++rangeNum) {
@@ -341,6 +343,8 @@ HdPrimGather::_DoPredicateTestOnRange(const SdfPathVector &paths,
                                       FilterPredicateFn    predicateFn,
                                       void                *predicateParam)
 {
+    TRACE_FUNCTION();
+
     // Range _end is inclusive, but blocked_range is exclusive.
     _ConcurrentRange concurrentRange(range._start,
                                      range._end + 1,
@@ -371,6 +375,8 @@ HdPrimGather::_DoPredicateTestOnPrims(const SdfPathVector &paths,
                                FilterPredicateFn    predicateFn,
                                void                *predicateParam)
 {
+    TRACE_FUNCTION();
+
     size_t begin = range.begin();
     size_t end   = range.end() - 1;  // convert to inclusive.
 

@@ -62,8 +62,17 @@ UsdLuxShadowAPI::Get(const UsdStagePtr &stage, const SdfPath &path)
 
 
 /* virtual */
-UsdSchemaType UsdLuxShadowAPI::_GetSchemaType() const {
-    return UsdLuxShadowAPI::schemaType;
+UsdSchemaKind UsdLuxShadowAPI::_GetSchemaKind() const
+{
+    return UsdLuxShadowAPI::schemaKind;
+}
+
+/* static */
+bool
+UsdLuxShadowAPI::CanApply(
+    const UsdPrim &prim, std::string *whyNot)
+{
+    return prim.CanApplyAPI<UsdLuxShadowAPI>(whyNot);
 }
 
 /* static */
@@ -102,13 +111,13 @@ UsdLuxShadowAPI::_GetTfType() const
 UsdAttribute
 UsdLuxShadowAPI::GetShadowEnableAttr() const
 {
-    return GetPrim().GetAttribute(UsdLuxTokens->shadowEnable);
+    return GetPrim().GetAttribute(UsdLuxTokens->inputsShadowEnable);
 }
 
 UsdAttribute
 UsdLuxShadowAPI::CreateShadowEnableAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdLuxTokens->shadowEnable,
+    return UsdSchemaBase::_CreateAttr(UsdLuxTokens->inputsShadowEnable,
                        SdfValueTypeNames->Bool,
                        /* custom = */ false,
                        SdfVariabilityVarying,
@@ -119,13 +128,13 @@ UsdLuxShadowAPI::CreateShadowEnableAttr(VtValue const &defaultValue, bool writeS
 UsdAttribute
 UsdLuxShadowAPI::GetShadowColorAttr() const
 {
-    return GetPrim().GetAttribute(UsdLuxTokens->shadowColor);
+    return GetPrim().GetAttribute(UsdLuxTokens->inputsShadowColor);
 }
 
 UsdAttribute
 UsdLuxShadowAPI::CreateShadowColorAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdLuxTokens->shadowColor,
+    return UsdSchemaBase::_CreateAttr(UsdLuxTokens->inputsShadowColor,
                        SdfValueTypeNames->Color3f,
                        /* custom = */ false,
                        SdfVariabilityVarying,
@@ -136,13 +145,13 @@ UsdLuxShadowAPI::CreateShadowColorAttr(VtValue const &defaultValue, bool writeSp
 UsdAttribute
 UsdLuxShadowAPI::GetShadowDistanceAttr() const
 {
-    return GetPrim().GetAttribute(UsdLuxTokens->shadowDistance);
+    return GetPrim().GetAttribute(UsdLuxTokens->inputsShadowDistance);
 }
 
 UsdAttribute
 UsdLuxShadowAPI::CreateShadowDistanceAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdLuxTokens->shadowDistance,
+    return UsdSchemaBase::_CreateAttr(UsdLuxTokens->inputsShadowDistance,
                        SdfValueTypeNames->Float,
                        /* custom = */ false,
                        SdfVariabilityVarying,
@@ -153,13 +162,13 @@ UsdLuxShadowAPI::CreateShadowDistanceAttr(VtValue const &defaultValue, bool writ
 UsdAttribute
 UsdLuxShadowAPI::GetShadowFalloffAttr() const
 {
-    return GetPrim().GetAttribute(UsdLuxTokens->shadowFalloff);
+    return GetPrim().GetAttribute(UsdLuxTokens->inputsShadowFalloff);
 }
 
 UsdAttribute
 UsdLuxShadowAPI::CreateShadowFalloffAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdLuxTokens->shadowFalloff,
+    return UsdSchemaBase::_CreateAttr(UsdLuxTokens->inputsShadowFalloff,
                        SdfValueTypeNames->Float,
                        /* custom = */ false,
                        SdfVariabilityVarying,
@@ -170,13 +179,13 @@ UsdLuxShadowAPI::CreateShadowFalloffAttr(VtValue const &defaultValue, bool write
 UsdAttribute
 UsdLuxShadowAPI::GetShadowFalloffGammaAttr() const
 {
-    return GetPrim().GetAttribute(UsdLuxTokens->shadowFalloffGamma);
+    return GetPrim().GetAttribute(UsdLuxTokens->inputsShadowFalloffGamma);
 }
 
 UsdAttribute
 UsdLuxShadowAPI::CreateShadowFalloffGammaAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdLuxTokens->shadowFalloffGamma,
+    return UsdSchemaBase::_CreateAttr(UsdLuxTokens->inputsShadowFalloffGamma,
                        SdfValueTypeNames->Float,
                        /* custom = */ false,
                        SdfVariabilityVarying,
@@ -201,11 +210,11 @@ const TfTokenVector&
 UsdLuxShadowAPI::GetSchemaAttributeNames(bool includeInherited)
 {
     static TfTokenVector localNames = {
-        UsdLuxTokens->shadowEnable,
-        UsdLuxTokens->shadowColor,
-        UsdLuxTokens->shadowDistance,
-        UsdLuxTokens->shadowFalloff,
-        UsdLuxTokens->shadowFalloffGamma,
+        UsdLuxTokens->inputsShadowEnable,
+        UsdLuxTokens->inputsShadowColor,
+        UsdLuxTokens->inputsShadowDistance,
+        UsdLuxTokens->inputsShadowFalloff,
+        UsdLuxTokens->inputsShadowFalloffGamma,
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(
@@ -228,3 +237,58 @@ PXR_NAMESPACE_CLOSE_SCOPE
 // 'PXR_NAMESPACE_OPEN_SCOPE', 'PXR_NAMESPACE_CLOSE_SCOPE'.
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
+
+#include "pxr/usd/usdShade/connectableAPI.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
+
+UsdLuxShadowAPI::UsdLuxShadowAPI(const UsdShadeConnectableAPI &connectable)
+    : UsdLuxShadowAPI(connectable.GetPrim())
+{
+}
+
+UsdShadeConnectableAPI 
+UsdLuxShadowAPI::ConnectableAPI() const
+{
+    return UsdShadeConnectableAPI(GetPrim());
+}
+
+UsdShadeOutput
+UsdLuxShadowAPI::CreateOutput(const TfToken& name,
+                                const SdfValueTypeName& typeName)
+{
+    return UsdShadeConnectableAPI(GetPrim()).CreateOutput(name, typeName);
+}
+
+UsdShadeOutput
+UsdLuxShadowAPI::GetOutput(const TfToken &name) const
+{
+    return UsdShadeConnectableAPI(GetPrim()).GetOutput(name);
+}
+
+std::vector<UsdShadeOutput>
+UsdLuxShadowAPI::GetOutputs(bool onlyAuthored) const
+{
+    return UsdShadeConnectableAPI(GetPrim()).GetOutputs(onlyAuthored);
+}
+
+UsdShadeInput
+UsdLuxShadowAPI::CreateInput(const TfToken& name,
+                               const SdfValueTypeName& typeName)
+{
+    return UsdShadeConnectableAPI(GetPrim()).CreateInput(name, typeName);
+}
+
+UsdShadeInput
+UsdLuxShadowAPI::GetInput(const TfToken &name) const
+{
+    return UsdShadeConnectableAPI(GetPrim()).GetInput(name);
+}
+
+std::vector<UsdShadeInput>
+UsdLuxShadowAPI::GetInputs(bool onlyAuthored) const
+{
+    return UsdShadeConnectableAPI(GetPrim()).GetInputs(onlyAuthored);
+}
+
+PXR_NAMESPACE_CLOSE_SCOPE
