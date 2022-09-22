@@ -277,7 +277,7 @@ ARCH_API void ArchReleaseFile(ArchFile* file);
 /// Returns -1 if the file cannot be opened/read.
 ARCH_API int64_t ArchGetFileLength(const char* fileName);
 ARCH_API int64_t ArchGetFileLength(FILE* fileName);
-ARCH_API inline int64_t ArchGetFileLength(ArchFile *file) { return file->GetFileLength(); }
+ARCH_API inline int64_t ArchGetFileLength(ArchFile* file) { return file->GetFileLength(); }
 
 /// Return a filename for this file, if one can be obtained.
 ARCH_API inline std::string ArchGetFileName(ArchFile *file) { return file->GetFileName(); }

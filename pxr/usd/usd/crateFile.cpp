@@ -2622,7 +2622,7 @@ CrateFile::Packer::Close()
     }
 
     if (!TfGetEnvSetting(USDC_USE_ASSET)) {
-        FILE *file; size_t offset;
+        ArchFile* file; size_t offset;
         std::tie(file, offset) = asset->GetFileUnsafe();
         if (file) {
             // Reset the filename we've read content from.
