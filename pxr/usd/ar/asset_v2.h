@@ -39,8 +39,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-class ArchFile;
-
 /// \class ArAsset
 ///
 /// Interface for accessing the contents of an asset.
@@ -95,7 +93,7 @@ public:
     /// fread, fseek, etc. See ArchPRead for a function that can be used
     /// to read data from this handle safely.
     AR_API
-    virtual std::pair<ArchFile*, size_t> GetFileUnsafe() const = 0;
+    virtual std::pair<FILE*, size_t> GetFileUnsafe() const = 0;
 
 protected:
     AR_API

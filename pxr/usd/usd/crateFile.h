@@ -290,7 +290,7 @@ private:
     // destruction).
     struct _FileRange {
         _FileRange() = default;
-        _FileRange(ArchFile *file, int64_t startOffset,
+        _FileRange(FILE *file, int64_t startOffset,
                    int64_t length, bool hasOwnership)
             : file(file)
             , startOffset(startOffset)
@@ -322,7 +322,7 @@ private:
 
         int64_t GetLength() const { return length; }
         
-        ArchFile *file = nullptr;
+        FILE *file = nullptr;
         int64_t startOffset = 0;
         int64_t length = 0;
         bool hasOwnership = false;
@@ -811,7 +811,7 @@ private:
     void _InitAsset();
 
     static _FileMappingIPtr
-    _MmapFile(char const *fileName, ArchFile *file);
+    _MmapFile(char const *fileName, FILE *file);
     static _FileMappingIPtr
     _MmapAsset(char const *fileName, ArAssetSharedPtr const &asset);
 

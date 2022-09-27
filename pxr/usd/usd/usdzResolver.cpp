@@ -204,9 +204,9 @@ public:
         return count;
     }
     
-    std::pair<ArchFile*, size_t> GetFileUnsafe() _CONST override
+    std::pair<FILE*, size_t> GetFileUnsafe() _CONST override
     {
-        std::pair<ArchFile*, size_t> result = _sourceAsset->GetFileUnsafe();
+        std::pair<FILE*, size_t> result = _sourceAsset->GetFileUnsafe();
         if (result.first) {
             result.second += _offsetInZipFile;
         }

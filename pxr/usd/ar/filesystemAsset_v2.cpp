@@ -34,7 +34,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 std::shared_ptr<ArFilesystemAsset>
 ArFilesystemAsset::Open(const ArResolvedPath& resolvedPath)
 {
-    ArchFile* f = ArchOpenFile(resolvedPath.GetPathString().c_str(), "rb");
+    FILE* f = ArchOpenFile(resolvedPath.GetPathString().c_str(), "rb");
     if (!f) {
         return nullptr;
     }
@@ -52,7 +52,7 @@ ArFilesystemAsset::GetModificationTimestamp(const ArResolvedPath& resolvedPath)
     return ArTimestamp();
 }
 
-ArFilesystemAsset::ArFilesystemAsset(ArchFile* file) 
+ArFilesystemAsset::ArFilesystemAsset(FILE* file) 
     : _file(file) 
 { 
     if (!_file) {
@@ -62,7 +62,7 @@ ArFilesystemAsset::ArFilesystemAsset(ArchFile* file)
 
 ArFilesystemAsset::~ArFilesystemAsset() 
 { 
-    ArchReleaseFile(_file); 
+    fclose(_file); 
 }
 
 size_t
@@ -108,7 +108,7 @@ ArFilesystemAsset::Read(void* buffer, size_t count, size_t offset) const
     return numRead;
 }
         
-std::pair<ArchFile*, size_t>
+std::pair<FILE*, size_t>
 ArFilesystemAsset::GetFileUnsafe() const
 {
     return std::make_pair(_file, 0);

@@ -161,11 +161,6 @@ TfPathExists(string const& path, bool resolveSymlinks)
 bool
 TfIsDir(string const& path, bool resolveSymlinks)
 {
-	bool _result;
-	if (ArchTryIsDir(path, _result)) {
-		return _result;
-	}
-
 #if defined (ARCH_OS_WINDOWS)
     // Report not a directory if path is a symlink and resolveSymlinks is
     // false.

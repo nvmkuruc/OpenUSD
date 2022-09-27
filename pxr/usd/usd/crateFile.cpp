@@ -162,7 +162,7 @@ static int _GetMMapPrefetchKB()
 #if AR_VERSION == 1
 // Write nbytes bytes to fd at pos.
 static inline int64_t
-WriteToAsset(ArchFile *file, void const *bytes, int64_t nbytes, int64_t pos) {
+WriteToAsset(FILE *file, void const *bytes, int64_t nbytes, int64_t pos) {
     int64_t nwritten = ArchPWrite(file, bytes, nbytes, pos);
     if (ARCH_UNLIKELY(nwritten < 0)) {
         TF_RUNTIME_ERROR("Failed writing usdc data: %s",
@@ -480,7 +480,7 @@ template <> struct _IsBitwiseReadWrite<_ListOpHeader> : std::true_type {};
 CrateFile::_FileRange::~_FileRange()
 {
     if (file && hasOwnership) {
-        ArchReleaseFile(file);
+        fclose(file);
     }
 }
 
@@ -703,7 +703,7 @@ struct _PreadStream {
 private:
     int64_t _start;
     int64_t _cur;
-    ArchFile *_file;
+    FILE *_file;
 };
 
 struct _AssetStream {
@@ -913,7 +913,7 @@ struct CrateFile::_PackingContext
 {
 #if AR_VERSION == 1
     using OutputType = TfSafeOutputFile;
-    static ArchFile* _Get(OutputType& out) { return out.Get(); }
+    static FILE* _Get(OutputType& out) { return out.Get(); }
 #else
     using OutputType = ArWritableAssetSharedPtr;
     static ArWritableAsset* _Get(OutputType& out) { return out.get(); }
@@ -2112,7 +2112,7 @@ bool
 CrateFile::CanRead(string const &assetPath, ArAssetSharedPtr const &asset)
 {
     // If the asset has a file, mark it random access to avoid prefetch.
-    ArchFile *file; size_t offset;
+    FILE *file; size_t offset;
     std::tie(file, offset) = asset->GetFileUnsafe();
     if (file) {
         ArchFileAdvise(file, offset, asset->GetSize(),
@@ -2148,7 +2148,7 @@ CrateFile::CreateNew()
 CrateFile::_FileMappingIPtr
 CrateFile::_MmapAsset(char const *assetPath, ArAssetSharedPtr const &asset)
 {
-    ArchFile *file; size_t offset;
+    FILE *file; size_t offset;
     std::tie(file, offset) = asset->GetFileUnsafe();
     std::string errMsg;
     auto mapping = _FileMappingIPtr(
@@ -2167,17 +2167,15 @@ CrateFile::_MmapAsset(char const *assetPath, ArAssetSharedPtr const &asset)
 
 /* static */
 CrateFile::_FileMappingIPtr
-CrateFile::_MmapFile(char const *fileName, ArchFile *file)
+CrateFile::_MmapFile(char const *fileName, FILE *file)
 {
     std::string errMsg;
     auto mapping = _FileMappingIPtr(
         new _FileMapping(ArchMapFileReadWrite(file, &errMsg)));
     if (!mapping->GetMapStart()) {
-        // #nv begin crate-in-memory
-        /*TF_RUNTIME_ERROR("Couldn't map file '%s'%s%s", fileName,
+        TF_RUNTIME_ERROR("Couldn't map file '%s'%s%s", fileName,
                          !errMsg.empty() ? ": " : "",
-                         errMsg.c_str());*/
-        // nv end
+                         errMsg.c_str());
         mapping.reset();
     }
     return mapping;
@@ -2206,7 +2204,7 @@ CrateFile::Open(string const &assetPath, ArAssetSharedPtr const &asset)
 
     if (!TfGetEnvSetting(USDC_USE_ASSET)) {
         // See if we can get an underlying FILE * for the asset.
-        ArchFile *file; size_t offset;
+        FILE *file; size_t offset;
         std::tie(file, offset) = asset->GetFileUnsafe();
         if (file) {
             // If so, then we'll either mmap it or use pread() on it.
@@ -2228,7 +2226,7 @@ CrateFile::Open(string const &assetPath, ArAssetSharedPtr const &asset)
     }
 
     if (!result) {
-        // With no underlying ArchFile *, we'll go through ArAsset::Read() directly.
+        // With no underlying FILE *, we'll go through ArAsset::Read() directly.
         result.reset(new CrateFile(assetPath, asset));
     }
     
@@ -2476,11 +2474,11 @@ CrateFile::CanPackTo(string const &fileName) const
     }
     // Try to open \p fileName and get its filename.
     bool result = false;
-    if (ArchFile *f = ArchOpenFile(fileName.c_str(), "rb")) {
+    if (FILE *f = ArchOpenFile(fileName.c_str(), "rb")) {
         if (ArchGetFileName(f) == _fileReadFrom) {
             result = true;
         }
-        ArchReleaseFile(f);
+        fclose(f);
     }
     return result;
 }
@@ -2622,7 +2620,7 @@ CrateFile::Packer::Close()
     }
 
     if (!TfGetEnvSetting(USDC_USE_ASSET)) {
-        ArchFile* file; size_t offset;
+        FILE* file; size_t offset;
         std::tie(file, offset) = asset->GetFileUnsafe();
         if (file) {
             // Reset the filename we've read content from.
