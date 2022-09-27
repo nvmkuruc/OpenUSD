@@ -52,7 +52,7 @@ ArFilesystemAsset::ArFilesystemAsset(FILE* file)
 
 ArFilesystemAsset::~ArFilesystemAsset() 
 { 
-    ArchReleaseFile(_file); 
+    fclose(_file);
 }
 
 size_t
