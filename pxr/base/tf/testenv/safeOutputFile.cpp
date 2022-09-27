@@ -88,14 +88,6 @@ TestErrorCases()
     CheckFail([]() { return TfSafeOutputFile::Replace("/etc/passwd"); });
 }
 
-// NV aluk
-// Temporary hack for fprintf in this test to treat ArchFile* as FILE*
-static void
-fprintf(FILE *archFile, std::string content)
-{
-    archFile->PWrite(content.c_str(), content.size(), 0);
-}
-
 static void
 TestReplaceNewFile()
 {
