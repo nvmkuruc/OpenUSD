@@ -756,7 +756,7 @@ class CrateFile::_BufferedOutput
 {
 public:
 #if AR_VERSION == 1
-    using OutputType = ArchFile*;
+    using OutputType = FILE*;
 #else
     using OutputType = ArWritableAsset*;
 #endif
