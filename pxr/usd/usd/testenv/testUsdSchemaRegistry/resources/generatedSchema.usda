@@ -4,6 +4,7 @@
 )
 
 class MetadataTest "MetadataTest" (
+    displayName = "Display Name"
     doc = "Testing documentation metadata"
     hidden = true
     testCustomMetadata = "garply"
