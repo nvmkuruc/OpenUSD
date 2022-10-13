@@ -284,6 +284,15 @@ class TestUsdMetadata(unittest.TestCase):
             attr = foo.CreateAttribute("attr", Sdf.ValueTypeNames.String)
             rel = foo.CreateRelationship("rel")
 
+            # nv begin #prim-display-name
+            # verify display name metadata on prim
+            self.assertEqual(foo.GetMetadata("displayName"), None)
+            self.assertEqual(foo.HasAuthoredMetadata("displayName"), False)
+            self.assertEqual(foo.SetMetadata("displayName", "foo"), True)
+            self.assertEqual(foo.GetMetadata("displayName"), "foo")
+            self.assertEqual(foo.HasAuthoredMetadata("displayName"), True)
+            # nv end
+
             for prop in [attr, rel]:
                 self.assertEqual(prop.GetDisplayName(), "")
                 self.assertFalse(prop.HasAuthoredDisplayName())
