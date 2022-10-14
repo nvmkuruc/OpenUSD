@@ -19,6 +19,7 @@ def "GLOBAL" (
 
 class "AbstractTest" (
     inherits = </Typed>
+    displayName = "Display Name"
     doc = "Testing documentation metadata"
     hidden = true
 )
