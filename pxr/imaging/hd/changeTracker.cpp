@@ -28,6 +28,9 @@
 #include "pxr/imaging/hd/tokens.h"
 
 #include "pxr/base/tf/debug.h"
+// #nv begin #contiguous-values-map
+#include "pxr/base/tf/envSetting.h"
+// nv end
 #include "pxr/base/tf/token.h"
 
 #include <iostream>
@@ -35,8 +38,19 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+
+// #nv begin #contiguous-values-map
+TF_DEFINE_ENV_SETTING(HD_CHANGETRACKER_USE_CONTIGUOUS_VALUES_MAP, 0,
+    "Use contiguous values map for RPrim State");
+static bool HdChangeTrackerUseContiguousValuesMap() {
+    static bool _v = TfGetEnvSetting(HD_CHANGETRACKER_USE_CONTIGUOUS_VALUES_MAP) == 1;
+    return _v;
+}
+// #nv end
+
 HdChangeTracker::HdChangeTracker() 
     : _rprimState()
+    , _rprimStateContiguousValues()
     , _instancerState()
     , _taskState()
     , _sprimState()
@@ -84,7 +98,13 @@ void
 HdChangeTracker::RprimInserted(SdfPath const& id, HdDirtyBits initialDirtyState)
 {
     TF_DEBUG(HD_RPRIM_ADDED).Msg("Rprim Added: %s\n", id.GetText());
-    _rprimState[id] = initialDirtyState;
+    // #nv begin #contiguous-values-map
+    if(!HdChangeTrackerUseContiguousValuesMap()) {
+        _rprimState[id] = initialDirtyState;
+    }else{
+        _rprimStateContiguousValues[id] = initialDirtyState;
+    }
+    // #nv end
 
     ++_sceneStateVersion;
     ++_rprimIndexVersion;
@@ -94,7 +114,13 @@ void
 HdChangeTracker::RprimRemoved(SdfPath const& id)
 {
     TF_DEBUG(HD_RPRIM_REMOVED).Msg("Rprim Removed: %s\n", id.GetText());
-    _rprimState.erase(id);
+    // #nv begin #contiguous-values-map
+    if(!HdChangeTrackerUseContiguousValuesMap()) {
+        _rprimState.erase(id);
+    }else{
+        _rprimStateContiguousValues.erase(id);
+    }
+    // #nv end
     // Make sure cached DrawItems get flushed out and their buffers are
     // reclaimed.
     _needsGarbageCollection = true;
@@ -111,14 +137,28 @@ HdChangeTracker::MarkRprimDirty(SdfPath const& id, HdDirtyBits bits)
         TF_CODING_ERROR("MarkRprimDirty called with bits == clean!");
         return;
     }
-
-    _IDStateMap::iterator it = _rprimState.find(id);
-    if (!TF_VERIFY(it != _rprimState.end(), "%s\n", id.GetText())) {
-        return;
+    // #nv begin #contiguous-values-map
+    HdDirtyBits *dirtyBits;
+    if(!HdChangeTrackerUseContiguousValuesMap())
+    {
+        _IDStateMap::iterator it = _rprimState.find(id);
+        if (!TF_VERIFY(it != _rprimState.end(), "%s\n", id.GetText())) {
+            return;
+        }
+        dirtyBits = &it->second;
     }
+    else
+    {
+        bool exists = _rprimStateContiguousValues.find(id, &dirtyBits);
+        if (!TF_VERIFY(exists, "%s\n", id.GetText())) {
+            return;
+        }
+    }
+    auto &rprimState = *dirtyBits;
+    // #nv end
 
     // Early out if no new bits are being set.
-    if ((bits & (~it->second)) == 0) {
+    if ((bits & (~rprimState)) == 0) {
         // Can not early out if the change represents
         // a change to the prim filter.  These need to
         // trigger a re-evaluation of the dirty list so need
@@ -132,12 +172,12 @@ HdChangeTracker::MarkRprimDirty(SdfPath const& id, HdDirtyBits bits)
 
     // used ensure the repr has been created. don't touch scene state version
     if (bits == HdChangeTracker::InitRepr) {
-        it->second |= HdChangeTracker::InitRepr;
+        rprimState |= HdChangeTracker::InitRepr;
         return;
     }
 
     // set Varying bit if it's not set
-    HdDirtyBits oldBits = it->second;
+    HdDirtyBits oldBits = rprimState;
     if ((oldBits & HdChangeTracker::Varying) == 0) {
         TF_DEBUG(HD_VARYING_STATE).Msg("New Varying State %s: %s\n",
                                        id.GetText(),
@@ -147,7 +187,7 @@ HdChangeTracker::MarkRprimDirty(SdfPath const& id, HdDirtyBits bits)
         bits |= HdChangeTracker::Varying;
         ++_varyingStateVersion;
     }
-    it->second = oldBits | bits;
+    rprimState = oldBits | bits;
     ++_sceneStateVersion;
 
     if ((bits & DirtyVisibility) != 0) {
@@ -178,11 +218,23 @@ HdChangeTracker::ResetVaryingState()
     ++_varyingStateVersion;
 
     // reset all variability bit
-    TF_FOR_ALL (it, _rprimState) {
-        if (IsClean(it->second)) {
-            it->second &= ~Varying;
+    // #nv begin #contiguous-values-map
+    if(!HdChangeTrackerUseContiguousValuesMap()) {
+        TF_FOR_ALL (it, _rprimState) {
+            if (IsClean(it->second)) {
+                it->second &= ~Varying;
+            }
         }
     }
+    else
+    {
+        _rprimStateContiguousValues.for_each_value([](pxr::HdDirtyBits &dirtyBits){
+            if (IsClean(dirtyBits)) {
+                dirtyBits &= ~Varying;
+            }
+        });
+    }
+    // #nv end
 }
 
 void
@@ -191,27 +243,51 @@ HdChangeTracker::ResetRprimVaryingState(SdfPath const& id)
     TF_DEBUG(HD_VARYING_STATE).Msg("Resetting Rprim Varying State: %s\n",
                                    id.GetText());
 
-    _IDStateMap::iterator it = _rprimState.find(id);
-    if (!TF_VERIFY(it != _rprimState.end(), "%s\n", id.GetText())) {
-        return;
+    // #nv begin #contiguous-values-map
+    HdDirtyBits *dirtyBits = nullptr;
+    if(!HdChangeTrackerUseContiguousValuesMap()) {
+        _IDStateMap::iterator it = _rprimState.find(id);
+        if (!TF_VERIFY(it != _rprimState.end(), "%s\n", id.GetText())) {
+            return;
+        }
+        dirtyBits = &it->second;
+    }else{
+        bool exists = _rprimStateContiguousValues.find(id, &dirtyBits);
+        // #nv end
+        if (!TF_VERIFY(exists, "%s\n", id.GetText())) {
+            return;
+        }
     }
+    auto &rprimState = *dirtyBits;
 
     // Don't update varying state or change count as we don't want to
     // cause re-evaluation of the varying state now, but
     // want to pick up the possible change on the next iteration.
 
-    it->second &= ~Varying;
+    rprimState &= ~Varying;
 }
 
 void
 HdChangeTracker::MarkRprimClean(SdfPath const& id, HdDirtyBits newBits)
 {
     TF_DEBUG(HD_RPRIM_CLEANED).Msg("Rprim Cleaned: %s\n", id.GetText());
-    _IDStateMap::iterator it = _rprimState.find(id);
-    if (!TF_VERIFY(it != _rprimState.end()))
-        return;
-    // preserve the variability bit
-    it->second = (it->second & Varying) | newBits;
+    // #nv begin #contiguous-values-map
+    HdDirtyBits *dirtyBits = nullptr;
+    if(!HdChangeTrackerUseContiguousValuesMap()) {
+        _IDStateMap::iterator it = _rprimState.find(id);
+        if (!TF_VERIFY(it != _rprimState.end())) {
+            return;
+        }
+        // preserve the variability bit
+        dirtyBits = &it->second;
+    }else{
+        bool exists = _rprimStateContiguousValues.find(id, &dirtyBits);
+        if (!TF_VERIFY(exists))
+            return;
+    }
+    auto &rprimState = *dirtyBits;
+    // #nv end
+    rprimState = (rprimState & Varying) | newBits;
 }
 
 void
@@ -781,7 +857,7 @@ HdChangeTracker::IsSkelAnimXformDirty(HdDirtyBits dirtyBits, SdfPath const &id)
 	bool isDirty = (dirtyBits & NV_DirtySkelAnimXform) != 0;
 	return isDirty;
 }
-//-NV_CHANGE FRZHANG
+// #nv end FRZHANG
 
 void 
 HdChangeTracker::MarkPrimvarDirty(SdfPath const& id, TfToken const& name)
@@ -825,24 +901,42 @@ HdChangeTracker::MarkAllRprimsDirty(HdDirtyBits bits)
     //
 
     bool varyingStateUpdated = false;
+    //+NVCHANGE JERRANS
+    if(!HdChangeTrackerUseContiguousValuesMap()) {
+        for (_IDStateMap::iterator it  = _rprimState.begin();
+                                it != _rprimState.end(); ++it) {
 
-    for (_IDStateMap::iterator it  = _rprimState.begin();
-                               it != _rprimState.end(); ++it) {
+            HdDirtyBits &rprimDirtyBits = it->second;
 
-        HdDirtyBits &rprimDirtyBits = it->second;
+            // If RenderTag or Repr are marked dirty, we always want to update
+            // the varying state (This matches the don't early out condition in
+            // MarkRprim dirty).
+            if ((bits & ((~rprimDirtyBits) | DirtyRenderTag | DirtyRepr)) != 0) {
+                rprimDirtyBits |= bits;
 
-        // If RenderTag or Repr are marked dirty, we always want to update
-        // the varying state (This matches the don't early out condition in
-        // MarkRprim dirty).
-        if ((bits & ((~rprimDirtyBits) | DirtyRenderTag | DirtyRepr)) != 0) {
-            rprimDirtyBits |= bits;
-
-            if ((rprimDirtyBits & HdChangeTracker::Varying) == 0) {
-                rprimDirtyBits |= HdChangeTracker::Varying;
-                varyingStateUpdated = true;
+                if ((rprimDirtyBits & HdChangeTracker::Varying) == 0) {
+                    rprimDirtyBits |= HdChangeTracker::Varying;
+                    varyingStateUpdated = true;
+                }
             }
         }
+    }else{
+        _rprimStateContiguousValues.for_each_value([&](auto &rprimDirtyBits)
+        {
+            // If RenderTag or Repr are marked dirty, we always want to update
+            // the varying state (This matches the don't early out condition in
+            // MarkRprim dirty).
+            if ((bits & ((~rprimDirtyBits) | DirtyRenderTag | DirtyRepr)) != 0) {
+                rprimDirtyBits |= bits;
+
+                if ((rprimDirtyBits & HdChangeTracker::Varying) == 0) {
+                    rprimDirtyBits |= HdChangeTracker::Varying;
+                    varyingStateUpdated = true;
+                }
+            }
+        });
     }
+    //-NVCHANGE
 
     if (varyingStateUpdated) {
         ++_varyingStateVersion;
@@ -885,14 +979,25 @@ HdChangeTracker::MarkPrimvarDirty(HdDirtyBits *dirtyBits, TfToken const &name)
 HdDirtyBits
 HdChangeTracker::GetRprimDirtyBits(SdfPath const& id) const
 {
-    _IDStateMap::const_iterator it = _rprimState.find(id);
-    if (!TF_VERIFY(it != _rprimState.end()))
-        return Clean;
+    // #nv begin #contiguous-values-map
+    const HdDirtyBits *dirtyBits = nullptr;
+    if(!HdChangeTrackerUseContiguousValuesMap()) {
+        _IDStateMap::const_iterator it = _rprimState.find(id);
+        if (!TF_VERIFY(it != _rprimState.end()))
+            return Clean;
+        dirtyBits = &it->second;
+    }else{
+        bool exists = _rprimStateContiguousValues.find(id, &dirtyBits);
+        if (!TF_VERIFY(exists))
+            return Clean;
+    }
+    auto &rprimState = *dirtyBits;
+    // #nv end
 
     // not masking the varying bit, since we use that bit
     // in HdRenderIndex::GetDelegateIDsWithDirtyRprims to extract
     // all varying rprims.
-    return it->second;// & (~Varying);
+    return rprimState;// & (~Varying);
 }
 
 void 
