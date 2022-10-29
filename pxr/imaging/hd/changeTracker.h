@@ -29,13 +29,15 @@
 #include "pxr/imaging/hd/version.h"
 #include "pxr/imaging/hd/rprimCollection.h"
 #include "pxr/imaging/hd/types.h"
+// #nv begin #contiguous-values-map
+#include "pxr/imaging/hd/nvhashmap.h"
+// nv end
 #include "pxr/usd/sdf/path.h"
 #include "pxr/base/tf/hashmap.h"
 
 #include <atomic>
 
 PXR_NAMESPACE_OPEN_SCOPE
-
 
 /// \class HdChangeTracker
 ///
@@ -617,7 +619,6 @@ private:
     HdChangeTracker(const HdChangeTracker &) = delete;
     HdChangeTracker &operator=(const HdChangeTracker &) = delete;
 
-
     static void _LogCacheAccess(TfToken const& cacheName,
                                 SdfPath const& id, bool hit);
 
@@ -627,6 +628,9 @@ private:
     typedef TfHashMap<TfToken, unsigned, TfToken::HashFunctor> _GeneralStateMap;
 
     // Core dirty state.
+    // #nv begin #contiguous-values-map
+    nv::contiguous_values_map<SdfPath, HdDirtyBits, SdfPath::Hash> _rprimStateContiguousValues;
+    // #nv end
     _IDStateMap _rprimState;
     _IDStateMap _instancerState;
     _IDStateMap _taskState;

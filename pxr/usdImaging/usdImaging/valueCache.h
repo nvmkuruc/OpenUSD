@@ -41,6 +41,7 @@
 #include "pxr/base/gf/vec4f.h"
 #include "pxr/base/tf/token.h"
 
+#include <tbb/concurrent_unordered_set.h>
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_queue.h>
 
@@ -238,10 +239,10 @@ private:
         typedef tbb::concurrent_unordered_map<Key, Element, Key::Hash> _MapType;
         typedef typename _MapType::iterator                            _MapIt;
         typedef typename _MapType::const_iterator                      _MapConstIt;
-        typedef tbb::concurrent_queue<Key>                          _QueueType;
+        typedef tbb::concurrent_unordered_set<Key, Key::Hash>          _SetType;
 
         _MapType   _map;
-        _QueueType _deferredDeleteQueue;
+        _SetType _deferredDeleteSet;
     };
 
 
@@ -293,7 +294,7 @@ private:
 		*value = it->second;
 #else
 		std::swap(it->second, *value);
-		cache->_deferredDeleteQueue.push(key);
+		cache->_deferredDeleteSet.insert(key);
 #endif
 		//-NV_CHANGE FRZHANG
         return true;
@@ -340,15 +341,17 @@ private:
     void _GarbageCollect(_TypedCache<T> &cache) {
         typedef _TypedCache<T> Cache_t;
 
-		Key key;
-        while (cache._deferredDeleteQueue.try_pop(key))
+        if( cache._deferredDeleteSet.size() == cache._map.size() )
         {
-            auto itor = cache._map.find(key);
-            if (itor != cache._map.end())
-            {
-                cache._map.unsafe_erase(itor);
-            }
+            cache._deferredDeleteSet.clear();
+            cache._map.clear();
+            return;
         }
+        for( auto &key : cache._deferredDeleteSet )
+        {
+            cache._map.unsafe_erase(key);
+        }
+        cache._deferredDeleteSet.clear();
     }
 
 public:
