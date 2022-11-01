@@ -152,13 +152,16 @@ class TestVtArray(unittest.TestCase):
             (Vt.Int64Array, (-9223372036854775809, 9223372036854775808)),
         ]
 
+        #nv begin #large-buffers
+        #note: renamed array variable to arrayT
         for arrayType, (x0, x1) in overflows:
             for x in (x0, x1):
                 with self.assertRaises(OverflowError):
-                    array = arrayType((x,))
+                    arrayT = arrayType((x,))
             for x in (x0+1, x1-1):
-                array = arrayType((x,))
-                self.assertEqual(array, eval(repr(array)))
+                arrayT = arrayType((x,))
+                self.assertEqual(arrayT, eval(repr(arrayT)))
+        #nv end
 
     def test_ParallelizedOps(self):
         m0 = Vt.Matrix4dArray((Gf.Matrix4d(1),Gf.Matrix4d(2)))
@@ -268,6 +271,23 @@ class TestVtArray(unittest.TestCase):
         # Vec3dArray.
         va = Vt.Vec3dArray(10, [(1,2,3),(2,3,4)])
         self.assertEqual(Vt.Vec3dArray.FromNumpy(numpy.array(va)), va)
+
+    #nv begin #large-buffers
+    def test_LargeBuffer(self):
+        '''VtArray can be created from a buffer with item count
+           greater than maxint'''
+
+        try:
+            import numpy
+        except ImportError:
+            # If we don't have numpy, just skip this test.
+            return
+
+        largePyBuffer = numpy.zeros(2500000000, dtype=numpy.int8)
+        vtArrayFromBuffer = Vt.UCharArray.FromBuffer(largePyBuffer)
+        self.assertEqual(len(vtArrayFromBuffer), 2500000000)
+    #nv end
+
 
 if __name__ == '__main__':
     unittest.main()
