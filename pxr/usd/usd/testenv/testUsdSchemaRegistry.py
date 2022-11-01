@@ -41,8 +41,13 @@ class TestUsdSchemaRegistry(unittest.TestCase):
         self.assertTrue(primDef)
 
         self.assertEqual(set(primDef.ListMetadataFields()), 
-            set(["typeName", "testCustomMetadata", "hidden", "documentation"]))
+        # nv begin #prim-display-name
+            set(["typeName", "testCustomMetadata", "hidden", "documentation", "displayName"]))
+        # nv end
         self.assertEqual(primDef.GetMetadata("typeName"), "MetadataTest")
+        # nv begin #prim-display-name
+        self.assertEqual(primDef.GetMetadata("displayName"), "Display Name")
+        # nv end
         self.assertEqual(primDef.GetMetadata("documentation"),
                          "Testing documentation metadata")
         self.assertEqual(primDef.GetMetadata("hidden"), True)

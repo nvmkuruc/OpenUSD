@@ -872,6 +872,10 @@ SdfSchemaBase::_RegisterStandardFields()
                        SdfMetadataDisplayGroupTokens->core)
         .MetadataField(SdfFieldKeys->DisplayGroupOrder,
                        SdfMetadataDisplayGroupTokens->core)
+        // #nv begin #prim-display-name
+        .MetadataField(SdfFieldKeys->DisplayName,
+                       SdfMetadataDisplayGroupTokens->core)
+        // nv end
         .MetadataField(SdfFieldKeys->Documentation,
                        SdfMetadataDisplayGroupTokens->core)
         .MetadataField(SdfFieldKeys->Hidden,
