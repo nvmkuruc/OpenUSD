@@ -26,7 +26,6 @@
 
 #include "pxr/pxr.h"
 #include "pxr/usd/sdf/api.h"
-#include "pxr/base/tf/functionRef.h"
 #include "pxr/base/tf/token.h"
 #include "pxr/base/tf/mallocTag.h"
 
@@ -125,41 +124,32 @@ public:
     };
 
     static Sdf_PathPrimNodeHandle
-    FindOrCreatePrim(Sdf_PathNode const *parent, const TfToken &name,
-                     TfFunctionRef<bool ()> isValid);
+    FindOrCreatePrim(Sdf_PathNode const *parent, const TfToken &name);
     
     static Sdf_PathPropNodeHandle
-    FindOrCreatePrimProperty(
-        Sdf_PathNode const *parent, const TfToken &name,
-        TfFunctionRef<bool ()> isValid);
+    FindOrCreatePrimProperty(Sdf_PathNode const *parent, const TfToken &name);
     
     static Sdf_PathPrimNodeHandle
     FindOrCreatePrimVariantSelection(Sdf_PathNode const *parent,
                                      const TfToken &variantSet,
-                                     const TfToken &variant,
-                                     TfFunctionRef<bool ()> isValid);
+                                     const TfToken &variant);
 
     static Sdf_PathPropNodeHandle
     FindOrCreateTarget(Sdf_PathNode const *parent,
-                       SdfPath const &targetPath,
-                       TfFunctionRef<bool ()> isValid);
+                       SdfPath const &targetPath);
 
     static Sdf_PathPropNodeHandle
     FindOrCreateRelationalAttribute(Sdf_PathNode const *parent,
-                                    const TfToken &name,
-                                    TfFunctionRef<bool ()> isValid);
+                                    const TfToken &name);
 
     static Sdf_PathPropNodeHandle
-    FindOrCreateMapper(Sdf_PathNode const *parent, SdfPath const &targetPath,
-                       TfFunctionRef<bool ()> isValid);
+    FindOrCreateMapper(Sdf_PathNode const *parent, SdfPath const &targetPath);
 
     static Sdf_PathPropNodeHandle
-    FindOrCreateMapperArg(Sdf_PathNode const *parent, const TfToken &name,
-                          TfFunctionRef<bool ()> isValid);
+    FindOrCreateMapperArg(Sdf_PathNode const *parent, const TfToken &name);
     
     static Sdf_PathPropNodeHandle
-    FindOrCreateExpression(Sdf_PathNode const *parent,
-                           TfFunctionRef<bool ()> isValid);
+    FindOrCreateExpression(Sdf_PathNode const *parent);
 
     static Sdf_PathNode const *GetAbsoluteRootNode();
     static Sdf_PathNode const *GetRelativeRootNode();
