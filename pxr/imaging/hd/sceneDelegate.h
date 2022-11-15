@@ -191,8 +191,10 @@ struct HdPrimvarDescriptor {
         : name(name_), interpolation(interp_), role(role_), indexed(indexed_)
     { }
     bool operator==(HdPrimvarDescriptor const& rhs) const {
-        return name == rhs.name && role == rhs.role
-            && interpolation == rhs.interpolation;
+        return name == rhs.name && role == rhs.role;
+        // nv-begin
+        // removed interpolation comparison
+        // nv-end
     }
     bool operator!=(HdPrimvarDescriptor const& rhs) const {
         return !(*this == rhs);
