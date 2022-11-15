@@ -134,10 +134,12 @@ void UsdSkel_SkelAnimationQueryImpl::Refresh(const TfToken& propertyName)
         _blendShapeWeights = UsdAttributeQuery(_anim.GetBlendShapeWeightsAttr());
     }
     else if(propertyName == UsdSkelTokens->joints){
-        _anim.GetJointsAttr().Get(&_jointOrder);
+        if(_anim.GetJointsAttr())
+            _anim.GetJointsAttr().Get(&_jointOrder);
     }
     else if(propertyName == UsdSkelTokens->blendShapes){
-        _anim.GetBlendShapesAttr().Get(&_blendShapeOrder);
+        if(_anim.GetBlendShapesAttr())
+            _anim.GetBlendShapesAttr().Get(&_blendShapeOrder);
     }
 }
 //-NV_CHANGE BRONG
