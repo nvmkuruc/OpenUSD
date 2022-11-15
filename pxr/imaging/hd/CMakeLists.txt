@@ -165,6 +165,7 @@ pxr_library(hd
         dataSourceTypeDefs.h
         driver.h
         materialNetworkInterface.h
+        nvhashmap.h
         version.h
 
     PRIVATE_CLASSES
