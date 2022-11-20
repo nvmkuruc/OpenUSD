@@ -251,11 +251,6 @@ TfNormPath(string const &inPath, bool stripDriveSpecifier)
 string
 TfAbsPath(string const& path)
 {
-	std::string _result;
-	if (ArchTryAbsPath(path, _result)) {
-		return _result;
-	}
-
     return ArchAbsPath(path);
 }
 

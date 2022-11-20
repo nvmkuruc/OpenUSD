@@ -560,20 +560,17 @@ UsdSkelImagingSkeletonAdapter::ProcessPrimResync(
                     && skelData->skelQuery.GetAnimQuery().GetPrim().GetPath() == primPath) 
                 {
                     //this skelanimation is removed
-                    if (!animPrim)
+                    if (animPrim)
                     {
-                        _skelAnimMap[primPath].erase(skelPath);
+                        RefreshAnimQuery(primPath, UsdSkelTokens->translations, index);
+                        RefreshAnimQuery(primPath, UsdSkelTokens->rotations, index);
+                        RefreshAnimQuery(primPath, UsdSkelTokens->scales, index);
+                        RefreshAnimQuery(primPath, UsdSkelTokens->joints, index);
+                        RefreshAnimQuery(primPath, UsdSkelTokens->blendShapeWeights, index);   
                     }
-
-                    RefreshAnimQuery(primPath, UsdSkelTokens->translations, index);
-                    RefreshAnimQuery(primPath, UsdSkelTokens->rotations, index);
-                    RefreshAnimQuery(primPath, UsdSkelTokens->scales, index);
-                    RefreshAnimQuery(primPath, UsdSkelTokens->joints, index);
-                    RefreshAnimQuery(primPath, UsdSkelTokens->blendShapeWeights, index);
 
                     //Refresh SkelAnimQuery no matter remove or resync, remove and repopulate are handled here.
                     RefreshSkeletonQuery(skelPath, UsdSkelTokens->skelAnimationSource, index);
-
                 }
             }
         }

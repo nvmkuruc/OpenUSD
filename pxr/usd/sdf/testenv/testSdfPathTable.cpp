@@ -278,7 +278,7 @@ static void ReadPaths(string const &fileName, vector<SdfPath> *out)
     printf("Reading paths...");
     fflush(stdout);
 
-    ArchFile* fp = ArchOpenFile(fileName.c_str(), "rb");
+    FILE* fp = ArchOpenFile(fileName.c_str(), "rb");
     if (!fp)
         return;
 

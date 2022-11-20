@@ -52,7 +52,7 @@ TfSafeOutputFile::IsOpenForUpdate() const
     return _file && _tempFileName.empty();
 }
 
-ArchFile *
+FILE *
 TfSafeOutputFile::ReleaseUpdatedFile()
 {
     if (!IsOpenForUpdate()) {
@@ -60,7 +60,7 @@ TfSafeOutputFile::ReleaseUpdatedFile()
                         "replace)");
         return nullptr;
     }
-	ArchFile *ret = _file;
+	FILE *ret = _file;
     _file = nullptr;
     _tempFileName.clear();
     _targetFileName.clear();
@@ -74,7 +74,7 @@ TfSafeOutputFile::Close()
         return;
 
     // Close the file.
-    ArchReleaseFile(_file);
+    fclose(_file);
     _file = nullptr;
 
     // If this was for update, we have nothing else to do.
@@ -115,7 +115,7 @@ TfSafeOutputFile::Update(std::string const &fileName, bool overwrite)
 {
     TfSafeOutputFile result;
     result._targetFileName = fileName;
-    ArchFile *file = ArchOpenFile(fileName.c_str(), overwrite ? "wb" : "rb+");
+    FILE *file = ArchOpenFile(fileName.c_str(), overwrite ? "wb" : "rb+");
     if (!file) {
         TF_RUNTIME_ERROR("Unable to open file '%s' for writing",
                          fileName.c_str());
@@ -128,12 +128,8 @@ TfSafeOutputFile::Update(std::string const &fileName, bool overwrite)
 TfSafeOutputFile
 TfSafeOutputFile::Replace(std::string const &fileName)
 {
-	if (!ArchCanMakeTmpFile(fileName.c_str())) {
-		return TfSafeOutputFile::Update(fileName, true);
-	}
-
-	TfSafeOutputFile result;
-	std::string error;
+    TfSafeOutputFile result;
+    std::string error;
     int tmpFd = Tf_CreateSiblingTempFile(fileName,
                                          &result._targetFileName,
                                          &result._tempFileName,
@@ -144,7 +140,7 @@ TfSafeOutputFile::Replace(std::string const &fileName)
     }
 
     // Obtain a FILE *.
-    result._file = ArchOpenFile(tmpFd, "wb");
+    result._file = ArchFdOpen(tmpFd, "wb");
     if (!result._file) {
         TF_RUNTIME_ERROR("Unable to obtain writable FILE pointer: %s",
                          ArchStrerror(errno).c_str());

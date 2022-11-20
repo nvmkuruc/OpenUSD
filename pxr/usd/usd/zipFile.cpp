@@ -109,31 +109,28 @@ private:
 
 struct _OutputStream 
 {
-    _OutputStream(ArchFile* f) : _f(f), _ofs(f->GetFileLength()) { }
+    _OutputStream(FILE* f) : _f(f) { }
 
     template <class T>
     inline void Write(const T& value)
     {
         static_assert(_IsBitwiseReadWrite<T>::value, 
                       "Cannot fwrite non-trivially-copyable type");
-		ArchPWrite(_f, &value, sizeof(T), _ofs);
-		_ofs += sizeof(T);
+        fwrite(&value, sizeof(T), 1, _f);
     }
 
     inline void Write(const char* buffer, size_t numBytes)
     {
-		ArchPWrite(_f, buffer, numBytes, _ofs);
-		_ofs += numBytes;
+        fwrite(buffer, /* size = */ 1, /* count = */ numBytes, _f);
     }
 
     inline long Tell() const
     {
-        return _ofs;
+        return ftell(_f);
     }
 
 private:
-	ArchFile* _f;
-	long _ofs;
+    FILE* _f;
 };
 
 // ------------------------------------------------------------

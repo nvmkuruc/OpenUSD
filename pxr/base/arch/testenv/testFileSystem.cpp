@@ -96,7 +96,7 @@ TestArchAbsPath()
 int main()
 {
     std::string firstName = ArchMakeTmpFileName("archFS");
-    ArchFile *firstFile;
+    FILE *firstFile;
 
     char const * const testContent = "text in a file";
 
