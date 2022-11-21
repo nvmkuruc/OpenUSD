@@ -42,7 +42,7 @@ int main(int argc, char** argv)
     std::string log = ArchMakeTmpFileName("statusLogTester");
     FILE *logFile;
 
-    ARCH_AXIOM((logFile = fopen(log.c_str(), "w")) != NULL);
+    ARCH_AXIOM((logFile = ArchOpenFile(log.c_str(), "w")) != NULL);
     fputs("fake log\n", logFile);
     fputs("let's throw in a weird printf %1024$s specifier\n", logFile);
     fclose(logFile);

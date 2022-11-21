@@ -943,8 +943,8 @@ _FinishLoggingFatalStackTrace(const char *progname, const char *stackTrace,
 {
     if (!crashingHard && sessionLog) {
         // If we were given a session log, cat it to the end of the stack.
-        if (FILE* stackFd = fopen(stackTrace, "a")) {
-            if (FILE* sessionLogFd = fopen(sessionLog, "r")) {
+        if (FILE* stackFd = ArchOpenFile(stackTrace, "a")) {
+            if (FILE* sessionLogFd = ArchOpenFile(sessionLog, "r")) {
                 fputs("\n\n********** Session Log **********\n\n", stackFd);
                 // Cat the session log
                 char line[4096];
@@ -1023,7 +1023,7 @@ ArchLogPostMortem(const char* reason,
     }
 
     // Write reason for stack trace to logfile.
-    if (FILE* stackFd = fopen(logfile, "a")) {
+    if (FILE* stackFd = ArchOpenFile(logfile, "a")) {
         if (reason) {
             fputs("This stack trace was requested because: ", stackFd);
             fputs(reason, stackFd);

@@ -88,10 +88,7 @@ Arch_ComputeNanosecondsPerTick()
         while (fgets(linebuffer, sizeof(linebuffer), in)) {
             char* colon;
 
-            if ((strncmp(linebuffer, "bogomips", 8) == 0 ||
-// nv begin #aarch64-support
-               strncmp(linebuffer, "BogoMIPS", 8) == 0) &&
-// nv end
+            if (strncmp(linebuffer, "bogomips", 8) == 0 &&
                 (colon = strchr(linebuffer, ':'))) {
 
                 colon++;
