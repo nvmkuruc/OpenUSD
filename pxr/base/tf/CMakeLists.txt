@@ -654,7 +654,7 @@ if(PXR_ENABLE_PYTHON_SUPPORT)
         PYTHON
         COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTfPyNotice"
     )
-	pxr_register_test(testTfPyInterpreter
+    pxr_register_test(testTfPyInterpreter
         COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTfPyInterpreter"
     )
     pxr_register_test(testTfPyInvoke

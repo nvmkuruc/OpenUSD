@@ -59,7 +59,7 @@ public:
 
     Tf_EnvSettingRegistry() {
         string fileName = TfGetenv("PIXAR_TF_ENV_SETTING_FILE", "");
-        if (FILE* fp = fopen(fileName.c_str(), "r")) {
+        if (FILE* fp = ArchOpenFile(fileName.c_str(), "r")) {
             char buffer[1024];
 
 #ifdef PXR_PYTHON_SUPPORT_ENABLED

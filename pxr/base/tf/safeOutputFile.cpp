@@ -60,7 +60,7 @@ TfSafeOutputFile::ReleaseUpdatedFile()
                         "replace)");
         return nullptr;
     }
-	FILE *ret = _file;
+    FILE *ret = _file;
     _file = nullptr;
     _tempFileName.clear();
     _targetFileName.clear();
@@ -111,11 +111,11 @@ TfSafeOutputFile::Discard()
 }
 
 TfSafeOutputFile
-TfSafeOutputFile::Update(std::string const &fileName, bool overwrite)
+TfSafeOutputFile::Update(std::string const &fileName)
 {
     TfSafeOutputFile result;
     result._targetFileName = fileName;
-    FILE *file = ArchOpenFile(fileName.c_str(), overwrite ? "wb" : "rb+");
+    FILE *file = ArchOpenFile(fileName.c_str(), "rb+");
     if (!file) {
         TF_RUNTIME_ERROR("Unable to open file '%s' for writing",
                          fileName.c_str());

@@ -36,8 +36,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-class ArchFile;
-
 /// \class TfSafeOutputFile
 ///
 /// Opens a file for output, either for update "r+" or to completely replace
@@ -73,7 +71,7 @@ public:
     TF_API ~TfSafeOutputFile();
 
     /// Open \p fileName for update ("r+").
-    TF_API static TfSafeOutputFile Update(std::string const &fileName, bool overwrite = false);
+    TF_API static TfSafeOutputFile Update(std::string const &fileName);
 
     /// Arrange for \p fileName to be replaced.  Create a sibling temporary file
     /// and open that for writing.  When Close() is called (or the destructor is

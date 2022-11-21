@@ -170,7 +170,7 @@ TfScriptModuleLoader::GetModulesDict() const
 void
 TfScriptModuleLoader::WriteDotFile(string const &file) const
 {
-    FILE *out = fopen(file.c_str(), "w");
+    FILE *out = ArchOpenFile(file.c_str(), "w");
     if (!out) {
         TF_RUNTIME_ERROR("Could not open '%s' for writing.\n", file.c_str());
         return;
