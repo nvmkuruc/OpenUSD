@@ -39,7 +39,7 @@ class TestSdfPayload(unittest.TestCase):
         ]
         payloads = []
         for values in itertools.product(*[a[1] for a in args]):
-            argvalues = list(zip([a[0] for a in args], values))
+            argvalues = zip([a[0] for a in args], values)
             kw = {}
             for (arg, value) in argvalues:
                 if value:

@@ -483,8 +483,6 @@ _ForEachField(
         }
     }
 
-// +NV_CHANGE JSHENTU
-#if 0 // throws "vector iterators incompatible" error on MSVC debug build
     auto finalIt = (srcIt == srcEndIt) ? dstIt : srcIt;
     auto finalEndIt = (srcIt == srcEndIt) ? dstEndIt : srcEndIt;
     const bool inSrc = (srcIt != srcEndIt);
@@ -492,22 +490,6 @@ _ForEachField(
     for (; finalIt != finalEndIt; ++finalIt) {
         fn(*finalIt, /* inSrc = */ inSrc, /* inDst = */ !inSrc);
     }
-#else
-    const bool inSrc = srcIt != srcEndIt;
-    if (inSrc)
-    {
-        for (auto finalIt = srcIt; finalIt != srcEndIt; ++finalIt) {
-            fn(*finalIt, /* inSrc = */ inSrc, /* inDst = */ !inSrc);
-        }
-    }
-    else
-    {
-        for (auto finalIt = dstIt; finalIt != dstEndIt; ++finalIt) {
-            fn(*finalIt, /* inSrc = */ inSrc, /* inDst = */ !inSrc);
-        }
-    }
-#endif
-// -NV_CHANGE JSHENTU
 }
 
 bool 

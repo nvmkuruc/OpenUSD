@@ -267,7 +267,7 @@ class TestUsdInherits(unittest.TestCase):
             self.assertEqual(child.GetInherits().GetAllDirectInherits(),
                              [Sdf.Path(path) for path in ['/DI', '/DRI', '/ARI',
                                                           '/Parent/Sibling']])
-                                                    
+
     def test_ListPosition(self):
         for fmt in allFormats:
             stage = Usd.Stage.CreateInMemory("x."+fmt, sessionLayer=None)

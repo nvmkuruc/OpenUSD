@@ -32,10 +32,10 @@ def Err(msg):
 def PrintReport(fname, info, summaryOnly):
     print('@%s@' % fname, 'file version', info.GetFileVersion())
     ss = info.GetSummaryStats()
-    print(('  %s specs, %s paths, %s tokens, %s strings, '
+    print ('  %s specs, %s paths, %s tokens, %s strings, '
            '%s fields, %s field sets' % 
            (ss.numSpecs, ss.numUniquePaths, ss.numUniqueTokens,
-            ss.numUniqueStrings, ss.numUniqueFields, ss.numUniqueFieldSets)))
+            ss.numUniqueStrings, ss.numUniqueFields, ss.numUniqueFieldSets))
     if summaryOnly:
         return
     print('  Structural Sections:')

@@ -311,7 +311,7 @@ def _findFiles(args):
         # DIR DIR
         if all(map(isdir, stats)):
             ldir, rdir = args[0], args[1]
-            lhs, rhs = list(map(listFiles, args))
+            lhs, rhs = map(listFiles, args)
             return (
                 # baseline only
                 sorted([join(ldir, p) for p in lhs - rhs]),

@@ -85,7 +85,7 @@ def _CreateUsdzPackage(usdzFile, filesToAdd, recurse, checkCompliance, verbose):
                 filesToAdd += filesInDir
             else:
                 if verbose:
-                    print(('.. adding: %s' % f))
+                    print('.. adding: %s' % f)
                 if os.path.getsize(f) > 0:
                     fileList.append(f)
                 else:
@@ -218,12 +218,12 @@ def main():
 
         if args.verbose:
             if os.path.exists(usdzFile):
-                print(("File at path '%s' already exists. Overwriting file." % 
-                        usdzFile))
+                print("File at path '%s' already exists. Overwriting file." % 
+                        usdzFile)
             
             if args.inputFiles:
-                print(('Creating package \'%s\' with files %s.' % 
-                      (usdzFile, inputFiles)))
+                print('Creating package \'%s\' with files %s.' % 
+                      (usdzFile, inputFiles))
 
             if args.asset or args.arkitAsset:
                 Tf.Debug.SetDebugSymbolsByName("USDUTILS_CREATE_USDZ_PACKAGE", 1)

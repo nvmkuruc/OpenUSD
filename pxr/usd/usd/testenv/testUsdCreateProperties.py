@@ -433,9 +433,9 @@ class TestUsdCreateProperties(unittest.TestCase):
             a = p.CreateAttribute('a', Sdf.ValueTypeNames.Float)
             r = p.CreateRelationship('r')
             self.assertEqual(len(p.GetProperties()), 2)
-            self.assertTrue(Usd.Property not in list(map(type, p.GetProperties())))
-            self.assertTrue(Usd.Attribute in list(map(type, p.GetProperties())))
-            self.assertTrue(Usd.Relationship in list(map(type, p.GetProperties())))
+            self.assertTrue(Usd.Property not in map(type, p.GetProperties()))
+            self.assertTrue(Usd.Attribute in map(type, p.GetProperties()))
+            self.assertTrue(Usd.Relationship in map(type, p.GetProperties()))
 
     def test_ResolvedAssetPaths(self):
         print('Testing that asset-path-valued attributes give resolved values')

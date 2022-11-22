@@ -73,7 +73,7 @@ def _compareFiles(installedFiles, generatedFiles, configuration):
 
             if diffs and failOnDiff:
                 exit('*** Differing Generated Files:\n' +
-                     '\n'.join(list(diffs.values())))
+                     '\n'.join(diffs.values()))
 
     return diffs
 
@@ -81,14 +81,14 @@ def _copyGeneratedFiles(installedFiles, generatedFiles, diffs):
     for generatedFile, installedFile in zip(generatedFiles, installedFiles):
         baseName = basename(installedFile)
         if baseName in diffs:
-            print(('Changed: ' + baseName))
-            print((diffs[baseName]))
+            print('Changed: ' + baseName)
+            print(diffs[baseName])
             if not access(installedFile, W_OK):
-                print(('Cannot author ' + installedFile + ', (no write access).'))
+                print('Cannot author ' + installedFile + ', (no write access).')
             else:
                 copyfile(generatedFile, installedFile) 
         else:
-            print(('Unchanged: ' + baseName))
+            print('Unchanged: ' + baseName)
 
 # -----------------------------------------------------------------------------
 # Code generation functions.
