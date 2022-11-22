@@ -119,7 +119,7 @@ class TestPcpPathTranslation(unittest.TestCase):
                    "/World/Ref3/RefChild.localSelfRel" : ".",
                    "/World/Ref3/RefChild.localParentRel" : ".."}
 
-        for (path, expectedTargetPath) in list(pathMap.items()):
+        for (path, expectedTargetPath) in pathMap.items():
             relPath = Sdf.Path(path)
             (curTargetPaths, _, curErrors) = \
                 pcpCache.ComputeRelationshipTargetPaths(relPath)
@@ -187,7 +187,7 @@ class TestPcpPathTranslation(unittest.TestCase):
                    "/World/Ref3/RefChild.refSelfRel" : ".",
                    "/World/Ref3/RefChild.refParentRel" : ".."}
 
-        for (path, expectedTargetPath) in list(pathMap.items()):
+        for (path, expectedTargetPath) in pathMap.items():
             relPath = Sdf.Path(path)
             (curTargetPaths, _, curErrors) = \
                 pcpCache.ComputeRelationshipTargetPaths(relPath)
