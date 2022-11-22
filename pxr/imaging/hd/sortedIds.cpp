@@ -216,18 +216,15 @@ Hd_SortedIds::_InsertSort()
 {
     SdfPathVector::iterator sortPosIt = _ids.begin();
     // skip already sorted items
-    if (_ids.size())
-    {
-        sortPosIt += _sortedCount;
+    sortPosIt += _sortedCount;
 
-        while (sortPosIt != _ids.end()) {
-            SdfPathVector::iterator insertPosIt = std::lower_bound(_ids.begin(),
-                sortPosIt,
-                *sortPosIt);
+    while (sortPosIt != _ids.end()) {
+        SdfPathVector::iterator insertPosIt = std::lower_bound(_ids.begin(),
+                                                               sortPosIt,
+                                                               *sortPosIt);
 
-            std::rotate(insertPosIt, sortPosIt, sortPosIt + 1);
-            ++sortPosIt;
-        }
+        std::rotate(insertPosIt, sortPosIt, sortPosIt + 1);
+        ++sortPosIt;
     }
 }
 

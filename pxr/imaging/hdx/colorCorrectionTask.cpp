@@ -78,11 +78,6 @@ HdxColorCorrectionTask::HdxColorCorrectionTask(
 
 HdxColorCorrectionTask::~HdxColorCorrectionTask()
 {
-    // #nv begin gl-errors
-    // Is this still needed?
-    // bool performedGLOperation = false;
-    // nv end
-
     if (_texture3dLUT) {
         _GetHgi()->DestroyTexture(&_texture3dLUT);
     }
