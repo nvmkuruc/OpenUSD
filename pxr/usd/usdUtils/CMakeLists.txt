@@ -376,21 +376,18 @@ pxr_register_test(testUsdUtilsCoalescingDiagnosticDelegateCpp
     EXPECTED_RETURN_CODE 0
 )
 
-# #nv begin #in-memory-io
-# Disabled while ArchFile* vs FILE* output resulting in differing usdz contents are investigated.
-# pxr_register_test(testUsdUtilsCreateNewARKitUsdzPackage
-    # PYTHON
-    # COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUtilsCreateNewUsdzPackage --check --arkit -l contents_arkit.txt package.usdz root.usd"
-    # EXPECTED_RETURN_CODE 0
-# )
+pxr_register_test(testUsdUtilsCreateNewARKitUsdzPackage
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUtilsCreateNewUsdzPackage --check --arkit -l contents_arkit.txt package.usdz root.usd"
+    EXPECTED_RETURN_CODE 0
+)
 
-# pxr_register_test(testUsdUtilsCreateNewUsdzPackage
-    # PYTHON
-    # COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUtilsCreateNewUsdzPackage --check -l contents.txt package.usdz root.usd"
-    # DIFF_COMPARE contents.txt
-    # EXPECTED_RETURN_CODE 0
-# )
-# nv end
+pxr_register_test(testUsdUtilsCreateNewUsdzPackage
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUtilsCreateNewUsdzPackage --check -l contents.txt package.usdz root.usd"
+    DIFF_COMPARE contents.txt
+    EXPECTED_RETURN_CODE 0
+)
 
 pxr_register_test(testUsdUtilsDependencies
     PYTHON
