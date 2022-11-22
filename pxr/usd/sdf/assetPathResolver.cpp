@@ -38,7 +38,7 @@
 #include "pxr/base/tf/pathUtils.h"
 #include "pxr/base/tf/staticData.h"
 #include "pxr/base/tf/staticTokens.h"
-#include <iostream>
+
 #include <utility>
 #include <vector>
 
@@ -240,25 +240,7 @@ Sdf_ComputeAnonLayerIdentifier(
     const SdfLayer* layer)
 {
     TF_VERIFY(layer);
-
-    // #nv begin #url-encoded-layer-ids
-
-    // Identifier template is either "anon:" or "anon:SOME_TAG"
-    // and we respectively return "anon:LAYER_ADDRESS" or "anon:LAYER_ADDRESS:SOME_TAG".
-    // We use stringstream instead of TfStringPrintf so that URL-encoded characters such as
-    // %20 do not get misinterpreted as format strings, which triggers crashes in the
-    // string library.
-    std::stringstream strstream;
-
-    if (identifierTemplate == _Tokens->AnonLayerPrefix) {
-        strstream << _Tokens->AnonLayerPrefix.GetString() << layer;
-    } else {
-        strstream << _Tokens->AnonLayerPrefix.GetString() << layer << ":" <<
-            identifierTemplate.substr(_Tokens->AnonLayerPrefix.GetString().size());
-    }
-
-    return strstream.str();
-    // nv end
+    return TfStringPrintf(identifierTemplate.c_str(), layer);
 }
 
 bool
@@ -294,9 +276,13 @@ Sdf_GetAnonLayerIdentifierTemplate(
 {
     string idTag = tag.empty() ? tag : TfStringTrim(tag);
 
-    // #nv begin #url-encoded-layer-ids
-    return _Tokens->AnonLayerPrefix.GetString() + idTag;
-    // nv end
+    // Ensure that URL-encoded characters are not misinterpreted as
+    // format strings to TfStringPrintf in Sdf_ComputeAnonLayerIdentifier.
+    // See discussion in https://github.com/PixarAnimationStudios/USD/pull/2022
+    idTag = TfStringReplace(idTag, "%", "%%");
+
+    return _Tokens->AnonLayerPrefix.GetString() + "%p" +
+        (idTag.empty() ? idTag : ":" + idTag);
 }
 
 string
