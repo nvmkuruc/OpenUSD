@@ -424,6 +424,7 @@ class TestUsdSchemaRegistry(unittest.TestCase):
         # Expected fields and properties from the concrete schema.
         concretePrimDefPrimFields = {
             "apiSchemas" : Sdf.TokenListOp.CreateExplicit([]),
+            "displayName" : "Display Name",
             "documentation" : concretePrimDef.GetDocumentation(),
             "hidden" : True,
             "testCustomMetadata" : "garply",
