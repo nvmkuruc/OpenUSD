@@ -47,6 +47,12 @@ SdfData::StreamsData() const
 }
 
 bool
+SdfData::IsDetached() const
+{
+    return true;
+}
+
+bool
 SdfData::HasSpec(const SdfPath &path) const
 {
     return _data.find(path) != _data.end();

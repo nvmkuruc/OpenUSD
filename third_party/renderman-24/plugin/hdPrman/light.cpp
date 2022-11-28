@@ -737,7 +737,18 @@ HdPrmanLight::Sync(HdSceneDelegate *sceneDelegate,
     riley::ShadingNode &lightNode = lightNodes.back();
 
     // Attributes.
-    RtParamList attrs = param->ConvertAttributes(sceneDelegate, id);
+    RtParamList attrs = param->ConvertAttributes(sceneDelegate, id, false);
+
+    // Check if the dome light should be camera visible
+    if (lightNode.name == us_PxrDomeLight) {
+        const bool domeLightCamVis = sceneDelegate->GetRenderIndex().
+            GetRenderDelegate()->GetRenderSetting<bool>(
+                HdRenderSettingsTokens->domeLightCameraVisibility,
+                true);
+        if (!domeLightCamVis) {
+            attrs.SetInteger(RixStr.k_visibility_camera, 0);
+        }
+    }
 
     // Light linking
     {
@@ -803,7 +814,7 @@ HdPrmanLight::Sync(HdSceneDelegate *sceneDelegate,
     // TODO: portals
 
     _shaderId = riley->CreateLightShader(
-        riley::UserId::DefaultId(),
+        riley::UserId(stats::AddDataLocation(id.GetText()).GetValue()),
         {static_cast<uint32_t>(lightNodes.size()), lightNodes.data()},
         {static_cast<uint32_t>(filterNodes.size()), filterNodes.data()});
 
@@ -903,7 +914,7 @@ HdPrmanLight::Sync(HdSceneDelegate *sceneDelegate,
     riley::CoordinateSystemList const coordsysList = {
                              unsigned(coordsysIds.size()), coordsysIds.data()};
     _instanceId = riley->CreateLightInstance(
-        riley::UserId::DefaultId(),
+        riley::UserId(stats::AddDataLocation(id.GetText()).GetValue()),
         riley::GeometryPrototypeId::InvalidId(), // no group
         riley::GeometryPrototypeId::InvalidId(), // no geo
         riley::MaterialId::InvalidId(), // no material

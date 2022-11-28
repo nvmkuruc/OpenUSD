@@ -35,20 +35,25 @@ pxr_library(hd
         bufferSpec
         camera
         cameraSchema
+        capsuleSchema
         categoriesSchema
         changeTracker
         command
         compExtCompInputSource
         computation
+        coneSchema
         containerDataSourceEditor
         coordSys
         coordSysBindingSchema
+        cubeSchema
+        cylinderSchema
         dataSource
         dataSourceLegacyPrim
         dataSourceLocator
         dataSourceMaterialNetworkInterface
         debugCodes
         dependenciesSchema
+        dependencyForwardingSceneIndex
         dependencySchema
         dirtyBitsTranslator
         dirtyList
@@ -76,15 +81,18 @@ pxr_library(hd
         geomSubsetSchema
         geomSubsetsSchema
         instanceCategoriesSchema
+        instancedBySceneIndex
         instancedBySchema
         instancer
         instanceRegistry
         instancerTopologySchema
         instanceSchema
+        lazyContainerDataSource
         legacyDisplayStyleSchema
         legacyPrimSceneIndex
         light
         lightSchema
+        mapContainerDataSource
         material
         materialBindingSchema
         materialConnectionSchema
@@ -120,6 +128,7 @@ pxr_library(hd
         renderIndex
         renderPass
         renderPassState
+        renderSettingsSchema
         renderThread
         repr
         resource
@@ -129,6 +138,7 @@ pxr_library(hd
         rprim
         rprimCollection
         rprimSharedData
+        sampleFilterSchema
         sceneDelegate
         sceneExtCompInputSource
         sceneIndex
@@ -140,6 +150,7 @@ pxr_library(hd
         selection
         smoothNormals
         sortedIds
+        sphereSchema
         sprim
         strategyBase
         subdivisionTagsSchema

@@ -26,6 +26,7 @@
 #include "pxr/usdImaging/usdImaging/dataSourceBasisCurves.h"
 #include "pxr/usdImaging/usdImaging/delegate.h"
 #include "pxr/usdImaging/usdImaging/indexProxy.h"
+#include "pxr/usdImaging/usdImaging/primvarUtils.h"
 #include "pxr/usdImaging/usdImaging/tokens.h"
 
 #include "pxr/imaging/hd/basisCurves.h"
@@ -235,7 +236,7 @@ UsdImagingBasisCurvesAdapter::UpdateForTime(
             HdInterpolation interpolation;
             VtFloatArray widths;
             if (curves.GetWidthsAttr().Get(&widths, time)) {
-                interpolation = _UsdToHdInterpolation(
+                interpolation = UsdImagingUsdToHdInterpolation(
                     curves.GetWidthsInterpolation());
             } else {
                 interpolation = HdInterpolationConstant;
@@ -262,7 +263,7 @@ UsdImagingBasisCurvesAdapter::UpdateForTime(
             if (curves.GetNormalsAttr().Get(&normals, time)) {
                 _MergePrimvar(&primvars,
                     UsdGeomTokens->normals,
-                    _UsdToHdInterpolation(curves.GetNormalsInterpolation()),
+                    UsdImagingUsdToHdInterpolation(curves.GetNormalsInterpolation()),
                     HdPrimvarRoleTokens->normal);
             } else {
                 _RemovePrimvar(&primvars, UsdGeomTokens->normals);
@@ -292,14 +293,14 @@ UsdImagingBasisCurvesAdapter::ProcessPropertyChange(UsdPrim const& prim,
         UsdGeomCurves curves(prim);
         return UsdImagingPrimAdapter::_ProcessNonPrefixedPrimvarPropertyChange(
             prim, cachePath, propertyName, HdTokens->widths,
-            _UsdToHdInterpolation(curves.GetWidthsInterpolation()),
+            UsdImagingUsdToHdInterpolation(curves.GetWidthsInterpolation()),
             HdChangeTracker::DirtyWidths);
     
     } else if (propertyName == UsdGeomTokens->normals) {
         UsdGeomPointBased pb(prim);
         return UsdImagingPrimAdapter::_ProcessNonPrefixedPrimvarPropertyChange(
             prim, cachePath, propertyName, HdTokens->normals,
-            _UsdToHdInterpolation(pb.GetNormalsInterpolation()),
+            UsdImagingUsdToHdInterpolation(pb.GetNormalsInterpolation()),
             HdChangeTracker::DirtyNormals);
     }
     // Handle prefixed primvars that use special dirty bits.

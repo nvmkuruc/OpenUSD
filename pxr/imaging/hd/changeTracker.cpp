@@ -74,6 +74,7 @@ HdChangeTracker::HdChangeTracker()
     , _instancerIndexVersion(1)
     , _sceneStateVersion(1)
     , _visChangeCount(1)
+    , _instanceIndicesChangeCount(1)
     , _rprimRenderTagVersion(1)
     , _taskRenderTagsVersion(1)
     , _emulationSceneIndex(nullptr)
@@ -233,6 +234,10 @@ void HdChangeTracker::_MarkRprimDirty(SdfPath const& id, HdDirtyBits bits)
 
     if ((bits & DirtyVisibility) != 0) {
         ++_visChangeCount;
+    }
+
+    if ((bits & DirtyInstanceIndex) != 0) {
+        ++_instanceIndicesChangeCount;
     }
 
     if ((bits & DirtyRenderTag) != 0) {
@@ -604,6 +609,7 @@ HdChangeTracker::_MarkInstancerDirty(SdfPath const& id, HdDirtyBits bits)
     }
     if (bits & DirtyInstanceIndex) {
         toPropagate |= DirtyInstanceIndex;
+        ++_instanceIndicesChangeCount;
     }
 
     // Now mark any associated rprims or instancers dirty.
@@ -1126,6 +1132,9 @@ HdChangeTracker::MarkAllRprimsDirty(HdDirtyBits bits)
     if ((bits & DirtyVisibility) != 0) {
         ++_visChangeCount;
     }
+    if ((bits & DirtyInstanceIndex) != 0) {
+        ++_instanceIndicesChangeCount;
+    }
     if ((bits & DirtyRenderTag) != 0) {
         ++_rprimRenderTagVersion;
     }
@@ -1223,6 +1232,12 @@ unsigned
 HdChangeTracker::GetVisibilityChangeCount() const
 {
     return _visChangeCount;
+}
+
+unsigned
+HdChangeTracker::GetInstanceIndicesChangeCount() const
+{
+    return _instanceIndicesChangeCount;
 }
 
 void

@@ -51,7 +51,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
-    ((displacementBoundSphere, "displacementbound:sphere")) 
+    ((displacementBoundSphere, "displacementbound:sphere"))
 );
 
 HdPrman_Mesh::HdPrman_Mesh(SdfPath const& id)
@@ -167,10 +167,7 @@ HdPrman_Mesh::_ConvertGeometry(HdPrman_RenderParam *renderParam,
         *primType = RixStr.k_Ri_SubdivisionMesh;
         primvars.SetString(RixStr.k_Ri_scheme, RixStr.k_bilinear);
     }
-
-    if (IsDoubleSided(sceneDelegate)) {
-        primvars.SetInteger(RixStr.k_Ri_Sides, 2);
-    }
+  
     // Orientation, aka winding order.
     // Because PRMan uses a left-handed coordinate system, and USD/Hydra
     // use a right-handed coordinate system, the meaning of orientation
@@ -206,10 +203,18 @@ HdPrman_Mesh::_ConvertGeometry(HdPrman_RenderParam *renderParam,
         VtIntArray creaseIndices = osdTags.GetCreaseIndices();
         VtFloatArray creaseWeights = osdTags.GetCreaseWeights();
         if (!creaseIndices.empty()) {
+            const bool weightPerCrease = 
+                creaseWeights.size() == creaseLengths.size();
             for (int creaseLength: creaseLengths) {
                 tagNames.push_back(RixStr.k_crease);
                 tagArgCounts.push_back(creaseLength); // num int args
-                tagArgCounts.push_back(1); // num float args
+                if (weightPerCrease) {
+                    // one weight for each crease
+                    tagArgCounts.push_back(1); // num float args
+                } else {
+                    // one weight for each crease edge
+                    tagArgCounts.push_back(creaseLength-1); // num float args
+                }
                 tagArgCounts.push_back(0); // num str args
             }
             tagIntArgs.insert(tagIntArgs.end(),

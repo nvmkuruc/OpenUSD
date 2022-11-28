@@ -101,26 +101,22 @@ My_TestGLDrawing::InitTest()
     _stage = UsdStage::Open(GetStageFilePath(),
         IsEnabledUnloadedAsBounds() ? UsdStage::LoadNone : UsdStage::LoadAll);
 
+    if (!UsdImagingGLEngine::IsHydraEnabled()) {
+        std::cerr << "Couldn't initialize hydra" << std::endl;
+        exit(-1);
+    }
     SdfPathVector excludedPaths;
-    if (UsdImagingGLEngine::IsHydraEnabled()) {
-        std::cout << "Using HD Renderer.\n";
-        _engine.reset(new UsdImagingGLEngine(
-            _stage->GetPseudoRoot().GetPath(), excludedPaths));
-        if (!_GetRenderer().IsEmpty()) {
-            if (!_engine->SetRendererPlugin(_GetRenderer())) {
-                std::cerr << "Couldn't set renderer plugin: " <<
-                    _GetRenderer().GetText() << std::endl;
-                exit(-1);
-            } else {
-                std::cout << "Renderer plugin: " << _GetRenderer().GetText()
-                    << std::endl;
-            }
+    _engine.reset(new UsdImagingGLEngine(
+        _stage->GetPseudoRoot().GetPath(), excludedPaths));
+    if (!_GetRenderer().IsEmpty()) {
+        if (!_engine->SetRendererPlugin(_GetRenderer())) {
+            std::cerr << "Couldn't set renderer plugin: " <<
+                _GetRenderer().GetText() << std::endl;
+            exit(-1);
+        } else {
+            std::cout << "Renderer plugin: " << _GetRenderer().GetText()
+                << std::endl;
         }
-    } else{
-        std::cout << "Using Reference Renderer.\n"; 
-        _engine.reset(
-            new UsdImagingGLEngine(_stage->GetPseudoRoot().GetPath(), 
-                    excludedPaths));
     }
 
     for (const auto &renderSetting : GetRenderSettings()) {
@@ -176,10 +172,10 @@ My_TestGLDrawing::InitTest()
     }
 
     if(IsEnabledTestLighting()) {
+        _lightingContext = GlfSimpleLightingContext::New();
         if(UsdImagingGLEngine::IsHydraEnabled()) {
             // set same parameter as GlfSimpleLightingContext::SetStateFromOpenGL
             // OpenGL defaults
-            _lightingContext = GlfSimpleLightingContext::New();
             if (!IsEnabledSceneLights()) {
                 GlfSimpleLight light;
                 if (IsEnabledCameraLight()) {
@@ -311,7 +307,8 @@ My_TestGLDrawing::DrawTest(bool offscreen)
         if(UsdImagingGLEngine::IsHydraEnabled()) {
             _engine->SetLightingState(_lightingContext);
         } else {
-            _engine->SetLightingStateFromOpenGL();
+            _lightingContext->SetStateFromOpenGL();
+            _engine->SetLightingState(_lightingContext);
         }
     }
 

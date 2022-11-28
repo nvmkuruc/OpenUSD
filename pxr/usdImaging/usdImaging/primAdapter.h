@@ -91,6 +91,11 @@ public:
             UsdPrim const& prim,
             const UsdImagingDataSourceStageGlobals &stageGlobals);
 
+    USDIMAGING_API
+    virtual HdDataSourceLocatorSet InvalidateImagingSubprim(
+            TfToken const& subprim,
+            TfTokenVector const& properties);
+
     // ---------------------------------------------------------------------- //
     /// \name Initialization
     // ---------------------------------------------------------------------- //
@@ -288,12 +293,18 @@ public:
                                        SdfPath const& cachePath,
                                        UsdImagingIndexProxy* index);
 
+<<<<<<< HEAD
     // #nv begin #light-link-refresh
+=======
+>>>>>>> v22.11
     USDIMAGING_API
     virtual void MarkCollectionsDirty(UsdPrim const& prim,
                                       SdfPath const& cachePath,
                                       UsdImagingIndexProxy* index);
+<<<<<<< HEAD
     // #nv end
+=======
+>>>>>>> v22.11
 
     // ---------------------------------------------------------------------- //
     /// \name Computations 
@@ -842,12 +853,20 @@ protected:
     // #nv end
 
     USDIMAGING_API
+    UsdStageRefPtr _GetStage() const;
+
+    USDIMAGING_API
     UsdImaging_CoordSysBindingStrategy::value_type
     _GetCoordSysBindings(UsdPrim const& prim) const;
 
     USDIMAGING_API
     UsdImaging_InheritedPrimvarStrategy::value_type
     _GetInheritedPrimvars(UsdPrim const& prim) const;
+
+    // Utility for derived classes to try to find an inherited primvar.
+    USDIMAGING_API
+    UsdGeomPrimvar _GetInheritedPrimvar(UsdPrim const& prim,
+                                        TfToken const& primvarName) const;
 
     USDIMAGING_API
     GfInterval _GetCurrentTimeSamplingInterval();
@@ -861,6 +880,7 @@ protected:
     USDIMAGING_API
     bool _DoesDelegateSupportCoordSys() const;
 
+<<<<<<< HEAD
     //+NV_CHANGE FRZHANG
     USDIMAGING_API
     bool _UseNVGPUSkinningComputations() const;
@@ -875,6 +895,8 @@ protected:
     USDIMAGING_API
     static TfToken _UsdToHdRole(TfToken const& usdRole);
 
+=======
+>>>>>>> v22.11
 private:
     UsdImagingDelegate* _delegate;
 };

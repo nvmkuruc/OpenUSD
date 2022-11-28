@@ -26,6 +26,7 @@
 #include "pxr/usdImaging/usdImaging/delegate.h"
 #include "pxr/usdImaging/usdImaging/indexProxy.h"
 #include "pxr/usdImaging/usdImaging/instancerContext.h"
+#include "pxr/usdImaging/usdImaging/primvarUtils.h"
 #include "pxr/usdImaging/usdImaging/tokens.h"
 
 #include "pxr/imaging/hd/basisCurves.h"
@@ -343,6 +344,13 @@ UsdImagingInstanceAdapter::_Populate(UsdPrim const& prim,
 
             if (!isLeafInstancer) {
                 instancerData.childPointInstancers.insert(protoPath);
+
+                // Store cache path and instancer path mapping that
+                // helps to improve reversing lookup in `_GetProtoPrim()`
+                const auto& cacheIt = _protoPrimToInstancerMap.find(protoPath);
+                if (cacheIt == _protoPrimToInstancerMap.end()) {
+                    _protoPrimToInstancerMap[protoPath] = instancerPath;
+                }
             }
 
             TF_DEBUG(USDIMAGING_INSTANCER).Msg(
@@ -365,9 +373,9 @@ UsdImagingInstanceAdapter::_Populate(UsdPrim const& prim,
         // edits to the proto root).
         index->AddDependency(instancerPath, instancerPrim.GetPrototype());
 
-        // Mark this instancer as having a TrackVariability queued, since
-        // we automatically queue it in InsertInstancer.
-        instancerData.refreshVariability = true;
+        // Mark this instancer as having TrackVariability/UpdateForTime queued,
+        // since we automatically queue them in InsertInstancer.
+        instancerData.refresh = true;
     }
 
     // Add an entry to the instancer data for the given instance.
@@ -456,15 +464,15 @@ UsdImagingInstanceAdapter::_Populate(UsdPrim const& prim,
                 index->AddDependency(depInstancerPath, prim);
             }
 
-            // Ask hydra to do a full refresh on this instancer.
             index->MarkInstancerDirty(depInstancerPath,
                     HdChangeTracker::DirtyPrimvar |
                     HdChangeTracker::DirtyInstanceIndex);
 
-            // Tell UsdImaging to re-run TrackVariability.
-            if (!depInstancerData.refreshVariability) {
-                depInstancerData.refreshVariability = true;
-                index->Refresh(depInstancerPath);
+            // Ask hydra to do a full refresh on this instancer.
+            if (!depInstancerData.refresh) {
+                depInstancerData.refresh = true;
+                index->RequestTrackVariability(depInstancerPath);
+                index->RequestUpdateForTime(depInstancerPath);
             }
         }
 
@@ -589,7 +597,9 @@ UsdImagingInstanceAdapter::TrackVariability(UsdPrim const& prim,
             }
         }
 
-        instrData->refreshVariability = false;
+        // We can clear the "refresh" bit here since by the time
+        // TrackVariability is run, we're done populating new instances.
+        instrData->refresh = false;
     }
 }
 
@@ -1274,7 +1284,7 @@ UsdImagingInstanceAdapter::UpdateForTime(UsdPrim const& prim,
                                              &val, time)) {
                     _MergePrimvar(&primvarDescCache->GetPrimvars(cachePath),
                                   ipv.name, HdInterpolationInstance,
-                                  _UsdToHdRole(ipv.type.GetRole()));
+                                  UsdImagingUsdToHdRole(ipv.type.GetRole()));
                 }
             }
         }
@@ -1423,6 +1433,12 @@ UsdImagingInstanceAdapter::MarkDirty(UsdPrim const& prim,
         }
     } else if (TfMapLookupPtr(_instancerData, prim.GetPath()) != nullptr) {
         index->MarkInstancerDirty(cachePath, dirty);
+        // Note that if any primvars have changed, we need to re-run
+        // UpdateForTime. Value clips mean that frame changes can change the
+        // primvar set.
+        if (dirty & HdChangeTracker::DirtyPrimvar) {
+            index->RequestUpdateForTime(cachePath);
+        }
     }
 }
 
@@ -2106,6 +2122,12 @@ UsdImagingInstanceAdapter::_ResyncInstancer(SdfPath const& instancerPath,
         // Call ProcessRemoval here because we don't want them to reschedule for
         // resync, that will happen when the instancer is resync'd.
         pair.second.adapter->ProcessPrimRemoval(pair.first, index);
+
+        // Remove proto prim to instancer cache
+        auto protoIt = _protoPrimToInstancerMap.find(pair.first);
+        if (protoIt != _protoPrimToInstancerMap.end()) {
+            _protoPrimToInstancerMap.erase(protoIt);
+        }
     }
 
     // Remove this instancer's entry from the USD prototype -> instancer map.
@@ -2196,25 +2218,20 @@ UsdImagingInstanceAdapter::_GetProtoPrim(SdfPath const& instancerPath,
         // prim is not nested under the instancer, which causes the
         // instancerPath to be invalid in this context.
         //
-        // Tracking the non-child prims in a separate map would remove the need
-        // for this loop.
-        for (auto const& pathInstancerDataPair : _instancerData) {
-            _InstancerData const& instancer = pathInstancerDataPair.second;
-            _PrimMap::const_iterator protoIt =
-                                    instancer.primMap.find(cachePath);
-            if (protoIt != instancer.primMap.end()) {
-                // This is the correct instancer path for this prim.
-                instancerCachePath = pathInstancerDataPair.first;
-                materialUsdPath = 
-                    pathInstancerDataPair.second.materialUsdPath;
-                drawMode =
-                    pathInstancerDataPair.second.drawMode;
-                inheritablePurpose =
-                    pathInstancerDataPair.second.inheritablePurpose;
-                r = &protoIt->second;
-                break;
-            }
-        }
+        const auto& cacheIt = _protoPrimToInstancerMap.find(cachePath);
+        if (cacheIt != _protoPrimToInstancerMap.end()) {
+            const auto& instancerIt = _instancerData.find(cacheIt->second);
+            if (instancerIt != _instancerData.end()) {
+                const auto& protoIt = instancerIt->second.primMap.find(cachePath);
+                if (protoIt != instancerIt->second.primMap.end()) {
+                    instancerCachePath = cacheIt->second;
+                    materialUsdPath = instancerIt->second.materialUsdPath;
+                    drawMode = instancerIt->second.drawMode;
+                    inheritablePurpose = instancerIt->second.inheritablePurpose;
+                    r = &protoIt->second;
+                }
+             }
+         }
     }
 
     if (!r) {
@@ -2570,7 +2587,12 @@ UsdImagingInstanceAdapter::GetScenePrimPaths(
             // determine the min/max index to determine how many bits have to be
             // allocated in the requestIndicesMap.
             for (size_t i = 0; i < instanceIndices.size(); i++) {
+<<<<<<< HEAD
                 int instanceIndex = instanceIndices[i];
+=======
+                const size_t instanceIndex =
+                    static_cast<size_t>(instanceIndices[i]);
+>>>>>>> v22.11
 
                 // skip invalid indices
                 if (instanceIndex < indices.size()) {
@@ -2591,7 +2613,12 @@ UsdImagingInstanceAdapter::GetScenePrimPaths(
 
                 // set bits for all valid requested indices to true
                 for (size_t i = 0; i < instanceIndices.size(); i++) {
+<<<<<<< HEAD
                     int instanceIndex = instanceIndices[i];
+=======
+                    const size_t instanceIndex =
+                        static_cast<size_t>(instanceIndices[i]);
+>>>>>>> v22.11
 
                     // skip invalid indices
                     if (instanceIndex < indices.size()) {

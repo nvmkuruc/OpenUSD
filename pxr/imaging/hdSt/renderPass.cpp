@@ -26,6 +26,7 @@
 #include "pxr/imaging/hdSt/debugCodes.h"
 #include "pxr/imaging/hdSt/drawItemsCache.h"
 #include "pxr/imaging/hdSt/indirectDrawBatch.h"
+#include "pxr/imaging/hdSt/pipelineDrawBatch.h"
 #include "pxr/imaging/hdSt/resourceRegistry.h"
 #include "pxr/imaging/hdSt/renderParam.h"
 #include "pxr/imaging/hdSt/renderPassState.h"
@@ -124,77 +125,6 @@ HdSt_RenderPass::HasDrawItems(TfTokenVector const &renderTags) const
         (renderTags.empty() || renderParam->HasAnyRenderTag(renderTags));
 }
 
-static
-const GfVec3i &
-_GetFramebufferSize(const HgiGraphicsCmdsDesc &desc)
-{
-    for (const HgiTextureHandle &color : desc.colorTextures) {
-        return color->GetDescriptor().dimensions;
-    }
-    if (desc.depthTexture) {
-        return desc.depthTexture->GetDescriptor().dimensions;
-    }
-    
-    static const GfVec3i fallback(0);
-    return fallback;
-}
-
-static
-GfVec4i
-_FlipViewport(const GfVec4i &viewport,
-              const GfVec3i &framebufferSize)
-{
-    const int height = framebufferSize[1];
-    if (height > 0) {
-        return GfVec4i(viewport[0],
-                       height - (viewport[1] + viewport[3]),
-                       viewport[2],
-                       viewport[3]);
-    } else {
-        return viewport;
-    }
-}
-
-static
-GfVec4i
-_ToVec4i(const GfVec4f &v)
-{
-    return GfVec4i(int(v[0]), int(v[1]), int(v[2]), int(v[3]));
-}
-
-static
-GfVec4i
-_ToVec4i(const GfRect2i &r)
-{
-    return GfVec4i(r.GetMinX(),  r.GetMinY(),
-                   r.GetWidth(), r.GetHeight());
-}
-
-static
-GfVec4i
-_ComputeViewport(HdRenderPassStateSharedPtr const &renderPassState,
-                 const HgiGraphicsCmdsDesc &desc,
-                 const bool flip)
-{
-    const CameraUtilFraming &framing = renderPassState->GetFraming();
-    if (framing.IsValid()) {
-        // Use data window for clients using the new camera framing
-        // API.
-        const GfVec4i viewport = _ToVec4i(framing.dataWindow);
-        if (flip) {
-            // Note that in OpenGL, the coordinates for the viewport
-            // are y-Up but the camera framing is y-Down.
-            return _FlipViewport(viewport, _GetFramebufferSize(desc));
-        } else {
-            return viewport;
-        }
-    }
-
-    // For clients not using the new camera framing API, fallback
-    // to the viewport they specified.
-    return _ToVec4i(renderPassState->GetViewport());
-}
-
 void
 HdSt_RenderPass::_Execute(HdRenderPassStateSharedPtr const &renderPassState,
                           TfTokenVector const& renderTags)
@@ -220,7 +150,25 @@ HdSt_RenderPass::_Execute(HdRenderPassStateSharedPtr const &renderPassState,
         GetRenderIndex()->GetResourceRegistry());
     TF_VERIFY(resourceRegistry);
 
-    _cmdBuffer.PrepareDraw(stRenderPassState, resourceRegistry);
+    // Create graphics work to handle the prepare steps.
+    // This does not have any AOVs since it only writes intermediate buffers.
+    HgiGraphicsCmdsUniquePtr prepareGfxCmds =
+        _hgi->CreateGraphicsCmds(HgiGraphicsCmdsDesc());
+    if (!TF_VERIFY(prepareGfxCmds)) {
+        return;
+    }
+
+    HdRprimCollection const &collection = GetRprimCollection();
+    std::string prepareName = "HdSt_RenderPass: Prepare " +
+        collection.GetMaterialTag().GetString();
+
+    prepareGfxCmds->PushDebugGroup(prepareName.c_str());
+
+    _cmdBuffer.PrepareDraw(prepareGfxCmds.get(),
+                           stRenderPassState, resourceRegistry);
+
+    prepareGfxCmds->PopDebugGroup();
+    _hgi->SubmitCmds(prepareGfxCmds.get());
 
     // Create graphics work to render into aovs.
     const HgiGraphicsCmdsDesc desc =
@@ -230,15 +178,13 @@ HdSt_RenderPass::_Execute(HdRenderPassStateSharedPtr const &renderPassState,
         return;
     }
 
-    HdRprimCollection const &collection = GetRprimCollection();
     std::string passName = "HdSt_RenderPass: " +
         collection.GetMaterialTag().GetString();
 
     gfxCmds->PushDebugGroup(passName.c_str());
 
     gfxCmds->SetViewport(
-        _ComputeViewport(
-            renderPassState,
+        stRenderPassState->ComputeViewport(
             desc,
             /* flip = */ _hgi->GetAPIName() == HgiTokens->OpenGL));
 
@@ -439,14 +385,19 @@ HdSt_RenderPass::_FrustumCullCPU(
     // to be consistent with GPU culling.
 
     HdChangeTracker const &tracker = GetRenderIndex()->GetChangeTracker();
+    HgiCapabilities const *capabilities = _hgi->GetCapabilities();
 
-    const bool multiDrawIndirectEnabled = _hgi->
-        GetCapabilities()->IsSet(HgiDeviceCapabilitiesBitsMultiDrawIndirect);
+    const bool multiDrawIndirectEnabled =
+        capabilities->IsSet(HgiDeviceCapabilitiesBitsMultiDrawIndirect);
+
+    const bool gpuFrustumCullingEnabled =
+        HdSt_PipelineDrawBatch::IsEnabled(capabilities) ?
+            HdSt_PipelineDrawBatch::IsEnabledGPUFrustumCulling() :
+            HdSt_IndirectDrawBatch::IsEnabledGPUFrustumCulling();
 
     const bool
        skipCulling = TfDebug::IsEnabled(HDST_DISABLE_FRUSTUM_CULLING) ||
-           (multiDrawIndirectEnabled
-               && HdSt_IndirectDrawBatch::IsEnabledGPUFrustumCulling());
+           (multiDrawIndirectEnabled && gpuFrustumCullingEnabled);
     bool freezeCulling = TfDebug::IsEnabled(HD_FREEZE_CULL_FRUSTUM);
 
     if(skipCulling) {

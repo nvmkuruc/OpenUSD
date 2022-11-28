@@ -71,7 +71,6 @@ class UsdPrim;
 class HdRenderIndex;
 class HdxTaskController;
 class UsdImagingDelegate;
-class UsdImagingGLLegacyEngine;
 class UsdImagingStageSceneIndex;
 
 TF_DECLARE_WEAK_AND_REF_PTRS(GlfSimpleLightingContext);
@@ -221,22 +220,12 @@ public:
     void SetCameraState(const GfMatrix4d& viewMatrix,
                         const GfMatrix4d& projectionMatrix);
 
-    /// Helper function to extract camera and viewport state from opengl and
-    /// then call SetCameraState and SetRenderViewport
-    USDIMAGINGGL_API
-    void SetCameraStateFromOpenGL();
-
     /// @}
 
     // ---------------------------------------------------------------------
     /// \name Light State
     /// @{
     // ---------------------------------------------------------------------
-    
-    /// Helper function to extract lighting state from opengl and then
-    /// call SetLights.
-    USDIMAGINGGL_API
-    void SetLightingStateFromOpenGL();
 
     /// Copy lighting state from another lighting context.
     USDIMAGINGGL_API
@@ -370,6 +359,10 @@ public:
     USDIMAGINGGL_API
     HgiTextureHandle GetAovTexture(TfToken const& name) const;
 
+    /// Returns the AOV render buffer for the given token.
+    USDIMAGINGGL_API
+    HdRenderBuffer* GetAovRenderBuffer(TfToken const& name) const;
+        
     /// Returns the list of renderer settings.
     USDIMAGINGGL_API
     UsdImagingGLRendererSettingsList GetRendererSettingsList() const;
@@ -543,6 +536,17 @@ protected:
     USDIMAGINGGL_API
     void _PrepareRender(const UsdImagingGLRenderParams& params);
 
+    USDIMAGINGGL_API
+    void _UpdateDomeLightCameraVisibility();
+
+    using BBoxVector = std::vector<GfBBox3d>;
+
+    USDIMAGINGGL_API
+    void _SetBBoxParams(
+        const BBoxVector& bboxes,
+        const GfVec4f& bboxLineColor,
+        float bboxLineDashSize);
+
     // Create a hydra collection given root paths and render params.
     // Returns true if the collection was updated.
     USDIMAGINGGL_API
@@ -587,9 +591,6 @@ protected:
     HdxTaskController *_GetTaskController() const;
 
     USDIMAGINGGL_API
-    bool _IsUsingLegacyImpl() const;
-
-    USDIMAGINGGL_API
     HdSelectionSharedPtr _GetSelection() const;
 
 protected:
@@ -620,18 +621,12 @@ protected:
 
     // Data we want to live across render plugin switches:
     GfVec4f _selectionColor;
+    bool _domeLightCameraVisibility;
 
     SdfPath _rootPath;
     SdfPathVector _excludedPrimPaths;
     SdfPathVector _invisedPrimPaths;
     bool _isPopulated;
-
-    // An implementation of much of the engine functionality that doesn't
-    // invoke any of the advanced Hydra features.  It is kept around for 
-    // backwards compatibility, but it's deprecated and scheduled for deletion.
-    // When we use the legacy code, this pointer is non-null and most of the
-    // rest of this class isn't used; when we use hydra, this pointer is null.
-    std::unique_ptr<UsdImagingGLLegacyEngine> _legacyImpl;
 
 private:
     void _DestroyHydraObjects();

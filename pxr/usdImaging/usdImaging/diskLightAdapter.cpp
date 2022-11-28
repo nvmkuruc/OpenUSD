@@ -42,6 +42,22 @@ UsdImagingDiskLightAdapter::~UsdImagingDiskLightAdapter()
 {
 }
 
+TfTokenVector
+UsdImagingDiskLightAdapter::GetImagingSubprims()
+{
+    return { TfToken() };
+}
+
+TfToken
+UsdImagingDiskLightAdapter::GetImagingSubprimType(TfToken const& subprim)
+{
+    if (subprim.IsEmpty()) {
+        return HdPrimTypeTokens->diskLight;
+    }
+
+    return TfToken();
+}
+
 bool
 UsdImagingDiskLightAdapter::IsSupported(UsdImagingIndexProxy const* index) const
 {
@@ -56,9 +72,13 @@ UsdImagingDiskLightAdapter::Populate(UsdPrim const& prim,
 {
     index->InsertSprim(HdPrimTypeTokens->diskLight, prim.GetPath(), prim);
     HD_PERF_COUNTER_INCR(UsdImagingTokens->usdPopulatedPrimCount);
+<<<<<<< HEAD
     // #nv begin #light-link-refresh
     _RegisterLightCollections(prim);
     // #nv end
+=======
+    _RegisterLightCollections(prim);
+>>>>>>> v22.11
 
     return prim.GetPath();
 }
@@ -67,9 +87,13 @@ void
 UsdImagingDiskLightAdapter::_RemovePrim(SdfPath const& cachePath,
                                          UsdImagingIndexProxy* index)
 {
+<<<<<<< HEAD
     // #nv begin #light-link-refresh
     _UnregisterLightCollections(cachePath);
     // #nv end
+=======
+    _UnregisterLightCollections(cachePath);
+>>>>>>> v22.11
     index->RemoveSprim(HdPrimTypeTokens->diskLight, cachePath);
 }
 

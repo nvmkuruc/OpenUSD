@@ -42,6 +42,22 @@ UsdImagingSphereLightAdapter::~UsdImagingSphereLightAdapter()
 {
 }
 
+TfTokenVector
+UsdImagingSphereLightAdapter::GetImagingSubprims()
+{
+    return { TfToken() };
+}
+
+TfToken
+UsdImagingSphereLightAdapter::GetImagingSubprimType(TfToken const& subprim)
+{
+    if (subprim.IsEmpty()) {
+        return HdPrimTypeTokens->sphereLight;
+    }
+
+    return TfToken();
+}
+
 bool
 UsdImagingSphereLightAdapter::IsSupported(
         UsdImagingIndexProxy const* index) const
@@ -57,9 +73,13 @@ UsdImagingSphereLightAdapter::Populate(UsdPrim const& prim,
 {
     index->InsertSprim(HdPrimTypeTokens->sphereLight, prim.GetPath(), prim);
     HD_PERF_COUNTER_INCR(UsdImagingTokens->usdPopulatedPrimCount);
+<<<<<<< HEAD
     // #nv begin #light-link-refresh
     _RegisterLightCollections(prim);
     // #nv end
+=======
+    _RegisterLightCollections(prim);
+>>>>>>> v22.11
 
     return prim.GetPath();
 }
@@ -68,9 +88,13 @@ void
 UsdImagingSphereLightAdapter::_RemovePrim(SdfPath const& cachePath,
                                          UsdImagingIndexProxy* index)
 {
+<<<<<<< HEAD
     // #nv begin #light-link-refresh
     _UnregisterLightCollections(cachePath);
     // #nv end
+=======
+    _UnregisterLightCollections(cachePath);
+>>>>>>> v22.11
     index->RemoveSprim(HdPrimTypeTokens->sphereLight, cachePath);
 }
 

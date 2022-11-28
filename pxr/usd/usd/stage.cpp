@@ -1948,21 +1948,21 @@ UsdStage::GetRelationshipAtPath(const SdfPath &path) const
 Usd_PrimDataConstPtr
 UsdStage::_GetPrimDataAtPath(const SdfPath &path) const
 {
-    tbb::spin_rw_mutex::scoped_lock lock;
-    if (_primMapMutex)
-        lock.acquire(*_primMapMutex, /*write=*/false);
-    PathToNodeMap::const_iterator entry = _primMap.find(path);
-    return entry != _primMap.end() ? entry->second.get() : nullptr;
+    PathToNodeMap::const_accessor acc;
+    if (_primMap.find(acc, path)) {
+        return acc->second.get();
+    }
+    return nullptr;
 }
 
 Usd_PrimDataPtr
 UsdStage::_GetPrimDataAtPath(const SdfPath &path)
 {
-    tbb::spin_rw_mutex::scoped_lock lock;
-    if (_primMapMutex)
-        lock.acquire(*_primMapMutex, /*write=*/false);
-    PathToNodeMap::const_iterator entry = _primMap.find(path);
-    return entry != _primMap.end() ? entry->second.get() : nullptr;
+    PathToNodeMap::const_accessor acc;
+    if (_primMap.find(acc, path)) {
+        return acc->second.get();
+    }
+    return nullptr;
 }
 
 Usd_PrimDataConstPtr 
@@ -2503,18 +2503,11 @@ UsdStage::_InstantiatePrim(const SdfPath &primPath)
 
     // Instantiate new prim data instance.
     Usd_PrimDataPtr p = new Usd_PrimData(this, primPath);
-    pair<PathToNodeMap::iterator, bool> result;
-    std::pair<SdfPath, Usd_PrimDataPtr> payload(primPath, p);
-    {
-        tbb::spin_rw_mutex::scoped_lock lock;
-        if (_primMapMutex)
-            lock.acquire(*_primMapMutex);
-        result = _primMap.insert(payload);
-    }
 
     // Insert entry into the map -- should always succeed.
-    TF_VERIFY(result.second, "Newly instantiated prim <%s> already present in "
-              "_primMap", primPath.GetText());
+    TF_VERIFY(_primMap.emplace(primPath, p),
+              "Newly instantiated prim <%s> already present in _primMap",
+              primPath.GetText());
     return p;
 }
 
@@ -2871,9 +2864,17 @@ UsdStage::_ReportErrors(const PcpErrorVector &errors,
         allErrors.reserve(errors.size() + otherErrors.size());
 
         for (const auto& err : errors) {
-            allErrors.push_back(TfStringPrintf("%s %s", 
-                                               err->ToString().c_str(), 
-                                               fullContext.c_str()));
+            if (err->rootSite.path.IsAbsoluteRootPath()) {
+                allErrors.push_back(TfStringPrintf("%s %s", 
+                    err->ToString().c_str(), 
+                    fullContext.c_str()));
+
+            } else {
+                allErrors.push_back(TfStringPrintf("In <%s>: %s %s", 
+                    err->rootSite.path.GetString().c_str(),
+                    err->ToString().c_str(), 
+                    fullContext.c_str()));
+            }
         }
         for (const auto& err : otherErrors) {
             allErrors.push_back(TfStringPrintf("%s %s", 
@@ -2895,6 +2896,10 @@ UsdStage::_ReportErrors(const PcpErrorVector &errors,
 static Usd_PrimTypeInfoCache &
 _GetPrimTypeInfoCache()
 {
+    // As noted in prim.h, our current guarantee of the lifetime of the objects
+    // referenced by the return value of UsdPrim::GetPrimTypeInfo is (at least)
+    // as long as the owning stage is open. This is currently true as we never
+    // clear either this cache or its contents.
     static Usd_PrimTypeInfoCache cache;
     return cache;
 }
@@ -2961,7 +2966,6 @@ UsdStage::_ComposeSubtreesInParallel(
 
     // Begin a subtree composition in parallel.
     WorkWithScopedParallelism([this, &prims, &primIndexPaths]() {
-            _primMapMutex = boost::in_place();
             _dispatcher = boost::in_place();
             // We populate the clip cache concurrently during composition, so we
             // need to enable concurrent population here.
@@ -2980,12 +2984,10 @@ UsdStage::_ComposeSubtreesInParallel(
             }
             catch (...) {
                 _dispatcher = boost::none;
-                _primMapMutex = boost::none;
                 throw;
             }
             
             _dispatcher = boost::none;
-            _primMapMutex = boost::none;
         });
 }
 
@@ -3113,26 +3115,24 @@ UsdStage::_DestroyPrimsInParallel(const vector<SdfPath>& paths)
 
     TRACE_FUNCTION();
 
-    TF_AXIOM(!_dispatcher && !_primMapMutex);
+    TF_AXIOM(!_dispatcher);
 
     WorkWithScopedParallelism([&]() {
-            _primMapMutex = boost::in_place();
-            _dispatcher = boost::in_place();
-            for (const auto& path : paths) {
-                Usd_PrimDataPtr prim = _GetPrimDataAtPath(path);
-                // We *expect* every prim in paths to be valid as we iterate,
-                // but at one time had issues with deactivated prototype prims,
-                // so we preserve a guard for resiliency.  See
-                // testUsdBug141491.py
-                if (TF_VERIFY(prim)) {
-                    _dispatcher->Run([this, prim]() {
-                            _DestroyPrim(prim);
-                        });
-                }
+        _dispatcher = boost::in_place();
+        for (const auto& path : paths) {
+            Usd_PrimDataPtr prim = _GetPrimDataAtPath(path);
+            // We *expect* every prim in paths to be valid as we iterate,
+            // but at one time had issues with deactivated prototype prims,
+            // so we preserve a guard for resiliency.  See
+            // testUsdBug141491.py
+            if (TF_VERIFY(prim)) {
+                _dispatcher->Run([this, prim]() {
+                    _DestroyPrim(prim);
+                });
             }
-            _dispatcher = boost::none;
-            _primMapMutex = boost::none;
-        });
+        }
+        _dispatcher = boost::none;
+    });
 }
 
 void
@@ -3168,17 +3168,10 @@ UsdStage::_DestroyPrim(Usd_PrimDataPtr prim)
     // NOTE: The above was true in gcc 4.4 but not in gcc 4.8, nor is it
     //       true in boost::unordered_map or std::unordered_map.
     if (!_isClosingStage) {
-        SdfPath primPath = prim->GetPath(); 
-        tbb::spin_rw_mutex::scoped_lock lock;
-        const bool hasMutex = static_cast<bool>(_primMapMutex);
-        if (hasMutex)
-            lock.acquire(*_primMapMutex);
-        bool erased = _primMap.erase(primPath);
-        if (hasMutex)
-            lock.release();
-        TF_VERIFY(erased, 
+        SdfPath primPath = prim->GetPath();
+        TF_VERIFY(_primMap.erase(primPath),
                   "Destroyed prim <%s> not present in stage's data structures",
-                  prim->GetPath().GetString().c_str());
+                  primPath.GetString().c_str());
     }
 }
 
@@ -3205,11 +3198,9 @@ UsdStage::Reload()
 
     ArResolverScopedCache resolverCache;
 
-#if AR_VERSION > 1
     // Refresh the resolver to pick up changes that might have
     // affected asset resolution.
     ArGetResolver().RefreshContext(GetPathResolverContext());
-#endif
 
     // Reload layers in a change block to batch together change notices.
     { 
@@ -4333,10 +4324,6 @@ void
 UsdStage::_HandleResolverDidChange(
     const ArNotice::ResolverChanged& n)
 {
-#if AR_VERSION == 1
-    return;
-#endif
-
     // A ResolverChanged notice that affects our resolver context means that
     // any asset paths that have been resolved on this stage may now resolve
     // to a different resolved path. This includes asset paths that were
@@ -4636,12 +4623,13 @@ UsdStage::_ComputeSubtreesToRecompose(
 
         // Add prototypes to list of subtrees to recompose and instantiate any 
         // new prototype not present in the primMap from before
+        PathToNodeMap::const_accessor acc;
         if (_instanceCache->IsPrototypePath(*i)) {
-            PathToNodeMap::const_iterator itr = _primMap.find(*i);
             Usd_PrimDataPtr prototypePrim;
-            if (itr != _primMap.end()) {
+            if (_primMap.find(acc, *i)) {
                 // should be a changed prototype if already in the primMap
-                prototypePrim = itr->second.get();
+                prototypePrim = acc->second.get();
+                acc.release();
             } else {
                 // newPrototype should be absent from the primMap, instantiate
                 // these now to be added to subtreesToRecompose
@@ -4655,8 +4643,7 @@ UsdStage::_ComputeSubtreesToRecompose(
         // Collect all non-prototype prims (including descendants of prototypes)
         // to be added to subtreesToRecompute
         SdfPath const &parentPath = i->GetParentPath();
-        PathToNodeMap::const_iterator parentIt = _primMap.find(parentPath);
-        if (parentIt != _primMap.end()) {
+        if (_primMap.find(acc, parentPath)) {
 
             // Since our input range contains no descendant paths, siblings
             // must appear consecutively.  We want to process all siblings that
@@ -4665,16 +4652,17 @@ UsdStage::_ComputeSubtreesToRecompose(
             // parent to find the range of siblings.
 
             // Recompose parent's list of children.
-            auto parent = parentIt->second.get();
+            auto parent = acc->second.get();
+            acc.release();
             _ComposeChildren(
                 parent, parent->IsInPrototype() ? nullptr : &_populationMask,
                 /*recurse=*/false);
 
             // Recompose the subtree for each affected sibling.
             do {
-                PathToNodeMap::const_iterator primIt = _primMap.find(*i);
-                if (primIt != _primMap.end()) {
-                    subtreesToRecompose->push_back(primIt->second.get());
+                if (_primMap.find(acc, *i)) {
+                    subtreesToRecompose->push_back(acc->second.get());
+                    acc.release();
                 } else if (_instanceCache->IsPrototypePath(*i)) {
                     // If this path is a prototype path and is not present in
                     // the primMap, then this must be a new prototype added
@@ -6282,10 +6270,10 @@ _ComposeGeneralMetadataImpl(Usd_PrimDataConstPtr primData,
                             Composer *composer)
 {
     // Main resolution loop.
-    SdfPath specPath = res->GetLocalPath(propName);
+    SdfPath specPath;
     bool gotOpinion = false;
 
-    for (bool isNewNode = false; res->IsValid(); isNewNode = res->NextLayer()) {
+    for (bool isNewNode = true; res->IsValid(); isNewNode = res->NextLayer()) {
         if (isNewNode) {
             specPath = res->GetLocalPath(propName);
         }
@@ -6730,83 +6718,59 @@ _GetPrimSpecifierImpl(Usd_PrimDataConstPtr primData,
     // 'class' specifiers due to direct inherits as weaker than all other
     // defining specifiers avoids this problem.
 
-    // These are ordered so stronger strengths are numerically larger.
-    enum _SpecifierStrength {
-        _SpecifierStrengthNonDefining,
-        _SpecifierStrengthDirectlyInheritedClass,
-        _SpecifierStrengthDefining
-    };
-
-    boost::optional<SdfSpecifier> specifier;
-    _SpecifierStrength strength = _SpecifierStrengthNonDefining;
-
     // Iterate over all prims, strongest to weakest.
-    SdfSpecifier curSpecifier = SdfSpecifierOver;
-
-    Usd_Resolver::Position specPos;
+    SdfSpecifier resolvedSpecifier = SdfSpecifierOver;
 
     const PcpPrimIndex &primIndex = primData->GetPrimIndex();
     for (Usd_Resolver res(&primIndex); res.IsValid(); res.NextLayer()) {
-        // Get specifier and its strength from this prim.
-        _SpecifierStrength curStrength = _SpecifierStrengthDefining;
-        if (res.GetLayer()->HasField(
+
+        // Try to get the specifier from the spec on this layer.
+        SdfSpecifier curSpecifier = SdfSpecifierOver;
+        if (!res.GetLayer()->HasField(
                 res.GetLocalPath(), SdfFieldKeys->Specifier, &curSpecifier)) {
-            specPos = res.GetPosition();
-
-            if (SdfIsDefiningSpecifier(curSpecifier)) {
-                // Compute strength.
-                if (curSpecifier == SdfSpecifierClass) {
-                    // See if this excerpt is due to direct inherits.  Walk up
-                    // the excerpt tree looking for a direct inherit.  If we
-                    // find one set the strength and stop.
-                    for (PcpNodeRef node = res.GetNode();
-                         node; node = node.GetParentNode()) {
-
-                        if (PcpIsInheritArc(node.GetArcType()) &&
-                            !node.IsDueToAncestor()) {
-                            curStrength =
-                                _SpecifierStrengthDirectlyInheritedClass;
-                            break;
-                        }
-                    }
-
-                }
-            }
-            else {
-                // Strength is _SpecifierStrengthNonDefining and can't be
-                // stronger than the current strength so there's no need to do
-                // the check below.
-                continue;
-            }
-        }
-        else {
-            // Variant PrimSpecs don't have a specifier field, continue looking
-            // for a specifier.
+            // Some prim specs (such as variants) don't have a specifier field.
             continue;
         }
 
-        // Use the specifier if it's stronger.
-        if (curStrength > strength) {
-            specifier = curSpecifier;
-            strength = curStrength;
-
-            // We can stop as soon as we find a specifier with the strongest
-            // strength.
-            if (strength == _SpecifierStrengthDefining)
-                break;
+        // Skip overs
+        if (curSpecifier == SdfSpecifierOver) {
+            continue;
         }
+
+        // If the specifier is a "def" we're done; the specifier is "def"
+        if (curSpecifier == SdfSpecifierDef) {
+            composer->ConsumeExplicitValue(SdfSpecifierDef);
+            return true;
+        }
+
+        // Otherwise, the specifier is class. But we still need to 
+        // see if this node is due to a direct inherit by walking up
+        // the prim index graph looking for a direct inherit node which,
+        // if found, means this node is due to a direct inherit.
+        const bool isDueToDirectInherit = [&res]() {
+            for (PcpNodeRef node = res.GetNode(); 
+                    node; node = node.GetParentNode()) {
+                if (PcpIsInheritArc(node.GetArcType()) &&
+                        !node.IsDueToAncestor()) {
+                    return true;
+                }
+            }
+            return false;
+        } ();
+
+        // If the node's not due to a direct inherit then "class" is
+        // the strongest specifier and we're done.
+        if (!isDueToDirectInherit) {
+            composer->ConsumeExplicitValue(SdfSpecifierClass);
+            return true;
+        }
+
+        // Otherwise set the resolved specifier to class and keep looking
+        // for a def specifier.
+        resolvedSpecifier = SdfSpecifierClass;
     }
 
-    // Verify we found *something*.  We should never have PrimData without at
-    // least one PrimSpec, and 'specifier' is required, so it must be present.
-    if (TF_VERIFY(specPos.GetLayer(), "No PrimSpecs for '%s'",
-                  primData->GetPath().GetText())) {
-        // Let the composer see the deciding opinion.
-        composer->ConsumeAuthored(
-            specPos.GetNode(), specPos.GetLayer(), 
-            specPos.GetLocalPath(),
-            SdfFieldKeys->Specifier, TfToken());
-    }
+    composer->ConsumeExplicitValue(resolvedSpecifier);
     return true;
 }
 
@@ -6822,9 +6786,9 @@ _GetListOpMetadataImpl(Usd_PrimDataConstPtr primData,
     // Collect all list op opinions for this field.
     std::vector<ListOpType> listOps;
 
-    SdfPath specPath = res->GetLocalPath(propName);
+    SdfPath specPath;
 
-    for (bool isNewNode = false; res->IsValid(); isNewNode = res->NextLayer()) {
+    for (bool isNewNode = true; res->IsValid(); isNewNode = res->NextLayer()) {
         if (isNewNode)
             specPath = res->GetLocalPath(propName);
 
@@ -7044,27 +7008,23 @@ _ListMetadataFieldsImpl(Usd_PrimDataConstPtr primData,
 {
     TRACE_FUNCTION();
 
-    Usd_Resolver res(&primData->GetPrimIndex());
-    SdfPath specPath = res.GetLocalPath(propName);
-    PcpNodeRef lastNode = res.GetNode();
-    SdfSpecType specType = SdfSpecTypeUnknown;
-
     const UsdPrimDefinition &primDef = primData->GetPrimDefinition();
 
     // If this is a builtin property, determine specType from the definition.
-    if (!propName.IsEmpty()) {
-        specType = primDef.GetSpecType(propName);
-    }
+    SdfSpecType specType = propName.IsEmpty() ? 
+        SdfSpecTypeUnknown : primDef.GetSpecType(propName);
 
     // Insert authored fields, discovering spec type along the way.
-    for (; res.IsValid(); res.NextLayer()) {
-        if (res.GetNode() != lastNode) {
-            lastNode = res.GetNode();
+    SdfPath specPath;
+    Usd_Resolver res(&primData->GetPrimIndex());
+    for (bool isNewNode = true; res.IsValid(); isNewNode = res.NextLayer()) {
+        if (isNewNode) {
             specPath = res.GetLocalPath(propName);
         }
         const SdfLayerRefPtr& layer = res.GetLayer();
-        if (specType == SdfSpecTypeUnknown)
+        if (specType == SdfSpecTypeUnknown) {
             specType = layer->GetSpecType(specPath);
+        }
 
         for (const auto& fieldName : layer->ListFields(specPath)) {
             if (!_IsPrivateFieldKey(fieldName))
@@ -7293,16 +7253,16 @@ template <class T>
 struct Usd_AttrGetValueHelper {
 
 public:
-    // Get the value at time for the attribute. The getValueImpl function is
-    // templated for sharing of this functionality between _GetValue and 
-    // _GetValueForResolveInfo.
-    template <class Fn>
-    static bool GetValue(const UsdStage &stage, UsdTimeCode time, 
-                         const UsdAttribute &attr, T* result, 
-                         const Fn &getValueImpl)
+    // Get the value at time for the attribute.
+    static bool GetValue(
+        const UsdStage &stage, 
+        UsdTimeCode time, 
+        const UsdAttribute &attr, 
+        T* result)
     {
         // Special case if time is default: we can grab the value from the
-        // metadata. This value will be fully resolved already.
+        // metadata. This value will be fully resolved already and can be
+        // returned without further value resolution.
         if (time.IsDefault()) {
             SdfAbstractDataTypedValue<T> out(result);
             TypeSpecificValueComposer<T> composer(&out);
@@ -7314,7 +7274,57 @@ public:
                 (!Usd_ClearValueIfBlocked<SdfAbstractDataValue>(&out));
         }
 
-        return _GetResolvedValue(stage, time, attr, result, getValueImpl);
+        // Otherwise we have numeric time and need to get the value with
+        // the appropriate interpolation.
+        auto getValueImpl = [&](Usd_InterpolatorBase* interpolator,
+                                SdfAbstractDataValue* value) {
+            return stage._GetValueImpl(time, attr, interpolator, value);
+        };
+
+        if (_GetValueWithInterpolationImpl(stage, result, getValueImpl)) {
+            // Do the the type specific value resolution on the result. For 
+            // most types _ResolveValue does nothing. 
+            _ResolveValue(stage, time, attr, result);
+            return true;
+        }
+        return false;
+    }
+
+    // Get the value at time for the attribute using the given the already 
+    // computed resolve info.
+    static bool GetValueFromResolveInfo(
+        const UsdStage &stage, 
+        UsdTimeCode time, 
+        const UsdAttribute &attr, 
+        const UsdResolveInfo &info,
+        T* result)
+    {
+        if (time.IsDefault()) {
+            // For default time do default value resolution. The the resolved
+            // value will NOT have type specific value resolution applied yet.
+            SdfAbstractDataTypedValue<T> out(result);
+            if (!stage._GetDefaultValueFromResolveInfoImpl<SdfAbstractDataValue>(
+                    info, attr, &out)) {
+                return false;
+            }
+        } else {
+            // Otherwise we have numeric time and need to get the value with
+            // the appropriate interpolation.
+            auto getValueImpl = [&](Usd_InterpolatorBase* interpolator,
+                                    SdfAbstractDataValue* value) {
+                return stage._GetValueFromResolveInfoImpl(
+                    info, time, attr, interpolator, value);
+            };
+
+            if (!_GetValueWithInterpolationImpl(stage, result, getValueImpl)) {
+                return false;
+            }
+        }
+
+        // Do the the type specific value resolution on the result. For 
+        // most types _ResolveValue does nothing. 
+        _ResolveValue(stage, time, attr, result);
+        return true;
     }
 
 private:
@@ -7331,35 +7341,19 @@ private:
     // resolution (like SdfAssetPath and SdfTimeCode), the value returned from
     // from this is NOT fully resolved yet.
     template <class Fn>
-    static bool _GetValueFromImpl(const UsdStage &stage,
-                                  UsdTimeCode time, const UsdAttribute &attr,
-                                  T* result, const Fn &getValueImpl)
+    static bool _GetValueWithInterpolationImpl(
+        const UsdStage &stage, T* result, const Fn &getValueImpl)
     {
         SdfAbstractDataTypedValue<T> out(result);
 
         if (stage._interpolationType == UsdInterpolationTypeLinear) {
             typedef typename _SelectInterpolator::type _Interpolator;
             _Interpolator interpolator(result);
-            return getValueImpl(stage, time, attr, &interpolator, &out);
+            return getValueImpl(&interpolator, &out);
         };
 
         Usd_HeldInterpolator<T> interpolator(result);
-        return getValueImpl(stage, time, attr, &interpolator, &out);
-    }
-
-    // Gets the fully resolved value for the attribute.
-    template <class Fn>
-    static bool _GetResolvedValue(const UsdStage &stage,
-                                  UsdTimeCode time, const UsdAttribute &attr,
-                                  T* result, const Fn &getValueImpl)
-    {
-        if (_GetValueFromImpl(stage, time, attr, result, getValueImpl)) {
-            // Do the the type specific value resolution on the result. For 
-            // most types _ResolveValue does nothing. 
-            _ResolveValue(stage, time, attr, result);
-            return true;
-        }
-        return false;
+        return getValueImpl(&interpolator, &out);
     }
 
     // Performs type specific value resolution.
@@ -7410,10 +7404,13 @@ void Usd_AttrGetValueHelper<VtArray<SdfTimeCode>>::_ResolveValue(
 
 // Attribute value getter for type erased VtValue.
 struct Usd_AttrGetUntypedValueHelper {
-    template <class Fn>
-    static bool GetValue(const UsdStage &stage, UsdTimeCode time, 
-                         const UsdAttribute &attr, VtValue* result, 
-                         const Fn &getValueImpl)
+
+    // Get the value at time for the attribute.
+    static bool GetValue(
+        const UsdStage &stage, 
+        UsdTimeCode time, 
+        const UsdAttribute &attr, 
+        VtValue* result)
     {
         // Special case if time is default: we can grab the value from the
         // metadata. This value will be fully resolved already because 
@@ -7426,7 +7423,7 @@ struct Usd_AttrGetUntypedValueHelper {
         }
 
         Usd_UntypedInterpolator interpolator(attr, result);
-        if (getValueImpl(stage, time, attr, &interpolator, result)) {
+        if (stage._GetValueImpl(time, attr, &interpolator, result)) {
             if (result) {
                 // Always run the resolve functions for value types that need 
                 // it.
@@ -7436,6 +7433,36 @@ struct Usd_AttrGetUntypedValueHelper {
         }
         return false;
     }
+
+    // Get the value at time for the attribute using the given the already 
+    // computed resolve info.
+    static bool GetValueFromResolveInfo(
+        const UsdStage &stage, 
+        UsdTimeCode time,
+        const UsdAttribute &attr, 
+        const UsdResolveInfo &info,
+        VtValue* result)
+    {
+        if (time.IsDefault()) {
+            if (!stage._GetDefaultValueFromResolveInfoImpl(
+                    info, attr, result)) {
+                return false;
+            }
+        } else {
+            Usd_UntypedInterpolator interpolator(attr, result);
+            if (!stage._GetValueFromResolveInfoImpl(
+                info, time, attr, &interpolator, result)) {
+                return false;
+            }
+        }
+
+        if (result) {
+            // Always run the resolve functions for value types that need 
+            // it.
+            stage._MakeResolvedAttributeValue(time, attr, result);
+        }
+        return true;
+    }    
 };
 
 // #nv begin #omni-hydra
@@ -7475,6 +7502,7 @@ bool
 UsdStage::_GetValue(UsdTimeCode time, const UsdAttribute &attr,
                     VtValue* result) const
 {
+<<<<<<< HEAD
     auto getValueImpl = [](const UsdStage &stage,
                            UsdTimeCode time, const UsdAttribute &attr,
                            Usd_InterpolatorBase* interpolator,
@@ -7491,8 +7519,10 @@ UsdStage::_GetValue(UsdTimeCode time, const UsdAttribute &attr,
     }
     // nv end
 
+=======
+>>>>>>> v22.11
     return Usd_AttrGetUntypedValueHelper::GetValue(
-        *this, time, attr, result, getValueImpl);
+        *this, time, attr, result);
 }
 
 template <class T>
@@ -7500,6 +7530,7 @@ bool
 UsdStage::_GetValue(UsdTimeCode time, const UsdAttribute &attr,
                     T* result) const
 {
+<<<<<<< HEAD
     auto getValueImpl = [](const UsdStage &stage,
                            UsdTimeCode time, const UsdAttribute &attr,
                            Usd_InterpolatorBase* interpolator,
@@ -7516,8 +7547,10 @@ UsdStage::_GetValue(UsdTimeCode time, const UsdAttribute &attr,
     }
     // nv end
 
+=======
+>>>>>>> v22.11
     return Usd_AttrGetValueHelper<T>::GetValue(
-        *this, time, attr, result, getValueImpl);
+        *this, time, attr, result);
 }
 
 class UsdStage_ResolveInfoAccess
@@ -7714,20 +7747,37 @@ UsdStage::_GetValueImpl(UsdTimeCode time, const UsdAttribute &attr,
 // as we need to gather all relevant property specs in the LayerStack
 struct UsdStage::_PropertyStackResolver {
     SdfPropertySpecHandleVector propertyStack;
+    std::vector<std::pair<SdfPropertySpecHandle, SdfLayerOffset>> 
+        propertyStackWithLayerOffsets;
+
+    _PropertyStackResolver(bool withLayerOffsets) : 
+        _withLayerOffsets(withLayerOffsets) {}
 
     bool ProcessFallback() { return false; }
 
     bool
-    ProcessLayer(const size_t layerStackPosition,
-                 const SdfPath& specPath,
-                 const PcpNodeRef& node,
-                 const double *time) 
+    ProcessLayerAtTime(const SdfLayerRefPtr &layer,
+                       const SdfPath& specPath,
+                       const PcpNodeRef& node,
+                       const double *) 
     {
-        const auto layer
-            = node.GetLayerStack()->GetLayers()[layerStackPosition];
+        // Processing layers for the property stack does not depend on time.
+        return ProcessLayerAtDefault(layer, specPath, node);
+    }
+
+    bool
+    ProcessLayerAtDefault(const SdfLayerRefPtr &layer,
+                          const SdfPath& specPath,
+                          const PcpNodeRef& node) 
+    {
         const auto propertySpec = layer->GetPropertyAtPath(specPath);
         if (propertySpec) {
-            propertyStack.push_back(propertySpec); 
+            if (_withLayerOffsets) {
+                propertyStackWithLayerOffsets.emplace_back(
+                    propertySpec, _GetLayerToStageOffset(node, layer)); 
+            } else {
+                propertyStack.push_back(propertySpec); 
+            }
         }
 
         return false;
@@ -7763,21 +7813,101 @@ struct UsdStage::_PropertyStackResolver {
 
             if (const auto propertySpec = 
                     sourceClip->GetPropertyAtPath(specPath)) {
-                propertyStack.push_back(propertySpec);
+                if (_withLayerOffsets) {
+                    // The layer offset for the clip is the layer offset of the
+                    // source layer of the clip set.
+                    const auto layer = clipSet->sourceLayerStack->GetLayers()[
+                        clipSet->sourceLayerIndex];
+                    propertyStackWithLayerOffsets.emplace_back(
+                        propertySpec, _GetLayerToStageOffset(node, layer)); 
+                } else {
+                    propertyStack.push_back(propertySpec);
+                }
             }
         }
      
         return false;
     }
+
+private:
+    bool _withLayerOffsets;
 };
 
 SdfPropertySpecHandleVector
 UsdStage::_GetPropertyStack(const UsdProperty &prop,
                             UsdTimeCode time) const
 {
-    _PropertyStackResolver resolver;
-    _GetResolvedValueImpl(prop, &resolver, &time);
+    auto makeUsdResolverFn = [&prop](bool skipEmptyNodes) {
+        return Usd_Resolver(&prop._Prim()->GetPrimIndex(), skipEmptyNodes);
+    };
+
+    _PropertyStackResolver resolver(/* withLayerOffsets = */ false);
+    if (time.IsDefault()) {
+        _GetResolvedValueAtDefaultImpl(prop, &resolver, makeUsdResolverFn);
+    } else {
+        double localTime = time.GetValue();
+        _GetResolvedValueAtTimeImpl(
+            prop, &resolver, &localTime, makeUsdResolverFn);
+    }
     return resolver.propertyStack; 
+}
+
+std::vector<std::pair<SdfPropertySpecHandle, SdfLayerOffset>> 
+UsdStage::_GetPropertyStackWithLayerOffsets(
+    const UsdProperty &prop, UsdTimeCode time) const
+{
+    auto makeUsdResolverFn = [&prop](bool skipEmptyNodes) {
+        return Usd_Resolver(&prop._Prim()->GetPrimIndex(), skipEmptyNodes);
+    };
+
+    _PropertyStackResolver resolver(/* withLayerOffsets = */ true);
+    if (time.IsDefault()) {
+        _GetResolvedValueAtDefaultImpl(prop, &resolver, makeUsdResolverFn);
+    } else {
+        double localTime = time.GetValue();
+        _GetResolvedValueAtTimeImpl(
+            prop, &resolver, &localTime, makeUsdResolverFn);
+    }
+    return resolver.propertyStackWithLayerOffsets; 
+}
+
+SdfPrimSpecHandleVector 
+UsdStage::_GetPrimStack(const UsdPrim &prim)
+{
+    SdfPrimSpecHandleVector primStack;
+
+    for (Usd_Resolver resolver(&(prim._Prim()->GetPrimIndex())); 
+                      resolver.IsValid(); resolver.NextLayer()) {
+
+        auto primSpec = resolver.GetLayer()
+            ->GetPrimAtPath(resolver.GetLocalPath());
+
+        if (primSpec) { 
+            primStack.push_back(primSpec); 
+        }
+    }
+
+    return primStack;
+}
+
+std::vector<std::pair<SdfPrimSpecHandle, SdfLayerOffset>> 
+UsdStage::_GetPrimStackWithLayerOffsets(const UsdPrim &prim)
+{
+    std::vector<std::pair<SdfPrimSpecHandle, SdfLayerOffset>>  primStack;
+
+    for (Usd_Resolver resolver(&(prim._Prim()->GetPrimIndex())); 
+                      resolver.IsValid(); resolver.NextLayer()) {
+
+        auto primSpec = resolver.GetLayer()
+            ->GetPrimAtPath(resolver.GetLocalPath());
+
+        if (primSpec) { 
+            primStack.emplace_back(primSpec, 
+                _GetLayerToStageOffset(resolver.GetNode(), resolver.GetLayer())); 
+        }
+    }
+
+    return primStack;
 }
 
 // A 'Resolver' for filling UsdResolveInfo.
@@ -7809,16 +7939,13 @@ struct UsdStage::_ResolveInfoResolver
     }
 
     bool
-    ProcessLayer(const size_t layerStackPosition,
-                 const SdfPath& specPath,
-                 const PcpNodeRef& node,
-                 const double *time) 
+    ProcessLayerAtTime(const SdfLayerRefPtr& layer,
+                       const SdfPath& specPath,
+                       const PcpNodeRef& node,
+                       const double *time) 
     {
-        const PcpLayerStackRefPtr& nodeLayers = node.GetLayerStack();
-        const SdfLayerRefPtrVector& layerStack = nodeLayers->GetLayers();
         const SdfLayerOffset layerToStageOffset =
-            _GetLayerToStageOffset(node, layerStack[layerStackPosition]);
-        const SdfLayerRefPtr& layer = layerStack[layerStackPosition];
+            _GetLayerToStageOffset(node, layer);
         boost::optional<double> localTime;
         if (time) {
             localTime = layerToStageOffset.GetInverse() * (*time);
@@ -7842,12 +7969,37 @@ struct UsdStage::_ResolveInfoResolver
         }
 
         if (_resolveInfo->_source != UsdResolveInfoSourceNone) {
-            _resolveInfo->_layerStack = nodeLayers;
+            _resolveInfo->_layerStack = node.GetLayerStack();
             _resolveInfo->_layer = layer;
             _resolveInfo->_primPathInLayerStack = node.GetPath();
             _resolveInfo->_layerToStageOffset = layerToStageOffset;
             _resolveInfo->_node = node;
             return true;
+        }
+
+        return false;
+    }
+
+    bool
+    ProcessLayerAtDefault(const SdfLayerRefPtr& layer,
+                          const SdfPath& specPath,
+                          const PcpNodeRef& node) 
+    {
+        Usd_DefaultValueResult defValue = Usd_HasDefault(
+            layer, specPath, _extraInfo->defaultOrFallbackValue);
+        if (defValue == Usd_DefaultValueResult::Found) {
+            _resolveInfo->_source = UsdResolveInfoSourceDefault;
+            _resolveInfo->_layerStack = node.GetLayerStack();
+            _resolveInfo->_layer = layer;
+            _resolveInfo->_primPathInLayerStack = node.GetPath();
+            _resolveInfo->_layerToStageOffset = 
+                _GetLayerToStageOffset(node, layer);
+            _resolveInfo->_node = node;
+            return true;
+        }
+        else if (defValue == Usd_DefaultValueResult::Blocked) {
+            _resolveInfo->_valueIsBlocked = true;
+            return ProcessFallback();
         }
 
         return false;
@@ -7888,13 +8040,53 @@ UsdStage::_GetResolveInfo(const UsdAttribute &attr,
                           const UsdTimeCode *time, 
                           _ExtraResolveInfo<T> *extraInfo) const
 {
+    auto makeUsdResolverFn = [&attr](bool skipEmptyNodes) {
+        return Usd_Resolver(&attr._Prim()->GetPrimIndex(), skipEmptyNodes);
+    };
+    _GetResolveInfoImpl(attr, resolveInfo, time, extraInfo, makeUsdResolverFn);
+
+}
+
+template <class T>
+void
+UsdStage::_GetResolveInfoWithResolveTarget(
+    const UsdAttribute &attr, 
+    const UsdResolveTarget &resolveTarget,
+    UsdResolveInfo *resolveInfo,
+    const UsdTimeCode *time, 
+    _ExtraResolveInfo<T> *extraInfo) const
+{
+    auto makeUsdResolverFn = [&resolveTarget](bool skipEmptyNodes) {
+        return Usd_Resolver(&resolveTarget, skipEmptyNodes);
+    };
+    _GetResolveInfoImpl(attr, resolveInfo, time, extraInfo, makeUsdResolverFn);
+}
+
+template <class T, class MakeUsdResolverFn>
+void 
+UsdStage::_GetResolveInfoImpl(
+    const UsdAttribute &attr, 
+    UsdResolveInfo *resolveInfo,
+    const UsdTimeCode *time,
+    _ExtraResolveInfo<T> *extraInfo,
+    const MakeUsdResolverFn &makeUsdResolverFn) const
+{
     _ExtraResolveInfo<T> localExtraInfo;
     if (!extraInfo) {
         extraInfo = &localExtraInfo;
     }
 
     _ResolveInfoResolver<T> resolver(attr, resolveInfo, extraInfo);
-    _GetResolvedValueImpl(attr, &resolver, time);
+    if (!time) {
+        _GetResolvedValueAtTimeImpl(
+            attr, &resolver, nullptr, makeUsdResolverFn);
+    } else if (time->IsDefault()) {
+        _GetResolvedValueAtDefaultImpl(attr, &resolver, makeUsdResolverFn);
+    } else {
+        double localTime = time->GetValue();
+        _GetResolvedValueAtTimeImpl(
+            attr, &resolver, &localTime, makeUsdResolverFn);
+    }
     
     if (TfDebug::IsEnabled(USD_VALIDATE_VARIABILITY) &&
         (resolveInfo->_source == UsdResolveInfoSourceTimeSamples ||
@@ -7908,101 +8100,151 @@ UsdStage::_GetResolveInfo(const UsdAttribute &attr,
     }
 }
 
-// This function takes a Resolver object, which is used to process opinions
-// in strength order. Resolvers must implement three functions: 
+// These functions take a Resolver object, which is used to process opinions
+// in strength order. Resolvers must implement four functions: 
 //       
-//       ProcessLayer()
+//       ProcessLayerAtTime()
+//       ProcessLayerAtDefault()
 //       ProcessClips()
 //       ProcessFallback()
 //
 // Each of these functions is required to return true, to indicate that 
 // iteration of opinions should stop, and false otherwise.
-template <class Resolver>
+template <class Resolver, class MakeUsdResolverFn>
 void
-UsdStage::_GetResolvedValueImpl(const UsdProperty &prop,
-                                Resolver *resolver,
-                                const UsdTimeCode *time) const
+UsdStage::_GetResolvedValueAtDefaultImpl(
+    const UsdProperty &prop,
+    Resolver *resolver,
+    const MakeUsdResolverFn &makeUsdResolverFn) const
 {
-    auto primHandle = prop._Prim();
-    boost::optional<double> localTime;
-    if (time && !time->IsDefault()) {
-        localTime = time->GetValue();
-    }
-
-    // Retrieve all clips that may contribute time samples for this
-    // attribute at the given time. Clips never contribute default
-    // values.
-    const std::vector<Usd_ClipSetRefPtr>* clipsAffectingPrim = nullptr;
-    if (primHandle->MayHaveOpinionsInClips()
-        && (!time || !time->IsDefault())) {
-        clipsAffectingPrim =
-            &(_clipCache->GetClipsForPrim(primHandle->GetPath()));
-    }
-
-    // Clips may contribute opinions at nodes where no specs for the attribute
-    // exist in the node's LayerStack. So, if we have any clips, tell
-    // Usd_Resolver that we want to iterate over 'empty' nodes as well.
-    const bool skipEmptyNodes = (bool)(!clipsAffectingPrim);
-
-    for (Usd_Resolver res(&primHandle->GetPrimIndex(), skipEmptyNodes); 
-         res.IsValid(); res.NextNode()) {
-
-        const PcpNodeRef& node = res.GetNode();
-        const bool nodeHasSpecs = node.HasSpecs();
-        if (!nodeHasSpecs && !clipsAffectingPrim) {
-            continue;
+    SdfPath specPath;
+    Usd_Resolver res = makeUsdResolverFn(/*skipEmptyNodes = */ true);
+    for (bool isNewNode = true; res.IsValid(); isNewNode = res.NextLayer()) {
+        if (isNewNode) {
+            specPath = res.GetLocalPath(prop.GetName());
         }
-
-        const SdfPath specPath = node.GetPath().AppendProperty(prop.GetName());
-        const SdfLayerRefPtrVector& layerStack 
-            = node.GetLayerStack()->GetLayers();
-        boost::optional<std::vector<Usd_ClipSetRefPtr>> clips;
-        for (size_t i = 0, e = layerStack.size(); i < e; ++i) {
-            if (nodeHasSpecs) { 
-                if (resolver->ProcessLayer(i, specPath, node, 
-                                           localTime.get_ptr())) {
-                    return;
-                }
-            }
-
-            if (clipsAffectingPrim){ 
-                if (!clips) {
-                    clips = _GetClipsThatApplyToNode(*clipsAffectingPrim,
-                                                     node, specPath);
-                    // If we don't have specs on this node and clips don't
-                    // apply we can mode onto the next node.
-                    if (!nodeHasSpecs && clips->empty()) { 
-                        break; 
-                    }
-                }
-                
-                // gcc 4.8 incorrectly detects boost::optional as uninitialized. 
-                // See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=47679
-                ARCH_PRAGMA_PUSH
-                ARCH_PRAGMA_MAYBE_UNINITIALIZED
-
-                for (const Usd_ClipSetRefPtr& clipSet : *clips) {
-                    // We only care about clips that were introduced at this
-                    // position within the LayerStack.
-                    if (clipSet->sourceLayerIndex != i) {
-                        continue;
-                    }
-
-                    // Look through clips to see if they have a time sample for
-                    // this attribute. If a time is given, examine just the clips
-                    // that are active at that time.
-                    if (resolver->ProcessClips(
-                            clipSet, specPath, node, localTime.get_ptr())) {
-                        return;
-                    }
-                }
-
-                ARCH_PRAGMA_POP
-            }    
+        if (resolver->ProcessLayerAtDefault(
+                res.GetLayer(), specPath, res.GetNode())) {
+            return;
         }
     }
 
     resolver->ProcessFallback();
+}
+
+template <class Resolver>
+static void
+_GetResolvedValueAtTimeNoClipsImpl(
+    Usd_Resolver *res,
+    const TfToken &propName,
+    Resolver *resolver,
+    const double *localTime)
+{
+    SdfPath specPath;
+    for (bool isNewNode = true; res->IsValid(); isNewNode = res->NextLayer()) {
+        if (isNewNode) {
+            specPath = res->GetLocalPath(propName);
+        }
+        if (resolver->ProcessLayerAtTime(
+                res->GetLayer(), specPath, res->GetNode(), localTime)) {
+            return;
+        }
+    }
+
+    resolver->ProcessFallback();
+}
+
+template <class Resolver>
+static void
+_GetResolvedValueAtTimeWithClipsImpl(
+    Usd_Resolver *res,
+    const TfToken &propName,
+    Resolver *resolver,
+    const double *localTime,
+    const std::vector<Usd_ClipSetRefPtr> &clipsAffectingPrim)
+{
+    bool nodeHasSpecs;
+    SdfPath specPath;
+    std::vector<Usd_ClipSetRefPtr> clips;
+
+    // Note that we iterate this loop manually in the body as we may skip to 
+    // the next node (instead of next layer) if the node has neither specs nor
+    // clips).
+    for (bool isNewNode = true; res->IsValid(); ) {
+        if (isNewNode) {
+            specPath = res->GetLocalPath(propName);
+            nodeHasSpecs = res->GetNode().HasSpecs();
+        }
+
+        if (nodeHasSpecs) { 
+            if (resolver->ProcessLayerAtTime(
+                    res->GetLayer(), specPath, res->GetNode(), localTime)) {
+                return;
+            }
+        }
+
+        if (isNewNode) {
+            clips = _GetClipsThatApplyToNode(
+                clipsAffectingPrim, res->GetNode(), specPath);
+
+            // If we don't have specs on this node and clips don't
+            // apply we can move onto the next node.
+            if (!nodeHasSpecs && clips.empty()) { 
+                res->NextNode();
+                isNewNode = true;
+                continue;
+            }
+        }
+
+        const size_t layerStackIndex = res->GetLayerStackIndex();
+        for (const Usd_ClipSetRefPtr& clipSet : clips) {
+            // We only care about clips that were introduced at this
+            // position within the LayerStack.
+            if (clipSet->sourceLayerIndex == layerStackIndex) {
+                // Look through clips to see if they have a time sample for
+                // this attribute. If a time is given, examine just the clips
+                // that are active at that time.
+                if (resolver->ProcessClips(
+                        clipSet, specPath, res->GetNode(), localTime)) {
+                    return;
+                }
+            }
+        }
+
+        isNewNode = res->NextLayer();
+    }
+
+    resolver->ProcessFallback();
+}
+
+template <class Resolver, class MakeUsdResolverFn>
+void
+UsdStage::_GetResolvedValueAtTimeImpl(
+    const UsdProperty &prop,
+    Resolver *resolver,
+    const double *localTime,
+    const MakeUsdResolverFn &makeUsdResolverFn) const
+{
+    auto primHandle = prop._Prim();
+
+    if (primHandle->MayHaveOpinionsInClips()) {
+        // Retrieve all clips that may contribute time samples for this
+        // attribute at the given time. Clips never contribute default
+        // values.
+        const std::vector<Usd_ClipSetRefPtr> &clipsAffectingPrim =
+            _clipCache->GetClipsForPrim(primHandle->GetPath());
+
+        // Clips may contribute opinions at nodes where no specs for the 
+        // attribute exist in the node's LayerStack. So, since we have clips, 
+        // tell Usd_Resolver that we want to iterate over 'empty' nodes as well.
+        Usd_Resolver res = makeUsdResolverFn(/* skipEmptyNodes = */ false);
+        _GetResolvedValueAtTimeWithClipsImpl(
+            &res, prop.GetName(), resolver, localTime, clipsAffectingPrim);
+    } else {
+        Usd_Resolver res = makeUsdResolverFn(/* skipEmptyNodes = */ true);
+        _GetResolvedValueAtTimeNoClipsImpl(
+            &res, prop.GetName(), resolver, localTime);
+    }
 }
 
 void
@@ -8011,6 +8253,17 @@ UsdStage::_GetResolveInfo(const UsdAttribute &attr,
                           const UsdTimeCode *time) const
 {
     _GetResolveInfo<SdfAbstractDataValue>(attr, resolveInfo, time);
+}
+
+void 
+UsdStage::_GetResolveInfoWithResolveTarget(
+    const UsdAttribute &attr, 
+    const UsdResolveTarget &resolveTarget,
+    UsdResolveInfo *resolveInfo,
+    const UsdTimeCode *time) const
+{
+    _GetResolveInfoWithResolveTarget<SdfAbstractDataValue>(
+        attr, resolveTarget, resolveInfo, time);
 }
 
 template <class T>
@@ -8037,8 +8290,7 @@ UsdStage::_GetValueFromResolveInfoImpl(const UsdResolveInfo &info,
             layer->GetIdentifier().c_str(),
             time.GetValue());
 
-        return TF_VERIFY(
-            layer->HasField(specPath, SdfFieldKeys->Default, result));
+        return layer->HasField(specPath, SdfFieldKeys->Default, result);
     }
     else if (info._source == UsdResolveInfoSourceValueClips) {
         const SdfPath specPath =
@@ -8069,11 +8321,47 @@ UsdStage::_GetValueFromResolveInfoImpl(const UsdResolveInfo &info,
     return false;
 }
 
+template <class T>
+bool 
+UsdStage::_GetDefaultValueFromResolveInfoImpl(const UsdResolveInfo &info,
+                                              const UsdAttribute &attr,
+                                              T* result) const
+{
+    if (info._source == UsdResolveInfoSourceDefault) {
+        const SdfPath specPath =
+            info._primPathInLayerStack.AppendProperty(attr.GetName());
+        const SdfLayerHandle& layer = info._layer;
+
+        TF_DEBUG(USD_VALUE_RESOLUTION).Msg(
+            "RESOLVE: reading field %s:%s from @%s@\n",
+            specPath.GetText(),
+            SdfFieldKeys->Default.GetText(),
+            layer->GetIdentifier().c_str());
+
+        return layer->HasField(specPath, SdfFieldKeys->Default, result);
+    } else if (info._source == UsdResolveInfoSourceFallback) {
+        // Get the fallback value.
+        return attr._Prim()->GetPrimDefinition().GetAttributeFallbackValue(
+                attr.GetName(), result);
+    } else if (info._source != UsdResolveInfoSourceNone) {
+        TF_CODING_ERROR("Invalid resolve info used for getting the value at "
+            "default time for attr '%s'. Resolve info source must be Default, "
+            "Fallback, or None. Got %s",
+            attr.GetPath().GetText(),
+            TfStringify(info._source).c_str());
+    }
+
+    return false;
+
+}
+
+
 bool
 UsdStage::_GetValueFromResolveInfo(const UsdResolveInfo &info,
                                    UsdTimeCode time, const UsdAttribute &attr,
                                    VtValue* result) const
 {
+<<<<<<< HEAD
     auto getValueImpl = [&info](const UsdStage &stage,
                                 UsdTimeCode time, const UsdAttribute &attr,
                                 Usd_InterpolatorBase* interpolator,
@@ -8093,6 +8381,10 @@ UsdStage::_GetValueFromResolveInfo(const UsdResolveInfo &info,
 
     return Usd_AttrGetUntypedValueHelper::GetValue(
         *this, time, attr, result, getValueImpl);
+=======
+    return Usd_AttrGetUntypedValueHelper::GetValueFromResolveInfo(
+        *this, time, attr, info, result);
+>>>>>>> v22.11
 }
 
 template <class T>
@@ -8101,6 +8393,7 @@ UsdStage::_GetValueFromResolveInfo(const UsdResolveInfo &info,
                                    UsdTimeCode time, const UsdAttribute &attr,
                                    T* result) const
 {
+<<<<<<< HEAD
     auto getValueImpl = [&info](const UsdStage &stage,
                                 UsdTimeCode time, const UsdAttribute &attr, 
                                 Usd_InterpolatorBase* interpolator,
@@ -8120,6 +8413,10 @@ UsdStage::_GetValueFromResolveInfo(const UsdResolveInfo &info,
 
     return Usd_AttrGetValueHelper<T>::GetValue(
         *this, time, attr, result, getValueImpl);
+=======
+    return Usd_AttrGetValueHelper<T>::GetValueFromResolveInfo(
+        *this, time, attr, info, result);
+>>>>>>> v22.11
 }
 
 // --------------------------------------------------------------------- //
@@ -8152,34 +8449,6 @@ UsdStage::_GetTimeSamplesInIntervalFromResolveInfo(
     // This is the lowest-level site for guaranteeing that all GetTimeSample
     // queries clear out the return vector
     times->clear();
-    const auto copySamplesInInterval = [](const std::set<double>& samples, 
-                                          vector<double>* target, 
-                                          const GfInterval& interval) 
-    {
-        std::set<double>::iterator samplesBegin, samplesEnd; 
-
-        if (interval.IsMinOpen()) {
-            samplesBegin = std::upper_bound(samples.begin(), 
-                                            samples.end(), 
-                                            interval.GetMin()); 
-        } else {
-            samplesBegin = std::lower_bound(samples.begin(), 
-                                            samples.end(), 
-                                            interval.GetMin());
-        }
-
-        if (interval.IsMaxOpen()) {
-            samplesEnd = std::lower_bound(samplesBegin,
-                                          samples.end(), 
-                                          interval.GetMax());
-        } else {
-            samplesEnd = std::upper_bound(samplesBegin,
-                                          samples.end(),
-                                          interval.GetMax());
-        }
-
-        target->insert(target->end(), samplesBegin, samplesEnd);
-    };
 
     if (info._source == UsdResolveInfoSourceTimeSamples) {
         const SdfPath specPath =
@@ -8192,7 +8461,7 @@ UsdStage::_GetTimeSamplesInIntervalFromResolveInfo(
             if (info._layerToStageOffset.IsIdentity()) {
                 // The layer offset is identity, so we can use the interval
                 // directly, and do not need to remap the sample times.
-                copySamplesInInterval(samples, times, interval);
+                Usd_CopyTimeSamplesInInterval(samples, interval, times);
             } else {
                 // Map the interval (expressed in stage time) to layer time.
                 const SdfLayerOffset stageToLayer =
@@ -8200,7 +8469,7 @@ UsdStage::_GetTimeSamplesInIntervalFromResolveInfo(
                 const GfInterval layerInterval =
                     interval * stageToLayer.GetScale()
                     + stageToLayer.GetOffset();
-                copySamplesInInterval(samples, times, layerInterval);
+                Usd_CopyTimeSamplesInInterval(samples, layerInterval, times);
                 // Map the layer sample times to stage times.
                 for (auto &time : *times) {
                     time = info._layerToStageOffset * time;
@@ -8231,9 +8500,7 @@ UsdStage::_GetTimeSamplesInIntervalFromResolveInfo(
 
             // See comments in _GetValueImpl regarding layer
             // offsets and why they're not applied here.
-            const std::set<double> samples =
-                clipSet->ListTimeSamplesForPath(specPath);
-            copySamplesInInterval(samples, times, interval);;
+            *times = clipSet->GetTimeSamplesInInterval(specPath, interval);
             return true;
         }
     }

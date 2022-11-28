@@ -48,6 +48,7 @@
 #include "pxr/usdImaging/usdImaging/tokens.h"
 
 #include "pxr/usdImaging/usdImagingGL/engine.h"
+#include "pxr/imaging/glf/simpleLightingContext.h"
 
 #include <iomanip>
 #include <iostream>
@@ -99,13 +100,11 @@ My_TestGLDrawing::InitTest()
     _stage = UsdStage::Open(GetStageFilePath());
     SdfPathVector excludedPaths;
 
-    if (UsdImagingGLEngine::IsHydraEnabled()) {
-        std::cout << "Using HD Renderer.\n";
-        _sharedId = SdfPath("/Shared");
-    } else {
-        std::cout << "Using Reference Renderer.\n";
-        _sharedId = SdfPath::AbsoluteRootPath();
+    if (!UsdImagingGLEngine::IsHydraEnabled()) {
+        std::cerr << "Couldn't initialize hydra" << std::endl;
+        exit(-1);
     }
+    _sharedId = SdfPath("/Shared");
     _engine.reset(new UsdImagingGLEngine(_stage->GetPseudoRoot().GetPath(),
                                    excludedPaths,
                                    SdfPathVector(), // invisedPrimPaths
@@ -293,7 +292,9 @@ My_TestGLDrawing::Draw()
 
 
     if(IsEnabledTestLighting()) {
-        _engine->SetLightingStateFromOpenGL();
+        GlfSimpleLightingContextRefPtr lightingContext = GlfSimpleLightingContext::New();
+        lightingContext->SetStateFromOpenGL();
+        _engine->SetLightingState(lightingContext);
     }
 
     if (!GetClipPlanes().empty()) {

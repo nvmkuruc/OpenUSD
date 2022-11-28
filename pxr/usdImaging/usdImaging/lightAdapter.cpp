@@ -22,6 +22,7 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/usdImaging/usdImaging/lightAdapter.h"
+#include "pxr/usdImaging/usdImaging/dataSourcePrim.h"
 #include "pxr/usdImaging/usdImaging/delegate.h"
 #include "pxr/usdImaging/usdImaging/indexProxy.h"
 #include "pxr/usdImaging/usdImaging/materialParamUtils.h"
@@ -57,6 +58,28 @@ UsdImagingLightAdapter::~UsdImagingLightAdapter()
 {
 }
 
+HdContainerDataSourceHandle
+UsdImagingLightAdapter::GetImagingSubprimData(
+        TfToken const& subprim,
+        UsdPrim const& prim,
+        const UsdImagingDataSourceStageGlobals &stageGlobals)
+{
+    if (subprim.IsEmpty()) {
+        return UsdImagingDataSourcePrim::New(
+            prim.GetPath(), prim, stageGlobals);
+    }
+
+    return nullptr;
+}
+
+HdDataSourceLocatorSet
+UsdImagingLightAdapter::InvalidateImagingSubprim(
+    TfToken const& subprim,
+    TfTokenVector const& properties)
+{
+    return UsdImagingDataSourcePrim::Invalidate(subprim, properties);
+}
+
 bool
 UsdImagingLightAdapter::IsSupported(UsdImagingIndexProxy const* index) const
 {
@@ -71,21 +94,61 @@ UsdImagingLightAdapter::Populate(UsdPrim const& prim,
 {
     index->InsertSprim(HdPrimTypeTokens->light, prim.GetPath(), prim);
     HD_PERF_COUNTER_INCR(UsdImagingTokens->usdPopulatedPrimCount);
+<<<<<<< HEAD
     // #nv begin #light-link-refresh
     _RegisterLightCollections(prim);
     // #nv end
+=======
+    _RegisterLightCollections(prim);
+>>>>>>> v22.11
 
     return prim.GetPath();
 }
 
 void
 UsdImagingLightAdapter::_RemovePrim(SdfPath const& cachePath,
-                                    UsdImagingIndexProxy* index)
+                                         UsdImagingIndexProxy* index)
 {
+<<<<<<< HEAD
     // #nv begin #light-link-refresh
     _UnregisterLightCollections(cachePath);
     // #nv end
     index->RemoveSprim(HdPrimTypeTokens->domeLight, cachePath);
+=======
+    _UnregisterLightCollections(cachePath);
+    index->RemoveSprim(HdPrimTypeTokens->domeLight, cachePath);
+}
+
+void
+UsdImagingLightAdapter::MarkCollectionsDirty(UsdPrim const& prim,
+                                             SdfPath const& cachePath,
+                                             UsdImagingIndexProxy* index)
+{
+    index->MarkSprimDirty(cachePath, HdLight::DirtyCollection);
+}
+
+bool
+UsdImagingLightAdapter::_UpdateCollectionsChanged(UsdPrim const& prim) const {
+    UsdImaging_CollectionCache &collectionCache = _GetCollectionCache();
+    UsdLuxLightAPI light(prim);
+    bool lightColChanged = collectionCache.UpdateCollection(light.GetLightLinkCollectionAPI());
+    bool shadowColChanged = collectionCache.UpdateCollection(light.GetShadowLinkCollectionAPI());
+    return lightColChanged || shadowColChanged;
+}
+
+void
+UsdImagingLightAdapter::_UnregisterLightCollections(SdfPath const& cachePath) {
+    UsdImaging_CollectionCache &collectionCache = _GetCollectionCache();
+    SdfPath lightLinkPath = cachePath.AppendProperty(UsdImagingTokens->collectionLightLink);
+    collectionCache.RemoveCollection(_GetStage(), lightLinkPath);
+    SdfPath shadowLinkPath = cachePath.AppendProperty(UsdImagingTokens->collectionShadowLink);
+    collectionCache.RemoveCollection(_GetStage(), shadowLinkPath);
+}
+
+void
+UsdImagingLightAdapter::_RegisterLightCollections(UsdPrim const& prim) {
+    _UpdateCollectionsChanged(prim);
+>>>>>>> v22.11
 }
 
 // #nv begin #light-link-refresh
@@ -169,10 +232,13 @@ UsdImagingLightAdapter::TrackVariability(UsdPrim const& prim,
         }
     }
 
+<<<<<<< HEAD
     // #nv begin fast-updates
     }
     // nv end
 
+=======
+>>>>>>> v22.11
     UsdImagingPrimvarDescCache* primvarDescCache = _GetPrimvarDescCache();
 
     // XXX Cache primvars for lights.
@@ -219,14 +285,20 @@ UsdImagingLightAdapter::ProcessPropertyChange(UsdPrim const& prim,
         return HdLight::DirtyBits::DirtyTransform;
     }
 
+<<<<<<< HEAD
     // #nv begin #light-link-refresh
+=======
+>>>>>>> v22.11
     if (TfStringStartsWith(propertyName.GetString(), UsdImagingTokens->collectionShadowLink.GetString()) || 
         TfStringStartsWith(propertyName.GetString(), UsdImagingTokens->collectionLightLink.GetString())) {
         if (_UpdateCollectionsChanged(prim)) {
             return HdLight::DirtyBits::DirtyCollection;
         }
     }
+<<<<<<< HEAD
     // #nv end
+=======
+>>>>>>> v22.11
 
     // "DirtyParam" is the catch-all bit for light params.
     return HdLight::DirtyBits::DirtyParams;

@@ -54,6 +54,10 @@ namespace {
 template<typename T>
 VtValue 
 _ComputeFlattened(VtValue const &value, VtIntArray const &indices) {
+    if (indices.empty()) {
+        return value;
+    }
+
     VtArray<T> array = value.Get<VtArray<T>>();
     VtArray<T> result = VtArray<T>(indices.size());
 
@@ -321,42 +325,42 @@ HdTokenDataSourceHandle
 HdPrimvarSchema::BuildRoleDataSource(
     const TfToken &role)
 {
-    if (role == HdPrimvarSchemaTokens->Point) {
+    if (role == HdPrimvarSchemaTokens->point) {
         static const HdRetainedTypedSampledDataSource<TfToken>::Handle ds =
             HdRetainedTypedSampledDataSource<TfToken>::New(role);
         return ds;
     }
-    if (role == HdPrimvarSchemaTokens->Normal) {
+    if (role == HdPrimvarSchemaTokens->normal) {
         static const HdRetainedTypedSampledDataSource<TfToken>::Handle ds =
             HdRetainedTypedSampledDataSource<TfToken>::New(role);
         return ds;
     }
-    if (role == HdPrimvarSchemaTokens->Vector) {
+    if (role == HdPrimvarSchemaTokens->vector) {
         static const HdRetainedTypedSampledDataSource<TfToken>::Handle ds =
             HdRetainedTypedSampledDataSource<TfToken>::New(role);
         return ds;
     }
-    if (role == HdPrimvarSchemaTokens->Color) {
+    if (role == HdPrimvarSchemaTokens->color) {
         static const HdRetainedTypedSampledDataSource<TfToken>::Handle ds =
             HdRetainedTypedSampledDataSource<TfToken>::New(role);
         return ds;
     }
-    if (role == HdPrimvarSchemaTokens->PointIndex) {
+    if (role == HdPrimvarSchemaTokens->pointIndex) {
         static const HdRetainedTypedSampledDataSource<TfToken>::Handle ds =
             HdRetainedTypedSampledDataSource<TfToken>::New(role);
         return ds;
     }
-    if (role == HdPrimvarSchemaTokens->EdgeIndex) {
+    if (role == HdPrimvarSchemaTokens->edgeIndex) {
         static const HdRetainedTypedSampledDataSource<TfToken>::Handle ds =
             HdRetainedTypedSampledDataSource<TfToken>::New(role);
         return ds;
     }
-    if (role == HdPrimvarSchemaTokens->FaceIndex) {
+    if (role == HdPrimvarSchemaTokens->faceIndex) {
         static const HdRetainedTypedSampledDataSource<TfToken>::Handle ds =
             HdRetainedTypedSampledDataSource<TfToken>::New(role);
         return ds;
     }
-    if (role == HdPrimvarSchemaTokens->TextureCoordinate) {
+    if (role == HdPrimvarSchemaTokens->textureCoordinate) {
         static const HdRetainedTypedSampledDataSource<TfToken>::Handle ds =
             HdRetainedTypedSampledDataSource<TfToken>::New(role);
         return ds;

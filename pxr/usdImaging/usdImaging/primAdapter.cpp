@@ -26,12 +26,14 @@
 #include "pxr/usdImaging/usdImaging/debugCodes.h"
 #include "pxr/usdImaging/usdImaging/delegate.h"
 #include "pxr/usdImaging/usdImaging/indexProxy.h"
+#include "pxr/usdImaging/usdImaging/primvarUtils.h"
 #include "pxr/usdImaging/usdImaging/resolvedAttributeCache.h"
 #include "pxr/usdImaging/usdImaging/instancerContext.h"
 
 #include "pxr/usd/sdf/schema.h"
 #include "pxr/usd/usd/collectionAPI.h"
 #include "pxr/usd/usdGeom/primvarsAPI.h"
+#include "pxr/usd/usdRender/settingsBase.h"
 
 #include "pxr/imaging/hd/perfLog.h"
 #include "pxr/imaging/hd/renderDelegate.h"
@@ -111,10 +113,22 @@ UsdImagingPrimAdapter::GetImagingSubprimData(
     return nullptr;
 }
 
+HdDataSourceLocatorSet
+UsdImagingPrimAdapter::InvalidateImagingSubprim(
+        TfToken const& subprim,
+        TfTokenVector const& properties)
+{
+    return HdDataSourceLocatorSet();
+}
+
 /*static*/
 bool
 UsdImagingPrimAdapter::ShouldCullSubtree(UsdPrim const& prim)
 {
+    // Do not skip RenderSettings prims even though they are non-imageable
+    if (prim.IsA<UsdRenderSettingsBase>() && !prim.GetTypeName().IsEmpty()) {
+        return false;
+    }
     // Skip population of non-imageable prims during population traversal
     // (although they can still be populated by reference).
     return (!prim.IsA<UsdGeomImageable>() && !prim.GetTypeName().IsEmpty());
@@ -261,6 +275,14 @@ void
 UsdImagingPrimAdapter::MarkReprDirty(UsdPrim const& prim,
                                      SdfPath const& cachePath,
                                      UsdImagingIndexProxy* index)
+{
+}
+
+/*virtual*/
+void
+UsdImagingPrimAdapter::MarkCollectionsDirty(UsdPrim const& prim,
+                                            SdfPath const& cachePath,
+                                            UsdImagingIndexProxy* index)
 {
 }
 
@@ -808,46 +830,6 @@ UsdImagingPrimAdapter::_RemovePrimvar(
     }
 }
 
-/* static */
-HdInterpolation
-UsdImagingPrimAdapter::_UsdToHdInterpolation(TfToken const& usdInterp)
-{
-    if (usdInterp == UsdGeomTokens->uniform) {
-        return HdInterpolationUniform;
-    } else if (usdInterp == UsdGeomTokens->vertex) {
-        return HdInterpolationVertex;
-    } else if (usdInterp == UsdGeomTokens->varying) {
-        return HdInterpolationVarying;
-    } else if (usdInterp == UsdGeomTokens->faceVarying) {
-        return HdInterpolationFaceVarying;
-    } else if (usdInterp == UsdGeomTokens->constant) {
-        return HdInterpolationConstant;
-    }
-    TF_CODING_ERROR("Unknown USD interpolation %s; treating as constant",
-                    usdInterp.GetText());
-    return HdInterpolationConstant;
-}
-
-/* static */
-TfToken
-UsdImagingPrimAdapter::_UsdToHdRole(TfToken const& usdRole)
-{
-    if (usdRole == SdfValueRoleNames->Point) {
-        return HdPrimvarRoleTokens->point;
-    } else if (usdRole == SdfValueRoleNames->Normal) {
-        return HdPrimvarRoleTokens->normal;
-    } else if (usdRole == SdfValueRoleNames->Vector) {
-        return HdPrimvarRoleTokens->vector;
-    } else if (usdRole == SdfValueRoleNames->Color) {
-        return HdPrimvarRoleTokens->color;
-    } else if (usdRole == SdfValueRoleNames->TextureCoordinate) {
-        return HdPrimvarRoleTokens->textureCoordinate;
-    }
-    // Empty token means no role specified
-    return TfToken();
-}
-
-
 void 
 UsdImagingPrimAdapter::_ComputeAndMergePrimvar(
     UsdPrim const& gprim,
@@ -867,8 +849,8 @@ UsdImagingPrimAdapter::_ComputeAndMergePrimvar(
     // fast as long as we don't touch the returned data.
     if (primvar.Get(&v, time)) {
         HdInterpolation interp = interpOverride ? *interpOverride
-            : _UsdToHdInterpolation(primvar.GetInterpolation());
-        TfToken role = _UsdToHdRole(primvar.GetAttr().GetRoleName());
+            : UsdImagingUsdToHdInterpolation(primvar.GetInterpolation());
+        TfToken role = UsdImagingUsdToHdRole(primvar.GetAttr().GetRoleName());
         TF_DEBUG(USDIMAGING_SHADERS)
             .Msg("UsdImaging: found primvar (%s) %s, interp %s\n",
                  gprim.GetPath().GetText(),
@@ -999,13 +981,19 @@ UsdImagingPrimAdapter::_GetCollectionCache() const
     return _delegate->_collectionCache;
 }
 
+<<<<<<< HEAD
 // #nv begin #light-link-refresh
+=======
+>>>>>>> v22.11
 UsdStageRefPtr
 UsdImagingPrimAdapter::_GetStage() const
 {
     return _delegate->_stage;
 }
+<<<<<<< HEAD
 // #nv end
+=======
+>>>>>>> v22.11
 
 UsdImaging_CoordSysBindingStrategy::value_type
 UsdImagingPrimAdapter::_GetCoordSysBindings(UsdPrim const& prim) const
@@ -1017,6 +1005,22 @@ UsdImaging_InheritedPrimvarStrategy::value_type
 UsdImagingPrimAdapter::_GetInheritedPrimvars(UsdPrim const& prim) const
 {
     return _delegate->_inheritedPrimvarCache.GetValue(prim);
+}
+
+UsdGeomPrimvar
+UsdImagingPrimAdapter::_GetInheritedPrimvar(UsdPrim const& prim,
+                                             TfToken const& primvarName) const
+{
+    UsdImaging_InheritedPrimvarStrategy::value_type inheritedPrimvarRecord =
+        _GetInheritedPrimvars(prim.GetParent());
+    if (inheritedPrimvarRecord) {
+        for (UsdGeomPrimvar const& pv : inheritedPrimvarRecord->primvars) {
+            if (pv.GetPrimvarName() == primvarName) {
+                return pv;
+            }
+        }
+    }
+    return UsdGeomPrimvar();
 }
 
 bool
@@ -1117,14 +1121,25 @@ UsdImagingPrimAdapter::GetTransform(UsdPrim const& prim,
     HF_MALLOC_TAG_FUNCTION();
     
     UsdImaging_XformCache &xfCache = _delegate->_xformCache;
+    SdfPath const& xformRoot = xfCache.GetRootPath();
     GfMatrix4d ctm(1.0);
 
-    if (_IsEnabledXformCache() && xfCache.GetTime() == time) {
+    // If the cachePath has the 'coordSys' namespace, it is a coordSys prim
+    // which can point to prims outside the xformRoot. So if 'prim', the
+    // coordSys target, is outside the xformRoot use the identity matrix.
+    std::pair<std::string, bool> isCoordSys = SdfPath::StripPrefixNamespace(
+        cachePath.GetName(), HdPrimTypeTokens->coordSys);
+    if (isCoordSys.second && !prim.GetPath().HasPrefix(xformRoot)) {
+        TF_WARN("Prim associated with '%s' has path <%s> which is not under "
+                "the xformCache root (%s), using the identity matrix.", 
+                cachePath.GetText(), prim.GetPath().GetText(), 
+                xformRoot.GetText());
+    }
+    else if (_IsEnabledXformCache() && xfCache.GetTime() == time) {
         ctm = xfCache.GetValue(prim);
     } else {
         ctm = UsdImaging_XfStrategy::ComputeTransform(
-            prim, xfCache.GetRootPath(), time, 
-            _delegate->_rigidXformOverrides);
+            prim, xformRoot, time, _delegate->_rigidXformOverrides);
     }
 
     return ignoreRootTransform ? ctm : ctm * GetRootTransform();
@@ -1226,12 +1241,11 @@ UsdImagingPrimAdapter::SampleTransform(
     size_t numSamplesToEvaluate = std::min(maxNumSamples, numSamples);
     for (size_t i=0; i < numSamplesToEvaluate; ++i) {
         sampleTimes[i] = timeSamples[i] - time.GetValue();
-        sampleValues[i] = UsdImaging_XfStrategy::ComputeTransform(
-            prim, 
-            _delegate->_xformCache.GetRootPath(), 
-            timeSamples[i],
-            _delegate->_rigidXformOverrides) 
-                * _delegate->_rootXf;
+        sampleValues[i] = 
+            UsdImaging_XfStrategy::ComputeTransform(
+                prim, _delegate->_xformCache.GetRootPath(), timeSamples[i], 
+                _delegate->_rigidXformOverrides) 
+            * _delegate->_rootXf;
     }
 
     // Early out if we can't fit the data in the arrays

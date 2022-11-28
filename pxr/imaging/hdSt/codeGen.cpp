@@ -21,8 +21,6 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/imaging/glf/simpleShadowArray.h"
-
 #include "pxr/imaging/hdSt/codeGen.h"
 #include "pxr/imaging/hdSt/geometricShader.h"
 #include "pxr/imaging/hdSt/glConversions.h"
@@ -1387,7 +1385,9 @@ HdSt_CodeGen::Compile(HdStResourceRegistry*const registry)
     const bool metalTessellationEnabled =
         capabilities->IsSet(HgiDeviceCapabilitiesBitsMetalTessellation);
     const bool requiresBasePrimitiveOffset =
-        capabilities->IsSet(HgiDeviceCapabilitiesBasePrimitiveOffset);
+        capabilities->IsSet(HgiDeviceCapabilitiesBitsBasePrimitiveOffset);
+    const bool requiresPrimitiveIdEmulation =
+         capabilities->IsSet(HgiDeviceCapabilitiesBitsPrimitiveIdEmulation);
     const bool doublePrecisionEnabled =
         capabilities->IsSet(HgiDeviceCapabilitiesBitsShaderDoublePrecision);
     const bool minusOneToOneDepth =
@@ -1450,10 +1450,6 @@ HdSt_CodeGen::Compile(HdStResourceRegistry*const registry)
     // imaging system. It can also be used as API guards when
     // we need new versions of Storm shading. 
     _genDefines << "#define HD_SHADER_API " << HD_SHADER_API << "\n";
-
-    // Used in glslfx files to support backward compatible
-    // declaration of resource layouts.
-    _genDefines << "#define HDST_ENABLE_GLSLFX_RESOURCE_LAYOUTS\n";
 
     // XXX: this macro is still used in GlobalUniform.
     _genDefines << "#define MAT4 " <<
@@ -1781,7 +1777,9 @@ HdSt_CodeGen::Compile(HdStResourceRegistry*const registry)
     }
 
     // generate drawing coord and accessors
-    _GenerateDrawingCoord(shaderDrawParametersEnabled, requiresBasePrimitiveOffset);
+    _GenerateDrawingCoord(shaderDrawParametersEnabled,
+                          requiresBasePrimitiveOffset,
+                          requiresPrimitiveIdEmulation);
 
     // generate primvars
     _GenerateConstantPrimvar();
@@ -1973,6 +1971,8 @@ HdSt_CodeGen::_GenerateComputeParameters(HgiShaderFunctionDesc * const csDesc)
         HgiShaderFunctionAddConstantParam(
             csDesc, name.GetString() + "Stride", _tokens->_int);
         
+        _genDefines << "#define HD_HAS_" << name << " 1\n";
+
         _EmitDeclaration(&_resCommon,
                 name,
                 declDataType,
@@ -2007,6 +2007,8 @@ HdSt_CodeGen::_GenerateComputeParameters(HgiShaderFunctionDesc * const csDesc)
             csDesc, name.GetString() + "Offset", _tokens->_int);
         HgiShaderFunctionAddConstantParam(
             csDesc, name.GetString() + "Stride", _tokens->_int);
+
+        _genDefines << "#define HD_HAS_" << name << " 1\n";
 
         _EmitDeclaration(&_resCommon,
                 name,
@@ -3135,7 +3137,7 @@ static void _EmitTextureAccessors(
                 << _GetPackedTypeAccessor(dataType, false)
                 << "(HgiGet_" << name;
             if (isArray) {
-                accessors << "(index, sampleCoord)\n";
+                accessors << "(index, sampleCoord)";
             } else {
                 accessors << "(sampleCoord)";
             }
@@ -3559,7 +3561,8 @@ _ProcessDrawingCoord(std::stringstream &ss,
 void
 HdSt_CodeGen::_GenerateDrawingCoord(
     bool const shaderDrawParametersEnabled,
-    bool const requiresBasePrimitiveOffset)
+    bool const requiresBasePrimitiveOffset,
+    bool const requiresPrimitiveIdEmulation)
 {
     TF_VERIFY(_metaData.drawingCoord0Binding.binding.IsValid());
     TF_VERIFY(_metaData.drawingCoord1Binding.binding.IsValid());
@@ -3724,13 +3727,17 @@ HdSt_CodeGen::_GenerateDrawingCoord(
             primitiveID << "int GetBasePrimitiveOffset() { return 0; }\n";
             _genPTVS    << "int GetBasePrimitiveOffset() { return 0; }\n";
         }
-        if (_geometricShader->GetPrimitiveType() ==
-               HdSt_GeometricShader::PrimitiveType::PRIM_MESH_COARSE_TRIQUADS) {
+        if (requiresPrimitiveIdEmulation) {
+            primitiveID << "int GetBasePrimitiveId() { return ptvsPatchId; }\n";
+        } else {
+            primitiveID << "int GetBasePrimitiveId() { return gl_PrimitiveID; }\n";
+        }
+        if (HdSt_GeometricShader::IsPrimTypeTriQuads(_geometricShader->GetPrimitiveType())) {
             primitiveID << "int GetPrimitiveID() {\n"
-                        << "  return (gl_PrimitiveID - GetBasePrimitiveOffset()) / 2;\n"
+                        << "  return (GetBasePrimitiveId() - GetBasePrimitiveOffset());\n"
                         << "}\n"
                         << "int GetTriQuadID() {\n"
-                        << "  return (gl_PrimitiveID - GetBasePrimitiveOffset()) & 1;\n"
+                        << "  return (GetBasePrimitiveId() - GetBasePrimitiveOffset()) & 1;\n"
                         << "}\n";
             _genPTVS    << "int GetPrimitiveID() {\n"
                         << "  return (patch_id - GetBasePrimitiveOffset()) / 2;\n"
@@ -3740,7 +3747,7 @@ HdSt_CodeGen::_GenerateDrawingCoord(
                         << "}\n";
         } else {
             primitiveID << "int GetPrimitiveID() {\n"
-                        << "  return (gl_PrimitiveID - GetBasePrimitiveOffset());\n"
+                        << "  return (GetBasePrimitiveId() - GetBasePrimitiveOffset());\n"
                         << "}\n";
             _genPTVS    << "int GetPrimitiveID() {\n"
                         << "  return (patch_id - GetBasePrimitiveOffset());\n"
@@ -5583,6 +5590,17 @@ HdSt_CodeGen::_GenerateShaderParameters(bool bindlessTextureEnabled)
                 << "\n}\n"
                 << "#define HD_HAS_" << it->second.name << " 1\n";
             
+            // Emit scalar accessors to support shading languages like MSL which
+            // do not support swizzle operators on scalar values.
+            if (_GetNumComponents(it->second.dataType) <= 4) {
+                accessors
+                    << _GetFlatType(it->second.dataType) << " HdGetScalar_"
+                    << it->second.name << "()"
+                    << " { return HdGet_" << it->second.name << "()"
+                    << _GetFlatTypeSwizzleString(it->second.dataType)
+                    << "; }\n";
+            }
+
             if (it->second.name == it->second.inPrimvars[0]) {
                 accessors
                     << "#endif\n";

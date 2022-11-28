@@ -113,7 +113,7 @@ public:
     void DidRemoveTarget(const SdfPath &targetPath);
 
     void DidChangeInfo(const SdfPath &path, const TfToken &key,
-                       const VtValue &oldValue, const VtValue &newValue);
+                       VtValue &&oldValue, const VtValue &newValue);
 
     // #nv begin #fast-updates
     // When a change list contains both fast updates and normal edits, treat the fast updates as normal.
