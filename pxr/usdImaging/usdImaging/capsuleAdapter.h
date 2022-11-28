@@ -126,17 +126,6 @@ public:
     VtValue GetPoints(
         UsdPrim const& prim,
         UsdTimeCode time) const override;
-<<<<<<< HEAD
-
-    USDIMAGING_API
-    static VtValue GetMeshPoints(UsdPrim const& prim, 
-                                 UsdTimeCode time);
-    
-    USDIMAGING_API
-    static VtValue GetMeshTopology();
-
-=======
->>>>>>> v22.11
 };
 
 

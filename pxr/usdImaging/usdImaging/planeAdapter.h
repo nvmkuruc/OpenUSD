@@ -73,7 +73,10 @@ public:
         UsdPrim const& prim,
         SdfPath const& cachePath,
         HdDirtyBits* timeVaryingBits,
-        UsdImagingInstancerContext const* instancerContext = nullptr) 
+        UsdImagingInstancerContext const* instancerContext = nullptr,
+        // #nv begin fast-updates
+        bool checkVariability = true)
+        // nv end
             const override;
 
     // ---------------------------------------------------------------------- //

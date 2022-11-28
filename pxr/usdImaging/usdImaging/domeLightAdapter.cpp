@@ -115,13 +115,7 @@ void
 UsdImagingDomeLightAdapter::_RemovePrim(SdfPath const& cachePath,
                                          UsdImagingIndexProxy* index)
 {
-<<<<<<< HEAD
-    // #nv begin #light-link-refresh
     _UnregisterLightCollections(cachePath);
-    // #nv end
-=======
-    _UnregisterLightCollections(cachePath);
->>>>>>> v22.11
     index->RemoveSprim(HdPrimTypeTokens->domeLight, cachePath);
 }
 

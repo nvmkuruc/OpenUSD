@@ -199,7 +199,10 @@ UsdProcImagingGenerativeProceduralAdapter::TrackVariability(
     UsdPrim const& prim,
     SdfPath const& cachePath,
     HdDirtyBits* timeVaryingBits,
-    UsdImagingInstancerContext const*  nstancerContext) const
+    UsdImagingInstancerContext const*  nstancerContext,
+    // #nv begin fast-updates
+    bool checkVariability) const
+    // nv end
 {
     // XXX copied/pared from UsdImagingGprimAdapter
     if (!(*timeVaryingBits & HdChangeTracker::DirtyPrimvar)) {

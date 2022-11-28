@@ -293,18 +293,10 @@ public:
                                        SdfPath const& cachePath,
                                        UsdImagingIndexProxy* index);
 
-<<<<<<< HEAD
-    // #nv begin #light-link-refresh
-=======
->>>>>>> v22.11
     USDIMAGING_API
     virtual void MarkCollectionsDirty(UsdPrim const& prim,
                                       SdfPath const& cachePath,
                                       UsdImagingIndexProxy* index);
-<<<<<<< HEAD
-    // #nv end
-=======
->>>>>>> v22.11
 
     // ---------------------------------------------------------------------- //
     /// \name Computations 
@@ -847,11 +839,6 @@ protected:
     USDIMAGING_API
     UsdImaging_CollectionCache& _GetCollectionCache() const;
 
-    // #nv begin #light-link-refresh
-    USDIMAGING_API
-    UsdStageRefPtr _GetStage() const;
-    // #nv end
-
     USDIMAGING_API
     UsdStageRefPtr _GetStage() const;
 
@@ -880,7 +867,6 @@ protected:
     USDIMAGING_API
     bool _DoesDelegateSupportCoordSys() const;
 
-<<<<<<< HEAD
     //+NV_CHANGE FRZHANG
     USDIMAGING_API
     bool _UseNVGPUSkinningComputations() const;
@@ -889,14 +875,6 @@ protected:
     bool _ShouldGenerateJointMesh() const;
     //-NV_CHANGE FRZHANG
 
-    // Conversion functions between usd and hydra enums.
-    USDIMAGING_API
-    static HdInterpolation _UsdToHdInterpolation(TfToken const& usdInterp);
-    USDIMAGING_API
-    static TfToken _UsdToHdRole(TfToken const& usdRole);
-
-=======
->>>>>>> v22.11
 private:
     UsdImagingDelegate* _delegate;
 };

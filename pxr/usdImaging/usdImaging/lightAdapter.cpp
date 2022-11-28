@@ -94,13 +94,7 @@ UsdImagingLightAdapter::Populate(UsdPrim const& prim,
 {
     index->InsertSprim(HdPrimTypeTokens->light, prim.GetPath(), prim);
     HD_PERF_COUNTER_INCR(UsdImagingTokens->usdPopulatedPrimCount);
-<<<<<<< HEAD
-    // #nv begin #light-link-refresh
     _RegisterLightCollections(prim);
-    // #nv end
-=======
-    _RegisterLightCollections(prim);
->>>>>>> v22.11
 
     return prim.GetPath();
 }
@@ -109,12 +103,6 @@ void
 UsdImagingLightAdapter::_RemovePrim(SdfPath const& cachePath,
                                          UsdImagingIndexProxy* index)
 {
-<<<<<<< HEAD
-    // #nv begin #light-link-refresh
-    _UnregisterLightCollections(cachePath);
-    // #nv end
-    index->RemoveSprim(HdPrimTypeTokens->domeLight, cachePath);
-=======
     _UnregisterLightCollections(cachePath);
     index->RemoveSprim(HdPrimTypeTokens->domeLight, cachePath);
 }
@@ -148,41 +136,7 @@ UsdImagingLightAdapter::_UnregisterLightCollections(SdfPath const& cachePath) {
 void
 UsdImagingLightAdapter::_RegisterLightCollections(UsdPrim const& prim) {
     _UpdateCollectionsChanged(prim);
->>>>>>> v22.11
 }
-
-// #nv begin #light-link-refresh
-void
-UsdImagingLightAdapter::MarkCollectionsDirty(UsdPrim const& prim,
-                                             SdfPath const& cachePath,
-                                             UsdImagingIndexProxy* index)
-{
-    index->MarkSprimDirty(cachePath, HdLight::DirtyCollection);
-}
-
-bool
-UsdImagingLightAdapter::_UpdateCollectionsChanged(UsdPrim const& prim) const {
-    UsdImaging_CollectionCache &collectionCache = _GetCollectionCache();
-    UsdLuxLightAPI light(prim);
-    bool lightColChanged = collectionCache.UpdateCollection(light.GetLightLinkCollectionAPI());
-    bool shadowColChanged = collectionCache.UpdateCollection(light.GetShadowLinkCollectionAPI());
-    return lightColChanged || shadowColChanged;
-}
-
-void
-UsdImagingLightAdapter::_UnregisterLightCollections(SdfPath const& cachePath) {
-    UsdImaging_CollectionCache &collectionCache = _GetCollectionCache();
-    SdfPath lightLinkPath = cachePath.AppendProperty(UsdImagingTokens->collectionLightLink);
-    collectionCache.RemoveCollection(_GetStage(), lightLinkPath);
-    SdfPath shadowLinkPath = cachePath.AppendProperty(UsdImagingTokens->collectionShadowLink);
-    collectionCache.RemoveCollection(_GetStage(), shadowLinkPath);
-}
-
-void
-UsdImagingLightAdapter::_RegisterLightCollections(UsdPrim const& prim) {
-    _UpdateCollectionsChanged(prim);
-}
-// #nv end
 
 void 
 UsdImagingLightAdapter::TrackVariability(UsdPrim const& prim,
@@ -194,8 +148,9 @@ UsdImagingLightAdapter::TrackVariability(UsdPrim const& prim,
     bool checkVariability) const
     // nv end
 {
+    // TODO: Remove or rework this (aluk).
     // #nv begin fast-updates
-    if (checkVariability) {
+    //if (checkVariability) {
     // nv end
 
     // Discover time-varying transforms.
@@ -232,13 +187,6 @@ UsdImagingLightAdapter::TrackVariability(UsdPrim const& prim,
         }
     }
 
-<<<<<<< HEAD
-    // #nv begin fast-updates
-    }
-    // nv end
-
-=======
->>>>>>> v22.11
     UsdImagingPrimvarDescCache* primvarDescCache = _GetPrimvarDescCache();
 
     // XXX Cache primvars for lights.
@@ -285,20 +233,12 @@ UsdImagingLightAdapter::ProcessPropertyChange(UsdPrim const& prim,
         return HdLight::DirtyBits::DirtyTransform;
     }
 
-<<<<<<< HEAD
-    // #nv begin #light-link-refresh
-=======
->>>>>>> v22.11
     if (TfStringStartsWith(propertyName.GetString(), UsdImagingTokens->collectionShadowLink.GetString()) || 
         TfStringStartsWith(propertyName.GetString(), UsdImagingTokens->collectionLightLink.GetString())) {
         if (_UpdateCollectionsChanged(prim)) {
             return HdLight::DirtyBits::DirtyCollection;
         }
     }
-<<<<<<< HEAD
-    // #nv end
-=======
->>>>>>> v22.11
 
     // "DirtyParam" is the catch-all bit for light params.
     return HdLight::DirtyBits::DirtyParams;

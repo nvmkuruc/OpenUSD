@@ -133,18 +133,10 @@ public:
                                    SdfPath const& cachePath,
                                    UsdImagingIndexProxy* index) override;
 
-<<<<<<< HEAD
-    // #nv begin #light-link-refresh
-=======
->>>>>>> v22.11
     USDIMAGING_API
     virtual void MarkCollectionsDirty(UsdPrim const& prim,
                                       SdfPath const& cachePath,
                                       UsdImagingIndexProxy* index) override;
-<<<<<<< HEAD
-    // #nv end
-=======
->>>>>>> v22.11
 
     // ---------------------------------------------------------------------- //
     /// \name Utility methods

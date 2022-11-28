@@ -2587,12 +2587,8 @@ UsdImagingInstanceAdapter::GetScenePrimPaths(
             // determine the min/max index to determine how many bits have to be
             // allocated in the requestIndicesMap.
             for (size_t i = 0; i < instanceIndices.size(); i++) {
-<<<<<<< HEAD
-                int instanceIndex = instanceIndices[i];
-=======
                 const size_t instanceIndex =
                     static_cast<size_t>(instanceIndices[i]);
->>>>>>> v22.11
 
                 // skip invalid indices
                 if (instanceIndex < indices.size()) {
@@ -2613,12 +2609,8 @@ UsdImagingInstanceAdapter::GetScenePrimPaths(
 
                 // set bits for all valid requested indices to true
                 for (size_t i = 0; i < instanceIndices.size(); i++) {
-<<<<<<< HEAD
-                    int instanceIndex = instanceIndices[i];
-=======
                     const size_t instanceIndex =
                         static_cast<size_t>(instanceIndices[i]);
->>>>>>> v22.11
 
                     // skip invalid indices
                     if (instanceIndex < indices.size()) {

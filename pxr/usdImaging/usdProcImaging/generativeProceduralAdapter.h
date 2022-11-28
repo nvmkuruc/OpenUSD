@@ -91,7 +91,10 @@ public:
                           SdfPath const& cachePath,
                           HdDirtyBits* timeVaryingBits,
                           UsdImagingInstancerContext const* 
-                              instancerContext = nullptr) const override;
+                              instancerContext = nullptr,
+        // #nv begin fast-updates
+        bool checkVariability = true) const override;
+        // nv end
 
 protected:
     

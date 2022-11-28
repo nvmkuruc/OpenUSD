@@ -456,40 +456,16 @@ public:
     // Used as a parallel callback method for use with WorkParallelForN.
     void UpdateVariability(size_t start, size_t end) {
         for (size_t i = start; i < end; i++) {
-            // #nv begin fast-updates
-            //const bool &checkVariability = _tasks[i].checkVariability;
-            // nv end
             UsdImagingIndexProxy indexProxy(_delegate, nullptr);
-            // #nv begin #parallel-xform-children
-#if PARALLEL_XFORM_CHILDREN
-            SdfPath const& cachePath = _tasks[i].path;
-#else
             SdfPath const& cachePath = _tasks[i];
-#endif
-            // nv end
 
             _HdPrimInfo *primInfo = _delegate->_GetHdPrimInfo(cachePath);
             if (TF_VERIFY(primInfo, "%s\n", cachePath.GetText())) {
                 UsdImagingPrimAdapterSharedPtr const& adapter=primInfo->adapter;
                 if (TF_VERIFY(adapter, "%s\n", cachePath.GetText())) {
                     adapter->TrackVariability(primInfo->usdPrim,
-<<<<<<< HEAD
-                        cachePath,
-                        &primInfo->timeVaryingBits);
-                        // #nv begin fast-updates
-                        //nullptr,
-                        //checkVariability);
-                        // nv end
-                    if (primInfo->timeVaryingBits != HdChangeTracker::Clean) {
-                        adapter->MarkDirty(primInfo->usdPrim,
-                                           cachePath,
-                                           primInfo->timeVaryingBits,
-                                           &indexProxy);
-                    }
-=======
                                               cachePath,
                                               &primInfo->timeVaryingBits);
->>>>>>> v22.11
                 }
             }
         }
@@ -1439,10 +1415,6 @@ UsdImagingDelegate::ApplyPendingUpdates()
     _Populate(&indexProxy);
     _ExecuteWorkForVariabilityUpdate(&worker);
 
-<<<<<<< HEAD
-    // #nv begin #light-link-refresh
-=======
->>>>>>> v22.11
     // Mark all dirty collection prims
     const SdfPathSet& pathsDirtiedByCollections = _collectionCache.GetDirtyPaths();
     if (!pathsDirtiedByCollections.empty()) {
@@ -1458,10 +1430,6 @@ UsdImagingDelegate::ApplyPendingUpdates()
         }
         _collectionCache.ClearDirtyPaths();
     }
-<<<<<<< HEAD
-    // #nv end
-=======
->>>>>>> v22.11
 }
 
 // #nv begin #omni-hydra

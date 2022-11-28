@@ -65,22 +65,6 @@ public:
     /// given collection, and establishes a cache entry.  If a
     /// prior entry existed for the collection at this path,
     /// it is removed first.
-<<<<<<< HEAD
-    // #nv begin #light-link-refresh
-    /// Returns true for new collection or
-    /// if the hash of the collection is different from any previous collection
-    bool
-    UpdateCollection(UsdCollectionAPI const& collection);
-
-    // #nv begin #light-link-refresh
-
-    /// Remove any cached entry for the given collection.
-    /// Does nothing if no cache entry exists.
-    /// Returns the hash of the removed collection, or 0 if no collection existed
-    size_t
-    RemoveCollection(UsdStageWeakPtr const& stage, SdfPath const& path);
-    // #nv end
-=======
     /// Returns true for newly created collection or
     /// if the hash of the collection is different from the previous collection
     bool
@@ -89,7 +73,6 @@ public:
     /// Returns the hash of the removed collection, or 0 if no collection existed
     size_t
     RemoveCollection(UsdStageWeakPtr const& stage, SdfPath const& path);
->>>>>>> v22.11
 
     /// Return the cached entry for the given collection.
     TfToken
@@ -100,10 +83,6 @@ public:
     VtArray<TfToken>
     ComputeCollectionsContainingPath(SdfPath const& path) const;
 
-<<<<<<< HEAD
-    // #nv begin #light-link-refresh
-=======
->>>>>>> v22.11
     /// Return the cached MembershipQuery for a given id
     void
     GetMembershipQuery(TfToken const& id, const Query** query) const;
@@ -116,11 +95,6 @@ public:
     /// Clears the internal dirty flags
     void
     ClearDirtyPaths();
-<<<<<<< HEAD
-    
-    // #nv end
-=======
->>>>>>> v22.11
 
 private:
     // The cache boils down to tracking the correspondence of
@@ -138,18 +112,10 @@ private:
     std::unordered_map<SdfPath, TfToken, SdfPath::Hash> _idForPath;
     std::unordered_map<Query, SdfPathSet, Query::Hash> _pathsForQuery;
 
-<<<<<<< HEAD
-    // #nv begin #light-link-refresh
-=======
->>>>>>> v22.11
     void
     _MarkCollectionContentDirty(UsdStageWeakPtr const& stage, UsdCollectionAPI::MembershipQuery const& query);
 
     SdfPathSet _dirtyPaths;
-<<<<<<< HEAD
-    // #nv end
-=======
->>>>>>> v22.11
 
     std::mutex _mutex;
 };

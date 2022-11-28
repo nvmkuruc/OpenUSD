@@ -342,16 +342,6 @@ UsdImagingPrimAdapter::MarkWindowPolicyDirty(UsdPrim const& prim,
 {
 }
 
-// #nv begin #light-link-refresh
-/*virtual*/
-void
-UsdImagingPrimAdapter::MarkCollectionsDirty(UsdPrim const& prim,
-                                            SdfPath const& cachePath,
-                                            UsdImagingIndexProxy* index)
-{
-}
-// #nv end
-
 /*virtual*/
 void
 UsdImagingPrimAdapter::InvokeComputation(SdfPath const& cachePath,
@@ -981,19 +971,11 @@ UsdImagingPrimAdapter::_GetCollectionCache() const
     return _delegate->_collectionCache;
 }
 
-<<<<<<< HEAD
-// #nv begin #light-link-refresh
-=======
->>>>>>> v22.11
 UsdStageRefPtr
 UsdImagingPrimAdapter::_GetStage() const
 {
     return _delegate->_stage;
 }
-<<<<<<< HEAD
-// #nv end
-=======
->>>>>>> v22.11
 
 UsdImaging_CoordSysBindingStrategy::value_type
 UsdImagingPrimAdapter::_GetCoordSysBindings(UsdPrim const& prim) const

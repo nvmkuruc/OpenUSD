@@ -25,10 +25,7 @@
 #include "pxr/imaging/hdSt/materialXFilter.h"
 #include "pxr/imaging/hdSt/materialXShaderGen.h"
 #include "pxr/imaging/hdSt/package.h"
-<<<<<<< HEAD
-=======
 #include "pxr/imaging/hdSt/resourceRegistry.h"
->>>>>>> v22.11
 #include "pxr/imaging/hdMtlx/hdMtlx.h"
 
 #include "pxr/usd/sdr/registry.h"
@@ -503,34 +500,6 @@ _ReplaceFilenameInput(
     }
 }
 
-static void
-_AddFallbackDomeLightTextureNode(
-    HdMaterialNetwork2* hdNetwork,
-    SdfPath const& hdTerminalNodePath,
-    mx::StringMap* mxHdTextureMap)
-{
-    // Create and add a Fallback Dome Light Texture Node to the hdNetwork
-    HdMaterialNode2 hdDomeTextureNode;
-    hdDomeTextureNode.nodeTypeId = _tokens->ND_image_color3;
-    hdDomeTextureNode.parameters[_tokens->file] =
-        VtValue(SdfAssetPath(
-            HdStPackageFallbackDomeLightTexture(), 
-            HdStPackageFallbackDomeLightTexture()));
-    const SdfPath domeTexturePath = 
-        hdTerminalNodePath.ReplaceName(_tokens->domeLightFallback);
-    hdNetwork->nodes.insert({domeTexturePath, hdDomeTextureNode});
-
-    // Connect the new Texture Node to the Terminal Node
-    HdMaterialConnection2 domeTextureConn;
-    domeTextureConn.upstreamNode = domeTexturePath;
-    domeTextureConn.upstreamOutputName = domeTexturePath.GetNameToken();
-    hdNetwork->nodes[hdTerminalNodePath].
-        inputConnections[domeTextureConn.upstreamOutputName] = {domeTextureConn};
-
-    // Add the Dome Texture name to the TextureMap for MaterialXShaderGen
-    (*mxHdTextureMap)[domeTexturePath.GetName()] = domeTexturePath.GetName();
-}
-
 // Add the Hydra texture node parameters to the texture nodes and connect the 
 // texture nodes to the terminal node
 static void 
@@ -572,20 +541,10 @@ _UpdateTextureNodes(
         // Gather the Hydra Texture Parameters
         std::map<TfToken, VtValue> hdParameters;
         _AddDefaultMtlxTextureValues(&hdParameters);
-<<<<<<< HEAD
-        for (auto const& currParam : hdTextureNode.parameters) {
-
-            // Get the MaterialX Input Value string
-            std::string mxInputValue = HdMtlxConvertToString(currParam.second);
-
-            // Get the Hydra equivalents for the MX Texture node parameters
-            std::string mxInputName = currParam.first.GetText();
-=======
         for (auto const& param : hdTextureNode.parameters) {
             // Get the Hydra equivalents for the Mx Texture node parameters
             std::string const& mxInputName = param.first.GetString();
             std::string const mxInputValue = HdMtlxConvertToString(param.second);
->>>>>>> v22.11
             _GetHdTextureParameters(mxInputName, mxInputValue, &hdParameters);
         }
 
@@ -599,10 +558,6 @@ _UpdateTextureNodes(
         // mxHdTextureMap so Hydra's codegen and HdStMaterialXShaderGen 
         // match up correctly.
         std::string newConnName = texturePath.GetName() + "_" + 
-<<<<<<< HEAD
-                                (*mxHdTextureMap)[texturePath.GetName()];
-        (*mxHdTextureMap)[texturePath.GetName()] = newConnName;
-=======
             hdMtlxTextureInfo.find(texturePath.GetName())->second;
 
         // Replace the texturePath.GetName() in the textureMap to the variable
@@ -619,19 +574,18 @@ _UpdateTextureNodes(
         }
         mxHdTextureMap->insert(std::pair<std::string, std::string>(
                 texturePath.GetName() + "_" + fileInputName, newConnName));
->>>>>>> v22.11
 
         // Make and add a new connection to the terminal node
         HdMaterialConnection2 textureConn;
         textureConn.upstreamNode = texturePath;
         textureConn.upstreamOutputName = TfToken(newConnName);
         hdNetwork->nodes[hdTerminalNodePath].
-            inputConnections[textureConn.upstreamOutputName] = { textureConn };
+            inputConnections[textureConn.upstreamOutputName] = {textureConn};
     }
 }
 
 // Connect the primvar nodes to the terminal node
-static void
+static void 
 _UpdatePrimvarNodes(
     mx::DocumentPtr const& mxDoc,
     HdMaterialNetwork2* hdNetwork,
@@ -651,7 +605,7 @@ _UpdatePrimvarNodes(
 
             // Figure out the mx typename
             mx::NodeDefPtr mxNodeDef = mxDoc->getNodeDef(
-                hdPrimvarNode.nodeTypeId.GetString());
+                    hdPrimvarNode.nodeTypeId.GetString());
             if (mxNodeDef) {
                 (*mxHdPrimvarMap)[primvarName] = mxNodeDef->getType();
             }
@@ -698,7 +652,7 @@ _UpdatePrimvarNodes(
         primvarConn.upstreamNode = primvarPath;
         primvarConn.upstreamOutputName = TfToken(newConnName);
         hdNetwork->nodes[hdTerminalNodePath]
-            .inputConnections[primvarConn.upstreamOutputName] = { primvarConn };
+            .inputConnections[primvarConn.upstreamOutputName] = {primvarConn};
     }
 }
 
@@ -967,49 +921,6 @@ HdSt_ApplyMaterialXFilter(
 
     if (mtlxSdrNode) {
 
-<<<<<<< HEAD
-        // Load Standard Libraries/setup SearchPaths (for mxDoc and mxShaderGen)
-        mx::FilePathVec libraryFolders;
-        mx::FileSearchPath searchPath = HdMtlxSearchPaths();
-        mx::DocumentPtr stdLibraries = mx::createDocument();
-        mx::loadLibraries(libraryFolders, searchPath, stdLibraries);
-
-        // Create the MaterialX Document from the HdMaterialNetwork
-        MxHdInfo mxHdInfo; // Hydra information for MaterialX glslfx shaderGen 
-        std::set<SdfPath> hdTextureNodes;
-        std::set<SdfPath> hdPrimvarNodes;
-        mx::DocumentPtr mtlxDoc = HdMtlxCreateMtlxDocumentFromHdNetwork(
-                                        *hdNetwork,
-                                        terminalNode,   // MaterialX HdNode
-                                        terminalNodePath,
-                                        materialPath,
-                                        stdLibraries,
-                                        &hdTextureNodes,
-                                        &mxHdInfo.textureMap,
-                                        &hdPrimvarNodes);
-
-        // Add a Fallback DomeLight texture node to make sure the indirect
-        // light computations always has a texture to sample from
-        _AddFallbackDomeLightTextureNode(
-            hdNetwork, terminalNodePath, &mxHdInfo.textureMap);
-
-        // Add Hydra parameters for each of the Texture nodes
-        _UpdateTextureNodes(mtlxDoc, hdNetwork, terminalNodePath, hdTextureNodes, 
-                            &mxHdInfo.textureMap, &mxHdInfo.primvarMap, 
-                            &mxHdInfo.defaultTexcoordName);
-
-        _UpdatePrimvarNodes(mtlxDoc, hdNetwork, terminalNodePath,
-                            hdPrimvarNodes, &mxHdInfo.primvarMap);
-
-        mxHdInfo.materialTag = _GetMaterialTag(terminalNode);
-        mxHdInfo.bindlessTexturesEnabled = bindlessTexturesEnabled;
-
-        // Load MaterialX Document and generate the glslfxShader
-        mx::ShaderPtr glslfxShader = HdSt_GenMaterialXShader(mtlxDoc,
-                                    searchPath, mxHdInfo);
-        if (!glslfxShader) {
-            return;
-=======
         mx::ShaderPtr glslfxShader;
         const TfToken materialTagToken(_GetMaterialTag(terminalNode));
         const bool bindlessTexturesEnabled = 
@@ -1059,7 +970,6 @@ HdSt_ApplyMaterialXFilter(
 
             // Add material parameters from the glslfxShader
             _AddMaterialXParams(glslfxShader, materialParams);
->>>>>>> v22.11
         }
 
         // Create a new terminal node with the new glslfxSource

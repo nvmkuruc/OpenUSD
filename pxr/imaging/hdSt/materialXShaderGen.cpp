@@ -332,11 +332,7 @@ HdStMaterialXShaderGen::_EmitMxFunctions(
                 if (texturePair.first == "domeLightFallback") {
                     continue;
                 }
-<<<<<<< HEAD
-                emitLine(TfStringPrintf("#define %s_file HdGetSampler_%s()",
-=======
                 emitLine(TfStringPrintf("#define %s HdGetSampler_%s()",
->>>>>>> v22.11
                                         texturePair.first.c_str(),
                                         texturePair.second.c_str()),
                         mxStage, false);
@@ -632,11 +628,7 @@ HdStMaterialXShaderGen::_EmitMxInitFunction(
             if (texturePair.first == "domeLightFallback") {
                 continue;
             }
-<<<<<<< HEAD
-            emitLine(texturePair.first + "_file = "
-=======
             emitLine(texturePair.first + " = "
->>>>>>> v22.11
                     "HdGetSampler_" + texturePair.second + "()", mxStage);
         }
         emitLineBreak(mxStage);

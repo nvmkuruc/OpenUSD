@@ -138,19 +138,17 @@ public:
                               SdfPath const& cachePath,
                               UsdImagingIndexProxy* index) override;
 
-<<<<<<< HEAD
     // #nv begin #bind-material-to-domelight
     USDIMAGING_API
     virtual SdfPath GetMaterialId(UsdPrim const& prim,
                                   SdfPath const& cachePath,
                                   UsdTimeCode time) const;
     // nv end
-=======
+
     USDIMAGING_API
     virtual void MarkCollectionsDirty(UsdPrim const& prim,
                                       SdfPath const& cachePath,
                                       UsdImagingIndexProxy* index) override;
->>>>>>> v22.11
 
     // ---------------------------------------------------------------------- //
     /// \name Utilities
@@ -165,35 +163,21 @@ protected:
     void _RemovePrim(SdfPath const& cachePath,
                      UsdImagingIndexProxy* index) override;
 
-<<<<<<< HEAD
-// #nv begin #light-link-refresh
-    USDIMAGING_API
-    virtual void MarkCollectionsDirty(UsdPrim const& prim,
-                                      SdfPath const& cachePath,
-                                      UsdImagingIndexProxy* index) override;
 protected:
-    USDIMAGING_API
-    void _UnregisterLightCollections(SdfPath const& cachePath);
 
     USDIMAGING_API
-=======
     // To be called from the Light Populate method
     void _UnregisterLightCollections(SdfPath const& cachePath);
 
     // To be called from the Light _RemovePrim method
->>>>>>> v22.11
     void _RegisterLightCollections(UsdPrim const& prim);
 
 private:
     /// Updates the collection cache content
     /// Checks for collection hash change and returns true if they are different
     bool _UpdateCollectionsChanged(UsdPrim const& prim) const;
-<<<<<<< HEAD
-// #nv end
-=======
 
 
->>>>>>> v22.11
 };
 
 
