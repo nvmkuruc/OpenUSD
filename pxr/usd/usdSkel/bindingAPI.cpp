@@ -392,7 +392,7 @@ UsdGeomPrimvar
 UsdSkelBindingAPI::CreateSkinningBlendWeightsPrimvar(bool constant,
     int elementSize) const
 {
-    return UsdGeomImageable(GetPrim()).CreatePrimvar(
+    return UsdGeomPrimvarsAPI(GetPrim()).CreatePrimvar(
         UsdSkelTokens->primvarsSkelSkinningBlendWeights,
         SdfValueTypeNames->FloatArray,
         constant ? UsdGeomTokens->constant : UsdGeomTokens->vertex,

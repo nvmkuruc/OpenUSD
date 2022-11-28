@@ -676,17 +676,6 @@ public:
     VtValue GetField(const SdfPath& path,
                      const TfToken& fieldName) const;
 
-    // #nv begin #fast-updates
-    SDF_API
-    VtValue GetField(const SdfAbstractDataFieldAccessHandle &fieldHandle) const;
-
-    SDF_API
-    SdfAbstractDataFieldAccessHandle CreateFieldHandle(const SdfPath &path, const TfToken &fieldName);
-
-    SDF_API
-    void ReleaseFieldHandle(SdfAbstractDataFieldAccessHandle *fieldHandle);
-    // nv end
-
     /// Return the value for the given \a path and \a fieldName. Returns the
     /// provided \a defaultValue value if none is set.
     template <class T>
@@ -708,14 +697,6 @@ public:
     SDF_API
     void SetField(const SdfPath& path, const TfToken& fieldName,
         const VtValue& value);
-
-    // #nv begin #fast-updates
-    SDF_API
-    void SetField(const SdfAbstractDataFieldAccessHandle &fieldHandle, const VtValue& value);
-    SDF_API
-    void SetField(const SdfAbstractDataFieldAccessHandle &fieldHandle, const SdfAbstractDataConstValue& value);
-    // nv end
-
     SDF_API
     void SetField(const SdfPath& path, const TfToken& fieldName,
         const SdfAbstractDataConstValue& value);
@@ -1552,15 +1533,6 @@ public:
         return hasValue && (!outValue.isValueBlock);
     }
 
-    // #nv begin #fast-updates
-    SDF_API
-    void SetTimeSample(const SdfAbstractDataFieldAccessHandle &fieldHandle, double time,
-                       const VtValue & value);
-    SDF_API
-    void SetTimeSample(const SdfAbstractDataFieldAccessHandle &fieldHandle, double time,
-                       const SdfAbstractDataConstValue& value);
-    // nv end
-
     SDF_API
     void SetTimeSample(const SdfPath& path, double time, 
                        const VtValue & value);
@@ -1854,10 +1826,6 @@ private:
     // Returns const handle to _data.
     SdfAbstractDataConstPtr _GetData() const;
 
-<<<<<<< HEAD
-    // #nv begin #fast-updates
-    // Inverse primitive for setting a single field.
-=======
     // Returns a new SdfAbstractData object for this layer.
     SdfAbstractDataRefPtr _CreateData() const;
 
@@ -1866,20 +1834,12 @@ private:
     // VtValue it points to will be moved-from after the function completes. If
     // \p oldValue is nullptr, the old field value will be retrieved
     // automatically.
->>>>>>> v22.11
     template <class T>
     void _PrimSetField(const SdfPath& path, 
                        const TfToken& fieldName,
                        const T& value,
-<<<<<<< HEAD
-                       const VtValue *oldValue = NULL,
-                       bool useDelegate = true,
-                       bool fastUpdates = false);
-    // nv end
-=======
                        VtValue *oldValue = nullptr,
                        bool useDelegate = true);
->>>>>>> v22.11
 
     // Inverse primitive for setting a single key in a dict-valued field.  The
     // previous dictionary value for the field (*not* the individual entry) may

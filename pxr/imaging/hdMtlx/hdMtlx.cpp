@@ -218,20 +218,12 @@ _AddMaterialXNode(
         _AddNodeToNodeGraph(mxNodeName, mxNodeCategory, 
                             mxNodeType, mxNodeGraph, addedNodeNames);
 
-<<<<<<< HEAD
-    if(mxNode->getNodeDef()) {
-=======
     if (mxNode->getNodeDef()) {
->>>>>>> v22.11
         // Sometimes mxNode->getNodeDef() starts failing.
         // It seems to happen when there are connections with mismatched types.
         // Explicitly setting the node def string appparently fixes the problem.
         // If we don't do this code gen may fail.
-<<<<<<< HEAD
-        if(mxNode->getNodeDefString().empty()) {
-=======
         if (mxNode->getNodeDefString().empty()) {
->>>>>>> v22.11
             mxNode->setNodeDefString(hdNodeType.GetText());
         }
     }

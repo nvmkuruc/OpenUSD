@@ -7502,25 +7502,6 @@ bool
 UsdStage::_GetValue(UsdTimeCode time, const UsdAttribute &attr,
                     VtValue* result) const
 {
-<<<<<<< HEAD
-    auto getValueImpl = [](const UsdStage &stage,
-                           UsdTimeCode time, const UsdAttribute &attr,
-                           Usd_InterpolatorBase* interpolator,
-                           VtValue* value) 
-    {
-        return stage._GetValueImpl(time, attr, interpolator, value);
-    };
-
-    // #nv begin #omni-hydra
-    if (_getValueFn && _getValueFnEnabled)
-    {
-        if ((*_getValueFn)(time, attr.GetPath(), nullptr, result, _getValueFnUserData))
-            return true; // value already authored at the strongest layer
-    }
-    // nv end
-
-=======
->>>>>>> v22.11
     return Usd_AttrGetUntypedValueHelper::GetValue(
         *this, time, attr, result);
 }
@@ -7530,25 +7511,6 @@ bool
 UsdStage::_GetValue(UsdTimeCode time, const UsdAttribute &attr,
                     T* result) const
 {
-<<<<<<< HEAD
-    auto getValueImpl = [](const UsdStage &stage,
-                           UsdTimeCode time, const UsdAttribute &attr,
-                           Usd_InterpolatorBase* interpolator,
-                           SdfAbstractDataValue* value) 
-    {
-        return stage._GetValueImpl(time, attr, interpolator, value);
-    };
-
-    // #nv begin #omni-hydra
-    if (_getValueFn && _getValueFnEnabled)
-    {
-        if ((*_getValueFn)(time, attr.GetPath(), (void*)result, nullptr, _getValueFnUserData))
-            return true; // value already authored at the strongest layer
-    }
-    // nv end
-
-=======
->>>>>>> v22.11
     return Usd_AttrGetValueHelper<T>::GetValue(
         *this, time, attr, result);
 }
@@ -8361,30 +8323,8 @@ UsdStage::_GetValueFromResolveInfo(const UsdResolveInfo &info,
                                    UsdTimeCode time, const UsdAttribute &attr,
                                    VtValue* result) const
 {
-<<<<<<< HEAD
-    auto getValueImpl = [&info](const UsdStage &stage,
-                                UsdTimeCode time, const UsdAttribute &attr,
-                                Usd_InterpolatorBase* interpolator,
-                                VtValue* value) 
-    {
-        return stage._GetValueFromResolveInfoImpl(
-            info, time, attr, interpolator, value);
-    };
-
-    // #nv begin #omni-hydra
-    if (_getValueFn && _getValueFnEnabled)
-    {
-        if ((*_getValueFn)(time, attr.GetPath(), nullptr, result, _getValueFnUserData))
-            return true; // value already authored at the strongest layer
-    }
-    // nv end
-
-    return Usd_AttrGetUntypedValueHelper::GetValue(
-        *this, time, attr, result, getValueImpl);
-=======
     return Usd_AttrGetUntypedValueHelper::GetValueFromResolveInfo(
         *this, time, attr, info, result);
->>>>>>> v22.11
 }
 
 template <class T>
@@ -8393,30 +8333,8 @@ UsdStage::_GetValueFromResolveInfo(const UsdResolveInfo &info,
                                    UsdTimeCode time, const UsdAttribute &attr,
                                    T* result) const
 {
-<<<<<<< HEAD
-    auto getValueImpl = [&info](const UsdStage &stage,
-                                UsdTimeCode time, const UsdAttribute &attr, 
-                                Usd_InterpolatorBase* interpolator,
-                                SdfAbstractDataValue* value) 
-    {
-        return stage._GetValueFromResolveInfoImpl(
-            info, time, attr, interpolator, value);
-    };
-
-    // #nv begin #omni-hydra
-    if (_getValueFn && _getValueFnEnabled)
-    {
-        if ((*_getValueFn)(time, attr.GetPath(), result, nullptr, _getValueFnUserData))
-            return true; // value already authored at the strongest layer
-    }
-    // nv end
-
-    return Usd_AttrGetValueHelper<T>::GetValue(
-        *this, time, attr, result, getValueImpl);
-=======
     return Usd_AttrGetValueHelper<T>::GetValueFromResolveInfo(
         *this, time, attr, info, result);
->>>>>>> v22.11
 }
 
 // --------------------------------------------------------------------- //

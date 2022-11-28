@@ -620,30 +620,6 @@ SdfLayer::_CreateNew(
             return TfNullPtr;
         }
 
-<<<<<<< HEAD
-    // #nv begin #usd_diff_deltas
-    }
-    // Release layer registry mutex before saving, which triggers another layer creation for deltas.
-    {
-    // nv end
-
-        // Stash away the existing layer hints.  The call to _Save below will
-        // invalidate them but they should still be good.
-        SdfLayerHints hints = layer->_hints;
-
-        // XXX 2011-08-19 Newly created layers should not be
-        // saved to disk automatically.
-        //
-        // Force the save here to ensure this new layer overwrites any
-        // existing layer on disk.
-        if (!layer->_Save(/* force = */ true)) {
-            // Dropping the layer reference will destroy it, and
-            // the destructor will remove it from the registry.
-            // #nv begin #usd_diff_deltas
-            layer->_FinishInitialization(/* success = */ false);
-            // nv end
-            return TfNullPtr;
-=======
         if (saveLayer) {
             // Stash away the existing layer hints.  The call to _Save below
             // will invalidate them but they should still be good.
@@ -661,7 +637,6 @@ SdfLayer::_CreateNew(
             }
 
             layer->_hints = hints;
->>>>>>> v22.11
         }
 
         // Once we have saved the layer, initialization is complete.
@@ -1451,51 +1426,6 @@ template void SdfLayer::_PrimSetTimeSample(
 // End of SdfLayer static functions
 // ---
 
-// #nv begin #fast-updates
-void
-SdfLayer::SetTimeSample(const SdfAbstractDataFieldAccessHandle &fieldHandle, double time,
-                        const VtValue & value)
-{
-    if (!fieldHandle) {
-        TF_CODING_ERROR("Cannot set time sample via field handle on @%s@.  "
-            "Field handle has expired.",
-            GetIdentifier().c_str());
-        return;
-    }
-
-    SdfChangeBlock block;
-    if (!PermissionToEdit()) {
-        TF_CODING_ERROR("Cannot set time sample on <%s>.  "
-            "Layer @%s@ is not editable.",
-            fieldHandle->GetPath().GetString().c_str(),
-            GetIdentifier().c_str());
-        return;
-    }
-
-    // Fast path does not perform type checking (just like fast and slow path for setting info fields).
-
-    if (_stateDelegate) {
-        _stateDelegate->_OnSetTimeSample(fieldHandle->GetPath(), time, value);
-    }
-
-    // TODO(USD):optimization: Analyze the affected time interval.
-    // For now, time samples do not trigger special change notification for fast updates.
-    // Current use cases for fast updates are focused on streaming updates to attribute defaults.
-    Sdf_ChangeManager::Get()
-        .DidChangeAttributeTimeSamples(SdfLayerHandle(this),
-            fieldHandle->GetPath());
-
-    _data->SetTimeSample(fieldHandle, time, value);
-}
-
-void
-SdfLayer::SetTimeSample(const SdfAbstractDataFieldAccessHandle &fieldHandle, double time,
-                        const SdfAbstractDataConstValue& value)
-{
-    SetTimeSample(fieldHandle, time, _GetVtValue(value));
-}
-// nv end
-
 void
 SdfLayer::_InitializeFromIdentifier(
     const string& identifier,
@@ -2039,7 +1969,6 @@ SdfLayer::_CanGetSpecAtPath(
     const SdfPath& path, 
     SdfPath* canonicalPath, SdfSpecType* specType) const
 {
-    TRACE_FUNCTION();
     if (path.IsEmpty()) {
         return false;
     }
@@ -3663,48 +3592,6 @@ SdfLayer::GetField(const SdfPath& path,
     return result;
 }
 
-// #nv begin #fast-updates
-VtValue
-SdfLayer::GetField(const SdfAbstractDataFieldAccessHandle &fieldHandle) const
-{
-    VtValue result;
-
-    if (!fieldHandle) {
-        TF_CODING_ERROR("Cannot gewt value via field handle on @%s@.  "
-            "Field handle has expired.",
-            GetIdentifier().c_str());
-        return result;
-    }
-
-    if (!_data->Get(fieldHandle, result))
-    {
-        // Otherwise if this is a required field, and the data has a spec here,
-        // return the fallback value.
-        if (SdfSchema::FieldDefinition const *def =
-            _GetRequiredFieldDef(fieldHandle->GetPath(), fieldHandle->GetFieldName()))
-        {
-            result = def->GetFallbackValue();
-        }
-    }
-    return result;
-}
-
-SdfAbstractDataFieldAccessHandle
-SdfLayer::CreateFieldHandle(const SdfPath &path, const TfToken &fieldName)
-{
-    return _data->CreateFieldHandle(path, fieldName);
-}
-
-void
-SdfLayer::ReleaseFieldHandle(SdfAbstractDataFieldAccessHandle *fieldHandle)
-{
-    if (!fieldHandle || !(*fieldHandle))
-        return;
-
-    _data->ReleaseFieldHandle(fieldHandle);
-}
-// nv end
-
 VtValue
 SdfLayer::_GetField(const SdfSchemaBase &schema,
                     const SdfAbstractData &data,
@@ -3762,55 +3649,6 @@ SdfLayer::SetField(const SdfPath& path, const TfToken& fieldName,
     if (value != oldValue)
         _PrimSetField(path, fieldName, value, &oldValue);
 }
-
-// #nv begin #fast-updates
-void
-SdfLayer::SetField(const SdfAbstractDataFieldAccessHandle &fieldHandle, const VtValue& value)
-{
-    TRACE_FUNCTION();
-    if (!fieldHandle) {
-        TF_CODING_ERROR("Cannot set field via field handle on @%s@.  "
-            "Field handle has expired.",
-            GetIdentifier().c_str());
-        return;
-    }
-
-    if (value.IsEmpty())
-        return EraseField(fieldHandle->GetPath(), fieldHandle->GetFieldName());
-
-    if (ARCH_UNLIKELY(!PermissionToEdit())) {
-        TF_CODING_ERROR("Cannot set %s on <%s>. Layer @%s@ is not editable.",
-            fieldHandle->GetFieldName().GetText(), fieldHandle->GetPath().GetString().c_str(),
-            GetIdentifier().c_str());
-        return;
-    }
-
-    VtValue oldValue;
-    _data->Get(fieldHandle, oldValue);
-    if (value != oldValue) {
-        // Send notification when leaving the change block,
-        // if we are not already nested in another change block.
-        SdfChangeBlock block;
-
-        _stateDelegate->_OnSetField(fieldHandle->GetPath(), fieldHandle->GetFieldName(), value);
-
-        const TfToken &fieldName = fieldHandle->GetFieldName();
-
-        Sdf_ChangeManager::Get().DidChangeField(
-            SdfLayerHandle(this),
-            fieldHandle->GetPath(), fieldHandle->GetFieldName(), oldValue, value);
-
-        _data->Set(fieldHandle, value);
-    }
-}
-
-void
-SdfLayer::SetField(const SdfAbstractDataFieldAccessHandle &fieldHandle, const SdfAbstractDataConstValue& value)
-{
-    TRACE_FUNCTION();
-    SetField(fieldHandle, _GetVtValue(value));
-}
-// nv end
 
 void
 SdfLayer::SetField(const SdfPath& path, const TfToken& fieldName,
@@ -4268,14 +4106,8 @@ void
 SdfLayer::_PrimSetField(const SdfPath& path, 
                         const TfToken& fieldName,
                         const T& value,
-<<<<<<< HEAD
-                        const VtValue *oldValuePtr,
-                        bool useDelegate,
-                        bool fastUpdates)
-=======
                         VtValue* oldValuePtr,
                         bool useDelegate)
->>>>>>> v22.11
 {
     if (useDelegate && TF_VERIFY(_stateDelegate)) {
         _stateDelegate->SetField(path, fieldName, value, oldValuePtr);
@@ -4295,24 +4127,12 @@ SdfLayer::_PrimSetField(const SdfPath& path,
     _data->Set(path, fieldName, value);
 }
 
-// #nv begin #fast-updates
 template void SdfLayer::_PrimSetField(
     const SdfPath&, const TfToken&, 
-<<<<<<< HEAD
-    const VtValue&, const VtValue *, bool, bool);
-// nv end
-
-// #nv begin #fast-updates
-template void SdfLayer::_PrimSetField(
-    const SdfPath&, const TfToken&, 
-    const SdfAbstractDataConstValue&, const VtValue *, bool, bool);
-// nv end
-=======
     const VtValue&, VtValue *, bool);
 template void SdfLayer::_PrimSetField(
     const SdfPath&, const TfToken&, 
     const SdfAbstractDataConstValue&, VtValue *, bool);
->>>>>>> v22.11
 
 template <class T>
 void

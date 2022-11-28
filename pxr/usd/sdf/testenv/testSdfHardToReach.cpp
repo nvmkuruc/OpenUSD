@@ -33,11 +33,6 @@
 #include <map>
 #include <vector>
 
-// #nv begin #fast-updates
-#include "pxr/base/tf/error.h"
-#include "pxr/base/tf/errorMark.h"
-// nv end
-
 PXR_NAMESPACE_USING_DIRECTIVE
 
 static void
@@ -186,104 +181,6 @@ _TestSdfRelationshipTargetSpecEdits()
     // prepended list, but the appended list proxy has removed it.
     TF_AXIOM(!layer->GetObjectAtPath(SdfPath("/Foo.rel[/Target]")));
 }
-
-// #nv begin #fast-updates
-static void
-_TestSdfFieldDataAccess()
-{
-    // Verify field handle creation.
-    auto layer = SdfLayer::CreateAnonymous();
-    auto prim = SdfPrimSpec::New(layer->GetPseudoRoot(), "dummyPrim", SdfSpecifierDef);
-    auto attr = SdfAttributeSpec::New(prim, "dummyAttr", SdfValueTypeNames->Double);
-    auto attrPath = attr->GetPath();
-    auto fieldHandle = layer->CreateFieldHandle(attr->GetPath(), SdfFieldKeys->Default);
-    TF_AXIOM(fieldHandle);
-    {
-        // Existing field handles should be reused.
-        auto fieldHandle1 = layer->CreateFieldHandle(attr->GetPath(), SdfFieldKeys->Default);
-        TF_AXIOM(fieldHandle == fieldHandle1);
-    }
-
-    // Setting and retrieving a field via its handle should have the same result as doing so with no handle.
-    VtValue doubleVal(9.0);
-    layer->SetField(fieldHandle, doubleVal);
-    TF_AXIOM(layer->GetField(fieldHandle) == doubleVal);
-    TF_AXIOM(layer->GetField(fieldHandle) ==
-        layer->GetField(attrPath, SdfFieldKeys->Default));
-    doubleVal = VtValue(-7.6);
-    layer->SetField(attrPath, SdfFieldKeys->Default, doubleVal);
-    TF_AXIOM(layer->GetField(fieldHandle) == doubleVal);
-    TF_AXIOM(layer->GetField(fieldHandle) == layer->GetField(attrPath, SdfFieldKeys->Default));
-
-    // Field handle should go invalid if the underlying field is erased.
-    layer->SetField(attrPath, SdfFieldKeys->Default, VtValue());
-    TF_AXIOM(!fieldHandle);
-
-    // Field handle should go invalid when the layer is deleted.
-    fieldHandle = layer->CreateFieldHandle(attr->GetPath(), SdfFieldKeys->TimeSamples);
-    TF_AXIOM(fieldHandle);
-    layer = TfNullPtr;
-    TF_AXIOM(!fieldHandle);
-
-    // Field handle should go invalid if the owning spec is moved.
-    layer = SdfLayer::CreateAnonymous();
-    prim = SdfPrimSpec::New(layer->GetPseudoRoot(), "dummyPrim", SdfSpecifierDef);
-    attr = SdfAttributeSpec::New(prim, "dummyAttr", SdfValueTypeNames->Double);
-    attrPath = attr->GetPath();
-    fieldHandle = layer->CreateFieldHandle(attr->GetPath(), SdfFieldKeys->TimeSamples);
-    TF_AXIOM(fieldHandle);
-    SdfBatchNamespaceEdit nsEdits;
-    TfToken renamedDummyAttrToken("renamedDummyAttr");
-    nsEdits.Add(SdfNamespaceEdit::Rename(attrPath, renamedDummyAttrToken));
-    TF_AXIOM(layer->CanApply(nsEdits));
-    layer->Apply(nsEdits);
-    TF_AXIOM(!fieldHandle);
-
-    // Verify releasing of field handle.
-    fieldHandle = layer->CreateFieldHandle(attr->GetPath().ReplaceName(renamedDummyAttrToken), SdfFieldKeys->TimeSamples);
-    TF_AXIOM(fieldHandle);
-    layer->ReleaseFieldHandle(&fieldHandle);
-    TF_AXIOM(!fieldHandle);
-
-    // It should be safe to try re-releasing an expired field handle.
-    layer->ReleaseFieldHandle(&fieldHandle);
-    TF_AXIOM(!fieldHandle);
-
-    // Setting and getting on an expired field handle should raise a coding error.
-    {
-        TfErrorMark m;
-        layer->SetTimeSample(fieldHandle, 1.0, VtValue(-4.5));
-        TF_AXIOM(!m.IsClean());
-        std::vector<TfError> errors;
-        errors.insert(errors.end(), m.begin(), m.end());
-        TF_AXIOM(errors.size() == 1);
-
-        // TODO: Expose TfDiagnosticBase and TfError API to Windows via TF_API, so that we
-        // can verify the error details.
-
-        m.Clear();
-        TF_AXIOM(m.IsClean());
-        errors.clear();
-        fieldHandle = layer->CreateFieldHandle(attr->GetPath().ReplaceName(renamedDummyAttrToken), SdfFieldKeys->Default);
-        TF_AXIOM(fieldHandle);
-        layer->ReleaseFieldHandle(&fieldHandle);
-        TF_AXIOM(!fieldHandle);
-        layer->SetField(fieldHandle, VtValue(0.6));
-        TF_AXIOM(!m.IsClean());
-        errors.insert(errors.end(), m.begin(), m.end());
-        TF_AXIOM(errors.size() == 1);
-
-        m.Clear();
-        TF_AXIOM(m.IsClean());
-        errors.clear();
-        TF_AXIOM(!fieldHandle);
-        layer->GetField(fieldHandle);
-        TF_AXIOM(!m.IsClean());
-        errors.insert(errors.end(), m.begin(), m.end());
-        TF_AXIOM(errors.size() == 1);
-    }
-}
-// nv end
 
 static void
 _TestSdfPathFindLongestPrefix()
@@ -538,10 +435,6 @@ main(int argc, char **argv)
     _TestSdfRelationshipTargetSpecEdits();
     _TestSdfPathFindLongestPrefix();
     _TestSdfFpsAndTcps();
-
-    // #nv begin #fast-updates
-    //_TestSdfFieldDataAccess();
-    // nv end
 
     return 0;
 }

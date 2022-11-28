@@ -231,27 +231,11 @@ def GetPythonInfo(context):
     if Windows():
         pythonLibPath = os.path.join(pythonBaseDir, "libs",
                                      _GetPythonLibraryFilename(context))
-<<<<<<< HEAD
-    else:
-        pythonIncludeDir = sysconfig.get_paths()['include']
-        if not os.path.exists(pythonIncludeDir):
-            pythonIncludeDir = sysconfig.get_config_var("INCLUDEPY")
-        if Windows():
-            pythonBaseDir = sysconfig.get_config_var("base")
-            pythonLibPath = os.path.join(pythonBaseDir, "libs",
-                                         _GetPythonLibraryFilename(context))
-        elif Linux():
-            pythonLibDir = os.path.join(sysconfig.get_paths()["platstdlib"], "..")
-            if not os.path.exists(pythonLibDir):
-                pythonLibDir = sysconfig.get_config_var("LIBDIR")
-            pythonMultiarchSubdir = sysconfig.get_config_var("multiarchsubdir")
-=======
     elif Linux():
         pythonMultiarchSubdir = sysconfig.get_config_var("multiarchsubdir")
         # Try multiple ways to get the python lib dir
         for pythonLibDir in (sysconfig.get_config_var("LIBDIR"),
                              os.path.join(pythonBaseDir, "lib")):
->>>>>>> v22.11
             if pythonMultiarchSubdir:
                 pythonLibPath = \
                     os.path.join(pythonLibDir + pythonMultiarchSubdir,
@@ -756,12 +740,6 @@ def InstallBoost_Helper(context, force, buildArgs):
     with CurrentWorkingDirectory(DownloadURL(BOOST_URL, context, force, 
                                              dontExtract=dontExtract)):
         bootstrap = "bootstrap.bat" if Windows() else "./bootstrap.sh"
-<<<<<<< HEAD
-        bootstrap_cmdline = '{bootstrap} --prefix="{instDir}"'.format(
-            bootstrap=bootstrap, instDir=context.instDir)
-
-        Run(bootstrap_cmdline)
-=======
 
         # For cross-compilation on macOS we need to specify the architecture
         # for both the bootstrap and the b2 phase of building boost.
@@ -795,7 +773,6 @@ def InstallBoost_Helper(context, force, buildArgs):
             bootstrapCmd += " --with-toolset=clang"
 
         Run(bootstrapCmd)
->>>>>>> v22.11
 
         # b2 supports at most -j64 and will error if given a higher value.
         num_procs = min(64, context.numJobs)
@@ -1592,15 +1569,11 @@ HDF5 = Dependency("HDF5", InstallHDF5, "include/hdf5.h")
 ############################################################
 # Alembic
 
-<<<<<<< HEAD
-ALEMBIC_URL = "https://github.com/alembic/alembic/archive/1.7.14.zip"
-=======
 if MacOS():
     # ALEMBIC 1.8.3 adds fixes for Apple Silicon cross compilation.
     ALEMBIC_URL = "https://github.com/alembic/alembic/archive/1.8.3.zip"
 else:
-    ALEMBIC_URL = "https://github.com/alembic/alembic/archive/1.7.10.zip"
->>>>>>> v22.11
+    ALEMBIC_URL = "https://github.com/alembic/alembic/archive/1.7.14.zip"
 
 def InstallAlembic(context, force, buildArgs):
     with CurrentWorkingDirectory(DownloadURL(ALEMBIC_URL, context, force)):
