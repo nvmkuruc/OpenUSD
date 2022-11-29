@@ -311,7 +311,7 @@ function(pxr_library NAME)
             endif()
         endif()
 
-        _get_library_prefix(prefix)
+        set(prefix "${PXR_LIB_PREFIX}")
         if(args_TYPE STREQUAL "STATIC")
             set(suffix ${CMAKE_STATIC_LIBRARY_SUFFIX})
         else()
@@ -1002,12 +1002,11 @@ function(pxr_toplevel_prologue)
             # Our shared library.
             add_library(usd_ms SHARED "${CMAKE_CURRENT_BINARY_DIR}/usd_ms.cpp")
             _get_folder("" folder)
-            _get_library_prefix(libPrefix)
             set_target_properties(usd_ms
                 PROPERTIES
                     FOLDER "${folder}"
-                    PREFIX "${libPrefix}"
-                    IMPORT_PREFIX "${libPrefix}"
+                    PREFIX "${PXR_LIB_PREFIX}"
+                    IMPORT_PREFIX "${PXR_LIB_PREFIX}"
             )
             _get_install_dir("lib" libInstallPrefix)
             install(
@@ -1144,13 +1143,12 @@ function(pxr_monolithic_epilogue)
     add_library(usd_m STATIC "${CMAKE_CURRENT_BINARY_DIR}/usd_m.cpp" ${objects})
 
     _get_folder("" folder)
-    _get_library_prefix(libPrefix)
     set_target_properties(usd_m
         PROPERTIES
             FOLDER "${folder}"
             POSITION_INDEPENDENT_CODE ON
-            PREFIX "${libPrefix}"
-            IMPORT_PREFIX "${libPrefix}"
+            PREFIX "${PXR_LIB_PREFIX}"
+            IMPORT_PREFIX "${PXR_LIB_PREFIX}"
     )
 
     # Adding $<TARGET_OBJECTS:foo> will not bring along compile

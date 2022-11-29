@@ -106,15 +106,10 @@ set(PXR_OBJECT_LIBS ""
     "Aggregation of all core libraries built as OBJECT libraries."
 )
 
-string(CONCAT helpstr
-    "Prefix for built library filenames. If unspecified, defaults "
-    "to 'libusd_' on Linux/macOS and 'usd_' on Windows, or '' for "
-    "monolithic builds."
-)
-set(PXR_LIB_PREFIX ""
+set(PXR_LIB_PREFIX "${CMAKE_SHARED_LIBRARY_PREFIX}usd_"
     CACHE
     STRING
-    "${helpstr}"
+    "Prefix for build library name"
 )
 
 option(BUILD_SHARED_LIBS "Build shared libraries." ON)
