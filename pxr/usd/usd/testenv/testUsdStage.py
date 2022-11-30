@@ -533,23 +533,5 @@ class TestUsdStage(unittest.TestCase):
                          sessionAnonLayer, sessionRefLayer]])
             assert not any([l.dirty for l in [sessionLayer, sessionSubLayer]])
 
-            # Check saving with UTF-8 characters
-            (rootLayer, rootSubLayer, rootAnonLayer, rootRefLayer) = \
-                _CreateLayers('root_utf8_umlaute_ß_3')
-            (sessionLayer, sessionSubLayer,
-             sessionAnonLayer, sessionRefLayer) = \
-                _CreateLayers('session_utf8_bigA_Ä_3')
-
-            stage = Usd.Stage.Open(rootLayer, sessionLayer)
-            assert all([l.dirty for l in 
-                        [rootLayer, rootSubLayer, rootAnonLayer, rootRefLayer,
-                         sessionLayer, sessionSubLayer, sessionAnonLayer,
-                         sessionRefLayer]])
-            stage.SaveSessionLayers()
-            assert all([l.dirty for l in 
-                        [rootLayer, rootSubLayer, rootAnonLayer, rootRefLayer,
-                         sessionAnonLayer, sessionRefLayer]])
-            assert not any([l.dirty for l in [sessionLayer, sessionSubLayer]])
-
 if __name__ == "__main__":
     unittest.main()
