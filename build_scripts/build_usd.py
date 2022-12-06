@@ -718,7 +718,7 @@ if MacOS():
     BOOST_URL = "https://boostorg.jfrog.io/artifactory/main/release/1.76.0/source/boost_1_76_0.tar.gz"
     BOOST_VERSION_FILE = "include/boost/version.hpp"
 elif Linux():
-    BOOST_URL = "https://boostorg.jfrog.io/artifactory/main/release/1.70.0/source/boost_1_70_0.tar.gz"
+    BOOST_URL = "https://boostorg.jfrog.io/artifactory/main/release/1.76.0/source/boost_1_76_0.tar.gz"
     BOOST_VERSION_FILE = "include/boost/version.hpp"
 elif Windows():
     # The default installation of boost on Windows puts headers in a versioned 
@@ -728,8 +728,8 @@ elif Windows():
     #
     # boost 1.70 is required for Visual Studio 2019. For simplicity, we use
     # this version for all older Visual Studio versions as well.
-    BOOST_URL = "https://boostorg.jfrog.io/artifactory/main/release/1.70.0/source/boost_1_70_0.tar.gz"
-    BOOST_VERSION_FILE = "include/boost-1_70/boost/version.hpp"
+    BOOST_URL = "https://boostorg.jfrog.io/artifactory/main/release/1.76.0/source/boost_1_76_0.tar.gz"
+    BOOST_VERSION_FILE = "include/boost/version.hpp"
 
 def InstallBoost_Helper(context, force, buildArgs):
     # Documentation files in the boost archive can have exceptionally
@@ -2431,7 +2431,7 @@ if which("cmake"):
         # cmake version 3.24
         cmake_required_version = (3, 24)
     else:
-        cmake_required_version = (3, 12)
+        cmake_required_version = (3, 24)
     cmake_version = GetCMakeVersion()
     if not cmake_version:
         PrintError("Failed to determine CMake version")
