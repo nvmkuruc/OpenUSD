@@ -2309,7 +2309,13 @@ if extraPythonPaths:
 
 # Determine list of dependencies that are required based on options
 # user has selected.
-requiredDependencies = [ZLIB, BOOST, TBB]
+requiredDependencies = []
+
+# nv begin #deps-locations
+# TODO: support --zlib-location, --boost-location, --tbb-location
+if context.buildMonolithic:
+    requiredDependencies = [ZLIB, BOOST, TBB]
+# nv end
 
 if context.buildAlembic:
     # nv begin #deps-locations
