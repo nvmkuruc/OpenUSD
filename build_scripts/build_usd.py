@@ -2256,8 +2256,11 @@ class InstallContext:
         self.buildPrman = self.buildImaging and args.build_prman
         self.prmanLocation = (os.path.abspath(args.prman_location)
                                if args.prman_location else None)                               
-        self.buildOIIO = args.build_oiio or (self.buildUsdImaging
-                                             and self.buildTests)
+        # nv begin #omni-build
+        # self.buildOIIO = args.build_oiio or (self.buildUsdImaging
+        #                                      and self.buildTests)
+        self.buildOIIO = args.build_oiio
+        # nv end
         self.buildOCIO = args.build_ocio
 
         # - Alembic Plugin
