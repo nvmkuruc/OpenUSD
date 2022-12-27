@@ -114,7 +114,7 @@ public:
                                   HdDirtyBits* timeVaryingBits,
                                   UsdImagingInstancerContext const* 
                                       instancerContext = NULL,
-                                  // #nv begin fast-updates
+                                  // #nv begin #fast-updates
                                   // If checkVariabilty is false, this method
                                   // only populates the value cache with initial values.
                                   bool checkVariability = true) const override;
@@ -391,7 +391,7 @@ private:
     VtIntArray _ComputeInstanceMap(UsdPrim const& instancerPrim,
             _InstancerData const& instrData,
             UsdTimeCode time) const;
-    // #nv begin instance-map-caching
+    // #nv begin #instance-map-caching
     typedef std::unordered_map<SdfPath, VtIntArray, SdfPath::Hash> _InstanceMapCache;
     mutable _InstanceMapCache _instanceMapCache;
     mutable tbb::spin_mutex _instanceMapCacheMutex;

@@ -75,11 +75,11 @@ UsdImagingFieldAdapter::TrackVariability(UsdPrim const& prim,
                                         HdDirtyBits* timeVaryingBits,
                                         UsdImagingInstancerContext const* 
                                             instancerContext,
-                                        // #nv begin fast-updates
+                                        // #nv begin #fast-updates
                                         bool checkVariability) const
                                         // nv end
 {
-    // #nv begin fast-updates
+    // #nv begin #fast-updates
     // Early out, as there are no initial values to populate into the value cache.
     if (!checkVariability)
         return;

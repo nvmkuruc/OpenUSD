@@ -384,7 +384,7 @@ public:
     HD_API
     HdResourceRegistrySharedPtr GetResourceRegistry() const;
 
-    // #nv begin omni-hydra
+    // #nv begin #omni-hydra
     // ---------------------------------------------------------------------- //
     /// \name Post Sync Delegates
     // ---------------------------------------------------------------------- //

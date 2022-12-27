@@ -215,12 +215,12 @@ private:
 
     UsdImagingIndexProxy(UsdImagingDelegate* delegate,
                             UsdImagingDelegate::_Worker* worker,
-                            // #nv begin fast-updates
+                            // #nv begin #fast-updates
                             bool checkVariability = true)
                             // nv end
         : _delegate(delegate)
         , _worker(worker)
-        // #nv begin fast-updates
+        // #nv begin #fast-updates
         , _checkVariability(checkVariability)
         // nv end
     {}
@@ -267,7 +267,7 @@ private:
     SdfPathVector _hdPrimInfoToRemove;
     _DependencyVector _dependenciesToRemove;
 
-    // #nv begin fast-updates
+    // #nv begin #fast-updates
     bool _checkVariability;
     // nv end
 };

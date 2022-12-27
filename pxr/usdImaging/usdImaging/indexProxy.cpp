@@ -105,7 +105,7 @@ void
 UsdImagingIndexProxy::_AddTask(SdfPath const& usdPath) 
 {
     _delegate->_AddTask(_worker, usdPath,
-        // #nv begin fast-updates
+        // #nv begin #fast-updates
         _checkVariability);
         // nv end
 }

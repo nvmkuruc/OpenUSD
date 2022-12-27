@@ -581,7 +581,7 @@ protected:
     std::vector<SdfFastUpdateList::FastUpdate> _fastUpdates;
 // nv end
 
-// #nv begin kit-delegate
+// #nv begin #kit-delegate
 // private:
 // nv end
 
@@ -609,7 +609,7 @@ protected:
     }
 
     void _AddTask(UsdImagingDelegate::_Worker *worker, SdfPath const& usdPath,
-        // #nv begin fast-updates
+        // #nv begin #fast-updates
         bool checkVariability = true);
         // nv end
 
@@ -627,7 +627,7 @@ protected:
     void _OnUsdObjectsChanged(UsdNotice::ObjectsChanged const&,
                               UsdStageWeakPtr const& sender);
 
-    // #nv begin omni_hydra
+    // #nv begin #omni-hydra
     USDIMAGING_API 
     virtual void _HandleUsdObjectsChanged(UsdNotice::ObjectsChanged const&,
         UsdStageWeakPtr const& sender);
@@ -666,7 +666,7 @@ protected:
     // Repopulate() on those prims individually. If repopulateFromRoot is
     // true, Repopulate() will be called on \p rootPath instead. This is slower,
     // but handles changes in tree topology.
-    // #nv begin #omni_hydra
+    // #nv begin #omni-hydra
     USDIMAGING_API
     virtual void _ResyncUsdPrim(SdfPath const& usdRootPath, UsdImagingIndexProxy* proxy,
         bool repopulateFromRoot = false,
@@ -684,7 +684,7 @@ protected:
         return p;
     }
 
-    // #nv begin kit-delegate
+    // #nv begin #kit-delegate
     USDIMAGING_API
     // nv end
     VtValue _GetUsdPrimAttribute(SdfPath const& cachePath,

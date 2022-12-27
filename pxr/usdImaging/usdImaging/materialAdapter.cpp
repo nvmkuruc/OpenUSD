@@ -38,7 +38,7 @@
 #include "pxr/usd/ar/resolverScopedCache.h"
 #include "pxr/usd/ar/resolverContextBinder.h"
 
-// #nv begin #new-MDL-schema
+// #nv begin #new-mdl-schema
 #include "pxr/usd/ar/resolver.h"
 #include "pxr/usd/sdr/registry.h"
 // nv end
@@ -145,12 +145,12 @@ UsdImagingMaterialAdapter::TrackVariability(
     SdfPath const& cachePath,
     HdDirtyBits* timeVaryingBits,
     UsdImagingInstancerContext const* instancerContext,
-    // #nv begin fast-updates
+    // #nv begin #fast-updates
     bool checkVariability) const
     // nv end
 {
     TRACE_FUNCTION();
-    // #nv begin fast-updates
+    // #nv begin #fast-updates
     // Early out, as there are no initial values to populate into the value cache.
     if (!checkVariability)
         return;
@@ -280,7 +280,7 @@ UsdImagingMaterialAdapter::GetMaterialResource(UsdPrim const& prim,
 {
     HdMaterialNetworkMap map;
     TfToken const& networkSelector = _GetMaterialNetworkSelector();
-    // #nv begin fast-updates
+    // #nv begin #fast-updates
     _GetMaterialNetworkMap(prim, networkSelector, &map, time);
     // nv end
     return VtValue(map);
@@ -414,7 +414,7 @@ void _WalkGraph(
             // path with a udim pattern, e.g.,
             // //SHOW/myImage.<UDIM>.exr to /filePath/myImage.<UDIM>.exr.
 
-            // #nv begin material-updates
+            // #nv begin #material-updates
             const VtValue value =
                 timeVarying == nullptr ? UsdImaging_ResolveMaterialParamValue(attr, time) : VtValue();
             // nv end
@@ -422,7 +422,7 @@ void _WalkGraph(
                 node.parameters[inputName] = value;
             }
 
-            // #nv begin material-updates
+            // #nv begin #material-updates
             if (timeVarying)
             // nv end
                 *timeVarying |= attr.ValueMightBeTimeVarying();
@@ -461,7 +461,7 @@ void _WalkGraph(
         _ExtractPrimvarsFromNode(node, materialNetwork, networkSelector);
     }
 
- // #nv begin #new-MDL-schema   
+ // #nv begin #new-mdl-schema   
     if (timeVarying == nullptr && node.identifier.IsEmpty()) {
         _GetShaderNodeForSourceTypeFallbackNV(
             shadeNode, networkSelector, &node.identifier, &node.subIdentifier);
@@ -502,7 +502,7 @@ _BuildHdMaterialNetworkFromTerminal(
     // Store terminals on material so backend can easily access them.
     materialNetworkMap->terminals.push_back(terminalNode.path);
 
-    // #nv begin #new-MDL-schema
+    // #nv begin #new-mdl-schema
     if (!_UnregisteredShaderIDsAllowed()) {
     // nv end
         // Validate that idenfitier (info:id) is known to Sdr.
@@ -514,7 +514,7 @@ _BuildHdMaterialNetworkFromTerminal(
                 terminalNode.path.GetText());
             *materialNetworkMap = HdMaterialNetworkMap();
         }
-    // #nv begin #new-MDL-schema
+    // #nv begin #new-mdl-schema
     }
     // nv end
 };

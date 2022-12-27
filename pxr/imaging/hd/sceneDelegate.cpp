@@ -57,7 +57,7 @@ HdSceneDelegate::Sync(HdSyncRequestVector* request)
 
 }
 
-// #nv begin #omni hydra
+// #nv begin #omni-hydra
 void
 HdSceneDelegate::UpdatePostSyncRequestVector(HdSyncRequestVector* request)
 {    
