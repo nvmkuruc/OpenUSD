@@ -47,6 +47,10 @@ option(PXR_ENABLE_PTEX_SUPPORT "Enable Ptex support" ON)
 option(PXR_ENABLE_OPENVDB_SUPPORT "Enable OpenVDB support" OFF)
 option(PXR_ENABLE_NAMESPACES "Enable C++ namespaces." ON)
 
+#nv begin #usdmdl
+option(NV_BUILD_USDMDL "Build usdMdl plugin" ON)
+#nv end
+
 # Determine GFX api
 # Metal only valid on Apple platforms
 set(pxr_enable_metal "OFF")

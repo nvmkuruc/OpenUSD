@@ -6,7 +6,9 @@ if (${PXR_BUILD_DRACO_PLUGIN})
 endif()
 add_subdirectory(sdrOsl)
 
+#nv begin #usdmdl
 # TODO: Get usdMdl working with minimal builds (no-python, no-imaging, monolithic)
-if (${PXR_BUILD_IMAGING})
+if (${PXR_BUILD_IMAGING} AND ${NV_BUILD_USDMDL})
     add_subdirectory(usdMdl)
 endif()
+#nv end
