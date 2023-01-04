@@ -51,6 +51,10 @@ option(PXR_PREFER_SAFETY_OVER_SPEED
        "Enable certain checks designed to avoid crashes or out-of-bounds memory reads with malformed input files.  These checks may negatively impact performance."
         ON)
 
+#nv begin #usdmdl
+option(NV_BUILD_USDMDL "Build usdMdl plugin" ON)
+#nv end
+
 # Determine GFX api
 # Metal only valid on Apple platforms
 set(pxr_enable_metal "OFF")
