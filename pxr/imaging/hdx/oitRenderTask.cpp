@@ -128,6 +128,8 @@ HdxOitRenderTask::Execute(HdTaskContext* ctx)
     // We render into a SSBO -- not MSSA compatible
     bool oldMSAA = glIsEnabled(GL_MULTISAMPLE);
     glDisable(GL_MULTISAMPLE);
+    // #nv begin #oit-gl-errors
+    #if 0
     // XXX When rendering HdStPoints we set GL_POINTS and assume that
     //     GL_POINT_SMOOTH is enabled by default. This renders circles instead
     //     of squares. However, when toggling MSAA off (above) we see GL_POINTS
@@ -136,6 +138,8 @@ HdxOitRenderTask::Execute(HdTaskContext* ctx)
     // XXX Switch points rendering to emit quad with FS that draws circle.
     bool oldPointSmooth = glIsEnabled(GL_POINT_SMOOTH);
     glEnable(GL_POINT_SMOOTH);
+    #endif
+    // #nv end
 
     // XXX HdxRenderTask::Prepare calls HdStRenderPassState::Prepare.
     // This sets the cullStyle for the render pass shader.
@@ -171,9 +175,13 @@ HdxOitRenderTask::Execute(HdTaskContext* ctx)
         glEnable(GL_MULTISAMPLE);
     }
 
+    // #nv begin #oit-gl-errors
+    #if 0
     if (!oldPointSmooth) {
         glDisable(GL_POINT_SMOOTH);
     }
+    #endif
+    // #nv end
 }
 
 
