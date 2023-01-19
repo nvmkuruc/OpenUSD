@@ -25,6 +25,8 @@
 # pylint: disable=range-builtin-not-iterating
 #
 from __future__ import division
+
+import array
 import unittest
 import sys, math
 from pxr import Gf, Vt
@@ -163,7 +165,10 @@ class TestVtArray(unittest.TestCase):
             for x in (x0+1, x1-1):
                 arrayT = arrayType((x,))
                 self.assertEqual(arrayT, eval(repr(arrayT)))
+<<<<<<< HEAD
         #nv end
+=======
+>>>>>>> v23.02-rc1
 
     def test_ParallelizedOps(self):
         m0 = Vt.Matrix4dArray((Gf.Matrix4d(1),Gf.Matrix4d(2)))
@@ -360,6 +365,7 @@ class TestVtArray(unittest.TestCase):
         _TestDivision(Vt.QuatdArray, Gf.Quatd, Gf.Vec3d)
         _TestDivision(Vt.QuaternionArray, Gf.Quaternion, Gf.Vec3d)
 
+<<<<<<< HEAD
     #nv begin #large-buffers
     def test_LargeBuffer(self):
         '''VtArray can be created from a buffer with item count
@@ -375,6 +381,19 @@ class TestVtArray(unittest.TestCase):
         vtArrayFromBuffer = Vt.UCharArray.FromBuffer(largePyBuffer)
         self.assertEqual(len(vtArrayFromBuffer), 2500000000)
     #nv end
+=======
+    # The test is disabled for py2 because array in py2 doesn't support old py2
+    # buffer protocol.
+    @unittest.skipIf(sys.version_info.major == 2,
+            "Array in py2 doesn't support old py2 buffer protocol")
+    def test_LargeBuffer(self):
+        '''VtArray can be created from a buffer with item count
+           greater than maxint'''
+        largePyBuffer = array.array('B', (0,)) * 2500000000
+        vtArrayFromBuffer = Vt.UCharArray.FromBuffer(largePyBuffer)
+        self.assertEqual(len(vtArrayFromBuffer), 2500000000)
+
+>>>>>>> v23.02-rc1
 
 if __name__ == '__main__':
     unittest.main()

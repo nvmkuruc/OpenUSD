@@ -106,9 +106,13 @@ int main() {
         _VerifyMetadata(prim, true, SdfFieldKeys->Active);
         _VerifyMetadata(prim, true, SdfFieldKeys->Hidden);
         _VerifyMetadata(prim, TfToken("DummyType"), SdfFieldKeys->TypeName);
+<<<<<<< HEAD
         // #nv begin #prim-display-name
         _VerifyMetadata(prim, string("Display Name"), SdfFieldKeys->DisplayName);
         // nv end
+=======
+        _VerifyMetadata(prim, string("Display Name"), SdfFieldKeys->DisplayName);
+>>>>>>> v23.02-rc1
 
         // attribute metadata
         _VerifyMetadata(attr, string("hello"), SdfFieldKeys->Comment);

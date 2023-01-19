@@ -46,6 +46,7 @@ pxr_library(sdf
         mapEditor
         namespaceEdit
         notice
+        opaqueValue
         path
         pathNode
         pathTable
@@ -142,6 +143,7 @@ pxr_library(sdf
         wrapLayerTree.cpp
         wrapNamespaceEdit.cpp
         wrapNotice.cpp
+        wrapOpaqueValue.cpp
         wrapPath.cpp
         wrapPayload.cpp
         wrapPrimSpec.cpp
@@ -302,7 +304,7 @@ pxr_build_test(testSdfPathTable
 pxr_build_test(testSdfPathThreading
     LIBRARIES
         sdf
-        ${Boost_PROGRAM_OPTIONS_LIBRARY}
+        tf
     CPPFILES
         testenv/testSdfPathThreading.cpp
 )

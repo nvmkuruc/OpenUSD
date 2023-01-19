@@ -61,6 +61,7 @@ UsdSkelSkinningQuery::UsdSkelSkinningQuery(
     const VtTokenArray& animBlendShapeOrder,
     const UsdAttribute& jointIndices,
     const UsdAttribute& jointWeights,
+    const UsdAttribute& skinningMethod,
     const UsdAttribute& geomBindTransform,
     //+NV_CHANGE FRZHANG
     const UsdAttribute& skinningMethod,
@@ -73,6 +74,7 @@ UsdSkelSkinningQuery::UsdSkelSkinningQuery(
       _interpolation(UsdGeomTokens->constant),
       _jointIndicesPrimvar(jointIndices),
       _jointWeightsPrimvar(jointWeights),
+      _skinningMethodAttr(skinningMethod),
       _geomBindTransformAttr(geomBindTransform),
       //+NV_CHANGE FRZHANG
       _skinningMethodAttr(skinningMethod),
@@ -360,10 +362,11 @@ UsdSkelSkinningQuery::ComputeSkinnedPoints(const VtArray<Matrix4>& xforms,
         }
 
         const Matrix4 geomBindXform(GetGeomBindTransform(time));
-        return UsdSkelSkinPointsLBS(geomBindXform, orderedXforms,
-                                    jointIndices, jointWeights,
-                                    _numInfluencesPerComponent,
-                                    *points);
+        const TfToken skinningMethod = GetSkinningMethod();
+        return UsdSkelSkinPoints(skinningMethod, geomBindXform, orderedXforms,
+                                 jointIndices, jointWeights,
+                                 _numInfluencesPerComponent,
+                                 *points);
     }
     return false;
 }
@@ -437,12 +440,13 @@ UsdSkelSkinningQuery::ComputeSkinnedNormals(const VtArray<Matrix4>& xforms,
         const Matrix4 geomBindXform(GetGeomBindTransform(time));
         const Matrix3 geomBindInvTransposeXform =
             geomBindXform.ExtractRotationMatrix().GetInverse().GetTranspose();
+        const TfToken skinningMethod = GetSkinningMethod();
 
-        return UsdSkelSkinNormalsLBS(geomBindInvTransposeXform,
-                                     invTransposeXforms,
-                                     jointIndices, jointWeights,
-                                     _numInfluencesPerComponent,
-                                     *normals);
+        return UsdSkelSkinNormals(skinningMethod, geomBindInvTransposeXform,
+                                  invTransposeXforms,
+                                  jointIndices, jointWeights,
+                                  _numInfluencesPerComponent,
+                                  *normals);
     }
     return false;
 }
@@ -491,8 +495,9 @@ UsdSkelSkinningQuery::ComputeSkinnedTransform(const VtArray<Matrix4>& xforms,
         }
 
         const Matrix4 geomBindXform(GetGeomBindTransform(time));
-        return UsdSkelSkinTransformLBS(geomBindXform, orderedXforms,
-                                       jointIndices, jointWeights, xform);
+        const TfToken skinningMethod = GetSkinningMethod();
+        return UsdSkelSkinTransform(skinningMethod, geomBindXform, orderedXforms,
+                                    jointIndices, jointWeights, xform);
     }
     return false;
 }
@@ -555,6 +560,19 @@ UsdSkelSkinningQuery::ComputeExtentsPadding(
 template USDSKEL_API float
 UsdSkelSkinningQuery::ComputeExtentsPadding(
     const VtArray<GfMatrix4f>&, const UsdGeomBoundable&) const;
+
+
+TfToken
+UsdSkelSkinningQuery::GetSkinningMethod() const
+{
+    // skinning method attr is optional.
+    TfToken skinningMethod;
+    if (!_skinningMethodAttr ||
+        !_skinningMethodAttr.Get(&skinningMethod)) {
+        skinningMethod = UsdSkelTokens->classicLinear;
+    }
+    return skinningMethod;
+}
 
 
 GfMatrix4d

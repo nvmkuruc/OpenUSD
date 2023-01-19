@@ -62,13 +62,15 @@ UsdImagingMeshAdapter::~UsdImagingMeshAdapter()
 }
 
 TfTokenVector
-UsdImagingMeshAdapter::GetImagingSubprims()
+UsdImagingMeshAdapter::GetImagingSubprims(UsdPrim const& prim)
 {
     return { TfToken() };
 }
 
 TfToken
-UsdImagingMeshAdapter::GetImagingSubprimType(TfToken const& subprim)
+UsdImagingMeshAdapter::GetImagingSubprimType(
+        UsdPrim const& prim,
+        TfToken const& subprim)
 {
     if (subprim.IsEmpty()) {
         return HdPrimTypeTokens->mesh;
@@ -78,8 +80,8 @@ UsdImagingMeshAdapter::GetImagingSubprimType(TfToken const& subprim)
 
 HdContainerDataSourceHandle
 UsdImagingMeshAdapter::GetImagingSubprimData(
-        TfToken const& subprim,
         UsdPrim const& prim,
+        TfToken const& subprim,
         const UsdImagingDataSourceStageGlobals &stageGlobals)
 {
     if (subprim.IsEmpty()) {
@@ -89,6 +91,15 @@ UsdImagingMeshAdapter::GetImagingSubprimData(
             stageGlobals);
     }
     return nullptr;
+}
+
+HdDataSourceLocatorSet
+UsdImagingMeshAdapter::InvalidateImagingSubprim(
+        UsdPrim const& prim,
+        TfToken const& subprim,
+        TfTokenVector const& properties)
+{
+    return UsdImagingDataSourceMeshPrim::Invalidate(prim, subprim, properties);
 }
 
 bool
@@ -591,5 +602,6 @@ UsdImagingMeshAdapter::Get(UsdPrim const& prim,
 
     return BaseAdapter::Get(prim, cachePath, key, time, outIndices);
 }
+
 
 PXR_NAMESPACE_CLOSE_SCOPE

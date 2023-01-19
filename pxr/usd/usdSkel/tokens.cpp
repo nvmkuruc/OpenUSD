@@ -29,8 +29,13 @@ UsdSkelTokensType::UsdSkelTokensType() :
     bindTransforms("bindTransforms", TfToken::Immortal),
     blendShapes("blendShapes", TfToken::Immortal),
     blendShapeWeights("blendShapeWeights", TfToken::Immortal),
+<<<<<<< HEAD
     classicLinear("ClassicLinear", TfToken::Immortal),
     dualQuaternion("DualQuaternion", TfToken::Immortal),
+=======
+    classicLinear("classicLinear", TfToken::Immortal),
+    dualQuaternion("dualQuaternion", TfToken::Immortal),
+>>>>>>> v23.02-rc1
     jointNames("jointNames", TfToken::Immortal),
     joints("joints", TfToken::Immortal),
     normalOffsets("normalOffsets", TfToken::Immortal),
@@ -39,7 +44,11 @@ UsdSkelTokensType::UsdSkelTokensType() :
     primvarsSkelGeomBindTransform("primvars:skel:geomBindTransform", TfToken::Immortal),
     primvarsSkelJointIndices("primvars:skel:jointIndices", TfToken::Immortal),
     primvarsSkelJointWeights("primvars:skel:jointWeights", TfToken::Immortal),
+<<<<<<< HEAD
     primvarsSkelSkinningBlendWeights("primvars:skel:skinningBlendWeights", TfToken::Immortal),
+=======
+    primvarsSkelSkinningMethod("primvars:skel:skinningMethod", TfToken::Immortal),
+>>>>>>> v23.02-rc1
     restTransforms("restTransforms", TfToken::Immortal),
     rotations("rotations", TfToken::Immortal),
     scales("scales", TfToken::Immortal),
@@ -66,7 +75,11 @@ UsdSkelTokensType::UsdSkelTokensType() :
         primvarsSkelGeomBindTransform,
         primvarsSkelJointIndices,
         primvarsSkelJointWeights,
+<<<<<<< HEAD
         primvarsSkelSkinningBlendWeights,
+=======
+        primvarsSkelSkinningMethod,
+>>>>>>> v23.02-rc1
         restTransforms,
         rotations,
         scales,

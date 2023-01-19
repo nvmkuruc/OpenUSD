@@ -423,7 +423,10 @@ Vt_ArrayFromBuffer(TfPyObjWrapper const &obj,
     auto elemShape = Vt_GetElementShape<T>();
     auto elemSize = std::accumulate(
         elemShape.begin(), elemShape.end(), (Py_ssize_t)1, multiply);
+<<<<<<< HEAD
     // #nv end
+=======
+>>>>>>> v23.02-rc1
 
     // Sanity check data sizes.
     auto arraySize = numItems / elemSize;

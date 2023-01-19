@@ -284,13 +284,13 @@ _GetLayerToStageOffset(const PcpNodeRef& pcpNode,
     return localOffset;
 }
 
-char const *_dormantMallocTagID = "UsdStages in aggregate";
-
 inline
 std::string 
-_StageTag(const std::string &id)
+_StageMallocTagString(const std::string &id)
 {
-    return "UsdStage: @" + id + "@";
+    return TfMallocTag::IsInitialized()
+        ? "UsdStage: @" + id + "@"
+        : std::string();
 }
 
 class UsdStage::_PendingChanges
@@ -510,12 +510,10 @@ UsdStage::UsdStage(const SdfLayerRefPtr& rootLayer,
         _rootLayer->GetIdentifier().c_str(),
         _sessionLayer ? _sessionLayer->GetIdentifier().c_str() : "<null>");
 
-ARCH_PRAGMA_PUSH
-ARCH_PRAGMA_DEPRECATED_POSIX_NAME
-    _mallocTagID = TfMallocTag::IsInitialized() ?
-        strdup(_StageTag(rootLayer->GetIdentifier()).c_str()) :
-        _dormantMallocTagID;
-ARCH_PRAGMA_POP
+    if (TfMallocTag::IsInitialized()) {
+        _mallocTagID.reset(
+            new std::string(_StageMallocTagString(rootLayer->GetIdentifier())));
+    }
 
     _cache->SetVariantFallbacks(GetGlobalVariantFallbacks());
 }
@@ -527,9 +525,6 @@ UsdStage::~UsdStage()
         _rootLayer ? _rootLayer->GetIdentifier().c_str() : "<null>",
         _sessionLayer ? _sessionLayer->GetIdentifier().c_str() : "<null>");
     _Close();
-    if (_mallocTagID != _dormantMallocTagID){
-        free(const_cast<char*>(_mallocTagID));
-    }
 }
 
 void
@@ -653,14 +648,8 @@ UsdStage::_InstantiateStage(const SdfLayerRefPtr &rootLayer,
     TF_DEBUG(USD_STAGE_OPEN)
         .Msg("UsdStage::_InstantiateStage: Creating new UsdStage\n");
 
-    // We don't want to pay for the tag-string construction unless
-    // we instrumentation is on, since some Stage ctors (InMemory) can be
-    // very lightweight.
-    boost::optional<TfAutoMallocTag2> tag;
-
-    if (TfMallocTag::IsInitialized()){
-        tag = boost::in_place("Usd", _StageTag(rootLayer->GetIdentifier()));
-    }
+    TfAutoMallocTag tag(
+        "Usd", _StageMallocTagString(rootLayer->GetIdentifier()));
 
     // Debug timing info
     TfStopwatch stopwatch;
@@ -755,7 +744,8 @@ UsdStageRefPtr
 UsdStage::CreateNew(const std::string& identifier,
                     InitialLoadSet load)
 {
-    TfAutoMallocTag2 tag("Usd", _StageTag(identifier));
+    TfAutoMallocTag tag("Usd", _StageMallocTagString(identifier));
+    TRACE_FUNCTION();
 
     if (SdfLayerRefPtr layer = _CreateNewLayer(identifier))
         return Open(layer, _CreateAnonymousSessionLayer(layer), load);
@@ -768,7 +758,8 @@ UsdStage::CreateNew(const std::string& identifier,
                     const SdfLayerHandle& sessionLayer,
                     InitialLoadSet load)
 {
-    TfAutoMallocTag2 tag("Usd", _StageTag(identifier));
+    TfAutoMallocTag tag("Usd", _StageMallocTagString(identifier));
+    TRACE_FUNCTION();
 
     if (SdfLayerRefPtr layer = _CreateNewLayer(identifier))
         return Open(layer, sessionLayer, load);
@@ -781,8 +772,9 @@ UsdStage::CreateNew(const std::string& identifier,
                     const ArResolverContext& pathResolverContext,
                     InitialLoadSet load)
 {
-    TfAutoMallocTag2 tag("Usd", _StageTag(identifier));
-
+    TfAutoMallocTag tag("Usd", _StageMallocTagString(identifier));
+    TRACE_FUNCTION();
+        
     if (SdfLayerRefPtr layer = _CreateNewLayer(identifier))
         return Open(layer, pathResolverContext, load);
     return TfNullPtr;
@@ -795,7 +787,8 @@ UsdStage::CreateNew(const std::string& identifier,
                     const ArResolverContext& pathResolverContext,
                     InitialLoadSet load)
 {
-    TfAutoMallocTag2 tag("Usd", _StageTag(identifier));
+    TfAutoMallocTag tag("Usd", _StageMallocTagString(identifier));
+    TRACE_FUNCTION();
 
     if (SdfLayerRefPtr layer = _CreateNewLayer(identifier))
         return Open(layer, sessionLayer, pathResolverContext, load);
@@ -886,7 +879,8 @@ _OpenLayer(
 UsdStageRefPtr
 UsdStage::Open(const std::string& filePath, InitialLoadSet load)
 {
-    TfAutoMallocTag2 tag("Usd", _StageTag(filePath));
+    TfAutoMallocTag tag("Usd", _StageMallocTagString(filePath));
+    TRACE_FUNCTION();
 
     SdfLayerRefPtr rootLayer = _OpenLayer(filePath);
     if (!rootLayer) {
@@ -902,7 +896,8 @@ UsdStage::Open(const std::string& filePath,
                const ArResolverContext& pathResolverContext,
                InitialLoadSet load)
 {
-    TfAutoMallocTag2 tag("Usd", _StageTag(filePath));
+    TfAutoMallocTag tag("Usd", _StageMallocTagString(filePath));
+    TRACE_FUNCTION();
 
     SdfLayerRefPtr rootLayer = _OpenLayer(filePath, pathResolverContext);
     if (!rootLayer) {
@@ -918,7 +913,8 @@ UsdStage::OpenMasked(const std::string& filePath,
                      const UsdStagePopulationMask &mask,
                      InitialLoadSet load)
 {
-    TfAutoMallocTag2 tag("Usd", _StageTag(filePath));
+    TfAutoMallocTag tag("Usd", _StageMallocTagString(filePath));
+    TRACE_FUNCTION();
 
     SdfLayerRefPtr rootLayer = _OpenLayer(filePath);
     if (!rootLayer) {
@@ -935,7 +931,8 @@ UsdStage::OpenMasked(const std::string& filePath,
                      const UsdStagePopulationMask &mask,
                      InitialLoadSet load)
 {
-    TfAutoMallocTag2 tag("Usd", _StageTag(filePath));
+    TfAutoMallocTag tag("Usd", _StageMallocTagString(filePath));
+    TRACE_FUNCTION();
 
     SdfLayerRefPtr rootLayer = _OpenLayer(filePath, pathResolverContext);
     if (!rootLayer) {
@@ -1083,7 +1080,7 @@ UsdStage::Open(const SdfLayerHandle& rootLayer,
              rootLayer->GetIdentifier().c_str(),
              sessionLayer ? sessionLayer->GetIdentifier().c_str() : "<null>",
              TfStringify(load).c_str());
-
+    TRACE_FUNCTION();
     return _OpenImpl(load, rootLayer, sessionLayer);
 }
 
@@ -1104,7 +1101,7 @@ UsdStage::Open(const SdfLayerHandle& rootLayer,
              rootLayer->GetIdentifier().c_str(),
              pathResolverContext.GetDebugString().c_str(), 
              TfStringify(load).c_str());
-
+    TRACE_FUNCTION();
     return _OpenImpl(load, rootLayer, pathResolverContext);
 }
 
@@ -1127,7 +1124,7 @@ UsdStage::Open(const SdfLayerHandle& rootLayer,
              sessionLayer ? sessionLayer->GetIdentifier().c_str() : "<null>",
              pathResolverContext.GetDebugString().c_str(),
              TfStringify(load).c_str());
-
+    TRACE_FUNCTION();
     return _OpenImpl(load, rootLayer, sessionLayer, pathResolverContext);
 }
 
@@ -1151,6 +1148,7 @@ UsdStage::OpenMasked(const SdfLayerHandle& rootLayer,
              TfStringify(mask).c_str(),
              TfStringify(load).c_str());
 
+    TRACE_FUNCTION();
     return _InstantiateStage(SdfLayerRefPtr(rootLayer),
                              _CreateAnonymousSessionLayer(rootLayer),
                              _CreatePathResolverContext(rootLayer),
@@ -1178,6 +1176,7 @@ UsdStage::OpenMasked(const SdfLayerHandle& rootLayer,
              TfStringify(mask).c_str(),
              TfStringify(load).c_str());
 
+    TRACE_FUNCTION();
     return _InstantiateStage(SdfLayerRefPtr(rootLayer),
                              SdfLayerRefPtr(sessionLayer),
                              _CreatePathResolverContext(rootLayer),
@@ -1205,6 +1204,7 @@ UsdStage::OpenMasked(const SdfLayerHandle& rootLayer,
              TfStringify(mask).c_str(),
              TfStringify(load).c_str());
 
+    TRACE_FUNCTION();
     return _InstantiateStage(SdfLayerRefPtr(rootLayer),
                              _CreateAnonymousSessionLayer(rootLayer),
                              pathResolverContext,
@@ -1234,6 +1234,7 @@ UsdStage::OpenMasked(const SdfLayerHandle& rootLayer,
              TfStringify(mask).c_str(),
              TfStringify(load).c_str());
 
+    TRACE_FUNCTION();
     return _InstantiateStage(SdfLayerRefPtr(rootLayer),
                              SdfLayerRefPtr(sessionLayer),
                              pathResolverContext,
@@ -1617,7 +1618,7 @@ UsdStage::_SetMetadataImpl(const UsdObject &obj,
         return false;
     }
 
-    TfAutoMallocTag2 tag("Usd", _mallocTagID);
+    TfAutoMallocTag tag("Usd", _GetMallocTagId());
 
     SdfSpecHandle spec;
 
@@ -2128,7 +2129,7 @@ UsdStage::LoadAndUnload(const SdfPathSet &loadSet,
                         const SdfPathSet &unloadSet,
                         UsdLoadPolicy policy)
 {
-    TfAutoMallocTag2 tag("Usd", _mallocTagID);
+    TfAutoMallocTag tag("Usd", _GetMallocTagId());
 
     // Optimization: If either or both of the sets is empty then check the other
     // set to see if the load rules already produce the desired state.  If so
@@ -3015,7 +3016,7 @@ UsdStage::_ComposeSubtreeImpl(
     UsdStagePopulationMask const *mask,
     const SdfPath& inPrimIndexPath)
 {
-    TfAutoMallocTag2 tag("Usd", _mallocTagID);
+    TfAutoMallocTag tag("Usd", _GetMallocTagId());
 
     const SdfPath primIndexPath = 
         (inPrimIndexPath.IsEmpty() ? prim->GetPath() : inPrimIndexPath);
@@ -3178,7 +3179,7 @@ UsdStage::_DestroyPrim(Usd_PrimDataPtr prim)
 void
 UsdStage::Reload()
 {
-    TfAutoMallocTag2 tag("Usd", _mallocTagID);
+    TfAutoMallocTag tag("Usd", _GetMallocTagId());
 
     // This UsdStage may receive layer change notices due to layers being
     // reloaded below. However, we won't receive that notice for any layers
@@ -3654,7 +3655,7 @@ void
 UsdStage::MuteAndUnmuteLayers(const std::vector<std::string> &muteLayers,
                               const std::vector<std::string> &unmuteLayers)
 {
-    TfAutoMallocTag2 tag("Usd", _mallocTagID);
+    TfAutoMallocTag tag("Usd", _GetMallocTagId());
 
     PcpChanges changes;
     std::vector<std::string> newMutedLayers, newUnMutedLayers;
@@ -3919,7 +3920,7 @@ void
 UsdStage::_HandleLayersDidChange(
     const SdfNotice::LayersDidChangeSentPerLayer &n)
 {
-    TfAutoMallocTag2 tag("Usd", _mallocTagID);
+    TfAutoMallocTag tag("Usd", _GetMallocTagId());
 
     // #nv begin #fast-updates
     TRACE_FUNCTION();
@@ -4734,7 +4735,7 @@ UsdStage::_ComposePrimIndexesInParallel(
         primIndexPaths, &errs, 
         _NameChildrenPred(mask, &_loadRules, _instanceCache.get()),
         _IncludePayloadsPredicate(this),
-        "Usd", _mallocTagID);
+        "Usd", _GetMallocTagId());
 
     if (!errs.empty()) {
         _ReportPcpErrors(errs, context);
@@ -6178,6 +6179,13 @@ UsdStage::_SetValueImpl(
         if (valType.IsUnknown()) {
             TF_RUNTIME_ERROR("Unknown typename for <%s>: '%s'",
                              typeName.GetText(), attr.GetPath().GetText());
+            return false;
+        }
+        static const TfType opaqueType = TfType::Find<SdfOpaqueValue>();
+        if (valType == opaqueType) {
+            TF_CODING_ERROR("Can't set value on <%s>: %s-typed attributes "
+                            "cannot have an authored default value",
+                            attr.GetPath().GetText(), typeName.GetText());
             return false;
         }
         // Check that the passed value is the expected type.
@@ -7778,10 +7786,9 @@ struct UsdStage::_PropertyStackResolver {
                 if (_withLayerOffsets) {
                     // The layer offset for the clip is the layer offset of the
                     // source layer of the clip set.
-                    const auto layer = clipSet->sourceLayerStack->GetLayers()[
-                        clipSet->sourceLayerIndex];
                     propertyStackWithLayerOffsets.emplace_back(
-                        propertySpec, _GetLayerToStageOffset(node, layer)); 
+                        propertySpec,
+                        _GetLayerToStageOffset(node, clipSet->sourceLayer)); 
                 } else {
                     propertyStack.push_back(propertySpec);
                 }
@@ -8158,11 +8165,10 @@ _GetResolvedValueAtTimeWithClipsImpl(
             }
         }
 
-        const size_t layerStackIndex = res->GetLayerStackIndex();
         for (const Usd_ClipSetRefPtr& clipSet : clips) {
             // We only care about clips that were introduced at this
             // position within the LayerStack.
-            if (clipSet->sourceLayerIndex == layerStackIndex) {
+            if (clipSet->sourceLayer == res->GetLayer()) {
                 // Look through clips to see if they have a time sample for
                 // this attribute. If a time is given, examine just the clips
                 // that are active at that time.
@@ -9159,6 +9165,12 @@ UsdInterpolationType
 UsdStage::GetInterpolationType() const
 {
     return _interpolationType;
+}
+
+char const *
+UsdStage::_GetMallocTagId() const
+{
+    return _mallocTagID ? _mallocTagID->c_str() : "UsdStages in aggregate";
 }
 
 std::string UsdDescribe(const UsdStage *stage) {

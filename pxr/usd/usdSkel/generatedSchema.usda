@@ -304,12 +304,18 @@ class "SkelBindingAPI" (
         *jointWeights* must match that of *jointIndices*. See UsdGeomPrimvar
         for more information on interpolation and elementSize."""
     )
+<<<<<<< HEAD
     uniform float[] primvars:skel:skinningBlendWeights (
         doc = """Weights for weighted blend skinning method. The primvar can have either 
         *constant* or *vertex* interpolation.
         Constant interpolation means every vertex share the same single blend weight.
         Vertex interpolation means every vertex has their own blend weight. The element
         size should match the vertices count in this case."""
+=======
+    uniform token primvars:skel:skinningMethod = "classicLinear" (
+        allowedTokens = ["classicLinear", "dualQuaternion"]
+        doc = "The skinningMethod specifies the skinning method for the prim."
+>>>>>>> v23.02-rc1
     )
     rel skel:animationSource (
         doc = """Animation source to be bound to Skeleton primitives at or

@@ -2247,6 +2247,7 @@ private:
     void _RegisterPerLayerNotices();
     void _RegisterResolverChangeNotice();
 
+<<<<<<< HEAD
 // #nv begin #fast-updates
 public:
     // Checks whether the given field handle has composition dependents
@@ -2277,6 +2278,11 @@ public:
     USD_API
     void SendFastUpdateNotice(const SdfPathVector& changedPath);
     // nv end
+=======
+    // Helper to obtain a malloc tag string for this stage.
+    inline char const *_GetMallocTagId() const;
+
+>>>>>>> v23.02-rc1
 private:
 
     // The 'pseudo root' prim.
@@ -2332,7 +2338,7 @@ private:
 
     // To provide useful aggregation of malloc stats, we bill everything
     // for this stage - from all access points - to this tag.
-    char const *_mallocTagID;
+    std::unique_ptr<std::string> _mallocTagID;
 
     // The state used when instantiating the stage.
     const InitialLoadSet _initialLoadSet;

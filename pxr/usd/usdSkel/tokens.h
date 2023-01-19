@@ -74,6 +74,7 @@ struct UsdSkelTokensType {
     /// 
     /// UsdSkelAnimation
     const TfToken blendShapeWeights;
+<<<<<<< HEAD
     /// \brief "ClassicLinear"
     /// 
     /// Possible value for UsdSkelBindingAPI::GetSkelSkinningMethodAttr(), Default value for UsdSkelBindingAPI::GetSkelSkinningMethodAttr()
@@ -81,6 +82,15 @@ struct UsdSkelTokensType {
     /// \brief "DualQuaternion"
     /// 
     /// Possible value for UsdSkelBindingAPI::GetSkelSkinningMethodAttr()
+=======
+    /// \brief "classicLinear"
+    /// 
+    /// Possible value for UsdSkelBindingAPI::GetSkinningMethodAttr(), Default value for UsdSkelBindingAPI::GetSkinningMethodAttr()
+    const TfToken classicLinear;
+    /// \brief "dualQuaternion"
+    /// 
+    /// Possible value for UsdSkelBindingAPI::GetSkinningMethodAttr()
+>>>>>>> v23.02-rc1
     const TfToken dualQuaternion;
     /// \brief "jointNames"
     /// 
@@ -114,10 +124,17 @@ struct UsdSkelTokensType {
     /// 
     /// UsdSkelBindingAPI
     const TfToken primvarsSkelJointWeights;
+<<<<<<< HEAD
     /// \brief "primvars:skel:skinningBlendWeights"
     /// 
     /// UsdSkelBindingAPI
     const TfToken primvarsSkelSkinningBlendWeights;
+=======
+    /// \brief "primvars:skel:skinningMethod"
+    /// 
+    /// UsdSkelBindingAPI
+    const TfToken primvarsSkelSkinningMethod;
+>>>>>>> v23.02-rc1
     /// \brief "restTransforms"
     /// 
     /// UsdSkelSkeleton

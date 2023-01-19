@@ -1232,6 +1232,15 @@ _RefineOrQuadrangulateOrTriangulateFaceVaryingPrimvar(
     return source;
 }
 
+static bool
+_GetDoubleSupport(
+    const HdStResourceRegistrySharedPtr& resourceRegistry)
+{
+    const HgiCapabilities* capabilities =
+        resourceRegistry->GetHgi()->GetCapabilities();
+    return capabilities->IsSet(HgiDeviceCapabilitiesBitsShaderDoublePrecision);
+}
+
 void
 HdStMesh::_PopulateVertexPrimvars(HdSceneDelegate *sceneDelegate,
                                   HdRenderParam *renderParam,
@@ -1362,6 +1371,10 @@ HdStMesh::_PopulateVertexPrimvars(HdSceneDelegate *sceneDelegate,
     // Track primvars that are skipped because they have zero elements
     HdPrimvarDescriptorVector zeroElementPrimvars;
 
+    // If any primvars use doubles, we need to know if the Hgi backend supports
+    // these, or if they need to be converted to floats.
+    const bool doublesSupported = _GetDoubleSupport(resourceRegistry);
+
     // Track index to identify varying primvars.
     int i = 0;
     for (HdPrimvarDescriptor const& primvar: primvars) {
@@ -1379,7 +1392,8 @@ HdStMesh::_PopulateVertexPrimvars(HdSceneDelegate *sceneDelegate,
 
         if (!value.IsEmpty()) {
             HdBufferSourceSharedPtr source =
-                std::make_shared<HdVtBufferSource>(primvar.name, value);
+                std::make_shared<HdVtBufferSource>(primvar.name, value, 1,
+                                                   doublesSupported);
 
             if (source->GetNumElements() == 0 &&
                 source->GetName() != HdTokens->points) {
@@ -1791,6 +1805,10 @@ HdStMesh::_PopulateFaceVaryingPrimvars(HdSceneDelegate *sceneDelegate,
     // Track primvars that are skipped because they have zero elements
     HdPrimvarDescriptorVector zeroElementPrimvars;
 
+    // If any primvars use doubles, we need to know if the Hgi backend supports
+    // these, or if they need to be converted to floats.
+    const bool doublesSupported = _GetDoubleSupport(resourceRegistry);
+
     for (HdPrimvarDescriptor const& primvar: primvars) {
         if (!HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, primvar.name)) {
             continue;
@@ -1808,7 +1826,8 @@ HdStMesh::_PopulateFaceVaryingPrimvars(HdSceneDelegate *sceneDelegate,
         
         if (!value.IsEmpty()) {
             HdBufferSourceSharedPtr source =
-                std::make_shared<HdVtBufferSource>(primvar.name, value);
+                std::make_shared<HdVtBufferSource>(primvar.name, value, 1,
+                                                   doublesSupported);
 
             if (!useUnflattendPrimvar && source->GetNumElements() == 0) {
                 // zero elements for primvars will be treated as if the primvar
@@ -1943,6 +1962,10 @@ HdStMesh::_PopulateElementPrimvars(HdSceneDelegate *sceneDelegate,
     // Track primvars that are skipped because they have zero elements
     HdPrimvarDescriptorVector zeroElementPrimvars;
 
+    // If any primvars use doubles, we need to know if the Hgi backend supports
+    // these, or if they need to be converted to floats.
+    const bool doublesSupported = _GetDoubleSupport(resourceRegistry);
+
     for (HdPrimvarDescriptor const& primvar: primvars) {
         if (!HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, primvar.name))
             continue;
@@ -1950,7 +1973,8 @@ HdStMesh::_PopulateElementPrimvars(HdSceneDelegate *sceneDelegate,
         VtValue value = GetPrimvar(sceneDelegate, primvar.name);
         if (!value.IsEmpty()) {
             HdBufferSourceSharedPtr source =
-                std::make_shared<HdVtBufferSource>(primvar.name, value);
+                std::make_shared<HdVtBufferSource>(primvar.name, value, 1,
+                                                   doublesSupported);
 
             if (source->GetNumElements() == 0) {
                 // zero elements for primvars other will be treated as if the
