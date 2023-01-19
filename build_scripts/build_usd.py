@@ -860,11 +860,6 @@ def InstallBoost_Helper(context, force, buildArgs):
                 b2_settings.append("toolset=msvc-14.2")
             elif context.cmakeToolset == "v141":
                 b2_settings.append("toolset=msvc-14.1")
-<<<<<<< HEAD
-            elif context.cmakeToolset == "v140":
-                b2_settings.append("toolset=msvc-14.0")
-=======
->>>>>>> v23.02-rc1
             elif IsVisualStudio2022OrGreater():
                 b2_settings.append("toolset=msvc-14.3")
             elif IsVisualStudio2019OrGreater():
@@ -1697,18 +1692,6 @@ def InstallUSD(context, force, buildArgs):
             # itself rather than rely on CMake's heuristics.
             pythonInfo = GetPythonInfo(context)
             if pythonInfo:
-<<<<<<< HEAD
-                # According to FindPythonLibs.cmake these are the variables
-                # to set to specify which Python installation to use.
-                extraArgs.append('-DPYTHON_EXECUTABLE="{pyExecPath}"'
-                                 .format(pyExecPath=pythonInfo[0]))
-                extraArgs.append('-DPYTHON_LIBRARY="{pyLibPath}"'
-                                 .format(pyLibPath=pythonInfo[1]))
-                extraArgs.append('-DPYTHON_INCLUDE_DIR="{pyIncPath}"'
-                                 .format(pyIncPath=pythonInfo[2]))
-                extraArgs.append('-DPYTHON_VERSION_NODOT={pyVersion}'
-                                 .format(pyVersion=pythonInfo[3].replace('.','')))
-=======
                 prefix = "Python3" if Python3() else "Python2"
                 extraArgs.append('-D{prefix}_EXECUTABLE="{pyExecPath}"'
                                  .format(prefix=prefix, 
@@ -1719,7 +1702,6 @@ def InstallUSD(context, force, buildArgs):
                 extraArgs.append('-D{prefix}_INCLUDE_DIR="{pyIncPath}"'
                                  .format(prefix=prefix,
                                          pyIncPath=pythonInfo[2]))
->>>>>>> v23.02-rc1
         else:
             extraArgs.append('-DPXR_ENABLE_PYTHON_SUPPORT=OFF')
 
@@ -2426,13 +2408,6 @@ if not isPython64Bit:
     sys.exit(1)
 
 if which("cmake"):
-<<<<<<< HEAD
-    # Check cmake requirements
-    if Windows():
-        # Windows build depend on boost 1.70, which is not supported before
-        # cmake version 3.24
-        cmake_required_version = (3, 24)
-=======
     # Check cmake minimum version requirements
     pyInfo = GetPythonInfo(context)
     pyVer = (int(pyInfo[3].split('.')[0]), int(pyInfo[3].split('.')[1]))
@@ -2448,7 +2423,6 @@ if which("cmake"):
     elif MacOS():
         # Apple Silicon is not supported prior to 3.19
         cmake_required_version = (3, 19)
->>>>>>> v23.02-rc1
     else:
         # Linux, and vfx platform CY2020, are verified to work correctly with 3.12
         cmake_required_version = (3, 12)

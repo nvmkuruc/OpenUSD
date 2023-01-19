@@ -227,7 +227,6 @@ UsdSkelImagingSkeletonAdapter::Populate(
                 _SkinnedPrimData(skelPath, skelData->skelQuery,
                                  query, skelRootPath);
 
-<<<<<<< HEAD
             //+NV_CHANGE FRZHANG : skip adding Sprim for the hydra skinning computation.
             affectedSkinnedPrimPaths.insert(skinnedPrimPath);
             if (_UseNVGPUSkinningComputations())
@@ -236,9 +235,7 @@ UsdSkelImagingSkeletonAdapter::Populate(
             }
             //-NV_CHANGE FRZHANG
 
-=======
             // 1. A skinning computation that computes the skinned points, and
->>>>>>> v23.02-rc1
             SdfPath compPath = _GetSkinningComputationPath(skinnedPrimPath);
 
             TF_DEBUG(USDIMAGING_COMPUTATIONS).Msg(
@@ -711,16 +708,14 @@ UsdSkelImagingSkeletonAdapter::MarkDirty(const UsdPrim& prim,
                         HdExtComputation::DirtySceneInput);
                 }
             }
+        }
 
-<<<<<<< HEAD
-=======
         // The aggregator computation pulls on primvars authored on the skinned
         // prim, but doesn't pull on its transform.
         if (dirty & HdChangeTracker::DirtyPrimvar) {
             index->MarkSprimDirty(
                 _GetSkinningInputAggregatorComputationPath(cachePath),
                 HdExtComputation::DirtySceneInput);
->>>>>>> v23.02-rc1
         }
 
     } else if (_IsSkinningComputationPath(cachePath) ||
@@ -2842,7 +2837,6 @@ UsdSkelImagingSkeletonAdapter::_RemoveSkinnedPrimAndComputations(
     // Remove skinned prim.
     index->RemoveRprim(cachePath);
 
-<<<<<<< HEAD
     // #nv begin #nv-gpu-skinning
     if (!_UseNVGPUSkinningComputations()) {
         // nv end
@@ -2851,9 +2845,8 @@ UsdSkelImagingSkeletonAdapter::_RemoveSkinnedPrimAndComputations(
         index->RemoveSprim(HdPrimTypeTokens->extComputation, compPath);
     }
 
-    if (_IsEnabledAggregatorComputation()
-        //+NV_CHANGE FRZHANG
-        && !_UseNVGPUSkinningComputations()
+    if (//+NV_CHANGE FRZHANG
+        !_UseNVGPUSkinningComputations()
         //-NV_CHANGE FRZHANG
         ) {
         SdfPath aggrCompPath =
@@ -2868,15 +2861,6 @@ UsdSkelImagingSkeletonAdapter::_RemoveSkinnedPrimAndComputations(
         skinnedPrimPaths.erase(cachePath); 
     }
     //-NV_CHANGE FRZHANG
-=======
-    // Remove the computations it participates in.
-    SdfPath compPath = _GetSkinningComputationPath(cachePath);
-    index->RemoveSprim(HdPrimTypeTokens->extComputation, compPath);
-    
-    SdfPath aggrCompPath =
-        _GetSkinningInputAggregatorComputationPath(cachePath);
-    index->RemoveSprim(HdPrimTypeTokens->extComputation, aggrCompPath);
->>>>>>> v23.02-rc1
 
     // Clear cache entry.
     _skinnedPrimDataCache.erase(cachePath);

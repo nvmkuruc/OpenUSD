@@ -2247,42 +2247,9 @@ private:
     void _RegisterPerLayerNotices();
     void _RegisterResolverChangeNotice();
 
-<<<<<<< HEAD
-// #nv begin #fast-updates
-public:
-    // Checks whether the given field handle has composition dependents
-    // (e.g., lives on a class or referenced prim), and starts tracking
-    // it internally for fast updates and recomposition changes
-    // if it is a new field handle.
-    USD_API
-    void CheckFieldForCompositionDependents(const SdfLayerHandle &layer,
-                                            SdfAbstractDataFieldAccessHandle fieldHandle,
-                                            bool isNewHandle = true,
-                                            bool* handleIsValid = nullptr);
-// nv end
-
-// #nv begin #omni-hydra
-public:
-
-    typedef bool (*_GetValueCallbackFn)(UsdTimeCode time, const SdfPath& path, void* uncheckedValuePtr, VtValue* result, void* userData);
-    // Override mechanism for fast hydra layer to replace GetValue call from UsdStage
-    // This allows clients to use fast data auhoring pipeline while other clients to still use standard USD api to retrieve authored value
-    // that only resides in the fast layer. 
-    // if userData is provided, this will be passed as the last argument of the callback function call
-    USD_API
-    void SetGetValueCallback(_GetValueCallbackFn fn, void* userData);
-
-    USD_API
-    void SetGetValueCallbackEnabled(bool enabled);
-
-    USD_API
-    void SendFastUpdateNotice(const SdfPathVector& changedPath);
-    // nv end
-=======
     // Helper to obtain a malloc tag string for this stage.
     inline char const *_GetMallocTagId() const;
 
->>>>>>> v23.02-rc1
 private:
 
     // The 'pseudo root' prim.

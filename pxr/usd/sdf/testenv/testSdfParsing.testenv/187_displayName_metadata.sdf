@@ -7,11 +7,7 @@
 
 class MfScope "Rig"
 {
-<<<<<<< HEAD
-    def MfScope "Leg"(
-=======
     def MfScope "Leg" (
->>>>>>> v23.02-rc1
         displayName = "Foo"
     )
     {

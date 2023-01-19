@@ -627,7 +627,6 @@ protected:
     void _OnUsdObjectsChanged(UsdNotice::ObjectsChanged const&,
                               UsdStageWeakPtr const& sender);
 
-<<<<<<< HEAD
     // #nv begin omni_hydra
     USDIMAGING_API 
     virtual void _HandleUsdObjectsChanged(UsdNotice::ObjectsChanged const&,
@@ -638,13 +637,12 @@ protected:
     USDIMAGING_API
     virtual HdDirtyBits _GetTimeVaryingBitMask(SdfPath const& path); 
     // nv end
-=======
+
     // Map holding USD subtree path keys mapped to associated hydra prim cache
     // paths. This may be prepopulated and provided to the Refresh and Resync
     // methods below to speed up dependency gathering.
     typedef TfHashMap<SdfPath, SdfPathVector, SdfPath::Hash>
         _FlattenedDependenciesCacheMap;
->>>>>>> v23.02-rc1
 
     // The lightest-weight update, it does fine-grained invalidation of
     // individual properties at the given path (prim or property).
@@ -652,16 +650,13 @@ protected:
     // If \p path is a prim path, changedPrimInfoFields will be populated
     // with the list of scene description fields that caused this prim to
     // be refreshed.
-<<<<<<< HEAD
-    // #nv begin #fast-updates
-    void _RefreshUsdObject(SdfPath const& usdPath,
-=======
+
     //
     // Returns whether the prim or the subtree rooted at `usdPath` needed to
     // be resync'd (i.e., removed and repopulated).
     //
+    // #nv begin #fast-updates
     bool _RefreshUsdObject(SdfPath const& usdPath, 
->>>>>>> v23.02-rc1
                            TfTokenVector const& changedPrimInfoFields,
                            _FlattenedDependenciesCacheMap const &cache,
                            UsdImagingIndexProxy* proxy,
@@ -683,19 +678,14 @@ protected:
     // Repopulate() on those prims individually. If repopulateFromRoot is
     // true, Repopulate() will be called on \p rootPath instead. This is slower,
     // but handles changes in tree topology.
-<<<<<<< HEAD
     // #nv begin #omni_hydra
     USDIMAGING_API
-    virtual void _ResyncUsdPrim(SdfPath const& usdRootPath, UsdImagingIndexProxy* proxy,
-        bool repopulateFromRoot = false,
-        bool fromThread = false); // #nv #parallel-xform-children
-    // nv end
-=======
     void _ResyncUsdPrim(SdfPath const& usdRootPath,
                         _FlattenedDependenciesCacheMap const &cache,
                         UsdImagingIndexProxy* proxy,
-                        bool repopulateFromRoot = false);
->>>>>>> v23.02-rc1
+                        bool repopulateFromRoot = false,
+        bool fromThread = false); // #nv #parallel-xform-children
+    // nv end
 
     // ---------------------------------------------------------------------- //
     // Usd Data-Access Helper Methods
@@ -793,8 +783,6 @@ protected:
     void _GatherDependencies(SdfPath const& subtree,
                              SdfPathVector *affectedCachePaths);
 
-<<<<<<< HEAD
-=======
     // Overload that takes an additional cache argument to help speed up the
     // dependency gathering operation. The onus is on the client to prepopulate
     // the cache.
@@ -803,7 +791,6 @@ protected:
                         _FlattenedDependenciesCacheMap const &cache,
                         SdfPathVector *affectedCachePaths);
 
->>>>>>> v23.02-rc1
     // SdfPath::ReplacePrefix() is used frequently to convert between
     // cache path and Hydra render index path and is a performance bottleneck.
     // These maps pre-computes these conversion.

@@ -415,7 +415,6 @@ Vt_ArrayFromBuffer(TfPyObjWrapper const &obj,
 
     // Check that the number of elements matches.
     auto multiply = [](Py_ssize_t x, Py_ssize_t y) { return x * y; };
-    // #nv begin #large-buffers
     auto numItems = std::accumulate(
         view.shape, view.shape + view.ndim, (Py_ssize_t)1, multiply);
 
@@ -423,10 +422,6 @@ Vt_ArrayFromBuffer(TfPyObjWrapper const &obj,
     auto elemShape = Vt_GetElementShape<T>();
     auto elemSize = std::accumulate(
         elemShape.begin(), elemShape.end(), (Py_ssize_t)1, multiply);
-<<<<<<< HEAD
-    // #nv end
-=======
->>>>>>> v23.02-rc1
 
     // Sanity check data sizes.
     auto arraySize = numItems / elemSize;

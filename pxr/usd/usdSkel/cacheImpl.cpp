@@ -176,16 +176,12 @@ UsdSkel_CacheImpl::ReadScope::_FindOrCreateSkinningQuery(
         skelQuery ? skelQuery.GetJointOrder() : VtTokenArray(),
         animQuery ? animQuery.GetBlendShapeOrder() : VtTokenArray(),
         key.jointIndicesAttr, key.jointWeightsAttr,
-<<<<<<< HEAD
         key.geomBindTransformAttr,
         //+NV_CHANGE FRZHANG
         key.skinningMethodAttr,
         key.skinningBlendWeightsAttr,
         //-NV_CHANGE FRZHANG
         key.jointsAttr,
-=======
-        key.skinningMethodAttr, key.geomBindTransformAttr, key.jointsAttr,
->>>>>>> v23.02-rc1
         key.blendShapesAttr, key.blendShapeTargetsRel);
 }
 
