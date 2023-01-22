@@ -84,14 +84,7 @@ _CreateJointWeightsAttr(UsdSkelBindingAPI &self,
     return self.CreateJointWeightsAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->FloatArray), writeSparsely);
 }
-        
-static UsdAttribute
-_CreateSkinningMethodAttr(UsdSkelBindingAPI &self,
-                                      object defaultVal, bool writeSparsely) {
-    return self.CreateSkinningMethodAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Token), writeSparsely);
-}
-        
+                
 static UsdAttribute
 _CreateSkinningBlendWeightsAttr(UsdSkelBindingAPI &self,
                                       object defaultVal, bool writeSparsely) {

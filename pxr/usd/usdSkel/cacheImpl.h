@@ -80,7 +80,6 @@ public:
         UsdAttribute skinningMethodAttr;
         UsdAttribute geomBindTransformAttr;
         //+NV_CHANGE FRZHANG
-        UsdAttribute skinningMethodAttr;
         UsdAttribute skinningBlendWeightsAttr;
         //-NV_CHANGE FRZHANG
         UsdAttribute jointsAttr;

@@ -66,7 +66,6 @@ public:
                          const UsdAttribute& skinningMethod,
                          const UsdAttribute& geomBindTransform,
                          //+NV_CHANGE FRZHANG
-                         const UsdAttribute& skinningMethod,
                          const UsdAttribute& skinningBlendWeights,
                          //-NV_CHANGE FRZHANG
                          const UsdAttribute& joints,
@@ -122,10 +121,6 @@ public:
     }
 
     //+NV_CHANGE FRZHANG
-    const UsdAttribute& GetSkinningMethodAttr() const {
-        return _skinningMethodAttr;
-    }
-
     const UsdGeomPrimvar& GetSkinningBlendWeightsPrimvar() const {
         return _skinningBlendWeightsPrimvar;
     }
@@ -294,7 +289,6 @@ private:
     UsdAttribute _skinningMethodAttr;
     UsdAttribute _geomBindTransformAttr;
     //+NV_CHANGE FRZHANG
-    UsdAttribute _skinningMethodAttr;
     UsdGeomPrimvar _skinningBlendWeightsPrimvar;
     //-NV_CHANGE FRZHANG
     UsdAttribute _blendShapes;

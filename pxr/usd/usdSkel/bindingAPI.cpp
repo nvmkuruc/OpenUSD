@@ -194,23 +194,6 @@ UsdSkelBindingAPI::CreateJointWeightsAttr(VtValue const &defaultValue, bool writ
 }
 
 UsdAttribute
-UsdSkelBindingAPI::GetSkinningMethodAttr() const
-{
-    return GetPrim().GetAttribute(UsdSkelTokens->skelSkinningMethod);
-}
-
-UsdAttribute
-UsdSkelBindingAPI::CreateSkinningMethodAttr(VtValue const &defaultValue, bool writeSparsely) const
-{
-    return UsdSchemaBase::_CreateAttr(UsdSkelTokens->skelSkinningMethod,
-                       SdfValueTypeNames->Token,
-                       /* custom = */ false,
-                       SdfVariabilityUniform,
-                       defaultValue,
-                       writeSparsely);
-}
-
-UsdAttribute
 UsdSkelBindingAPI::GetSkinningBlendWeightsAttr() const
 {
     return GetPrim().GetAttribute(UsdSkelTokens->primvarsSkelSkinningBlendWeights);

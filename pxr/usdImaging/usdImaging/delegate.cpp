@@ -1148,69 +1148,14 @@ UsdImagingDelegate::GetTimeWithOffset(float offset) const
 // Change Processing 
 // -------------------------------------------------------------------------- //
 
-// #nv begin #fast-updates
-void
-UsdImagingDelegate::ApplyPendingFastUpdates()
-{
-<<<<<<< HEAD
-    // Default implementation treats fast updates the same as normal scene edits.
-
-    // Need to invalidate all caches if any stage objects have changed. This
-    // invalidation is overly conservative, but correct.
-    _xformCache.Clear();
-    _materialBindingImplData.ClearCaches();
-    _materialBindingCache.Clear();
-    _visCache.Clear();
-    _purposeCache.Clear();
-    _drawModeCache.Clear();
-    _coordSysBindingCache.Clear();
-    _inheritedPrimvarCache.Clear();
-
-    std::vector<SdfFastUpdateList::FastUpdate> fastUpdates;
-    std::swap(fastUpdates, _fastUpdates);
-
-    _RefreshObjectsForFastUpdates(fastUpdates, true);
-}
-
-void
-UsdImagingDelegate::_RefreshObjectsForFastUpdates(
-    const std::vector<SdfFastUpdateList::FastUpdate> &fastUpdates,
-    bool refreshVariability)
-{
-    TfTokenVector dummyInfoFields;
-
-    UsdImagingDelegate::_Worker worker(this);
-    UsdImagingIndexProxy indexProxy(this, &worker, refreshVariability);
-    SdfPathSet allTrackedVariabilityPaths;
-
-    for (const auto &itr : fastUpdates) {
-        _RefreshUsdObject(itr.path, dummyInfoFields, &indexProxy, &allTrackedVariabilityPaths, refreshVariability);
-
-        // If any objects were removed as a result of the refresh (if it
-        // internally decided to resync), they must be ejected now,
-        // before the next call to _RefreshObject.
-        indexProxy._ProcessRemovals();
-    }
-
-    // If any changes called Repopulate() on the indexProxy, we need to
-    // repopulate them before any updates. If the list is empty, _Populate is a
-    // no-op.
-    _Populate(&indexProxy);
-
-    _ExecuteWorkForVariabilityUpdate(&worker);
-}
-// nv end
-
 void
 UsdImagingDelegate::_GatherDependencies(SdfPath const& subtree,
                                         SdfPathVector *affectedCachePaths)
 {
-=======
     if (affectedCachePaths == nullptr) {
         return;
     }
 
->>>>>>> v23.02-rc1
     HD_TRACE_FUNCTION();
 
     // Binary search for the first path in the subtree.
@@ -1282,12 +1227,6 @@ UsdImagingDelegate::ApplyPendingUpdates()
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
 
-    // #nv begin #fast-updates
-    if (!_fastUpdates.empty()) {
-        ApplyPendingFastUpdates();
-    }
-    // nv end
-
     // Early out if there are no updates.
     if (_usdPathsToResync.empty() && _usdPathsToUpdate.empty()) {
         return;
@@ -1327,8 +1266,6 @@ UsdImagingDelegate::ApplyPendingUpdates()
                          });
         _usdPathsToResync.clear();
 
-<<<<<<< HEAD
-=======
         // Pre-cache USD subtree to Hydra prim cache paths in parallel.
         // This avoids redundant serial calls to _GatherDependencies during
         // Resync and Refresh handling below.
@@ -1357,7 +1294,6 @@ UsdImagingDelegate::ApplyPendingUpdates()
         }
         resyncPathsCacheDispatcher.Wait();
 
->>>>>>> v23.02-rc1
         for (SdfPath const& usdPath: usdPathsToResync) {
             if (usdPath.IsPropertyPath()) {
 
@@ -1391,8 +1327,6 @@ UsdImagingDelegate::ApplyPendingUpdates()
     if (!_usdPathsToUpdate.empty()) {
         _PathsToUpdateMap usdPathsToUpdate;
         std::swap(usdPathsToUpdate, _usdPathsToUpdate);
-<<<<<<< HEAD
-=======
 
         // Pre-cache dependencies in parallel. See earlier note.
         WorkDispatcher updatePathsCacheDispatcher;
@@ -1417,7 +1351,6 @@ UsdImagingDelegate::ApplyPendingUpdates()
         }
         updatePathsCacheDispatcher.Wait();
 
->>>>>>> v23.02-rc1
         TF_FOR_ALL(pathIt, usdPathsToUpdate) {
             const SdfPath& usdPath = pathIt->first;
             const TfTokenVector& changedPrimInfoFields = pathIt->second;
@@ -1476,10 +1409,6 @@ UsdImagingDelegate::ApplyPendingUpdates()
     }
 }
 
-<<<<<<< HEAD
-// #nv begin #omni-hydra
-void
-=======
 using PathRange = UsdNotice::ObjectsChanged::PathRange;
 
 // Helper function to check if a path entry has attribute connection did change
@@ -1499,7 +1428,6 @@ _HasConnectionChanged(const SdfPath &path, const PathRange &pathRange)
 }
 
 void 
->>>>>>> v23.02-rc1
 UsdImagingDelegate::_OnUsdObjectsChanged(
     UsdNotice::ObjectsChanged const& notice,
     UsdStageWeakPtr const& sender)
@@ -1525,19 +1453,10 @@ UsdImagingDelegate::_HandleUsdObjectsChanged(
                             "from stage with root layer @%s@\n",
                         sender->GetRootLayer()->GetIdentifier().c_str());
 
-<<<<<<< HEAD
-    // #nv begin #fast-updates
-    const std::vector<SdfFastUpdateList::FastUpdate> &fastUpdates = notice.GetFastUpdates();
-    if (!fastUpdates.empty()) {
-        _fastUpdates.insert(_fastUpdates.end(), fastUpdates.begin(), fastUpdates.end());
-    }
-    // nv end
 
     using PathRange = UsdNotice::ObjectsChanged::PathRange;
-=======
     // If there was a connection changed inside a shade graph, this also
     // requires dumping all cached data since we need to rebuild the shader.
->>>>>>> v23.02-rc1
 
     // These paths are subtree-roots representing entire subtrees that may have
     // changed. In this case, we must dump all cached data below these points
@@ -1590,14 +1509,6 @@ UsdImagingDelegate::_HandleUsdObjectsChanged(
                                                  it->GetText());
             }
         }
-
-        // #nv begin #fast-updates
-        TF_FOR_ALL(it, _fastUpdates) {
-            TF_DEBUG(USDIMAGING_CHANGES).Msg(" - Fast update queued: %s\n",
-                it->path.GetText());
-        }
-        // nv end
-
     }
 }
 
@@ -1613,29 +1524,14 @@ bool _IsCoordSysAdapter(const UsdImagingPrimAdapterSharedPtr &adapter)
 }
 
 void 
-<<<<<<< HEAD
-UsdImagingDelegate::_ResyncUsdPrim(SdfPath const& usdPath, 
-                                   UsdImagingIndexProxy* proxy,
-                                   bool repopulateFromRoot,
-                                   bool fromThread)
-=======
 UsdImagingDelegate::_ResyncUsdPrim(
     SdfPath const& usdPath,
     _FlattenedDependenciesCacheMap const &cache,
     UsdImagingIndexProxy* proxy,
     bool repopulateFromRoot) 
->>>>>>> v23.02-rc1
 {
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
-
-    // #nv begin #parallel-xform-children
-    static tbb::spin_mutex resyncMutex;
-    std::unique_ptr<tbb::spin_mutex::scoped_lock> lock;
-    if (fromThread) {
-        lock.reset(new tbb::spin_mutex::scoped_lock(resyncMutex));
-    }
-    // nv end
 
     TF_DEBUG(USDIMAGING_CHANGES).Msg("[Resync Prim]: <%s>\n",
             usdPath.GetText());
@@ -1881,7 +1777,6 @@ UsdImagingDelegate::_ResyncUsdPrim(
     }
 }
 
-<<<<<<< HEAD
 //+NV_CHANGE BRONG
 void
 UsdImagingDelegate::_ResyncUsdAttrQuery(SdfPath const& usdPath, UsdImagingIndexProxy* proxy)
@@ -1938,21 +1833,14 @@ UsdImagingDelegate::_RefreshUsdAttrQuery(SdfPath const& usdPath, UsdImagingIndex
 }
 //-NV_CHANGE BRONG
 
-void 
-UsdImagingDelegate::_RefreshUsdObject(SdfPath const& usdPath, 
-                                      TfTokenVector const& changedInfoFields,
-                                      UsdImagingIndexProxy* proxy,
-                                      SdfPathSet* allTrackedVariabilityPaths,
-                                      bool checkVariability)
-=======
 bool 
 UsdImagingDelegate::_RefreshUsdObject(
     SdfPath const& usdPath, 
     TfTokenVector const& changedInfoFields,
     _FlattenedDependenciesCacheMap const &cache,
     UsdImagingIndexProxy* proxy,
-    SdfPathSet* allTrackedVariabilityPaths) 
->>>>>>> v23.02-rc1
+    SdfPathSet* allTrackedVariabilityPaths,
+    bool checkVariability)
 {
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
@@ -2008,18 +1896,12 @@ UsdImagingDelegate::_RefreshUsdObject(
             // if (e.g.) the primvar has been blocked, and calling
             // _GatherDependencies on a leaf prim won't invoke any extra work
             // vs the equal_range below...
-<<<<<<< HEAD
-            _GatherDependencies(usdPrimPath, &affectedCachePaths);
-        } else if (UsdCollectionAPI::CanContainPropertyName(attrName)
-                  // #nv begin #less-conservative-collection-dirty
-                  && !TfStringStartsWith(attrName, _tokens->collectionColliders)
-                  // nv end
-                 )
-            {
-=======
             _GatherDependencies(usdPrimPath, cache, &affectedCachePaths);
-        } else if (UsdCollectionAPI::CanContainPropertyName(attrName)) {
->>>>>>> v23.02-rc1
+        } else if (UsdCollectionAPI::CanContainPropertyName(attrName)
+            // #nv begin #less-conservative-collection-dirty
+            && !TfStringStartsWith(attrName, _tokens->collectionColliders)) {
+            // nv end
+
             // XXX Performance: Collections used for material bindings
             // can refer to prims at arbitrary locations in the scene.
             // Accordingly, we conservatively invalidate everything.
@@ -2039,19 +1921,12 @@ UsdImagingDelegate::_RefreshUsdObject(
             TF_DEBUG(USDIMAGING_CHANGES).Msg("[Refresh Object]: "
                 "HdCoordSys bindings affected for %s\n", usdPath.GetText());
             // Coordinate system bindings apply to all descendent gprims.
-<<<<<<< HEAD
-            _ResyncUsdPrim(usdPrimPath, proxy, true);
-            return;
+            _ResyncUsdPrim(usdPrimPath, cache, proxy, true);
+            resyncNeeded = true;
         } else if (usdPrim && (usdPrim.IsA<UsdShadeShader>()
             // #nv begin #material-editor
             || usdPrim.IsA<UsdShadeNodeGraph>())) {
             // nv end
-=======
-            _ResyncUsdPrim(usdPrimPath, cache, proxy, true);
-            resyncNeeded = true;
-
-        } else if (usdPrim && usdPrim.IsA<UsdShadeShader>()) {
->>>>>>> v23.02-rc1
             // Shader edits get forwarded to parent material.
             while (usdPrim && !usdPrim.IsA<UsdShadeMaterial>()) {
                 usdPrim = usdPrim.GetParent();
@@ -2081,13 +1956,6 @@ UsdImagingDelegate::_RefreshUsdObject(
         }
     }
 
-    // #nv begin #parallel-xform-children
-#if PARALLEL_XFORM_CHILDREN
-    UsdImagingDelegate::_Worker worker(this);
-    for (SdfPath const& affectedCachePath : affectedCachePaths) {
-        worker.AddTask(affectedCachePath, &changedInfoFields, proxy, &usdPath, checkVariability);
-    }
-#else
     // PERFORMANCE: We could execute this in parallel, for large numbers of
     // prims.
     for (SdfPath const& affectedCachePath: affectedCachePaths) {
@@ -2161,16 +2029,7 @@ UsdImagingDelegate::_RefreshUsdObject(
         }
     }
 
-<<<<<<< HEAD
-#endif
-
-#if PARALLEL_XFORM_CHILDREN
-    _ExecuteWorkForAffectedCachePaths(&worker);
-#endif
-    // nv end
-=======
     return resyncNeeded;
->>>>>>> v23.02-rc1
 }
 
 // -------------------------------------------------------------------------- //
@@ -3091,14 +2950,6 @@ UsdImagingDelegate::ProcessNonAdapterBasedPropertyChange(UsdPrim const& prim,
         return HdChangeTracker::Clean;
 
     return HdChangeTracker::AllDirty;
-}
-// nv end
-
-// #nv begin #fasat-updates
-bool
-UsdImagingDelegate::HasPendingFastUpdates() const
-{
-    return !(_fastUpdates.empty());
 }
 // nv end
 

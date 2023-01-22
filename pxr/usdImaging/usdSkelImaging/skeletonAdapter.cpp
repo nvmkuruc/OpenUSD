@@ -702,11 +702,9 @@ UsdSkelImagingSkeletonAdapter::MarkDirty(const UsdPrim& prim,
                 index->MarkSprimDirty(_GetSkinningComputationPath(cachePath),
                     HdExtComputation::DirtySceneInput);
 
-                if (_IsEnabledAggregatorComputation()) {
-                    index->MarkSprimDirty(
-                        _GetSkinningInputAggregatorComputationPath(cachePath),
-                        HdExtComputation::DirtySceneInput);
-                }
+                index->MarkSprimDirty(
+                    _GetSkinningInputAggregatorComputationPath(cachePath),
+                    HdExtComputation::DirtySceneInput);
             }
         }
 

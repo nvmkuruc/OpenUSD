@@ -181,6 +181,7 @@ UsdImaging_CollectionCache::ComputeCollectionsContainingPath(
 }
 
 // #nv begin #light-link-refresh
+#if 0
 void
 UsdImaging_CollectionCache::GetMembershipQuery(TfToken const& path, const UsdImaging_CollectionCache::Query** query) const
 {
@@ -190,6 +191,7 @@ UsdImaging_CollectionCache::GetMembershipQuery(TfToken const& path, const UsdIma
         *query = &it->second;
     }
 }
+#endif
 // nv end
 
 PXR_NAMESPACE_CLOSE_SCOPE

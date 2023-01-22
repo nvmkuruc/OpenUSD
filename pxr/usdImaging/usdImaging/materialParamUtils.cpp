@@ -253,10 +253,12 @@ _ResolveMaterialParamValue(
     TRACE_FUNCTION();
 
     // #nv begin #material-updates
+#if 0
     if (TfDebug::IsEnabled(USDIMAGING_TEXTURES) && (attr.GetTypeName() == SdfValueTypeNames->Asset)) {
         TF_DEBUG(USDIMAGING_TEXTURES).Msg("%s will resolve <%s> at %s\n",
             TF_FUNC_NAME().c_str(), attr.GetPath().GetText(), TfStringify(time).c_str());
     }
+#endif
     // nv end
 
     VtValue value;

@@ -89,7 +89,8 @@ UsdImagingDisplayFilterAdapter::TrackVariability(
     UsdPrim const& prim,
     SdfPath const& cachePath,
     HdDirtyBits* timeVaryingBits,
-    UsdImagingInstancerContext const* instancerContext) const
+    UsdImagingInstancerContext const* instancerContext,
+    bool checkVariability) const
 {
     // If any of the DisplayFilter attributes are time varying 
     // we will assume all DisplayFilter params are time-varying.

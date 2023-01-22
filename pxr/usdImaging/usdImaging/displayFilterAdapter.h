@@ -71,7 +71,8 @@ public:
                           SdfPath const& cachePath,
                           HdDirtyBits* timeVaryingBits,
                           UsdImagingInstancerContext const* 
-                          instancerContext = nullptr) const override;
+                          instancerContext = nullptr,
+                          bool checkVariability = true) const override;
 
 
     /// Thread Safe.

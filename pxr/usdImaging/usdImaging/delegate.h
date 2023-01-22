@@ -148,12 +148,6 @@ public:
     // nv end
     void ApplyPendingUpdates();
 
-    // #nv begin #fast-updates
-    /// Applies any fast (non-structural) updates which have been queued up by notices from USD.
-    USDIMAGING_API
-    virtual void ApplyPendingFastUpdates();
-    // nv end
-
     /// Returns the refinement level that is used when prims have no explicit
     /// level set.
     ///
@@ -565,20 +559,9 @@ public:
         TfToken const& property);
     // nv end
 
-    // #nv begin #fast-updates
-    USDIMAGING_API
-    bool HasPendingFastUpdates() const;
-    // nv end
-
 // #nv begin #fast-updates
 protected:
-    USDIMAGING_API
-    void _RefreshObjectsForFastUpdates(
-        const std::vector<SdfFastUpdateList::FastUpdate> &fastUpdates,
-        bool refreshVariability);
-
     UsdImaging_XformCache _xformCache;
-    std::vector<SdfFastUpdateList::FastUpdate> _fastUpdates;
 // nv end
 
 // #nv begin kit-delegate
@@ -678,14 +661,11 @@ protected:
     // Repopulate() on those prims individually. If repopulateFromRoot is
     // true, Repopulate() will be called on \p rootPath instead. This is slower,
     // but handles changes in tree topology.
-    // #nv begin #omni_hydra
     USDIMAGING_API
     void _ResyncUsdPrim(SdfPath const& usdRootPath,
                         _FlattenedDependenciesCacheMap const &cache,
                         UsdImagingIndexProxy* proxy,
-                        bool repopulateFromRoot = false,
-        bool fromThread = false); // #nv #parallel-xform-children
-    // nv end
+                        bool repopulateFromRoot = false);
 
     // ---------------------------------------------------------------------- //
     // Usd Data-Access Helper Methods

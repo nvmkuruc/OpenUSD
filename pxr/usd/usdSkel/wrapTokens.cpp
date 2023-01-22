@@ -77,11 +77,8 @@ void wrapUsdSkelTokens()
     _AddToken(cls, "primvarsSkelGeomBindTransform", UsdSkelTokens->primvarsSkelGeomBindTransform);
     _AddToken(cls, "primvarsSkelJointIndices", UsdSkelTokens->primvarsSkelJointIndices);
     _AddToken(cls, "primvarsSkelJointWeights", UsdSkelTokens->primvarsSkelJointWeights);
-<<<<<<< HEAD
     _AddToken(cls, "primvarsSkelSkinningBlendWeights", UsdSkelTokens->primvarsSkelSkinningBlendWeights);
-=======
     _AddToken(cls, "primvarsSkelSkinningMethod", UsdSkelTokens->primvarsSkelSkinningMethod);
->>>>>>> v23.02-rc1
     _AddToken(cls, "restTransforms", UsdSkelTokens->restTransforms);
     _AddToken(cls, "rotations", UsdSkelTokens->rotations);
     _AddToken(cls, "scales", UsdSkelTokens->scales);

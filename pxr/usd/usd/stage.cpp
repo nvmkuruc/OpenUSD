@@ -496,11 +496,6 @@ UsdStage::UsdStage(const SdfLayerRefPtr& rootLayer,
     , _populationMask(mask)
     , _isClosingStage(false)
     , _isWritingFallbackPrimTypes(false)
-    // #nv begin omni-hydra
-    , _getValueFn(nullptr)
-    , _getValueFnUserData(nullptr)
-    , _getValueFnEnabled(false)
-    // nv end
 {
     if (!TF_VERIFY(_rootLayer))
         return;
@@ -4834,42 +4829,6 @@ UsdStage::_RegisterPerLayerNotices()
     _layersAndNoticeKeys.swap(newLayersAndNoticeKeys);
 }
 
-// #nv begin #fast-updates
-void
-UsdStage::CheckFieldForCompositionDependents(const SdfLayerHandle &layer,
-                                             SdfAbstractDataFieldAccessHandle fieldHandle,
-                                             bool isNewHandle,
-                                             bool* handleIsValid)
-{
-    if (!layer || !fieldHandle)
-        return;
-    SdfPathVector dependentPaths;
-    _AddAffectedStagePaths(layer, fieldHandle->GetPath(),
-        *_cache, &dependentPaths, nullptr /* extraData*/);
-
-    // If the field has no dependent paths, it is no longer valid,
-    // e.g., lives in a sublayer that is not longer part of the layer stack.
-    if (dependentPaths.empty()) {
-        if (handleIsValid)
-            *handleIsValid = false;
-        return;
-    }
-    if (handleIsValid)
-        *handleIsValid = true;
-
-    bool hasCompositionDependents = dependentPaths.size() > 1 || *dependentPaths.begin() != fieldHandle->GetPath();
-    fieldHandle->SetHasCompositionDependents(hasCompositionDependents);
-
-    if (isNewHandle) {
-        if (fieldHandle->GetFieldName() == SdfFieldKeys->Default) {
-            _fieldHandles[layer][fieldHandle->GetPath()].defaultHandle = fieldHandle;
-        }
-        else if (fieldHandle->GetFieldName() == SdfFieldKeys->TimeSamples) {
-            _fieldHandles[layer][fieldHandle->GetPath()].timeSamplesHandle = fieldHandle;
-        }
-    }
-}
-// nv end
 void
 UsdStage::_RegisterResolverChangeNotice()
 {
@@ -7472,39 +7431,6 @@ struct Usd_AttrGetUntypedValueHelper {
         return true;
     }    
 };
-
-// #nv begin #omni-hydra
-void
-UsdStage::SetGetValueCallback(_GetValueCallbackFn fn, void* userData)
-{
-    _getValueFn = fn;
-    _getValueFnUserData = userData;
-}
-
-void
-UsdStage::SetGetValueCallbackEnabled(bool enabled)
-{
-    _getValueFnEnabled = enabled;
-}
-
-void 
-UsdStage::SendFastUpdateNotice(const SdfPathVector& changedPaths)
-{
-    std::vector<SdfFastUpdateList::FastUpdate> fastUpdates;
-
-    for (auto p : changedPaths)
-    {
-        VtValue data;
-        _AddToChangedPaths(&fastUpdates, p, data);
-    }
-
-    UsdNotice::ObjectsChanged::_PathsToChangesMap resyncChanges, infoChanges;
-
-    UsdStageWeakPtr self(this);
-    UsdNotice::ObjectsChanged(self, &resyncChanges, &infoChanges, &fastUpdates).Send(self);
-}
-
-// #nv end
 
 bool
 UsdStage::_GetValue(UsdTimeCode time, const UsdAttribute &attr,

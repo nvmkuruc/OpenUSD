@@ -310,6 +310,7 @@ class "SkelBindingAPI" (
         Constant interpolation means every vertex share the same single blend weight.
         Vertex interpolation means every vertex has their own blend weight. The element
         size should match the vertices count in this case."""
+    )
     uniform token primvars:skel:skinningMethod = "ClassicLinear" (
         allowedTokens = ["ClassicLinear", "DualQuaternion"]
         doc = "The skinningMethod specifies the skinning method for the prim."

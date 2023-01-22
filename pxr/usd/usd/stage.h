@@ -2328,12 +2328,6 @@ private:
     std::map<SdfLayerHandle, std::unordered_map<SdfPath, struct FieldHandleEntry, SdfPath::Hash> > _fieldHandles;
     // nv end
 
-    // #nv begin #omni-hydra
-    _GetValueCallbackFn _getValueFn;
-    void* _getValueFnUserData;
-    bool _getValueFnEnabled;
-    // nv end
-
     friend class UsdAPISchemaBase;
     friend class UsdAttribute;
     friend class UsdAttributeQuery;
