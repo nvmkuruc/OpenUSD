@@ -2146,11 +2146,9 @@ CrateFile::_MmapAsset(char const *assetPath, ArAssetSharedPtr const &asset)
         new _FileMapping(ArchMapFileReadOnly(file, &errMsg),
                          offset, asset->GetSize()));
     if (!mapping->GetMapStart()) {
-        // #nv begin #crate-in-memory
-        /*TF_RUNTIME_ERROR("Couldn't map asset '%s'%s%s", assetPath,
+        TF_RUNTIME_ERROR("Couldn't map asset '%s'%s%s", assetPath,
                          !errMsg.empty() ? ": " : "",
-                         errMsg.c_str())*/;
-        // nv end
+                         errMsg.c_str());
         mapping.reset();
     }
     return mapping;
@@ -2344,7 +2342,7 @@ CrateFile::CrateFile(string const &assetPath, string const &fileName,
     , _fileReadFrom(fileName)
     , _useMmap(false)
 {
-    // Note that we *do* store the asset here, since we need to keep the ArchFile*
+    // Note that we *do* store the asset here, since we need to keep the FILE*
     // alive to pread from it.
     _DoAllTypeRegistrations();
     _InitPread();
@@ -2555,7 +2553,7 @@ CrateFile::Packer::Close()
     }
 
     if (!TfGetEnvSetting(USDC_USE_ASSET)) {
-        FILE* file; size_t offset;
+        FILE *file; size_t offset;
         std::tie(file, offset) = asset->GetFileUnsafe();
         if (file) {
             // Reset the filename we've read content from.
@@ -2797,7 +2795,7 @@ CrateFile::_GetTimeSampleValueImpl(TimeSamples const &ts, size_t i) const
 {
     // Need to read the rep from the file for index i.
     auto offset = ts.valuesFileOffset + i * sizeof(ValueRep);
-    if (_useMmap && _mmapSrc) {
+    if (_useMmap) {
         auto reader = _MakeReader(
             _MakeMmapStream(_mmapSrc.get(), _debugPageMap.get()));
         reader.Seek(offset);
@@ -2818,7 +2816,7 @@ CrateFile::_MakeTimeSampleValuesMutableImpl(TimeSamples &ts) const
 {
     // Read out the reps into the vector.
     ts.values.resize(ts.times.Get().size());
-    if (_useMmap && _mmapSrc) {
+    if (_useMmap) {
         auto reader = _MakeReader(
             _MakeMmapStream(_mmapSrc.get(), _debugPageMap.get()));
         reader.Seek(ts.valuesFileOffset);
@@ -3762,7 +3760,7 @@ CrateFile::_BuildDecompressedPathsImpl(
 void
 CrateFile::_ReadRawBytes(int64_t start, int64_t size, char *buf) const
 {
-    if (_useMmap && _mmapSrc) {
+    if (_useMmap) {
         auto reader = _MakeReader(
             _MakeMmapStream(_mmapSrc.get(), _debugPageMap.get()));
         reader.Seek(start);
@@ -3943,7 +3941,7 @@ void
 CrateFile::_UnpackValue(ValueRep rep, T *out) const
 {
     auto const &h = _GetValueHandler<T>();
-    if (_useMmap && _mmapSrc) {
+    if (_useMmap) {
         h.Unpack(
             _MakeReader(
                 _MakeMmapStream(_mmapSrc.get(), _debugPageMap.get())), rep, out);
@@ -3958,7 +3956,7 @@ template <class T>
 void
 CrateFile::_UnpackValue(ValueRep rep, VtArray<T> *out) const {
     auto const &h = _GetValueHandler<T>();
-    if (_useMmap && _mmapSrc) {
+    if (_useMmap) {
         h.UnpackArray(
             _MakeReader(
                 _MakeMmapStream(_mmapSrc.get(), _debugPageMap.get())), rep, out);
@@ -3979,7 +3977,7 @@ CrateFile::_UnpackValue(ValueRep rep, VtValue *result) const {
         return;
     }
     auto index = static_cast<int>(repType);
-    if (_useMmap && _mmapSrc) {
+    if (_useMmap) {
         _unpackValueFunctionsMmap[index](rep, result);
     } else if (_preadSrc) {
         _unpackValueFunctionsPread[index](rep, result);
