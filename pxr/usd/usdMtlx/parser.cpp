@@ -356,8 +356,7 @@ ShaderBuilder::AddProperty(
              metadata.count(_tokens->unit)) {
             // The unit can be helpful if there is no documentation.
             metadata.emplace(SdrPropertyMetadata->Help,
-                             TfStringPrintf("Unit is %s. Please note that this MaterialX"
-                                            " unit can diverge from USD norms.",
+                             TfStringPrintf("Unit is %s.",
                                             metadata[_tokens->unit].c_str()));
         }
 
