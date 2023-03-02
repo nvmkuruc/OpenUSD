@@ -26,6 +26,9 @@ pxr_plugin(usdMdl
 		mdlAPI
 		tokens
 
+    PUBLIC_HEADERS
+        api.h
+
     CPPFILES
         discovery.cpp
         parser.cpp
@@ -40,7 +43,6 @@ pxr_plugin(usdMdl
         distiller
 
     PRIVATE_HEADERS
-        api.h
         neuray.h
 
     PYTHON_CPPFILES
