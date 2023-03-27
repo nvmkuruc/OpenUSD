@@ -21,6 +21,7 @@
 # KIND, either express or implied. See the Apache License for the specific
 # language governing permissions and limitations under the Apache License.
 #
+###
 from __future__ import print_function
 
 import argparse
@@ -403,7 +404,8 @@ def RunCMake(context, force, extraArgs = None):
     if generator is not None:
         generator = '-G "{gen}"'.format(gen=generator)
 
-    if IsVisualStudio2019OrGreater():
+    # Note - don't want to add -A (architecture flag) if generator is, ie, Ninja
+    if IsVisualStudio2019OrGreater() and "Visual Studio" in generator:
         generator = generator + " -A x64"
 
     toolset = context.cmakeToolset

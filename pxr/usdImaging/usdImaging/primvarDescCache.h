@@ -72,7 +72,9 @@ public:
         struct Hash {
             inline size_t operator()(Key const& key) const {
                 size_t hash = key._path.GetHash();
-                boost::hash_combine(hash, key._attribute.Hash());
+                // nv begin - usdrt wouldn't compile on boost 1.76 without this change
+                boost::hash_combine<size_t>(hash, key._attribute.Hash());
+                // nv end
                 return hash;
             }
         };
