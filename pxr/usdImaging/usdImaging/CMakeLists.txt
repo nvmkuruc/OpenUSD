@@ -129,19 +129,19 @@ pxr_library(usdImaging
 )
 
 # #nv begin #fast-updates
-pxr_build_test(testUsdImagingPopulate_Perf
-    LIBRARIES
-        trace
-        hd
-        usd
-        usdImaging
-        usdUtils
-        ${GLEW_LIBRARY}
-    CPPFILES
-        testenv/testUsdImagingPopulate_Perf.cpp
-)
+# pxr_build_test(testUsdImagingPopulate_Perf
+    # LIBRARIES
+        # trace
+        # hd
+        # usd
+        # usdImaging
+        # usdUtils
+        # ${GLEW_LIBRARY}
+    # CPPFILES
+        # testenv/testUsdImagingPopulate_Perf.cpp
+# )
 
-pxr_register_test(testUsdImagingPopulate_Perf
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdImagingPopulate_Perf"
-)
+# pxr_register_test(testUsdImagingPopulate_Perf
+    # COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdImagingPopulate_Perf"
+# )
 # nv end

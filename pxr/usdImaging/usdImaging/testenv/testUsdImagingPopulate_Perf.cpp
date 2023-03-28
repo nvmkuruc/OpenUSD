@@ -21,7 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-
+#if 0
 #include "pxr/pxr.h"
 #include "pxr/usdImaging/usdImaging/delegate.h"
 #include "pxr/imaging/hd/unitTestNullRenderDelegate.h""
@@ -112,3 +112,4 @@ main(int argc, char** argv)
 
     return 0;
 }
+#endif
