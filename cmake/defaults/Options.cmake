@@ -52,7 +52,7 @@ option(PXR_PREFER_SAFETY_OVER_SPEED
         ON)
 
 #nv begin #usdmdl
-option(NV_BUILD_USDMDL "Build usdMdl plugin" ON)
+option(NV_BUILD_USDMDL "Build usdMdl plugin" OFF)
 #nv end
 
 # Determine GFX api
