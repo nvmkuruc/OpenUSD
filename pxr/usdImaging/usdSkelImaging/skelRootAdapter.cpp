@@ -153,7 +153,7 @@ UsdSkelImagingSkelRootAdapter::TrackVariability(
     const SdfPath& cachePath,
     HdDirtyBits* timeVaryingBits,
     const UsdImagingInstancerContext* instancerContext,
-    // #nv begin fast-updates
+    // #nv begin #fast-updates
     bool checkVariability) const
     // nv end
 {

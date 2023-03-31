@@ -126,11 +126,11 @@ UsdImagingCameraAdapter::TrackVariability(UsdPrim const& prim,
     HdDirtyBits* timeVaryingBits,
     UsdImagingInstancerContext const*
     instancerContext,
-    // #nv begin fast-updates
+    // #nv begin #fast-updates
     bool checkVariability) const
     // nv end
 {
-    // #nv begin fast-updates
+    // #nv begin #fast-updates
     if (!checkVariability) {
         return;
     }

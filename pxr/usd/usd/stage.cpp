@@ -496,7 +496,7 @@ UsdStage::UsdStage(const SdfLayerRefPtr& rootLayer,
     , _populationMask(mask)
     , _isClosingStage(false)
     , _isWritingFallbackPrimTypes(false)
-    // #nv begin omni-hydra
+    // #nv begin #omni-hydra
     , _getValueFn(nullptr)
     , _getValueFnUserData(nullptr)
     , _getValueFnEnabled(false)

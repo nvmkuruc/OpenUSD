@@ -2146,7 +2146,7 @@ CrateFile::_MmapAsset(char const *assetPath, ArAssetSharedPtr const &asset)
         new _FileMapping(ArchMapFileReadOnly(file, &errMsg),
                          offset, asset->GetSize()));
     if (!mapping->GetMapStart()) {
-        // #nv begin crate-in-memory
+        // #nv begin #crate-in-memory
         /*TF_RUNTIME_ERROR("Couldn't map asset '%s'%s%s", assetPath,
                          !errMsg.empty() ? ": " : "",
                          errMsg.c_str())*/;

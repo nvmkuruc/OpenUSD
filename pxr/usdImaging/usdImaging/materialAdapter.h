@@ -89,7 +89,7 @@ public:
                           HdDirtyBits* timeVaryingBits,
                           UsdImagingInstancerContext const* 
                               instancerContext = NULL,
-                          // #nv begin fast-updates
+                          // #nv begin #fast-updates
                           // If checkVariabilty is false, this method
                           // only populates the value cache with initial values.
                           bool checkVariability = true) const override;
@@ -157,7 +157,7 @@ private:
                                 TfToken const& materialNetworkSelector,
                                 HdMaterialNetworkMap *materialNetworkMap,
                                 UsdTimeCode time,
-                                // #nv begin material-updates
+                                // #nv begin #material-updates
                                 bool* timeVarying=nullptr) const;
                                 // nv end
 #endif

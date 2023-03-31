@@ -302,11 +302,11 @@ UsdSkelImagingSkeletonAdapter::TrackVariability(
     const SdfPath& cachePath,
     HdDirtyBits* timeVaryingBits,
     const UsdImagingInstancerContext* instancerContext,
-    // #nv begin fast-updates
+    // #nv begin #fast-updates
     bool checkVariability) const
     // nv end
 {
-    // #nv begin fast-updates
+    // #nv begin #fast-updates
     // Early out, as there are no intial values to populate into the value cache.
     if (!checkVariability)
         return;

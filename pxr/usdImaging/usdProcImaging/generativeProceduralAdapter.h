@@ -92,7 +92,7 @@ public:
                           HdDirtyBits* timeVaryingBits,
                           UsdImagingInstancerContext const* 
                               instancerContext = nullptr,
-        // #nv begin fast-updates
+        // #nv begin #fast-updates
         bool checkVariability = true) const override;
         // nv end
 

@@ -415,7 +415,7 @@ Hd_PrimTypeIndex<PrimType>::SyncPrims(HdChangeTracker  &tracker,
 }
 // #nv end
 
-// #nv begin omni-hydra
+// #nv begin #omni-hydra
 template <class PrimType>
 void
 Hd_PrimTypeIndex<PrimType>::SyncPrims(HdSceneDelegate* sceneDelegate,

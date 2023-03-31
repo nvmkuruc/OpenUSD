@@ -42,7 +42,7 @@
 #include "pxr/usd/usdLux/lightAPI.h"
 #include "pxr/usd/usdLux/lightFilter.h"
 
-// #nv begin #new-MDL-schema
+// #nv begin #new-mdl-schema
 #include "pxr/usd/usdShade/shader.h"
 #include "pxr/base/tf/envSetting.h"
 // nv end
@@ -383,7 +383,7 @@ TfToken _GetNodeId(UsdShadeConnectableAPI const &shadeNode,
     return shadeNode.GetPrim().GetTypeName();
 }
 
-// #nv begin #new-MDL-schema
+// #nv begin #new-mdl-schema
 static void
 _GetShaderNodeForSourceTypeFallbackNV(
     UsdShadeShader const& shader,
@@ -545,7 +545,7 @@ void _WalkGraph(
             node, materialNetwork, shaderSourceTypes);
     }
 
-    // #nv begin #new-MDL-schema
+    // #nv begin #new-mdl-schema
     UsdShadeShader shader = UsdShadeShader(shadeNode.GetPrim());
     // TODO: resolve merge conflict
     if (/*timeVarying == nullptr && */node.identifier.IsEmpty() && shader) {
@@ -586,7 +586,7 @@ UsdImagingBuildHdMaterialNetworkFromTerminal(
     // Store terminals on material so backend can easily access them.
     materialNetworkMap->terminals.push_back(terminalNode.path);
 
-    // #nv begin #new-MDL-schema
+    // #nv begin #new-mdl-schema
     if (!_UnregisteredShaderIDsAllowed()) {
     // nv end
         // Validate that idenfitier (info:id) is known to Sdr.
@@ -598,7 +598,7 @@ UsdImagingBuildHdMaterialNetworkFromTerminal(
                     terminalNode.path.GetText());
             *materialNetworkMap = HdMaterialNetworkMap();
         }
-    // #nv begin #new-MDL-schema
+    // #nv begin #new-mdl-schema
     }
     // nv end
 };

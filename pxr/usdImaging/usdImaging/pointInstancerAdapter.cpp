@@ -497,7 +497,7 @@ UsdImagingPointInstancerAdapter::TrackVariability(UsdPrim const& prim,
                                   HdDirtyBits* timeVaryingBits,
                                   UsdImagingInstancerContext const* 
                                       instancerContext,
-                                  // #nv begin fast-updates
+                                  // #nv begin #fast-updates
                                   bool checkVariability) const
                                   // nv end
 {
@@ -526,7 +526,7 @@ UsdImagingPointInstancerAdapter::TrackVariability(UsdPrim const& prim,
         proto.adapter->TrackVariability(protoPrim, cachePath,
                                         &proto.variabilityBits,
                                         nullptr,
-                                        // #nv begin fast-updates
+                                        // #nv begin #fast-updates
                                         checkVariability);
                                         // nv end
         *timeVaryingBits |= proto.variabilityBits;
@@ -548,7 +548,7 @@ UsdImagingPointInstancerAdapter::TrackVariability(UsdPrim const& prim,
                                     time, &proto.visible);
         }
 
-        // #nv begin fast-updates
+        // #nv begin #fast-updates
         if (checkVariability) {
         // nv end
             // XXX: We handle PI visibility by pushing it onto the prototype;
@@ -565,7 +565,7 @@ UsdImagingPointInstancerAdapter::TrackVariability(UsdPrim const& prim,
     } else  if (_InstancerData const* instrData =
                 TfMapLookupPtr(_instancerData, cachePath)) {
 
-        // #nv begin fast-updates
+        // #nv begin #fast-updates
         // Early out when there are no further entries to add to the value cache.
         if (!checkVariability)
             return;
@@ -1419,7 +1419,7 @@ UsdImagingPointInstancerAdapter::GetScenePrimPath(
     VtIntArray const & indices = indicesValue.UncheckedGet<VtIntArray>();
 
     // instanceIndex = parentIndex * indices.size() + i.
-    // nv begin
+    // #nv begin
     if (indices.size() == 0)
     {
         return SdfPath();
