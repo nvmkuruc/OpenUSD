@@ -26,6 +26,7 @@
 
 #include "pxr/pxr.h"
 #include "pxr/usd/usdShade/api.h"
+#include "pxr/usd/usdShade/connectableAPI.h"
 
 #include "pxr/usd/ndr/nodeDiscoveryResult.h"
 
@@ -42,29 +43,6 @@ class UsdShadeShader;
 ///
 class UsdShadeShaderDefUtils {
 public:
-    /// Given a shader's \p identifier token, computes the corresponding 
-    /// SdrShaderNode's family name, implementation name and shader version 
-    /// (as NdrVersion).
-    /// 
-    /// * \p familyName is the prefix of \p identifier up to and not 
-    /// including the first underscore. 
-    /// * \p version is the suffix of \p identifier comprised of one or 
-    /// two integers representing the major and minor version numbers.
-    /// * \p implementationName is the string we get by joining 
-    /// <i>familyName</i> with everything that's in between <i>familyName</i> 
-    /// and <i>version</i> with an underscore.
-    /// 
-    /// Returns true if \p identifier is valid and was successfully split 
-    /// into the different components. 
-    /// 
-    /// \note The python version of this function returns a tuple containing
-    /// (famiyName, implementationName, version).
-    USDSHADE_API
-    static bool SplitShaderIdentifier(const TfToken &identifier, 
-                TfToken *familyName,
-                TfToken *implementationName,
-                NdrVersion *version);
-
     /// Returns the list of NdrNodeDiscoveryResult objects that must be added 
     /// to the shader registry for the given shader \p shaderDef, assuming it 
     /// is found in a shader definition file found by an Ndr discovery plugin. 
@@ -76,6 +54,21 @@ public:
     static NdrNodeDiscoveryResultVec GetNodeDiscoveryResults(
         const UsdShadeShader &shaderDef,
         const std::string &sourceUri);
+
+    /// Gets all input and output properties of the given \p shaderDef and 
+    /// translates them into NdrProperties that can be used as the properties
+    /// for an SdrShaderNode.
+    USDSHADE_API
+    static NdrPropertyUniquePtrVec GetShaderProperties(
+        const UsdShadeConnectableAPI &shaderDef);
+
+    /// Collects all the names of valid primvar inputs of the given \p metadata
+    /// and the given \p shaderDef and returns the string used to represent
+    /// them in SdrShaderNode metadata.
+    USDSHADE_API
+    static std::string GetPrimvarNamesMetadataString(
+        const NdrTokenMap metadata,
+        const UsdShadeConnectableAPI &shaderDef);
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

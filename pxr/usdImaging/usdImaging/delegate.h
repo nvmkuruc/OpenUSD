@@ -30,7 +30,7 @@
 #include "pxr/usdImaging/usdImaging/api.h"
 #include "pxr/usdImaging/usdImaging/version.h"
 #include "pxr/usdImaging/usdImaging/collectionCache.h"
-#include "pxr/usdImaging/usdImaging/valueCache.h"
+#include "pxr/usdImaging/usdImaging/primvarDescCache.h"
 #include "pxr/usdImaging/usdImaging/resolvedAttributeCache.h"
 #include "pxr/usdImaging/usdImaging/instancerContext.h"
 
@@ -39,7 +39,6 @@
 #include "pxr/imaging/hd/coordSys.h"
 #include "pxr/imaging/hd/sceneDelegate.h"
 #include "pxr/imaging/hd/selection.h"
-#include "pxr/imaging/hd/texture.h"
 #include "pxr/imaging/hd/version.h"
 
 #include "pxr/imaging/pxOsd/subdivTags.h"
@@ -105,11 +104,6 @@ public:
     // tests). Note this method is not virtual.
     USDIMAGING_API
     void SyncAll(bool includeUnvarying);
-
-    /// Opportunity for the delegate to clean itself up after
-    /// performing parrellel work during sync phase
-    USDIMAGING_API
-    virtual void PostSyncCleanup() override;
 
     /// Populates the rootPrim in the HdRenderIndex.
     USDIMAGING_API
@@ -207,7 +201,7 @@ public:
     void SetCullStyleFallback(HdCullStyle cullStyle);
 
     /// Sets the root transform for the entire delegate, which is applied to all
-    /// render prims generated. Settting this value will immediately invalidate
+    /// render prims generated. Setting this value will immediately invalidate
     /// existing rprim transforms.
     USDIMAGING_API
     void SetRootTransform(GfMatrix4d const& xf);
@@ -216,7 +210,7 @@ public:
     const GfMatrix4d &GetRootTransform() const { return _rootXf; }
 
     /// Sets the root visibility for the entire delegate, which is applied to
-    /// all render prims generated. Settting this value will immediately
+    /// all render prims generated. Setting this value will immediately
     /// invalidate existing rprim visibility.
     USDIMAGING_API
     void SetRootVisibility(bool isVisible);
@@ -267,6 +261,10 @@ public:
     /// Enables custom shading on prims.
     USDIMAGING_API
     void SetSceneMaterialsEnabled(bool enable);
+
+    /// Enables lights found in the usdscene.
+    USDIMAGING_API
+    void SetSceneLightsEnabled(bool enable);
 
     /// Set the window policy on all scene cameras. This comes from
     /// the application.
@@ -333,6 +331,10 @@ public:
     USDIMAGING_API
     virtual VtValue Get(SdfPath const& id, TfToken const& key) override;
     USDIMAGING_API
+    virtual VtValue GetIndexedPrimvar(SdfPath const& id, 
+                                      TfToken const& key, 
+                                      VtIntArray *outIndices) override;
+    USDIMAGING_API
     HdIdVectorSharedPtr
     virtual GetCoordSysBindings(SdfPath const& id) override;
     USDIMAGING_API
@@ -357,8 +359,8 @@ public:
 	/// NV_Edit
 	/// provide direct access to value cache.
 	/// CAUTION!!! please don't use this function is you have no idea about what is valueCache.
-	USDIMAGING_API
-	const UsdImagingValueCache& ValueCache() const { return _valueCache; }
+	// USDIMAGING_API
+	// const UsdImagingValueCache& ValueCache() const { return _valueCache; }
 
     //+NV_CHANGE FRZHANG
     //If use NV_GPUSkinning computation path, in this case don't generate usd's skinning computation sprim.
@@ -381,6 +383,11 @@ public:
 	USDIMAGING_API
 	virtual bool GetSkelAnimXformValues(SdfPath const& id, VtValue& skinningXform, GfMatrix4d& primWorldToLocal, GfMatrix4d& skelLocalToWorld) override;
 	//-NV_CHANGE FRZHANG
+    USDIMAGING_API
+    virtual SdfPath GetInstancerId(SdfPath const &primId) override;
+
+    USDIMAGING_API
+    virtual SdfPathVector GetInstancerPrototypes(SdfPath const &instancerId) override;
 
     // Motion samples
     USDIMAGING_API
@@ -398,18 +405,18 @@ public:
                   size_t maxNumSamples, float *times,
                   VtValue *samples) override;
 
+    USDIMAGING_API
+    virtual size_t
+    SampleIndexedPrimvar(SdfPath const& id, TfToken const& key,
+                         size_t maxNumSamples, float *times,
+                         VtValue *samples, VtIntArray *indices) override;
+
     // Material Support
     USDIMAGING_API
     virtual SdfPath GetMaterialId(SdfPath const &rprimId) override;
 
     USDIMAGING_API 
     virtual VtValue GetMaterialResource(SdfPath const &materialId) override;
-
-    // Texture Support
-    USDIMAGING_API
-    HdTextureResource::ID GetTextureResourceID(SdfPath const &id) override;
-    USDIMAGING_API
-    virtual HdTextureResourceSharedPtr GetTextureResource(SdfPath const &id) override;
 
     // Light Support
     USDIMAGING_API
@@ -468,6 +475,13 @@ public:
     USDIMAGING_API
     VtValue GetExtComputationInput(SdfPath const& computationId,
                                    TfToken const& input) override;
+
+    USDIMAGING_API
+    size_t SampleExtComputationInput(SdfPath const& computationId,
+                                     TfToken const& input,
+                                     size_t maxSampleCount,
+                                     float *sampleTimes,
+                                     VtValue *sampleValues) override;
 
     USDIMAGING_API
     std::string GetExtComputationKernel(SdfPath const& computationId) override;
@@ -570,6 +584,14 @@ protected:
 // #nv begin kit-delegate
 // private:
 // nv end
+
+    // Internal Get and SamplePrimvar
+    VtValue _Get(SdfPath const& id, TfToken const& key, VtIntArray *outIndices);
+
+    size_t _SamplePrimvar(SdfPath const& id, TfToken const& key,
+                          size_t maxNumSamples, float *times, VtValue *samples, 
+                          VtIntArray *indices);
+
     // Internal friend class.
     class _Worker;
     friend class UsdImagingIndexProxy;
@@ -623,10 +645,11 @@ protected:
     // with the list of scene description fields that caused this prim to
     // be refreshed.
     // #nv begin #fast-updates
-    void _RefreshUsdObject(SdfPath const& path,
-        TfTokenVector const& changedPrimInfoFields,
-        UsdImagingIndexProxy* proxy,
-        bool checkVariability = true);
+    void _RefreshUsdObject(SdfPath const& usdPath,
+                           TfTokenVector const& changedPrimInfoFields,
+                           UsdImagingIndexProxy* proxy,
+                           SdfPathSet* allTrackedVariabilityPaths,
+                           bool checkVariability = true);
     // nv end
 
     //+NV_CHANGE BRON
@@ -661,6 +684,9 @@ protected:
         return p;
     }
 
+    // #nv begin kit-delegate
+    USDIMAGING_API
+    // nv end
     VtValue _GetUsdPrimAttribute(SdfPath const& cachePath,
                                  TfToken const &attrName);
 
@@ -761,24 +787,24 @@ protected:
     _HdPrimInfo *_GetHdPrimInfo(const SdfPath &cachePath);
 
     Usd_PrimFlagsConjunction _GetDisplayPredicate() const;
+    Usd_PrimFlagsConjunction _GetDisplayPredicateForPrototypes() const;
 
     // Mark render tags dirty for all prims.
     // This is done in response to toggling the purpose-based display settings.
     void _MarkRenderTagsDirty();
 
+    typedef TfHashSet<SdfPath, SdfPath::Hash> _DirtySet;
 
-    typedef TfHashSet<SdfPath, SdfPath::Hash> _InstancerSet;
-
-    // Set of cache paths representing instancers
-    _InstancerSet _instancerPrimCachePaths;
+    // Set of cache paths that are due a Sync()
+    _DirtySet _dirtyCachePaths;
 
     /// Refinement level per-USD-prim and fallback.
     typedef TfHashMap<SdfPath, int, SdfPath::Hash> _RefineLevelMap;
     /// Map from USD prim path to refine level.
     _RefineLevelMap _refineLevelMap;
 
-    /// Cached/pre-fetched rprim data.
-    UsdImagingValueCache _valueCache;
+    /// Cached/pre-fetched primvar descriptors.
+    UsdImagingPrimvarDescCache _primvarDescCache;
 
     /// Usd binding.
     UsdStageRefPtr _stage;
@@ -821,7 +847,6 @@ protected:
 
     UsdImaging_MaterialBindingImplData _materialBindingImplData;
     UsdImaging_MaterialBindingCache _materialBindingCache;
-    UsdImaging_CoordSysBindingImplData _coordSysBindingImplData;
     UsdImaging_CoordSysBindingCache _coordSysBindingCache;
     UsdImaging_VisCache _visCache;
     UsdImaging_PurposeCache _purposeCache;
@@ -829,6 +854,8 @@ protected:
     UsdImaging_CollectionCache _collectionCache;
     UsdImaging_InheritedPrimvarCache _inheritedPrimvarCache;
     UsdImaging_PointInstancerIndicesCache _pointInstancerIndicesCache;
+    UsdImaging_NonlinearSampleCountCache _nonlinearSampleCountCache;
+    UsdImaging_BlurScaleCache _blurScaleCache;
 
     // Pickability
     PickabilityMap _pickablesMap;
@@ -843,6 +870,9 @@ protected:
 
     /// Enable custom shading of prims
     bool _sceneMaterialsEnabled;
+
+    /// Enable lights found in the usdscene
+    bool _sceneLightsEnabled;
 
     CameraUtilConformWindowPolicy _appWindowPolicy;
 

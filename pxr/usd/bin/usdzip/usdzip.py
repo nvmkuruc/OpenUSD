@@ -24,7 +24,6 @@
 #
 from __future__ import print_function
 import argparse
-import glob 
 import os
 import sys
 
@@ -44,61 +43,6 @@ def _Print(stream, msg):
 
 def _Err(msg):
     sys.stderr.write(msg + '\n')
-
-def _CheckCompliance(rootLayer, arkit=False):
-    checker = UsdUtils.ComplianceChecker(arkit=arkit, 
-        # We're going to flatten the USD stage and convert the root layer to 
-        # crate file format before packaging, if necessary. Hence, skip these 
-        # checks.
-        skipARKitRootLayerCheck=True)
-    checker.CheckCompliance(rootLayer)
-    errors = checker.GetErrors()
-    failedChecks = checker.GetFailedChecks()
-    for msg in errors + failedChecks:
-        _Err(msg)
-    return len(errors) == 0 and len(failedChecks) == 0
-
-def _CreateUsdzPackage(usdzFile, filesToAdd, recurse, checkCompliance, verbose):
-    with Usd.ZipFileWriter.CreateNew(usdzFile) as usdzWriter:
-        fileList = []
-        while filesToAdd:
-            # Pop front (first file) from the list of files to add.
-            f = filesToAdd[0]
-            filesToAdd = filesToAdd[1:]
-
-            if os.path.isdir(f):
-                # If a directory is specified, add all files in the directory.
-                filesInDir = glob.glob(os.path.join(f, '*'))
-                # If the recurse flag is not specified, remove sub-directories.
-                if not recurse:
-                    filesInDir = [f for f in filesInDir if not os.path.isdir(f)]
-                # glob.glob returns files in arbitrary order. Hence, sort them
-                # here to get consistent ordering of files in the package.
-                filesInDir.sort()
-                filesToAdd += filesInDir
-            else:
-                if verbose:
-                    print(('.. adding: %s' % f))
-                if os.path.getsize(f) > 0:
-                    fileList.append(f)
-                else:
-                    _Err("Skipping empty file '%s'." % f)
-
-        if checkCompliance and len(fileList) > 0:
-            rootLayer = fileList[0]
-            if not _CheckCompliance(rootLayer):
-                return False
-
-        for f in fileList:
-            try:
-                usdzWriter.AddFile(f)
-            except Tf.ErrorException as e:
-                _Err('Failed to add file \'%s\' to package. Discarding '
-                    'package.' % f)
-                # When the "with" block exits, Discard() will be called on 
-                # usdzWriter automatically if an exception occurs.
-                raise
-        return True
 
 def _DumpContents(dumpLocation, zipFile):
     with _Stream(dumpLocation, "w") as ofp:
@@ -211,12 +155,12 @@ def main():
 
         if args.verbose:
             if os.path.exists(usdzFile):
-                print(("File at path '%s' already exists. Overwriting file." % 
-                        usdzFile))
+                print("File at path '%s' already exists. Overwriting file." % 
+                        usdzFile)
             
             if args.inputFiles:
-                print(('Creating package \'%s\' with files %s.' % 
-                      (usdzFile, inputFiles)))
+                print('Creating package \'%s\' with files %s.' % 
+                      (usdzFile, inputFiles))
 
             if args.asset or args.arkitAsset:
                 Tf.Debug.SetDebugSymbolsByName("USDUTILS_CREATE_USDZ_PACKAGE", 1)
@@ -226,20 +170,21 @@ def main():
     else:
         if args.checkCompliance:
             parser.error("--checkCompliance should only be specified when "
-                "creatinga usdz package. Please use 'usdchecker' to check "
+                "creating a usdz package. Please use 'usdchecker' to check "
                 "compliance of an existing .usdz file.")
 
 
     success = True
     if len(inputFiles) > 0:
-        success = _CreateUsdzPackage(usdzFile, inputFiles, args.recurse, 
+        success = UsdUtils.CreateUsdzPackage(usdzFile, inputFiles, args.recurse, 
                 args.checkCompliance, args.verbose) and success
 
     elif args.asset:
         r = Ar.GetResolver()
         resolvedAsset = r.Resolve(args.asset)
         if args.checkCompliance:
-            success = _CheckCompliance(resolvedAsset, arkit=False) and success
+            success = UsdUtils.CheckUsdzCompliance(resolvedAsset, 
+                    arkit=False) and success
 
         context = r.CreateDefaultContextForAsset(resolvedAsset) 
         with Ar.ResolverContextBinder(context):
@@ -251,7 +196,8 @@ def main():
         r = Ar.GetResolver()
         resolvedAsset = r.Resolve(args.arkitAsset)
         if args.checkCompliance:
-            success = _CheckCompliance(resolvedAsset, arkit=True) and success
+            success = UsdUtils.CheckUsdzCompliance(resolvedAsset, 
+                    arkit=True) and success
 
         context = r.CreateDefaultContextForAsset(resolvedAsset)
         with Ar.ResolverContextBinder(context):

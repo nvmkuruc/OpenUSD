@@ -20,7 +20,6 @@ pxr_plugin(${PXR_PACKAGE}
     RESOURCE_FILES
         plugInfo.json
         dancingCubes.usda:usdDancingCubesExample/dancingCubes.usda
-        empty.usddancingcubesexample:usdDancingCubesExample/empty.usddancingcubesexample
 
     DISABLE_PRECOMPILED_HEADERS
 )
@@ -50,7 +49,7 @@ if ("${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Linux" AND
         DIFF_COMPARE dynamicContents.usda newDynamicContents.usda
         EXPECTED_RETURN_CODE 0
         ENV
-            PXR_PLUGINPATH_NAME=${CMAKE_INSTALL_PREFIX}/share/usd/examples/plugin/usdDancingCubesExample/resources
+            ${PXR_PLUGINPATH_NAME}=${CMAKE_INSTALL_PREFIX}/share/usd/examples/plugin/usdDancingCubesExample/resources
     )
 else()
     pxr_register_test(testUsdDancingCubesExample
@@ -58,6 +57,6 @@ else()
         COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdDancingCubesExample"
         EXPECTED_RETURN_CODE 0
         ENV
-            PXR_PLUGINPATH_NAME=${CMAKE_INSTALL_PREFIX}/share/usd/examples/plugin/usdDancingCubesExample/resources
+            ${PXR_PLUGINPATH_NAME}=${CMAKE_INSTALL_PREFIX}/share/usd/examples/plugin/usdDancingCubesExample/resources
     )
 endif()

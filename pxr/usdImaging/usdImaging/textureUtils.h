@@ -37,6 +37,8 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+/// \deprecated HdSceneDelegate no longer implements GetTextureResource.
+///
 /// The functions below are used by the old texture system where the
 /// scene delegates creates the texture resource in
 /// GetTextureResource.
@@ -51,13 +53,6 @@ PXR_NAMESPACE_OPEN_SCOPE
 USDIMAGING_API
 std::vector<std::tuple<int, TfToken>>
 UsdImaging_GetUdimTiles(
-    std::string const& basePath,
-    int tileLimit,
-    SdfLayerHandle const& layerHandle = SdfLayerHandle());
-
-USDIMAGING_API
-bool
-UsdImaging_UdimTilesExist(
     std::string const& basePath,
     int tileLimit,
     SdfLayerHandle const& layerHandle = SdfLayerHandle());

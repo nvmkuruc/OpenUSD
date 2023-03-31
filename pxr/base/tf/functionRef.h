@@ -43,6 +43,13 @@ class TfFunctionRef;
 /// only in the duration of the function call, and you want to keep your
 /// function's implementation out-of-line.
 ///
+/// For technical reasons, TfFunctionRef does not support function pointers;
+/// only function objects.  Internally TfFunctionRef stores a void pointer to
+/// the function object it's referencing, but C++ does not allow function
+/// pointers to be cast to void pointers.  Supporting this case would increase
+/// this class's size and add complexity to its implementation.  Instead,
+/// callers may wrap function pointers in lambdas to sidestep the issue.
+///
 /// The advantage over std::function is that TfFunctionRef is lighter-weight.
 /// Since it is non-owning, it guarantees no heap allocation; a possibility with
 /// std::function.  The cost to call a TfFunctionRef is an indirect function
@@ -91,9 +98,17 @@ class TfFunctionRef;
 template <class Ret, class... Args>
 class TfFunctionRef<Ret (Args...)>
 {
+    // Type trait to detect when an argument is a potentially cv-qualified
+    // TfFunctionRef.  This is used to disable the generic constructor and
+    // assignment operator so that TfFunctionRef arguments are copied rather
+    // than forming TfFunctionRefs pointing to TfFunctionRefs.
+    template <typename Fn>
+    using _IsFunctionRef = std::is_same<
+        std::remove_cv_t<std::remove_reference_t<Fn>>, TfFunctionRef>;
+
 public:
     /// Construct with an lvalue callable \p fn.
-    template <class Fn>
+    template <class Fn, class = std::enable_if_t<!_IsFunctionRef<Fn>::value>>
     constexpr TfFunctionRef(Fn &fn) noexcept
         : _fn(static_cast<void const *>(std::addressof(fn)))
         , _invoke(_InvokeFn<Fn>) {}
@@ -109,7 +124,8 @@ public:
 
     /// Assign from an lvalue callable \p fn.
     template <class Fn>
-    TfFunctionRef &
+    std::enable_if_t<!_IsFunctionRef<Fn>::value,
+                     TfFunctionRef &>
     operator=(Fn &fn) noexcept {
         *this = TfFunctionRef(fn);
         return *this;

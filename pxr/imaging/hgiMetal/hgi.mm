@@ -53,42 +53,58 @@ TF_REGISTRY_FUNCTION(TfType)
     t.SetFactory<HgiFactory<HgiMetal>>();
 }
 
-static int _GetAPIVersion()
-{
-    if (@available(macOS 10.15, ios 13.0, *)) {
-        return APIVersion_Metal3_0;
-    }
-    if (@available(macOS 10.13, ios 11.0, *)) {
-        return APIVersion_Metal2_0;
-    }
-    
-    return APIVersion_Metal1_0;
-}
-
 HgiMetal::HgiMetal(id<MTLDevice> device)
 : _device(device)
+, _currentCmds(nullptr)
 , _frameDepth(0)
-, _apiVersion(_GetAPIVersion())
 , _workToFlush(false)
 {
     if (!_device) {
         if( TfGetenvBool("HGIMETAL_USE_INTEGRATED_GPU", false)) {
-            _device = MTLCopyAllDevices()[1];
+            auto devices = MTLCopyAllDevices();
+            for (id<MTLDevice> d in devices) {
+                if ([d isLowPower]) {
+                    _device = d;
+                    break;
+                }
+            }
         }
 
         if (!_device) {
             _device = MTLCreateSystemDefaultDevice();
         }
     }
-    
+
     static int const commandBufferPoolSize = 256;
+
     _commandQueue = [_device newCommandQueueWithMaxCommandBufferCount:
                      commandBufferPoolSize];
     _commandBuffer = [_commandQueue commandBuffer];
     [_commandBuffer retain];
 
-    _capabilities.reset(
-        new HgiMetalCapabilities(device));
+    _capabilities.reset(new HgiMetalCapabilities(_device));
+    _indirectCommandEncoder.reset(new HgiMetalIndirectCommandEncoder(this));
+
+    MTLArgumentDescriptor *argumentDescBuffer =
+        [[MTLArgumentDescriptor alloc] init];
+    argumentDescBuffer.dataType = MTLDataTypePointer;
+    _argEncoderBuffer = [_device newArgumentEncoderWithArguments:
+                        @[argumentDescBuffer]];
+    [argumentDescBuffer release];
+
+    MTLArgumentDescriptor *argumentDescSampler =
+        [[MTLArgumentDescriptor alloc] init];
+    argumentDescSampler.dataType = MTLDataTypeSampler;
+    _argEncoderSampler = [_device newArgumentEncoderWithArguments:
+                         @[argumentDescSampler]];
+    [argumentDescSampler release];
+
+    MTLArgumentDescriptor *argumentDescTexture =
+        [[MTLArgumentDescriptor alloc] init];
+    argumentDescTexture.dataType = MTLDataTypeTexture;
+    _argEncoderTexture = [_device newArgumentEncoderWithArguments:
+                         @[argumentDescTexture]];
+    [argumentDescTexture release];
 
     HgiMetalSetupMetalDebug();
     
@@ -100,14 +116,37 @@ HgiMetal::HgiMetal(id<MTLDevice> device)
     
     [[MTLCaptureManager sharedCaptureManager]
         setDefaultCaptureScope:_captureScopeFullFrame];
+
+#if !__has_feature(objc_arc)
+    _pool = nil;
+#endif
 }
 
 HgiMetal::~HgiMetal()
 {
     [_commandBuffer commit];
+    [_commandBuffer waitUntilCompleted];
     [_commandBuffer release];
     [_captureScopeFullFrame release];
     [_commandQueue release];
+    [_argEncoderBuffer release];
+    [_argEncoderTexture release];
+    
+    while(_freeArgBuffers.size()) {
+        [_freeArgBuffers.top() release];
+        _freeArgBuffers.pop();
+    }
+}
+
+bool
+HgiMetal::IsBackendSupported() const
+{
+    // Want Metal 2.0 and Metal Shading Language 2.2 or higher.
+    if (@available(macOS 10.15, ios 13.0, *)) {
+        return true;
+    }
+
+    return false;
 }
 
 id<MTLDevice>
@@ -120,29 +159,28 @@ HgiGraphicsCmdsUniquePtr
 HgiMetal::CreateGraphicsCmds(
     HgiGraphicsCmdsDesc const& desc)
 {
-    // XXX We should TF_CODING_ERROR here when there are no attachments, but
-    // during the Hgi transition we allow it to render to global gl framebuffer.
-    if (!desc.HasAttachments()) {
-        // TF_CODING_ERROR("Graphics encoder desc has no attachments");
-        return nullptr;
-    }
-
-    HgiMetalGraphicsCmds* encoder(
-        new HgiMetalGraphicsCmds(this, desc));
-
-    return HgiGraphicsCmdsUniquePtr(encoder);
+    HgiMetalGraphicsCmds* gfxCmds(new HgiMetalGraphicsCmds(this, desc));
+    return HgiGraphicsCmdsUniquePtr(gfxCmds);
 }
 
 HgiComputeCmdsUniquePtr
 HgiMetal::CreateComputeCmds()
 {
-    return HgiComputeCmdsUniquePtr(new HgiMetalComputeCmds(this));
+    HgiComputeCmds* computeCmds = new HgiMetalComputeCmds(this);
+    if (!_currentCmds) {
+        _currentCmds = computeCmds;
+    }
+    return HgiComputeCmdsUniquePtr(computeCmds);
 }
 
 HgiBlitCmdsUniquePtr
 HgiMetal::CreateBlitCmds()
 {
-    return HgiBlitCmdsUniquePtr(new HgiMetalBlitCmds(this));
+    HgiMetalBlitCmds* blitCmds = new HgiMetalBlitCmds(this);
+    if (!_currentCmds) {
+        _currentCmds = blitCmds;
+    }
+    return HgiBlitCmdsUniquePtr(blitCmds);
 }
 
 HgiTextureHandle
@@ -155,6 +193,40 @@ void
 HgiMetal::DestroyTexture(HgiTextureHandle* texHandle)
 {
     _TrashObject(texHandle);
+}
+
+HgiTextureViewHandle
+HgiMetal::CreateTextureView(HgiTextureViewDesc const & desc)
+{
+    if (!desc.sourceTexture) {
+        TF_CODING_ERROR("Source texture is null");
+    }
+
+    HgiTextureHandle src =
+        HgiTextureHandle(new HgiMetalTexture(this, desc), GetUniqueId());
+    HgiTextureView* view = new HgiTextureView(desc);
+    view->SetViewTexture(src);
+    return HgiTextureViewHandle(view, GetUniqueId());
+}
+
+void
+HgiMetal::DestroyTextureView(HgiTextureViewHandle* viewHandle)
+{
+    // Trash the texture inside the view and invalidate the view handle.
+    HgiTextureHandle texHandle = (*viewHandle)->GetViewTexture();
+
+    if (_workToFlush) {
+        [_commandBuffer
+         addCompletedHandler:[texHandle](id<MTLCommandBuffer> cmdBuffer)
+         {
+            delete texHandle.Get();
+        }];
+    } else {
+        _TrashObject(&texHandle);
+    }
+    (*viewHandle)->SetViewTexture(HgiTextureHandle());
+    delete viewHandle->Get();
+    *viewHandle = HgiTextureViewHandle();
 }
 
 HgiSamplerHandle
@@ -252,9 +324,25 @@ HgiMetal::GetAPIName() const {
     return HgiTokens->Metal;
 }
 
+HgiMetalCapabilities const*
+HgiMetal::GetCapabilities() const
+{
+    return _capabilities.get();
+}
+
+HgiMetalIndirectCommandEncoder*
+HgiMetal::GetIndirectCommandEncoder() const
+{
+    return _indirectCommandEncoder.get();
+}
+
 void
 HgiMetal::StartFrame()
 {
+#if !__has_feature(objc_arc)
+    _pool = [[NSAutoreleasePool alloc] init];
+#endif
+
     if (_frameDepth++ == 0) {
         [_captureScopeFullFrame beginScope];
 
@@ -262,7 +350,7 @@ HgiMetal::StartFrame()
             // We need to grab a new command buffer otherwise the previous one
             // (if it was allocated at the end of the last frame) won't appear in
             // this frame's capture, and it will confuse us!
-            CommitCommandBuffer(CommitCommandBuffer_NoWait, true);
+            CommitPrimaryCommandBuffer(CommitCommandBuffer_NoWait, true);
         }
     }
 }
@@ -273,41 +361,148 @@ HgiMetal::EndFrame()
     if (--_frameDepth == 0) {
         [_captureScopeFullFrame endScope];
     }
+
+#if !__has_feature(objc_arc)
+    if (_pool) {
+        [_pool drain];
+        _pool = nil;
+    }
+#endif
+}
+
+id<MTLCommandQueue>
+HgiMetal::GetQueue() const
+{
+    return _commandQueue;
+}
+
+id<MTLCommandBuffer>
+HgiMetal::GetPrimaryCommandBuffer(HgiCmds *requester, bool flush)
+{
+    if (_workToFlush) {
+        if (_currentCmds && requester != _currentCmds) {
+            return nil;
+        }
+    }
+    if (flush) {
+        _workToFlush = true;
+    }
+    return _commandBuffer;
+}
+
+id<MTLCommandBuffer>
+HgiMetal::GetSecondaryCommandBuffer()
+{
+    id<MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
+    [commandBuffer retain];
+    return commandBuffer;
+}
+
+int
+HgiMetal::GetAPIVersion() const
+{
+    return GetCapabilities()->GetAPIVersion();
 }
 
 void
-HgiMetal::CommitCommandBuffer(CommitCommandBufferWaitType waitType,
-                              bool forceNewBuffer)
+HgiMetal::CommitPrimaryCommandBuffer(
+    CommitCommandBufferWaitType waitType,
+    bool forceNewBuffer)
 {
     if (!_workToFlush && !forceNewBuffer) {
         return;
     }
 
-    [_commandBuffer commit];
-    if (waitType == CommitCommandBuffer_WaitUntilScheduled) {
-        [_commandBuffer waitUntilScheduled];
-    }
-    else if (waitType == CommitCommandBuffer_WaitUntilCompleted) {
-        [_commandBuffer waitUntilCompleted];
-    }
+    CommitSecondaryCommandBuffer(_commandBuffer, waitType);
     [_commandBuffer release];
-
     _commandBuffer = [_commandQueue commandBuffer];
     [_commandBuffer retain];
-    
+
     _workToFlush = false;
 }
 
+void
+HgiMetal::CommitSecondaryCommandBuffer(
+    id<MTLCommandBuffer> commandBuffer,
+    CommitCommandBufferWaitType waitType)
+{
+    [commandBuffer commit];
+    if (waitType == CommitCommandBuffer_WaitUntilScheduled) {
+        [commandBuffer waitUntilScheduled];
+    }
+    else if (waitType == CommitCommandBuffer_WaitUntilCompleted) {
+        [commandBuffer waitUntilCompleted];
+    }
+}
+
+void
+HgiMetal::ReleaseSecondaryCommandBuffer(id<MTLCommandBuffer> commandBuffer)
+{
+    [commandBuffer release];
+}
+
+id<MTLArgumentEncoder>
+HgiMetal::GetBufferArgumentEncoder() const
+{
+    return _argEncoderBuffer;
+}
+
+id<MTLArgumentEncoder>
+HgiMetal::GetSamplerArgumentEncoder() const
+{
+    return _argEncoderSampler;
+}
+
+id<MTLArgumentEncoder>
+HgiMetal::GetTextureArgumentEncoder() const
+{
+    return _argEncoderTexture;
+}
+
+id<MTLBuffer>
+HgiMetal::GetArgBuffer()
+{
+    MTLResourceOptions options = _capabilities->defaultStorageMode;
+    id<MTLBuffer> buffer;
+
+    {
+        std::lock_guard<std::mutex> lock(_freeArgMutex);
+        if (_freeArgBuffers.empty()) {
+            buffer = [_device newBufferWithLength:HgiMetalArgumentOffsetSize
+                                          options:options];
+        }
+        else {
+            buffer = _freeArgBuffers.top();
+            _freeArgBuffers.pop();
+            memset(buffer.contents, 0x00, buffer.length);
+        }
+    }
+
+    if (!_commandBuffer) {
+        TF_CODING_ERROR("_commandBuffer is null");
+    }
+
+    [_commandBuffer
+     addCompletedHandler:^(id<MTLCommandBuffer> cmdBuffer)
+     {
+        std::lock_guard<std::mutex> lock(_freeArgMutex);
+        _freeArgBuffers.push(buffer);
+     }];
+
+    return buffer;
+}
+
 bool
-HgiMetal::_SubmitCmds(HgiCmds* cmds)
+HgiMetal::_SubmitCmds(HgiCmds* cmds, HgiSubmitWaitType wait)
 {
     TRACE_FUNCTION();
 
     if (cmds) {
-        _workToFlush = Hgi::_SubmitCmds(cmds);
+        _workToFlush = Hgi::_SubmitCmds(cmds, wait);
+        if (cmds == _currentCmds) {
+            _currentCmds = nullptr;
+        }
     }
-
-    CommitCommandBuffer();
 
     return _workToFlush;
 }

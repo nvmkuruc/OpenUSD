@@ -89,6 +89,7 @@ pxr_library(sdf
         api.h
         accessorHelpers.h
         declareSpec.h
+        layerHints.h
         schemaTypeRegistration.h
 
     PRIVATE_CLASSES
@@ -160,6 +161,9 @@ pxr_library(sdf
 
     RESOURCE_FILES
         plugInfo.json
+
+    DOXYGEN_FILES
+        overview.dox
 )
 
 # Validate that the checked in generated code matches the sources. This requires
@@ -191,6 +195,7 @@ pxr_test_scripts(
     testenv/testSdfBatchNamespaceEdit.py
     testenv/testSdfCopyUtils.py
     testenv/testSdfCustomLayerData.py
+    testenv/testSdfDetachedLayer.py
     testenv/testSdfFileFormat.py
     testenv/testSdfLayer.py
     testenv/testSdfLayerMuting.py
@@ -207,6 +212,51 @@ pxr_test_scripts(
     testenv/testSdfTypes.py
 )
 
+pxr_build_test_shared_lib(TestSdfNoAssetFileFormat
+    CREATE_FRAMEWORK
+    INSTALL_PREFIX SdfPlugins
+    LIBRARIES
+        sdf
+        tf
+
+    CPPFILES
+        testenv/TestSdfNoAssetFileFormat.cpp
+)
+
+pxr_build_test_shared_lib(TestSdfStreamingFileFormat
+    CREATE_FRAMEWORK
+    INSTALL_PREFIX SdfPlugins
+    LIBRARIES
+        sdf
+        tf
+
+    CPPFILES
+        testenv/TestSdfStreamingFileFormat.cpp
+)
+
+pxr_build_test_shared_lib(TestSdfTargetFileFormat
+    CREATE_FRAMEWORK
+    INSTALL_PREFIX SdfPlugins
+    LIBRARIES
+        sdf
+        tf
+
+    CPPFILES
+        testenv/TestSdfTargetFileFormat.cpp
+)
+
+pxr_build_test_shared_lib(TestSdfResolver
+    CREATE_FRAMEWORK
+    INSTALL_PREFIX SdfPlugins
+    LIBRARIES
+        ar
+        sdf
+        tf
+
+    CPPFILES
+        testenv/TestSdfResolver.cpp
+)
+
 pxr_build_test(testSdfAttributeBlocking_Cpp
     LIBRARIES
         sdf
@@ -219,6 +269,13 @@ pxr_build_test(testSdfHardToReach
         sdf
     CPPFILES
         testenv/testSdfHardToReach.cpp
+)
+
+pxr_build_test(testSdfLayerHints
+    LIBRARIES
+        sdf
+    CPPFILES
+        testenv/testSdfLayerHints.cpp
 )
 
 pxr_build_test(testSdfMetaDataPlugInfo
@@ -258,6 +315,11 @@ pxr_install_test_dir(
 pxr_install_test_dir(
     SRC testenv/testSdfCustomLayerData.testenv
     DEST testSdfCustomLayerData/testSdfCustomLayerData.testenv
+)
+
+pxr_install_test_dir(
+    SRC testenv/testSdfLayerHints.testenv
+    DEST testSdfLayerHints/testSdfLayerHints.testenv
 )
 
 pxr_install_test_dir(
@@ -309,6 +371,27 @@ pxr_register_test(testSdfCustomLayerData
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testSdfCustomLayerData"
 )
 
+pxr_register_test(testSdfDetachedLayer
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testSdfDetachedLayer"
+)
+
+pxr_register_test(testSdfDetachedLayerEnvVar1
+    PYTHON
+    ENV
+        SDF_LAYER_INCLUDE_IN_MEMORY=*
+        SDF_LAYER_EXCLUDE_IN_MEMORY=foo,bar
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testSdfDetachedLayer"
+)
+
+pxr_register_test(testSdfDetachedLayerEnvVar2
+    PYTHON
+    ENV
+        SDF_LAYER_INCLUDE_IN_MEMORY=foo,bar
+        SDF_LAYER_EXCLUDE_IN_MEMORY=baz,garply
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testSdfDetachedLayer"
+)
+
 pxr_register_test(testSdfHardToReach
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testSdfHardToReach"
 )
@@ -321,6 +404,10 @@ pxr_register_test(testSdfFileFormat
 pxr_register_test(testSdfLayer
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testSdfLayer"
+)
+
+pxr_register_test(testSdfLayerHints
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testSdfLayerHints"
 )
 
 pxr_register_test(testSdfLayerMuting

@@ -1,8 +1,16 @@
 #usda 1.0
+(
+    upAxis = "Y"
+    metersPerUnit = 0.01
+    defaultPrim = "Material"
+)
 
 def Material "Material"
 {
     token inputs:topLevelValue = "TopLevelValue"
+
+    token outputs:surfaceGood.connect = </Material/Terminal.outputs:bxdfOut>
+    token outputs:surfaceBad.connect = </Material/NodeGraph.outputs:nodeGraphOut2>
 
     def Shader "Terminal"
     {
@@ -20,6 +28,18 @@ def Material "Material"
         token inputs:terminalInput6.connect = </Material.inputs:topLevelValue>
         token inputs:terminalInput7.connect = </Material/NodeGraph.outputs:nodeGraphOutUnused>
         token inputs:terminalInput8.connect = </Material/NodeGraph.outputs:nodeGraphOut6>
+        token inputs:multiInput1.connect = [
+            </Material/NodeGraph.outputs:nodeGraphOut1>,
+            </Material/RegularNode.outputs:nodeOutput>
+        ]
+        token inputs:multiInput2.connect = </Material/NodeGraph.outputs:nodeGraphMultiOutput>
+        token inputs:multiInput3.connect = [
+            </Material/NodeGraph.outputs:nodeGraphOut2>,
+            </Material/NodeGraph.outputs:nodeGraphMultiOutput>,
+            </Material/RegularNode.outputs:nodeOutput>
+        ]
+
+        token outputs:bxdfOut
     }
 
     def NodeGraph "NodeGraph"
@@ -43,7 +63,11 @@ def Material "Material"
         token outputs:nodeGraphOut5.connect = </Material/NodeGraph/NestedNodeGraph.outputs:out>
         token outputs:nodeGraphOutUnused
         token outputs:nodeGraphOut6
-        token outputs:nodeGraphOut6.connect = </Material/NodeGraph.outputs:nodeGraphInUnconnected>
+        token outputs:nodeGraphOut6.connect = </Material/NodeGraph.inputs:nodeGraphInUnconnected>
+        token outputs:nodeGraphMultiOutput.connect = [
+            </Material/NodeGraph/NestedNode1.outputs:nestedOut1>,
+            </Material/NodeGraph/NestedNode2.outputs:nestedOut2>
+        ]
 
         # connections with a cycle, which is very bad, but something we want to handle gracefully
         token inputs:cycleA.connect = </Material/NodeGraph.outputs:cycleB>

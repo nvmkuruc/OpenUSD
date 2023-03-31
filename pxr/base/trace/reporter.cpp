@@ -26,11 +26,11 @@
 
 #include "pxr/pxr.h"
 #include "pxr/base/trace/aggregateTree.h"
+#include "pxr/base/trace/collector.h"
 #include "pxr/base/trace/eventTree.h"
 #include "pxr/base/trace/reporterDataSourceCollector.h"
 #include "pxr/base/trace/threads.h"
 
-#include "pxr/base/tf/instantiateSingleton.h"
 #include "pxr/base/tf/mallocTag.h"
 #include "pxr/base/tf/stringUtils.h"
 #include "pxr/base/arch/timing.h"
@@ -57,7 +57,8 @@ TraceReporter::TraceReporter(const string& label,
     TraceReporterBase(std::move(dataSource)),
     _label(label),
     _groupByFunction(true),
-    _foldRecursiveCalls(false)
+    _foldRecursiveCalls(false),
+    _shouldAdjustForOverheadAndNoise(true)
 {
     _aggregateTree = TraceAggregateTree::New();
     _eventTree = TraceEventTree::New();
@@ -81,10 +82,16 @@ _IndentString(int indent)
     return s;
 }
 
-void
-TraceReporter::_PrintLineTimes(ostream &s, double inclusive, double exclusive,
-                               int count, const string& label, int indent,
-                               bool recursive_node, int iterationCount)
+static std::string
+_GetKeyName(const TfToken& key)
+{
+    return key.GetString();
+}
+
+static void
+_PrintLineTimes(ostream &s, double inclusive, double exclusive,
+                int count, const string& label, int indent,
+                bool recursive_node, int iterationCount)
 {
     string inclusiveStr = TfStringPrintf("%9.3f ms ",
             ArchTicksToSeconds( uint64_t(inclusive * 1e3) / iterationCount ));
@@ -121,9 +128,11 @@ TraceReporter::_PrintLineTimes(ostream &s, double inclusive, double exclusive,
     s << label << "\n";
 }
 
-void
-TraceReporter::_PrintRecursionMarker(ostream &s, const std::string &label, 
-                                     int indent)
+static void
+_PrintRecursionMarker(
+    ostream &s,
+    const std::string &label, 
+    int indent)
 {
     string inclusiveStr(13, ' ');
     string exclusiveStr(13, ' ');
@@ -137,18 +146,12 @@ TraceReporter::_PrintRecursionMarker(ostream &s, const std::string &label,
 
 }
 
-#define _SORT 0
-
-// Used by std::sort
-static bool
-_InclusiveGreater(const TraceAggregateNodeRefPtr &a, const TraceAggregateNodeRefPtr &b)
-{
-    return (a->GetInclusiveTime() > b->GetInclusiveTime());
-}
-
-void
-TraceReporter::_PrintNodeTimes(ostream &s, TraceAggregateNodeRefPtr node, int indent, 
-                               int iterationCount)
+static void
+_PrintNodeTimes(
+    ostream &s,
+    TraceAggregateNodeRefPtr node,
+    int indent, 
+    int iterationCount)
 {
     // The root of the tree has id == -1, no useful stats there.
 
@@ -171,34 +174,9 @@ TraceReporter::_PrintNodeTimes(ostream &s, TraceAggregateNodeRefPtr node, int in
         sortedKids.push_back(it);
     }
     
-    if (_SORT) {
-        std::sort(sortedKids.begin(), sortedKids.end(), _InclusiveGreater);
-    }
-
     for (const TraceAggregateNodeRefPtr& it : sortedKids) {
         _PrintNodeTimes(s, it, indent+2, iterationCount);
     }
-}
-
-void
-TraceReporter::_PrintLineCalls(ostream &s, int count, int exclusiveCount,
-                               int totalCount, const string& label, int indent)
-{
-    string inclusiveStr =
-        TfStringPrintf("%9d (%6.2f%%) ",
-                       count,
-                       100.0 * count / totalCount);
-
-    string exclusiveStr =
-        TfStringPrintf("%9d (%6.2f%%) ",
-                       exclusiveCount,
-                       100.0 * exclusiveCount / totalCount);
-
-    s << inclusiveStr << exclusiveStr << " ";
-
-    s << _IndentString(indent);
-
-    s << label << "\n";
 }
 
 void
@@ -218,13 +196,6 @@ TraceReporter::_PrintTimes(ostream &s)
     }
 }
 
-std::string
-TraceReporter::_GetKeyName(const TfToken& key) const
-{
-    return key.GetString();
-}
-
-
 void
 TraceReporter::Report(
     std::ostream &s,
@@ -237,6 +208,13 @@ TraceReporter::Report(
     }
 
     UpdateTraceTrees();
+
+    // Adjust for overhead.
+    if (ShouldAdjustForOverheadAndNoise()) {
+        _aggregateTree->GetRoot()->AdjustForOverheadAndNoise(
+            TraceCollector::GetInstance().GetScopeOverhead(),
+            ArchGetTickQuantum());
+    }
 
     // Fold recursive calls if we need to.
     if (GetFoldRecursiveCalls()) {
@@ -376,6 +354,18 @@ TraceReporter::GetFoldRecursiveCalls() const
     return _foldRecursiveCalls;
 }
 
+void
+TraceReporter::SetShouldAdjustForOverheadAndNoise(bool shouldAdjust)
+{
+    _shouldAdjustForOverheadAndNoise = shouldAdjust;
+}
+
+bool
+TraceReporter::ShouldAdjustForOverheadAndNoise() const
+{
+    return _shouldAdjustForOverheadAndNoise;
+}
+
 /* static */
 TraceAggregateNode::Id
 TraceReporter::CreateValidEventId() 
@@ -400,31 +390,16 @@ TraceReporter::_ProcessCollection(
     }
 }
 
-namespace {
-class _GlobalReporterHolder {
-public:
-    /// Returns the singleton instance.
-    static _GlobalReporterHolder &GetInstance() {
-        return TfSingleton<_GlobalReporterHolder>::GetInstance();
-    }
-
-    _GlobalReporterHolder() {
-        _globalReporter =
-            TraceReporter::New("Trace global reporter",
-                TraceReporterDataSourceCollector::New());
-
-    }
-
-    TraceReporterRefPtr _globalReporter;
-};
-}
-
-TF_INSTANTIATE_SINGLETON(_GlobalReporterHolder);
-
 TraceReporterPtr 
 TraceReporter::GetGlobalReporter()
 {
-    return _GlobalReporterHolder::GetInstance()._globalReporter;
+    // Note that, like TfSingleton, the global reporter instance is not freed
+    // at shutdown.
+    static const TraceReporterPtr globalReporter(
+        new TraceReporter(
+            "Trace global reporter",
+            TraceReporterDataSourceCollector::New()));
+    return globalReporter;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

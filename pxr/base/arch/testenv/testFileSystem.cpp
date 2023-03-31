@@ -91,42 +91,40 @@ TestArchAbsPath()
     return true;
 }
 
-// NV aluk
-// Various lines disabled below which treat ArchFile* as a FILE*
 int main()
 {
     std::string firstName = ArchMakeTmpFileName("archFS");
-    ArchFile *firstFile;
+    FILE *firstFile;
 
     char const * const testContent = "text in a file";
 
     // Open a file, check that its length is 0, write to it, close it, and then
     // check that its length is now the number of characters written.
     ARCH_AXIOM((firstFile = ArchOpenFile(firstName.c_str(), "wb")) != NULL);
-    //fflush(firstFile);
+    fflush(firstFile);
     ARCH_AXIOM(ArchGetFileLength(firstName.c_str()) == 0);
-    //fputs(testContent, firstFile);
-    //fclose(firstFile);
-    //ARCH_AXIOM(ArchGetFileLength(firstName.c_str()) == strlen(testContent));
+    fputs(testContent, firstFile);
+    fclose(firstFile);
+    ARCH_AXIOM(ArchGetFileLength(firstName.c_str()) == strlen(testContent));
 
     // Map the file and assert the bytes are what we expect they are.
     ARCH_AXIOM((firstFile = ArchOpenFile(firstName.c_str(), "rb")) != NULL);
     ArchConstFileMapping cfm = ArchMapFileReadOnly(firstFile);
-    //fclose(firstFile);
-    //ARCH_AXIOM(cfm);
-    //ARCH_AXIOM(memcmp(testContent, cfm.get(), strlen(testContent)) == 0);
-    //cfm.reset();
+    fclose(firstFile);
+    ARCH_AXIOM(cfm);
+    ARCH_AXIOM(memcmp(testContent, cfm.get(), strlen(testContent)) == 0);
+    cfm.reset();
 
     // Try again with a mutable mapping.
     ARCH_AXIOM((firstFile = ArchOpenFile(firstName.c_str(), "rb")) != NULL);
     ArchMutableFileMapping mfm = ArchMapFileReadWrite(firstFile);
-    //fclose(firstFile);
-    //ARCH_AXIOM(mfm);
-    //ARCH_AXIOM(memcmp(testContent, mfm.get(), strlen(testContent)) == 0);
+    fclose(firstFile);
+    ARCH_AXIOM(mfm);
+    ARCH_AXIOM(memcmp(testContent, mfm.get(), strlen(testContent)) == 0);
     // Check that we can successfully mutate.
-    //mfm.get()[0] = 'T'; mfm.get()[2] = 's';
-    //ARCH_AXIOM(memcmp("Test", mfm.get(), strlen("Test")) == 0);
-    //mfm.reset();
+    mfm.get()[0] = 'T'; mfm.get()[2] = 's';
+    ARCH_AXIOM(memcmp("Test", mfm.get(), strlen("Test")) == 0);
+    mfm.reset();
     ArchUnlinkFile(firstName.c_str());
 
     // Test ArchPWrite and ArchPRead.

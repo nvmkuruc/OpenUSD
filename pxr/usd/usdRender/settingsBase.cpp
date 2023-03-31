@@ -56,8 +56,9 @@ UsdRenderSettingsBase::Get(const UsdStagePtr &stage, const SdfPath &path)
 
 
 /* virtual */
-UsdSchemaType UsdRenderSettingsBase::_GetSchemaType() const {
-    return UsdRenderSettingsBase::schemaType;
+UsdSchemaKind UsdRenderSettingsBase::_GetSchemaKind() const
+{
+    return UsdRenderSettingsBase::schemaKind;
 }
 
 /* static */
@@ -168,6 +169,23 @@ UsdRenderSettingsBase::CreateInstantaneousShutterAttr(VtValue const &defaultValu
                        writeSparsely);
 }
 
+UsdAttribute
+UsdRenderSettingsBase::GetDisableMotionBlurAttr() const
+{
+    return GetPrim().GetAttribute(UsdRenderTokens->disableMotionBlur);
+}
+
+UsdAttribute
+UsdRenderSettingsBase::CreateDisableMotionBlurAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdRenderTokens->disableMotionBlur,
+                       SdfValueTypeNames->Bool,
+                       /* custom = */ false,
+                       SdfVariabilityUniform,
+                       defaultValue,
+                       writeSparsely);
+}
+
 UsdRelationship
 UsdRenderSettingsBase::GetCameraRel() const
 {
@@ -203,6 +221,7 @@ UsdRenderSettingsBase::GetSchemaAttributeNames(bool includeInherited)
         UsdRenderTokens->aspectRatioConformPolicy,
         UsdRenderTokens->dataWindowNDC,
         UsdRenderTokens->instantaneousShutter,
+        UsdRenderTokens->disableMotionBlur,
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(

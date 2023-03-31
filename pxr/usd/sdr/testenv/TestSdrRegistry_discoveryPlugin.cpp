@@ -73,7 +73,10 @@ public:
                 TfToken("oso"),
                 TfToken("OSL"),
                 "TestNodeOSL.oso",
-                "TestNodeOSL.oso"
+                "TestNodeOSL.oso",
+                std::string(),
+                // Test specifying an invalid encoding
+                {{TfToken("sdrUsdEncodingVersion"), std::string("foobar")}}
             ),
             NdrNodeDiscoveryResult(
                 TfToken("TestNodeSameName"),
@@ -93,7 +96,10 @@ public:
                 TfToken("oso"),
                 TfToken("OSL"),
                 "TestNodeSameName.oso",
-                "TestNodeSameName.oso"
+                "TestNodeSameName.oso",
+                std::string(),
+                // Mark this shader as having a legacy USD encoding
+                {{TfToken("sdrUsdEncodingVersion"), std::string("0")}}
             )
         };
     }

@@ -31,6 +31,7 @@
 
 #include "pxr/usd/ar/packageUtils.h"
 #include "pxr/usd/ar/resolver.h"
+#include "pxr/usd/ar/resolverScopedCache.h"
 
 #include "pxr/base/trace/trace.h"
 
@@ -125,6 +126,38 @@ UsdUsdzFileFormat::Read(
 {
     TRACE_FUNCTION();
 
+    return _ReadHelper</* Detached = */ false>(
+        layer, resolvedPath, metadataOnly);
+}
+
+bool
+UsdUsdzFileFormat::_ReadDetached(
+    SdfLayer* layer,
+    const std::string& resolvedPath,
+    bool metadataOnly) const
+{
+    TRACE_FUNCTION();
+
+    return _ReadHelper</* Detached = */ true>(
+        layer, resolvedPath, metadataOnly);
+}
+
+template <bool Detached>
+bool
+UsdUsdzFileFormat::_ReadHelper(
+    SdfLayer* layer,
+    const std::string& resolvedPath,
+    bool metadataOnly) const
+{
+    // Use a scoped cache here so we only open the .usdz asset once.
+    //
+    // If the call to Read below calls ArResolver::OpenAsset, it will
+    // ultimately ask Usd_UsdzResolver to open the .usdz asset. The
+    // scoped cache will ensure that will pick up the asset opened
+    // in _GetFirstFileInZipFile instead of asking the resolver to
+    // open the asset again.
+    ArResolverScopedCache scopedCache;
+
     const std::string firstFile = _GetFirstFileInZipFile(resolvedPath);
     if (firstFile.empty()) {
         return false;
@@ -138,7 +171,11 @@ UsdUsdzFileFormat::Read(
 
     const std::string packageRelativePath = 
         ArJoinPackageRelativePath(resolvedPath, firstFile);
-    return packagedFileFormat->Read(layer, packageRelativePath, metadataOnly);
+    return Detached ?
+        packagedFileFormat->ReadDetached(
+            layer, packageRelativePath, metadataOnly) :
+        packagedFileFormat->Read(
+            layer, packageRelativePath, metadataOnly);
 }
 
 bool

@@ -28,7 +28,7 @@
 #include "pxr/base/tf/instantiateSingleton.h"
 #include "pxr/base/tf/type.h"
 
-#include <iostream>
+#include <ostream>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -317,14 +317,14 @@ SdfChangeList::DidChangeSublayerPaths( const std::string &subLayerPath,
 
 void
 SdfChangeList::DidChangeInfo(const SdfPath & path, const TfToken & key,
-                             const VtValue & oldVal, const VtValue & newVal)
+                             VtValue && oldVal, const VtValue & newVal)
 {
     Entry &entry = _GetEntry(path);
 
     auto iter = entry.FindInfoChange(key);
     if (iter == entry.infoChanged.end()) {
         entry.infoChanged.emplace_back(
-            key, std::pair<VtValue const &, VtValue const &>(oldVal, newVal));
+            key, std::make_pair(std::move(oldVal), newVal));
     }
     else {
         // Update new val, but retain old val from previous change.

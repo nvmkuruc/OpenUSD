@@ -24,7 +24,6 @@
 #include "pxr/base/arch/fileSystem.h"
 #include "pxr/base/tf/debug.h"
 
-
 // XXX: This include is a hack to avoid build errors due to
 // incompatible macro definitions in pyport.h on macOS.
 #include <locale>

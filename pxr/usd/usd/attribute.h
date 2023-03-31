@@ -439,11 +439,21 @@ public:
     bool Get(VtValue* value, UsdTimeCode time = UsdTimeCode::Default()) const;
 
     /// Perform value resolution to determine the source of the resolved
-    /// value of this attribute at the requested UsdTimeCode \p time,
-    /// which defaults to \em default.
+    /// value of this attribute at the requested UsdTimeCode \p time.
     USD_API
     UsdResolveInfo
-    GetResolveInfo(UsdTimeCode time = UsdTimeCode::Default()) const;
+    GetResolveInfo(UsdTimeCode time) const;
+
+    /// Perform value resolution to determine the source of the resolved
+    /// value of this attribute at any non-default time. 
+    ///
+    /// Often (i.e. unless the attribute is affected by 
+    /// \ref Usd_Page_ValueClips "Value Clips") the source of the resolved value
+    /// does not vary over time. See UsdAttributeQuery as an example that takes
+    /// advantage of this quality of value resolution.
+    USD_API
+    UsdResolveInfo
+    GetResolveInfo() const;
 
     /// Set the value of this attribute in the current UsdEditTarget to
     /// \p value at UsdTimeCode \p time, which defaults to \em default.
@@ -516,9 +526,9 @@ public:
     /// Adds \p source to the list of connections, in the position
     /// specified by \p position.
     ///
-    /// Issue an error if \p source identifies a master prim or an object
-    /// descendant to a master prim.  It is not valid to author connections to
-    /// these objects. 
+    /// Issue an error if \p source identifies a prototype prim or an object
+    /// descendant to a prototype prim.  It is not valid to author connections
+    /// to these objects. 
     ///
     /// What data this actually authors depends on what data is currently
     /// authored in the authoring layer, with respect to list-editing
@@ -529,24 +539,18 @@ public:
 
     /// Removes \p target from the list of targets.
     ///
-    /// Issue an error if \p source identifies a master prim or an object
-    /// descendant to a master prim.  It is not valid to author connections to
-    /// these objects.
+    /// Issue an error if \p source identifies a prototype prim or an object
+    /// descendant to a prototype prim.  It is not valid to author connections
+    /// to these objects.
     USD_API
     bool RemoveConnection(const SdfPath& source) const;
-
-    /// Clears all connection edits from the current EditTarget, and makes
-    /// the opinion explicit, which means we are effectively resetting the
-    /// composed value of the targets list to empty.
-    USD_API
-    bool BlockConnections() const;
 
     /// Make the authoring layer's opinion of the connection list explicit,
     /// and set exactly to \p sources.
     ///
-    /// Issue an error if \p source identifies a master prim or an object
-    /// descendant to a master prim.  It is not valid to author connections to
-    /// these objects.
+    /// Issue an error if \p source identifies a prototype prim or an object
+    /// descendant to a prototype prim.  It is not valid to author connections
+    /// to these objects.
     ///
     /// If any path in \p sources is invalid, issue an error and return false.
     USD_API
@@ -560,6 +564,12 @@ public:
     /// Compose this attribute's connections and fill \p sources with the
     /// result.  All preexisting elements in \p sources are lost.
     ///
+    /// Returns true if any connection path opinions have been authored and no
+    /// composition errors were encountered, returns false otherwise. 
+    /// Note that authored opinions may include opinions that clear the 
+    /// connections and a return value of true does not necessarily indicate 
+    /// that \p sources will contain any connection paths.
+    /// 
     /// See \ref Usd_ScenegraphInstancing_TargetsAndConnections for details on 
     /// behavior when targets point to objects beneath instance prims.
     ///

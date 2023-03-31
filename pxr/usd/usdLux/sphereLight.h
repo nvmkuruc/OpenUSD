@@ -28,7 +28,7 @@
 
 #include "pxr/pxr.h"
 #include "pxr/usd/usdLux/api.h"
-#include "pxr/usd/usdLux/light.h"
+#include "pxr/usd/usdLux/boundableLightBase.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
 #include "pxr/usd/usdLux/tokens.h"
@@ -54,20 +54,20 @@ class SdfAssetPath;
 ///
 /// Light emitted outward from a sphere.
 ///
-class UsdLuxSphereLight : public UsdLuxLight
+class UsdLuxSphereLight : public UsdLuxBoundableLightBase
 {
 public:
     /// Compile time constant representing what kind of schema this class is.
     ///
-    /// \sa UsdSchemaType
-    static const UsdSchemaType schemaType = UsdSchemaType::ConcreteTyped;
+    /// \sa UsdSchemaKind
+    static const UsdSchemaKind schemaKind = UsdSchemaKind::ConcreteTyped;
 
     /// Construct a UsdLuxSphereLight on UsdPrim \p prim .
     /// Equivalent to UsdLuxSphereLight::Get(prim.GetStage(), prim.GetPath())
     /// for a \em valid \p prim, but will not immediately throw an error for
     /// an invalid \p prim
     explicit UsdLuxSphereLight(const UsdPrim& prim=UsdPrim())
-        : UsdLuxLight(prim)
+        : UsdLuxBoundableLightBase(prim)
     {
     }
 
@@ -75,7 +75,7 @@ public:
     /// Should be preferred over UsdLuxSphereLight(schemaObj.GetPrim()),
     /// as it preserves SchemaBase state.
     explicit UsdLuxSphereLight(const UsdSchemaBase& schemaObj)
-        : UsdLuxLight(schemaObj)
+        : UsdLuxBoundableLightBase(schemaObj)
     {
     }
 
@@ -130,11 +130,11 @@ public:
     Define(const UsdStagePtr &stage, const SdfPath &path);
 
 protected:
-    /// Returns the type of schema this class belongs to.
+    /// Returns the kind of schema this class belongs to.
     ///
-    /// \sa UsdSchemaType
+    /// \sa UsdSchemaKind
     USDLUX_API
-    UsdSchemaType _GetSchemaType() const override;
+    UsdSchemaKind _GetSchemaKind() const override;
 
 private:
     // needs to invoke _GetStaticTfType.
@@ -156,7 +156,7 @@ public:
     ///
     /// | ||
     /// | -- | -- |
-    /// | Declaration | `float radius = 0.5` |
+    /// | Declaration | `float inputs:radius = 0.5` |
     /// | C++ Type | float |
     /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Float |
     USDLUX_API

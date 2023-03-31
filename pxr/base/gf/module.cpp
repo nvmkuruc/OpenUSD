@@ -29,7 +29,10 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 TF_WRAP_MODULE
 {
-    TF_WRAP( BBox3d );    
+    TF_WRAP( BBox3d );
+    TF_WRAP( DualQuatd );
+    TF_WRAP( DualQuatf );
+    TF_WRAP( DualQuath );
     TF_WRAP( Frustum );
     TF_WRAP( Gamma );
     TF_WRAP( Half );
@@ -49,8 +52,8 @@ TF_WRAP_MODULE
     TF_WRAP( Matrix4d );
 
     TF_WRAP( Plane );
-    TF_WRAP( Quatf );
     TF_WRAP( Quatd );
+    TF_WRAP( Quatf );
     TF_WRAP( Quath );
     TF_WRAP( Quaternion );
     TF_WRAP( Ray );

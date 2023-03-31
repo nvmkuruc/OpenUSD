@@ -73,7 +73,6 @@
 #include <boost/preprocessor/seq/for_each.hpp>
 #include <boost/preprocessor/seq/seq.hpp>
 #include <boost/preprocessor/tuple/elem.hpp>
-#include <boost/shared_ptr.hpp>
 #include <iosfwd>
 #include <list>
 #include <map>
@@ -183,6 +182,26 @@ enum SdfVariability {
     SdfNumVariabilities 
 };
 
+
+/// An enum for TfError codes related to authoring operations.
+///
+/// <b>SdfAuthoringError:</b>
+/// <ul>
+///     <li><b>SdfAuthoringErrorUnrecognizedFields.</b> This error is raised if
+///            SdfLayer::TransferContent, or SdfLayer::SetField API is called
+///            for layers of differing schema, and fields from the source layer
+///            are not recognized by the target layer's schema.
+///     <li><b>SdfAuthoringErrorUnrecognizedSpecType.</b> This error is raised
+///            in attempts to create specs on layers with spec types that are
+///            not recognized by the layer's schema.
+/// </ul>
+///
+enum SdfAuthoringError
+{
+    SdfAuthoringErrorUnrecognizedFields,
+    SdfAuthoringErrorUnrecognizedSpecType
+};
+
 // Each category of compatible units of measurement is defined by a
 // preprocessor sequence of tuples.  Each such sequence gives rise to an enum
 // representing the corresponding unit category.  All the unit categories are
@@ -267,8 +286,8 @@ typedef std::map<std::string, std::string> SdfVariantSelectionMap;
 typedef std::map<std::string, std::vector<std::string> > SdfVariantsMap;
 
 /// A map of source SdfPaths to target SdfPaths for relocation.
-//  Note: This map needs to be lexicographically sorted for Csd composition
-//        implementation, so SdfPath::FastLessThan is explicitly omitted as
+//  Note: This map needs to be lexicographically sorted for some downstream
+//        clients, so SdfPath::FastLessThan is explicitly omitted as
 //        the Compare template parameter.
 typedef std::map<SdfPath, SdfPath> SdfRelocatesMap;
 

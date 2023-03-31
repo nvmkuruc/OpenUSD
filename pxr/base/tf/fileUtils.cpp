@@ -85,9 +85,8 @@ Tf_HasAttribute(
     if (path.back() == '/' || path.back() == '\\')
         resolveSymlinks = true;
 
-// #nv begin #win32-utf-8
-    const DWORD attribs = GetFileAttributesW(ArchWindowsUtf8ToUtf16(path).c_str());
-// #nv end
+    const DWORD attribs =
+        GetFileAttributesW(ArchWindowsUtf8ToUtf16(path).c_str());
     if (attribs == INVALID_FILE_ATTRIBUTES) {
         if (attribute == 0 &&
             (GetLastError() == ERROR_FILE_NOT_FOUND ||
@@ -162,11 +161,6 @@ TfPathExists(string const& path, bool resolveSymlinks)
 bool
 TfIsDir(string const& path, bool resolveSymlinks)
 {
-	bool _result;
-	if (ArchTryIsDir(path, _result)) {
-		return _result;
-	}
-
 #if defined (ARCH_OS_WINDOWS)
     // Report not a directory if path is a symlink and resolveSymlinks is
     // false.
@@ -237,9 +231,7 @@ TfIsDirEmpty(string const& path)
     if (!TfIsDir(path))
         return false;
 #if defined(ARCH_OS_WINDOWS)
-// #nv begin #win32-utf-8
     return PathIsDirectoryEmptyW(ArchWindowsUtf8ToUtf16(path).c_str()) == TRUE;
-// #nv end
 #else
     if (DIR *dirp = opendir(path.c_str()))
     {
@@ -264,10 +256,9 @@ bool
 TfSymlink(string const& src, string const& dst)
 {
 #if defined(ARCH_OS_WINDOWS)
-// #nv begin #win32-utf-8
-    if (CreateSymbolicLinkW(ArchWindowsUtf8ToUtf16(dst).c_str(), ArchWindowsUtf8ToUtf16(src).c_str(),
-                           TfIsDir(src) ? SYMBOLIC_LINK_FLAG_DIRECTORY : 0)) {
-// #nv end
+    if (CreateSymbolicLinkW(ArchWindowsUtf8ToUtf16(dst).c_str(),
+                            ArchWindowsUtf8ToUtf16(src).c_str(),
+                            TfIsDir(src) ? SYMBOLIC_LINK_FLAG_DIRECTORY : 0)) {
         return true;
     }
 
@@ -299,9 +290,8 @@ bool
 TfMakeDir(string const& path, int mode)
 {
 #if defined(ARCH_OS_WINDOWS)
-// #nv begin #win32-utf-8
-    return CreateDirectoryW(ArchWindowsUtf8ToUtf16(path).c_str(), nullptr) == TRUE;
-// #nv end
+    return CreateDirectoryW(
+        ArchWindowsUtf8ToUtf16(path).c_str(), nullptr) == TRUE;
 #else
     // Default mode is 0777
     if (mode == -1)
@@ -361,7 +351,6 @@ TfReadDir(
     string *errMsg)
 {
 #if defined(ARCH_OS_WINDOWS)
-// #nv begin #win32-utf-8
     wchar_t szPath[MAX_PATH];
     WIN32_FIND_DATAW fdFile;
     HANDLE hFind = NULL;
@@ -384,18 +373,21 @@ TfReadDir(
             {
                 if(fdFile.dwFileAttributes &FILE_ATTRIBUTE_DIRECTORY)
                 {
-                    if (dirnames)
-                        dirnames->push_back(ArchWindowsUtf16ToUtf8(fdFile.cFileName));
+                    if (dirnames) {
+                        dirnames->push_back(
+                            ArchWindowsUtf16ToUtf8(fdFile.cFileName));
+                    }
                 }
                 else
                 {
-                    if (filenames)
-                        filenames->push_back(ArchWindowsUtf16ToUtf8(fdFile.cFileName));
+                    if (filenames) {
+                        filenames->push_back(
+                            ArchWindowsUtf16ToUtf8(fdFile.cFileName));
+                    }
                 }
             }
         }
         while (FindNextFileW(hFind, &fdFile));
-// #nv end
 
         FindClose(hFind);
 
@@ -683,15 +675,14 @@ TfTouchFile(string const &fileName, bool create)
             return false;
         close(fd);
 #else
-// #nv begin #win32-utf-8
-        HANDLE fileHandle = ::CreateFileW(ArchWindowsUtf8ToUtf16(fileName).c_str(),
+            HANDLE fileHandle =
+                ::CreateFileW(ArchWindowsUtf8ToUtf16(fileName).c_str(),
             GENERIC_WRITE,          // open for write
             0,                      // not for sharing
             NULL,                   // default security
             CREATE_ALWAYS,          // overwrite existing
             FILE_ATTRIBUTE_NORMAL,  //normal file
             NULL);                  // no template
-// #nv end
 
         if (fileHandle == INVALID_HANDLE_VALUE) {
             return false;

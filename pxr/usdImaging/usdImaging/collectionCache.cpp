@@ -38,7 +38,6 @@ _IsQueryTrivial(UsdCollectionAPI::MembershipQuery const& query)
         ruleMap.begin()->second == UsdTokens->expandPrims;
 }
 
-// #nv begin #light-link-refresh
 void
 UsdImaging_CollectionCache::_MarkCollectionContentDirty(UsdStageWeakPtr const& stage, 
     UsdCollectionAPI::MembershipQuery const& query)
@@ -151,7 +150,6 @@ UsdImaging_CollectionCache::ClearDirtyPaths()
 {
     _dirtyPaths.clear();
 }
-// #nv end
 
 TfToken
 UsdImaging_CollectionCache::GetIdForCollection(UsdCollectionAPI const& c)

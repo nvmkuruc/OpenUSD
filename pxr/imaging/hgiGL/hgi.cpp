@@ -21,7 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include <mutex>
+#include "pxr/imaging/garch/glApi.h"
 
 #include "pxr/imaging/hgi/handle.h"
 #include "pxr/imaging/hgiGL/hgi.h"
@@ -29,6 +29,7 @@
 #include "pxr/imaging/hgiGL/buffer.h"
 #include "pxr/imaging/hgiGL/computeCmds.h"
 #include "pxr/imaging/hgiGL/computePipeline.h"
+#include "pxr/imaging/hgiGL/contextArena.h"
 #include "pxr/imaging/hgiGL/conversions.h"
 #include "pxr/imaging/hgiGL/device.h"
 #include "pxr/imaging/hgiGL/diagnostic.h"
@@ -44,6 +45,7 @@
 #include "pxr/base/tf/registryManager.h"
 #include "pxr/base/tf/type.h"
 
+#include <mutex>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -65,6 +67,7 @@ HgiGL::HgiGL()
     static std::once_flag versionOnce;
     std::call_once(versionOnce, [](){
         const bool validate=TfGetEnvSetting(HGIGL_ENABLE_GL_VERSION_VALIDATION);
+        GarchGLApiLoad();
         if (validate && !HgiGLMeetsMinimumRequirements()) {
             TF_WARN(
                 "HgiGL minimum OpenGL requirements not met. Please ensure "
@@ -75,12 +78,21 @@ HgiGL::HgiGL()
 
     // Create "primary device" (note there is only one for GL)
     _device = new HgiGLDevice();
+
+    _capabilities.reset(new HgiGLCapabilities());
 }
 
 HgiGL::~HgiGL()
 {
     _garbageCollector.PerformGarbageCollection();
     delete _device;
+}
+
+bool
+HgiGL::IsBackendSupported() const
+{
+    // Want OpenGL 4.5 or higher.
+    return GetCapabilities()->GetAPIVersion() >= 450;
 }
 
 HgiGLDevice*
@@ -122,6 +134,31 @@ HgiGL::DestroyTexture(HgiTextureHandle* texHandle)
     _TrashObject(texHandle, _garbageCollector.GetTextureList());
 }
 
+HgiTextureViewHandle
+HgiGL::CreateTextureView(HgiTextureViewDesc const & desc)
+{
+    if (!desc.sourceTexture) {
+        TF_CODING_ERROR("Source texture is null");
+    }
+
+    HgiTextureHandle src =
+        HgiTextureHandle(new HgiGLTexture(desc), GetUniqueId());
+    HgiTextureView* view = new HgiTextureView(desc);
+    view->SetViewTexture(src);
+    return HgiTextureViewHandle(view, GetUniqueId());
+}
+
+void
+HgiGL::DestroyTextureView(HgiTextureViewHandle* viewHandle)
+{
+    // Trash the texture inside the view and invalidate the view handle.
+    HgiTextureHandle texHandle = (*viewHandle)->GetViewTexture();
+    _TrashObject(&texHandle, _garbageCollector.GetTextureList());
+    (*viewHandle)->SetViewTexture(HgiTextureHandle());
+    delete viewHandle->Get();
+    *viewHandle = HgiTextureViewHandle();
+}
+
 HgiSamplerHandle
 HgiGL::CreateSampler(HgiSamplerDesc const & desc)
 {
@@ -149,7 +186,8 @@ HgiGL::DestroyBuffer(HgiBufferHandle* bufHandle)
 HgiShaderFunctionHandle
 HgiGL::CreateShaderFunction(HgiShaderFunctionDesc const& desc)
 {
-    return HgiShaderFunctionHandle(new HgiGLShaderFunction(desc),GetUniqueId());
+    return HgiShaderFunctionHandle(
+        new HgiGLShaderFunction(this, desc), GetUniqueId());
 }
 
 void
@@ -189,7 +227,7 @@ HgiGraphicsPipelineHandle
 HgiGL::CreateGraphicsPipeline(HgiGraphicsPipelineDesc const& desc)
 {
     return HgiGraphicsPipelineHandle(
-        new HgiGLGraphicsPipeline(desc), GetUniqueId());
+        new HgiGLGraphicsPipeline(this, desc), GetUniqueId());
 }
 
 void
@@ -216,6 +254,18 @@ HgiGL::GetAPIName() const {
     return HgiTokens->OpenGL;
 }
 
+HgiGLCapabilities const*
+HgiGL::GetCapabilities() const
+{
+    return _capabilities.get();
+}
+
+HgiIndirectCommandEncoder*
+HgiGL::GetIndirectCommandEncoder() const
+{
+    return nullptr;
+}
+
 void
 HgiGL::StartFrame()
 {
@@ -223,7 +273,7 @@ HgiGL::StartFrame()
     if (_frameDepth++ == 0) {
         // Start Full Frame debug label
         #if defined(GL_KHR_debug)
-        if (GLEW_KHR_debug) {
+        if (GARCH_GLAPI_HAS(KHR_debug)) {
             glPushDebugGroup(GL_DEBUG_SOURCE_THIRD_PARTY, 0, -1, 
                 "Full Hydra Frame");
         }
@@ -236,24 +286,64 @@ HgiGL::EndFrame()
 {
     if (--_frameDepth == 0) {
         _garbageCollector.PerformGarbageCollection();
+        _device->GarbageCollect();
 
         // End Full Frame debug label
         #if defined(GL_KHR_debug)
-        if (GLEW_KHR_debug) {
+        if (GARCH_GLAPI_HAS(KHR_debug)) {
             glPopDebugGroup();
         }
         #endif
     }
 }
 
-bool
-HgiGL::_SubmitCmds(HgiCmds* cmds)
+HgiGLContextArenaHandle
+HgiGL::CreateContextArena()
 {
-    bool result = Hgi::_SubmitCmds(cmds);
+    return HgiGLContextArenaHandle(
+                new HgiGLContextArena(), GetUniqueId());
+}
+
+void
+HgiGL::DestroyContextArena(HgiGLContextArenaHandle* arenaHandle)
+{
+    if (arenaHandle) {
+        delete arenaHandle->Get();
+        *arenaHandle = HgiGLContextArenaHandle();
+    }
+}
+
+void
+HgiGL::SetContextArena(HgiGLContextArenaHandle const& arenaHandle)
+{
+    _device->SetCurrentArena(arenaHandle);
+}
+
+bool
+HgiGL::_SubmitCmds(HgiCmds* cmds, HgiSubmitWaitType wait)
+{
+    bool result = Hgi::_SubmitCmds(cmds, wait);
+
+    if (wait == HgiSubmitWaitTypeWaitUntilCompleted) {
+        // CPU - GPU synchronization (stall) by client request only.
+        static const uint64_t timeOut = 100000000000;
+
+        GLsync fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+        GLenum status = glClientWaitSync(
+            fence, GL_SYNC_FLUSH_COMMANDS_BIT, timeOut);
+
+        if (status != GL_ALREADY_SIGNALED && status != GL_CONDITION_SATISFIED) {
+            // We could loop, but we don't expect to timeout.
+            TF_RUNTIME_ERROR("Unexpected ClientWaitSync timeout");
+        }
+
+        glDeleteSync(fence);
+    }
 
     // If the Hgi client does not call Hgi::EndFrame we garbage collect here.
     if (_frameDepth == 0) {
         _garbageCollector.PerformGarbageCollection();
+        _device->GarbageCollect();
     }
 
     return result;

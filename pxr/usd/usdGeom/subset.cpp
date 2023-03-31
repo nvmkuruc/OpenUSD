@@ -75,8 +75,9 @@ UsdGeomSubset::Define(
 }
 
 /* virtual */
-UsdSchemaType UsdGeomSubset::_GetSchemaType() const {
-    return UsdGeomSubset::schemaType;
+UsdSchemaKind UsdGeomSubset::_GetSchemaKind() const
+{
+    return UsdGeomSubset::schemaKind;
 }
 
 /* static */
@@ -283,13 +284,23 @@ UsdGeomSubset::CreateUniqueGeomSubset(
     return subset;
 }
 
+// This is the same as UsdPrimDefaultPredicate except IsDefined is replaced 
+// with HasDefiningSpecifier.
+static Usd_PrimFlagsConjunction 
+_GetGeomSubsetPredicate()
+{
+    return UsdPrimIsActive && UsdPrimHasDefiningSpecifier && UsdPrimIsLoaded && 
+        !UsdPrimIsAbstract;
+}
+
 /* static */
 std::vector<UsdGeomSubset> 
 UsdGeomSubset::GetAllGeomSubsets(const UsdGeomImageable &geom)
 {
     std::vector<UsdGeomSubset> result;
 
-    for (const auto &childPrim : geom.GetPrim().GetChildren()) {
+    for (const auto &childPrim : 
+         geom.GetPrim().GetFilteredChildren(_GetGeomSubsetPredicate())) {
         if (childPrim.IsA<UsdGeomSubset>()) {
             result.emplace_back(childPrim);
         }
@@ -307,7 +318,8 @@ UsdGeomSubset::GetGeomSubsets(
 {
     std::vector<UsdGeomSubset> result;
 
-    for (const auto &childPrim : geom.GetPrim().GetChildren()) {
+    for (const auto &childPrim : 
+         geom.GetPrim().GetFilteredChildren(_GetGeomSubsetPredicate())) {
         if (childPrim.IsA<UsdGeomSubset>()) {
             UsdGeomSubset subset(childPrim);
 
@@ -333,7 +345,8 @@ UsdGeomSubset::GetAllGeomSubsetFamilyNames(const UsdGeomImageable &geom)
 {
     TfToken::Set familyNames;
     
-    for (const auto &childPrim : geom.GetPrim().GetChildren()) {
+    for (const auto &childPrim : 
+         geom.GetPrim().GetFilteredChildren(_GetGeomSubsetPredicate())) {
         if (childPrim.IsA<UsdGeomSubset>()) {
             UsdGeomSubset subset(childPrim);
             TfToken subsetFamilyName;
@@ -397,6 +410,18 @@ UsdGeomSubset::GetUnassignedIndices(
         VtIntArray indices;
         subset.GetIndicesAttr().Get(&indices, time);
         assignedIndices.insert(indices.begin(), indices.end());
+    }
+
+    // This is protection against the possibility that any of the subsets can
+    // erroneously contain negative valued indices. Even though negative indices
+    // are invalid, their presence breaks the assumption in the rest of this 
+    // function that all indices are nonnegative. This can lead to crashes.
+    // 
+    // Negative indices should be extremely rare which is why it's better to 
+    // check and remove them after the collection of assigned indices rather 
+    // than during.
+    while (!assignedIndices.empty() && *assignedIndices.begin() < 0) {
+        assignedIndices.erase(assignedIndices.begin());
     }
 
     VtIntArray result;

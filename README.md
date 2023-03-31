@@ -38,10 +38,11 @@ Supported Platforms
 USD is currently supported on Linux platforms and has been built and tested
 on CentOS 7 and RHEL 7.
 
-We are actively working on porting USD to both Windows and Mac platforms. 
-Support for both platforms should be considered experimental at this time.
-Currently, the tree will build on Mac and Windows, but only limited testing
-has been done on these platforms.
+We are actively working on porting USD to both Windows and Mac platforms (Please 
+see [VERSIONS.md](VERSIONS.md) for explicitly tested versions). Support for both
+platforms should be considered experimental at this time. Currently, the tree 
+will build on Mac and Windows, but only limited testing has been done on these 
+platforms.
 
 Dependencies
 ------------
@@ -69,7 +70,6 @@ The following dependencies are required:
 
 The following dependencies are optional:
 
- - [GLEW](http://glew.sourceforge.net/)
  - [OpenEXR](http://www.openexr.com)
  - [OpenImageIO](https://sites.google.com/site/openimageio/home)
  - [OpenColorIO](http://opencolorio.org/)
@@ -80,7 +80,7 @@ The following dependencies are optional:
 
 The following dependencies are required:
 
- - [PySide](http://wiki.qt.io/PySide) or [PySide2](http://wiki.qt.io/PySide2)
+ - [PySide6](http://wiki.qt.io/PySide6) or [PySide2](http://wiki.qt.io/PySide2)
  - [PyOpenGL](https://pypi.python.org/pypi/PyOpenGL/)
 
 Getting and Building the Code
@@ -114,7 +114,7 @@ additional documentation for running cmake directly.
 - Optional (Can be ignored by passing `--no-python` as an argument to `build_usd.py`)
     - Python (required for [bindings and tests](BUILDING.md#python)) 
     - PyOpenGL (required for [usdview](BUILDING.md#usd-imaging))
-    - PySide or PySide2 (required for [usdview](BUILDING.md#usd-imaging))
+    - PySide6 or PySide2 (required for [usdview](BUILDING.md#usd-imaging))
 
 #### 2. Download the USD source code
 
@@ -169,7 +169,7 @@ Set the environment variables specified by the script when it finishes and
 launch ```usdview``` with a sample asset.
 
 ```
-> usdview extras/usd/tutorials/convertingLayerFormats/Sphere.usda
+> usdview USD/extras/usd/tutorials/convertingLayerFormats/Sphere.usda
 ```
 
 Contributing

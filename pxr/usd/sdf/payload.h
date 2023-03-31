@@ -79,7 +79,9 @@ public:
     /// invalid characters, issue an error and set this payload's asset path to
     /// the empty asset path.
     void SetAssetPath(const std::string &assetPath) {
-        _assetPath = assetPath;
+        // Go through SdfAssetPath() to raise an error if \p assetPath contains
+        // illegal characters (i.e. control characters).
+        _assetPath = SdfAssetPath(assetPath).GetAssetPath();
     }
 
     /// Returns the scene path of the prim for the payload.

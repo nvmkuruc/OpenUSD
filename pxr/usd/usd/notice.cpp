@@ -26,10 +26,6 @@
 #include "pxr/usd/usd/stage.h"
 #include "pxr/base/tf/stl.h"
 
-#include <boost/iterator/transform_iterator.hpp>
-
-using boost::make_transform_iterator;
-
 PXR_NAMESPACE_OPEN_SCOPE
 
 // Register the notice class
@@ -48,6 +44,10 @@ TF_REGISTRY_FUNCTION(TfType)
     TfType::Define<
         UsdNotice::ObjectsChanged,
         TfType::Bases<UsdNotice::StageNotice> >();
+
+    TfType::Define<
+        UsdNotice::LayerMutingChanged,
+        TfType::Bases<UsdNotice::StageNotice> >();
 }
 
 
@@ -62,14 +62,17 @@ UsdNotice::StageContentsChanged::~StageContentsChanged() {}
 
 UsdNotice::StageEditTargetChanged::~StageEditTargetChanged() {}
 
+UsdNotice::LayerMutingChanged::~LayerMutingChanged() {}
+
 TfTokenVector 
 UsdNotice::ObjectsChanged::PathRange::const_iterator::GetChangedFields() const
 {
     TfTokenVector fields;
     for (const SdfChangeList::Entry* entry : base()->second) {
-        fields.insert(fields.end(),
-            make_transform_iterator(entry->infoChanged.begin(), TfGet<0>()),
-            make_transform_iterator(entry->infoChanged.end(), TfGet<0>()));
+        fields.reserve(fields.size() + entry->infoChanged.size());
+        std::transform(
+            entry->infoChanged.begin(), entry->infoChanged.end(),
+            std::back_inserter(fields), TfGet<0>());
     }
 
     std::sort(fields.begin(), fields.end());

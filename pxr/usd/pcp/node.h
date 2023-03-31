@@ -43,6 +43,8 @@ class PcpMapExpression;
 class PcpNodeRef;
 class PcpNodeRef_ChildrenIterator;
 class PcpNodeRef_ChildrenReverseIterator;
+class PcpErrorBase;
+typedef std::shared_ptr<PcpErrorBase> PcpErrorBasePtr;
 
 TF_DECLARE_WEAK_PTRS(PcpPrimIndex_Graph);
 
@@ -130,13 +132,15 @@ public:
     /// Inserts a new child node for \p site, connected to this node via
     /// \p arc.
     PCP_API
-    PcpNodeRef InsertChild(const PcpLayerStackSite& site, const PcpArc& arc);
+    PcpNodeRef InsertChild(const PcpLayerStackSite& site, const PcpArc& arc,
+        PcpErrorBasePtr *error);
 
     /// Inserts \p subgraph as a child of this node, with the root node of
     /// \p subtree connected to this node via \p arc.
     PCP_API
     PcpNodeRef InsertChildSubgraph(
-        const PcpPrimIndex_GraphPtr& subgraph, const PcpArc& arc);
+        const PcpPrimIndex_GraphPtr& subgraph, const PcpArc& arc,
+        PcpErrorBasePtr *error);
 
     /// Returns the immediate origin node for this node. The origin node
     /// is the node that caused this node to be brought into the prim index.
@@ -216,7 +220,10 @@ public:
     PCP_API
     bool IsRootNode() const;
 
-    /// Returns true if this node is due to an ancestral opinion.
+    /// Get/set whether this node was introduced by being copied from its
+    /// namespace ancestor, or directly by an arc at this level of namespace.
+    PCP_API
+    void SetIsDueToAncestor(bool isDueToAncestor);
     PCP_API
     bool IsDueToAncestor() const;
 
@@ -293,8 +300,8 @@ private:
 
     size_t _GetNodeIndex() const { return _nodeIdx; }
 
-    size_t _GetParentIndex() const;
-    size_t _GetOriginIndex() const;
+    inline size_t _GetParentIndex() const;
+    inline size_t _GetOriginIndex() const;
 
 private: // Data
     PcpPrimIndex_Graph* _graph;
@@ -439,6 +446,22 @@ struct Tf_IteratorInterface<PcpNodeRef::child_const_range, true> {
 template <>
 struct Tf_ShouldIterateOverCopy<PcpNodeRef::child_const_range> :
     boost::true_type {};
+
+/// Support for range-based for loops for PcpNodeRef children ranges.
+inline
+PcpNodeRef_ChildrenIterator
+begin(const PcpNodeRef::child_const_range& r)
+{
+    return r.first;
+}
+
+/// Support for range-based for loops for PcpNodeRef children ranges.
+inline
+PcpNodeRef_ChildrenIterator
+end(const PcpNodeRef::child_const_range& r)
+{
+    return r.second;
+}
 
 // Helper to count the non-variant path components of a path; equivalent
 // to path.StripAllVariantSelections().GetPathElementCount() except

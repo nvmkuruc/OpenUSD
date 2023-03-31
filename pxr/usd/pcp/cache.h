@@ -35,8 +35,10 @@
 #include "pxr/usd/sdf/path.h"
 #include "pxr/usd/sdf/pathTable.h"
 
+#include "pxr/usd/ar/ar.h"
 #include "pxr/usd/ar/resolverContext.h"
 #include "pxr/base/tf/declarePtrs.h"
+#include "pxr/base/tf/functionRef.h"
 #include "pxr/base/tf/hashset.h"
 
 #include <memory>
@@ -114,7 +116,7 @@ public:
 
     /// Get the identifier of the layerStack used for composition.
     PCP_API
-    PcpLayerStackIdentifier GetLayerStackIdentifier() const;
+    const PcpLayerStackIdentifier& GetLayerStackIdentifier() const;
 
     /// Get the layer stack for GetLayerStackIdentifier().  Note that
     /// this will neither compute the layer stack nor report errors.
@@ -124,6 +126,18 @@ public:
     /// and/or get errors caused by computing the layer stack.
     PCP_API
     PcpLayerStackPtr GetLayerStack() const;
+
+    /// Return true if this cache's root layer stack is \p layerStack, false
+    /// otherwise.  This is functionally equivalent to comparing against the
+    /// result of GetLayerStack(), but does not require constructing a TfWeakPtr
+    /// or any refcount operations.
+    bool HasRootLayerStack(PcpLayerStackRefPtr const &layerStack) const {
+        return layerStack == _layerStack;
+    }
+
+    /// \overload
+    PCP_API
+    bool HasRootLayerStack(PcpLayerStackPtr const &layerStack) const;
 
     /// Return true if the cache is configured in Usd mode.
     PCP_API
@@ -182,11 +196,9 @@ public:
     /// be generated.
     ///
     /// A canonical identifier for each layer in \p layersToMute will be
-    /// computed using ArResolver::ComputeRepositoryPath.  Any layer 
-    /// encountered during composition with the same repository path will
-    /// be considered muted and ignored.  Relative paths will be assumed to
-    /// be relative to the cache's root layer.  Search paths are immediately 
-    /// resolved and the result is used for computing the canonical path.
+    /// computed using ArResolver::CreateIdentifier using the cache's root
+    /// layer as the anchoring asset. Any layer encountered during composition
+    /// with the same identifier will be considered muted and ignored.
     ///
     /// Note that muting a layer will cause this cache to release all
     /// references to that layer.  If no other client is holding on to
@@ -200,10 +212,16 @@ public:
     /// changes necessary to see the change in muted layers.  Otherwise,
     /// those changes are applied immediately.
     /// 
+    /// \p newLayersMuted and \p newLayersUnmuted contains the pruned vector
+    /// of layers which are muted or unmuted by this call to RequestLayerMuting.
+    ///
     PCP_API 
     void RequestLayerMuting(const std::vector<std::string>& layersToMute,
                             const std::vector<std::string>& layersToUnmute,
-                            PcpChanges* changes = nullptr);
+                            PcpChanges* changes = nullptr,
+                            std::vector<std::string>* newLayersMuted = nullptr,
+                            std::vector<std::string>* newLayersUnmuted = 
+                                nullptr);
 
     /// Returns the list of canonical identifiers for muted layers
     /// in this cache.  See documentation on RequestLayerMuting for
@@ -257,6 +275,11 @@ public:
     PCP_API
     PcpLayerStackPtr
     FindLayerStack(const PcpLayerStackIdentifier &identifier) const;
+
+    /// Return true if \p layerStack is used by this cache in its composition,
+    /// false otherwise.
+    PCP_API
+    bool UsesLayerStack(const PcpLayerStackPtr &layerStack) const;
 
     /// Compute and return a reference to the cached result for the
     /// prim index for the given path. \p allErrors will contain any errors 
@@ -347,6 +370,16 @@ public:
     const PcpPrimIndex *
     FindPrimIndex(const SdfPath &primPath) const;
 
+    /// Run the given \p callback on every prim index in the cache.
+    /// The callback must have the signature: void(const PcpPrimIndex&).
+    template <class Callback>
+    void
+    ForEachPrimIndex(const Callback& callback) const
+    {
+        TfFunctionRef<void(const PcpPrimIndex&)> fn(callback);
+        _ForEachPrimIndex(fn);
+    }
+
     /// Compute and return a reference to the cached result for the
     /// property index for the given path. \p allErrors will contain any
     /// errors encountered while performing this operation.
@@ -406,6 +439,14 @@ public:
     PCP_API
     SdfLayerHandleSet GetUsedLayers() const;
 
+    /// Return a number that can be used to determine whether or not the set of
+    /// layers used by this cache may have changed or not.  For example, if one
+    /// calls GetUsedLayers() and saves the GetUsedLayersRevision(), and then
+    /// later calls GetUsedLayersRevision() again, if the number is unchanged,
+    /// then GetUsedLayers() is guaranteed to be unchanged as well.
+    PCP_API
+    size_t GetUsedLayersRevision() const;
+
     /// Returns set of all root layers used by this cache.
     PCP_API
     SdfLayerHandleSet GetUsedRootLayers() const;
@@ -414,6 +455,17 @@ public:
     PCP_API
     const PcpLayerStackPtrVector&
     FindAllLayerStacksUsingLayer(const SdfLayerHandle& layer) const;
+
+    /// Run the given \p callbcack on every layer stack used by prim
+    /// indexes in the cache. The callback must have the signature:
+    /// void(const PcpLayerStackPtr&).
+    template <class Callback>
+    void
+    ForEachLayerStack(const Callback& callback) const
+    {
+        TfFunctionRef<void(const PcpLayerStackPtr&)> fn(callback);
+        _ForEachLayerStack(fn);
+    }
 
     /// Returns dependencies on the given site of scene description,
     /// as discovered by the cached index computations.
@@ -576,6 +628,7 @@ public:
 
 private:
     friend class PcpChanges;
+    friend class Pcp_Dependencies;
     friend class Pcp_Statistics;
 
     struct _ParallelIndexer;
@@ -669,13 +722,21 @@ private:
     PcpPropertyIndex* _GetPropertyIndex(const SdfPath& path);
     const PcpPropertyIndex* _GetPropertyIndex(const SdfPath& path) const;
 
+    PCP_API
+    void _ForEachPrimIndex(
+        const TfFunctionRef<void(const PcpPrimIndex&)>& fn) const;
+
+    PCP_API
+    void _ForEachLayerStack(
+        const TfFunctionRef<void(const PcpLayerStackPtr&)>& fn) const;
+
 private:
     // Fixed evaluation parameters, set when the cache is created.  Note that
     // _rootLayer and _sessionLayer are not const because we want to mutate them
     // to enable parallel teardown in the destructor.
     SdfLayerRefPtr _rootLayer;
     SdfLayerRefPtr _sessionLayer;
-    const ArResolverContext _pathResolverContext;
+    const PcpLayerStackIdentifier _layerStackIdentifier;
 
     // Flag that configures PcpCache to use the restricted set of USD features.
     // Currently it governs whether relocates, inherits, permissions,

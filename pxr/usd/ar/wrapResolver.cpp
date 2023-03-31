@@ -1,5 +1,5 @@
 //
-// Copyright 2016 Pixar
+// Copyright 2020 Pixar
 //
 // Licensed under the Apache License, Version 2.0 (the "Apache License")
 // with the following modification; you may not use this file except in
@@ -25,10 +25,13 @@
 #include <boost/python/def.hpp>
 #include <boost/python/reference_existing_object.hpp>
 #include <boost/python/return_value_policy.hpp>
+#include <boost/python/tuple.hpp>
 
 #include "pxr/pxr.h"
+#include "pxr/usd/ar/assetInfo.h"
 #include "pxr/usd/ar/resolver.h"
 #include "pxr/usd/ar/resolverContext.h"
+#include "pxr/base/tf/pyAnnotatedBoolResult.h"
 #include "pxr/base/tf/refPtr.h"
 
 #include <boost/noncopyable.hpp>
@@ -37,24 +40,83 @@ using namespace boost::python;
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
+class Ar_PyAnnotatedBoolResult
+    : public TfPyAnnotatedBoolResult<std::string>
+{
+public:
+    Ar_PyAnnotatedBoolResult(bool val, const std::string& annotation)
+        : TfPyAnnotatedBoolResult<std::string>(val, annotation)
+    {
+    }
+};
+
+static 
+Ar_PyAnnotatedBoolResult
+_CanWriteAssetToPath(
+    ArResolver& resolver, const ArResolvedPath& resolvedPath)
+{
+    std::string whyNot;
+    const bool rval = resolver.CanWriteAssetToPath(resolvedPath, &whyNot);
+    return Ar_PyAnnotatedBoolResult(rval, whyNot);
+}
+
 void
 wrapResolver()
 {
+    Ar_PyAnnotatedBoolResult::Wrap<Ar_PyAnnotatedBoolResult>
+        ("_PyAnnotatedBoolResult", "whyNot");
+
     typedef ArResolver This;
 
     class_<This, boost::noncopyable>
         ("Resolver", no_init)
-        .def("ConfigureResolverForAsset", &This::ConfigureResolverForAsset)
+
         .def("CreateDefaultContext", &This::CreateDefaultContext)
         .def("CreateDefaultContextForAsset", 
-             &This::CreateDefaultContextForAsset)
+             &This::CreateDefaultContextForAsset,
+             args("assetPath"))
+
+        .def("CreateContextFromString", 
+             (ArResolverContext (This::*)(const std::string&) const)
+                 &This::CreateContextFromString,
+             args("contextStr"))
+
+        .def("CreateContextFromString", 
+             (ArResolverContext (This::*)
+                 (const std::string&, const std::string&) const)
+                 &This::CreateContextFromString,
+             (arg("uriScheme"), arg("contextStr")))
+
+        .def("CreateContextFromStrings", &This::CreateContextFromStrings,
+             args("contextStrs"))
+
         .def("GetCurrentContext", &This::GetCurrentContext)
 
-        .def("IsRelativePath", &This::IsRelativePath)
-        .def("AnchorRelativePath", &This::AnchorRelativePath)
-        .def("Resolve", &This::Resolve)
+        .def("IsContextDependentPath", &This::IsContextDependentPath,
+             args("assetPath"))
 
-        .def("GetExtension", &This::GetExtension)
+        .def("CreateIdentifier", &This::CreateIdentifier,
+             (args("assetPath"), 
+              args("anchorAssetPath") = ArResolvedPath()))
+        .def("CreateIdentifierForNewAsset", &This::CreateIdentifierForNewAsset,
+             (args("assetPath"), 
+              args("anchorAssetPath") = ArResolvedPath()))
+
+        .def("Resolve", &This::Resolve,
+             (args("assetPath")))
+        .def("ResolveForNewAsset", &This::ResolveForNewAsset,
+             (args("assetPath")))
+
+        .def("GetAssetInfo", &This::GetAssetInfo,
+             (args("assetPath"), args("resolvedPath")))
+        .def("GetModificationTimestamp", &This::GetModificationTimestamp,
+             (args("assetPath"), args("resolvedPath")))
+        .def("GetExtension", &This::GetExtension,
+             args("assetPath"))
+
+        .def("CanWriteAssetToPath", &_CanWriteAssetToPath,
+             args("resolvedPath"))
+
         .def("RefreshContext", &This::RefreshContext)
         ;
 

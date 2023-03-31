@@ -40,15 +40,46 @@ class UsdGeomSphere;
 ///
 /// Delegate support for UsdGeomSphere.
 ///
-class UsdImagingSphereAdapter : public UsdImagingGprimAdapter {
+class UsdImagingSphereAdapter : public UsdImagingGprimAdapter
+{
 public:
-    typedef UsdImagingGprimAdapter BaseAdapter;
+    using BaseAdapter = UsdImagingGprimAdapter;
+
+    // Number of radial segments about the Z axis.
+    static constexpr size_t numRadial = 10;
+    // Number of divisions along the Z axis.
+    static constexpr size_t numAxial  = 10;
 
     UsdImagingSphereAdapter()
         : UsdImagingGprimAdapter()
     {}
     USDIMAGING_API
-    virtual ~UsdImagingSphereAdapter();
+    ~UsdImagingSphereAdapter() override;
+
+    // ---------------------------------------------------------------------- //
+    /// \name Scene Index Support
+    // ---------------------------------------------------------------------- //
+
+    USDIMAGING_API
+    TfTokenVector GetImagingSubprims() override;
+
+    USDIMAGING_API
+    TfToken GetImagingSubprimType(TfToken const& subprim) override;
+
+    USDIMAGING_API
+    HdContainerDataSourceHandle GetImagingSubprimData(
+            TfToken const& subprim,
+            UsdPrim const& prim,
+            const UsdImagingDataSourceStageGlobals &stageGlobals) override;
+
+    USDIMAGING_API
+    HdDataSourceLocatorSet InvalidateImagingSubprim(
+        TfToken const& subprim,
+        TfTokenVector const& properties) override;
+
+    // ---------------------------------------------------------------------- //
+    /// \name Initialization
+    // ---------------------------------------------------------------------- //
 
     USDIMAGING_API
     SdfPath Populate(
@@ -59,6 +90,11 @@ public:
 
     USDIMAGING_API
     bool IsSupported(UsdImagingIndexProxy const* index) const override;
+
+    USDIMAGING_API
+    HdDirtyBits ProcessPropertyChange(UsdPrim const& prim,
+                                      SdfPath const& cachePath,
+                                      TfToken const& propertyName) override;
 
     // ---------------------------------------------------------------------- //
     /// \name Parallel Setup and Resolve
@@ -77,41 +113,25 @@ public:
         // nv end
             const override;
 
-    /// Thread Safe.
+    // ---------------------------------------------------------------------- //
+    /// \name Data access
+    // ---------------------------------------------------------------------- //
+
     USDIMAGING_API
-    void UpdateForTime(
-        UsdPrim const& prim,
-        SdfPath const& cachePath, 
-        UsdTimeCode time,
-        HdDirtyBits requestedBits,
-        UsdImagingInstancerContext const* instancerContext = nullptr) 
-            const override;
+    VtValue GetTopology(UsdPrim const& prim,
+                        SdfPath const& cachePath,
+                        UsdTimeCode time) const override;
 
 // ---------------------------------------------------------------------- //
 /// \name Change Processing
 // ---------------------------------------------------------------------- //
-
-    // #nv begin #fast-updates
-    USDIMAGING_API
-    virtual HdDirtyBits ProcessPropertyChange(UsdPrim const& prim,
-        SdfPath const& cachePath,
-        TfToken const& propertyName) override;
-    // nv end
 
     // Override the implemetation in GprimAdapter since we don't fetch the
     // points attribute for implicit primitives.
     USDIMAGING_API
     VtValue GetPoints(
         UsdPrim const& prim,
-        SdfPath const& cachePath,
         UsdTimeCode time) const override;
-
-    USDIMAGING_API
-    static VtValue GetMeshPoints(UsdPrim const& prim, 
-                                 UsdTimeCode time);
-
-    USDIMAGING_API
-    static VtValue GetMeshTopology();
 };
 
 

@@ -75,8 +75,8 @@ class UsdRenderProduct : public UsdRenderSettingsBase
 public:
     /// Compile time constant representing what kind of schema this class is.
     ///
-    /// \sa UsdSchemaType
-    static const UsdSchemaType schemaType = UsdSchemaType::ConcreteTyped;
+    /// \sa UsdSchemaKind
+    static const UsdSchemaKind schemaKind = UsdSchemaKind::ConcreteTyped;
 
     /// Construct a UsdRenderProduct on UsdPrim \p prim .
     /// Equivalent to UsdRenderProduct::Get(prim.GetStage(), prim.GetPath())
@@ -146,11 +146,11 @@ public:
     Define(const UsdStagePtr &stage, const SdfPath &path);
 
 protected:
-    /// Returns the type of schema this class belongs to.
+    /// Returns the kind of schema this class belongs to.
     ///
-    /// \sa UsdSchemaType
+    /// \sa UsdSchemaKind
     USDRENDER_API
-    UsdSchemaType _GetSchemaType() const override;
+    UsdSchemaKind _GetSchemaKind() const override;
 
 private:
     // needs to invoke _GetStaticTfType.
@@ -171,8 +171,7 @@ public:
     /// The type of output to produce.
     /// The default, "raster", indicates a 2D image.
     /// 
-    /// 
-    /// ote In the future, UsdRender may define additional product
+    /// \note In the future, UsdRender may define additional product
     /// types.
     ///
     /// | ||

@@ -26,6 +26,7 @@
 #include "pxr/base/tf/stringUtils.h"
 
 #include <MaterialXCore/Value.h>
+#include <MaterialXGenGlsl/Nodes/SurfaceNodeGlsl.h>
 #include <MaterialXGenShader/Shader.h>
 #include <MaterialXGenShader/ShaderGenerator.h>
 #include <MaterialXGenShader/Syntax.h>
@@ -34,6 +35,31 @@ namespace mx = MaterialX;
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+namespace {
+    // Create a customized version of the class mx::SurfaceNodeGlsl
+    // to be able to notify the shader generator when we start/end
+    // emitting the code for the SurfaceNode
+    class HdStMaterialXSurfaceNodeGen : public mx::SurfaceNodeGlsl
+    {
+    public:
+        static mx::ShaderNodeImplPtr create() {
+            return std::make_shared<HdStMaterialXSurfaceNodeGen>();
+        }
+
+        void emitFunctionCall(
+            const mx::ShaderNode& node, 
+            mx::GenContext& context,
+            mx::ShaderStage& stage) const override
+        {
+            HdStMaterialXShaderGen& shadergen = 
+                static_cast<HdStMaterialXShaderGen&>(context.getShaderGenerator());
+            
+            shadergen.SetEmittingSurfaceNode(true);
+            mx::SurfaceNodeGlsl::emitFunctionCall(node, context, stage);
+            shadergen.SetEmittingSurfaceNode(false);
+        }
+    };
+}
 
 static const std::string MxHdTangentString = 
 R"(
@@ -48,10 +74,11 @@ R"(
 static const std::string MxHdLightString = 
 R"(#if NUM_LIGHTS > 0
     for (int i = 0; i < NUM_LIGHTS; ++i) {
+        LightSource light = GetLightSource(i);
 
         // Save the indirect light transformation
-        if (lightSource[i].isIndirectLight) {
-            hdTransformationMatrix = lightSource[i].worldToLightTransform;
+        if (light.isIndirectLight) {
+            hdTransformationMatrix = light.worldToLightTransform;
         }
         // Save the direct light data
         else {
@@ -60,28 +87,35 @@ R"(#if NUM_LIGHTS > 0
 
             // Position (Hydra position in ViewSpace)
             $lightData[u_numActiveLightSources].position = 
-                (HdGet_worldToViewInverseMatrix() * lightSource[i].position).xyz;
+                (HdGet_worldToViewInverseMatrix() * light.position).xyz;
 
             // Color and Intensity 
-            // Note: Storm supports Simple, Sphere and Rect Direct Lights where
-            // diffuse = lightColor * intensity;
-            // specular = vec3(1) * intensity;
-            float intensity = lightSource[i].specular.r;
-            $lightData[u_numActiveLightSources].color = lightSource[i].diffuse.rgb/intensity;
+            // Note: in Storm, diffuse = lightColor * intensity;
+            float intensity = max( max(light.diffuse.r, light.diffuse.g), 
+                                   light.diffuse.b);
+            $lightData[u_numActiveLightSources].color = light.diffuse.rgb/intensity;
             $lightData[u_numActiveLightSources].intensity = intensity;
             
             // Attenuation 
             // Hydra: vec3(const, linear, quadratic)
             // MaterialX: const = 0.0, linear = 1.0, quadratic = 2.0
-            if (lightSource[i].attenuation.z > 0) {
+            if (light.attenuation.z > 0) {
                 $lightData[u_numActiveLightSources].decay_rate = 2.0;
             }
-            else if (lightSource[i].attenuation.y > 0) {
+            else if (light.attenuation.y > 0) {
                 $lightData[u_numActiveLightSources].decay_rate = 1.0;
             }
             else {
                 $lightData[u_numActiveLightSources].decay_rate = 0.0;
             }
+
+            // ShadowOcclusion value
+            #if USE_SHADOWS
+                u_lightData[u_numActiveLightSources].shadowOcclusion = 
+                    light.hasShadow ? shadowing(i, Peye) : 1.0;
+            #else 
+                u_lightData[u_numActiveLightSources].shadowOcclusion = 1.0;
+            #endif
 
             u_numActiveLightSources++;
         }
@@ -90,15 +124,21 @@ R"(#if NUM_LIGHTS > 0
 )";
 
 HdStMaterialXShaderGen::HdStMaterialXShaderGen(
-    MxHdInfo const& mxHdInfo)
+    HdSt_MxShaderGenInfo const& mxHdInfo)
     : GlslShaderGenerator(), 
       _mxHdTextureMap(mxHdInfo.textureMap),
       _mxHdPrimvarMap(mxHdInfo.primvarMap),
+      _mxHdPrimvarDefaultValueMap(mxHdInfo.primvarDefaultValueMap),
       _materialTag(mxHdInfo.materialTag),
-      _bindlessTexturesEnabled(mxHdInfo.bindlessTexturesEnabled)
+      _bindlessTexturesEnabled(mxHdInfo.bindlessTexturesEnabled),
+      _emittingSurfaceNode(false)
 {
     _defaultTexcoordName = (mxHdInfo.defaultTexcoordName == mx::EMPTY_STRING) ?
                             "st" : mxHdInfo.defaultTexcoordName;
+
+    // Register the customized version of the Surface node generator
+    registerImplementation("IM_surface_" + GlslShaderGenerator::TARGET, 
+        HdStMaterialXSurfaceNodeGen::create);
 }
 
 // Based on GlslShaderGenerator::generate()
@@ -130,6 +170,10 @@ HdStMaterialXShaderGen::_EmitGlslfxShader(
     mx::GenContext& mxContext,
     mx::ShaderStage& mxStage) const
 {
+    // Add a per-light shadowOcclusion value to the lightData uniform block
+    addStageUniform(mx::HW::LIGHT_DATA, mx::Type::FLOAT, 
+        "shadowOcclusion", mxStage);
+
     _EmitGlslfxHeader(mxStage);
     _EmitMxFunctions(mxGraph, mxContext, mxStage);
     _EmitMxSurfaceShader(mxGraph, mxContext, mxStage);
@@ -211,7 +255,8 @@ _IsHardcodedPublicUniform(const mx::TypeDesc& varType)
     // _AddMaterialXParams function, the rest are hardcoded 
     // in the shader
     if (varType.getBaseType() != mx::TypeDesc::BASETYPE_FLOAT &&
-        varType.getBaseType() != mx::TypeDesc::BASETYPE_INTEGER) {
+        varType.getBaseType() != mx::TypeDesc::BASETYPE_INTEGER &&
+        varType.getBaseType() != mx::TypeDesc::BASETYPE_BOOLEAN) {
         return true;
     }
     if (varType.getSize() < 1 || varType.getSize() > 4) {
@@ -287,7 +332,7 @@ HdStMaterialXShaderGen::_EmitMxFunctions(
                 if (texturePair.first == "domeLightFallback") {
                     continue;
                 }
-                emitLine(TfStringPrintf("#define %s_file HdGetSampler_%s()",
+                emitLine(TfStringPrintf("#define %s HdGetSampler_%s()",
                                         texturePair.first.c_str(),
                                         texturePair.second.c_str()),
                         mxStage, false);
@@ -583,7 +628,7 @@ HdStMaterialXShaderGen::_EmitMxInitFunction(
             if (texturePair.first == "domeLightFallback") {
                 continue;
             }
-            emitLine(texturePair.first + "_file = "
+            emitLine(texturePair.first + " = "
                     "HdGetSampler_" + texturePair.second + "()", mxStage);
         }
         emitLineBreak(mxStage);
@@ -676,15 +721,26 @@ HdStMaterialXShaderGen::_EmitMxVertexDataLine(
         // the geomprop primvar
         // Note: variable name format: 'T_IN_GEOMPROP_geomPropName';
         const std::string geompropName = mxVariableName.substr(
-                                            mx::HW::T_IN_GEOMPROP.size());
+                                            mx::HW::T_IN_GEOMPROP.size()+1);
+        
+        // Get the Default Value for the gromprop
+        std::string defaultValueString = 
+            _syntax->getDefaultValue(variable->getType());
+        auto defaultValueIt = _mxHdPrimvarDefaultValueMap.find(geompropName);
+        if (defaultValueIt != _mxHdPrimvarDefaultValueMap.end()) {
+            if (!defaultValueIt->second.empty()) {
+                defaultValueString = _syntax->getTypeName(variable->getType()) 
+                    + "(" + defaultValueIt->second + ")";
+            }
+        }
         hdVariableDef = TfStringPrintf("\n"
-                "    #ifdef HD_HAS%s\n"
-                "        HdGet%s(),\n"
+                "    #ifdef HD_HAS_%s\n"
+                "        HdGet_%s(),\n"
                 "    #else\n"
-                "        %s(0.0),\n"
+                "        %s,\n"
                 "    #endif\n        ", 
                 geompropName.c_str(), geompropName.c_str(),
-                _syntax->getTypeName(variable->getType()).c_str());
+                defaultValueString.c_str());
     }
     else {
         const std::string valueStr = variable->getValue() 
@@ -766,5 +822,22 @@ HdStMaterialXShaderGen::emitVariableDeclarations(
     }
 }
 
+void 
+HdStMaterialXShaderGen::emitLine(
+    const std::string& str, 
+    MaterialX::ShaderStage& stage, 
+    bool semicolon) const
+{
+    mx::GlslShaderGenerator::emitLine(str, stage, semicolon);
+
+    // When emitting the Light loop code for the Surface node, the variable
+    // 'occlusion' represents shadow occlusion. We don't use MaterialX's
+    // shadow implementation (hwShadowMap is false). Instead, use our own 
+    // per-light occlusion value calculated in mxInit() and stored in lightData
+    if (_emittingSurfaceNode && str == "vec3 L = lightShader.direction") {
+        emitLine(
+            "occlusion = u_lightData[activeLightIndex].shadowOcclusion", stage);
+    }
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE

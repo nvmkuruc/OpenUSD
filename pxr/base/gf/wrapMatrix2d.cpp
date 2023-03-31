@@ -95,7 +95,8 @@ getsegcount(PyObject *self, Py_ssize_t *lenp) {
 // Python's getcharbuf interface function.
 static Py_ssize_t
 getcharbuf(PyObject *self, Py_ssize_t segment, const char **ptrptr) {
-    return getreadbuf(self, segment, (void **) ptrptr);
+    PyErr_SetString(PyExc_ValueError, "cannot treat binary data as text");
+    return -1;
 }
 #endif
 
@@ -239,12 +240,10 @@ static bool __contains__vector( const GfMatrix2d &self, GfVec2d value ) {
     return false;
 }
 
-#if PY_MAJOR_VERSION == 2
 static GfMatrix2d __truediv__(const GfMatrix2d &self, GfMatrix2d value)
 {
     return self / value;
 }
-#endif
 
 static GfMatrix2d *__init__() {
     // Default constructor produces identity from python.
@@ -362,12 +361,6 @@ void wrapMatrix2d()
         .def( self * GfVec2f() )
         .def( GfVec2f() * self )
 
-#if PY_MAJOR_VERSION == 2
-        // Needed only to support "from __future__ import division" in
-        // python 2. In python 3 builds boost::python adds this for us.
-        .def("__truediv__", __truediv__ )
-#endif
-
         .def("__repr__", _Repr)
         .def("__hash__", __hash__)
 
@@ -383,4 +376,11 @@ void wrapMatrix2d()
     typeObj->tp_as_buffer = &bufferProcs;
     typeObj->tp_flags |= (TfPy_TPFLAGS_HAVE_NEWBUFFER |
                           TfPy_TPFLAGS_HAVE_GETCHARBUFFER);
+
+    if (!PyObject_HasAttrString(cls.ptr(), "__truediv__")) {
+        // __truediv__ not added by .def( self / self ) above, which
+        // happens when building with python 2, but we need it to support
+        // "from __future__ import division"
+        cls.def("__truediv__", __truediv__ );
+    }
 }

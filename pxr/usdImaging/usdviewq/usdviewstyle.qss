@@ -17,7 +17,7 @@
 
 QWidget {
     /* font */
-    font: %(BASE_FONT_SZ)s "Gotham Rounded";
+    font: %(BASE_FONT_SZ)s "Roboto";
     color: rgb(227, 227, 227);
 
     /* brownish background color */
@@ -306,11 +306,6 @@ QTableView, QTableWidget, QTreeWidget, #primFrame, #attributeFrame{
     alternate-background-color: rgb(59, 59, 59);
 }
 
-/* Font setting for the table widget */
-QTableWidget{
-    font: 25 %(BASE_FONT_SZ)s "Gotham Rounded";
-}
-
 /* bump to the right to hide the extra line */
 QTableWidget, QTreeWidget {
     margin-right: -1px;
@@ -593,7 +588,7 @@ QComboBox::drop-down {
 /* Add border around the 4 main panels (prim browser,
  * stage view, attribute inspector, attribute editor)
  */
-#primFrame, #glFrame {
+#primFrame, #renderFrame {
     border-top: 2px solid rgb(32, 32, 32);
 }
 
@@ -605,7 +600,7 @@ QComboBox::drop-down {
     border-left: 2px solid rgb(32, 32, 32);
 }
 
-#glFrame, #propertyInspectorFrame {
+#renderFrame, #propertyInspectorFrame {
     border-right: 2px solid rgb(32, 32, 32);
 }
 

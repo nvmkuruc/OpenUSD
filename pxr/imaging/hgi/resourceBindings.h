@@ -55,16 +55,25 @@ PXR_NAMESPACE_OPEN_SCOPE
 ///   limits to max buffers in an array.</li>
 /// <li>offsets:
 ///    Offset (in bytes) where data begins from the start of the buffer.
-///    This if an offset for each buffer in 'buffers'.</li>
+///    There is an offset corresponding to each buffer in 'buffers'.</li>
+/// <li>sizes:
+///    Size (in bytes) of the range of data in the buffer to bind.
+///    There is a size corresponding to each buffer in 'buffers'.
+///    If sizes is empty or the size for a buffer is specified as zero,
+///    then the entire buffer is bound.
+///    If the offset for a buffer is non-zero, then a non-zero size must
+///    also be specified.</li>
 /// <li>resourceType:
 ///    The type of buffer(s) that is to be bound.
 ///    All buffers in the array must have the same type.
-///    Note that vertex and index buffers are not bound to a resourceSet.
+///    Vertex, index and indirect buffers are not bound to a resourceSet.
 ///    They are instead passed to the draw command.</li>
 /// <li>bindingIndex:
 ///    Binding location for the buffer(s).</li>
 /// <li>stageUsage:
 ///    What shader stage(s) the buffer will be used in.</li>
+/// <li>writable:
+///    Whether the buffer binding should be non-const.</li>
 /// </ul>
 ///
 struct HgiBufferBindDesc
@@ -74,9 +83,11 @@ struct HgiBufferBindDesc
 
     HgiBufferHandleVector buffers;
     std::vector<uint32_t> offsets;
+    std::vector<uint32_t> sizes;
     HgiBindResourceType resourceType;
     uint32_t bindingIndex;
     HgiShaderStage stageUsage;
+    bool writable;
 };
 using HgiBufferBindDescVector = std::vector<HgiBufferBindDesc>;
 
@@ -110,6 +121,8 @@ inline bool operator!=(
 ///    Binding location for the texture</li>
 /// <li>stageUsage:
 ///    What shader stage(s) the texture will be used in.</li>
+/// <li>writable:
+///    Whether the texture binding should be non-const.</li>
 /// </ul>
 ///
 struct HgiTextureBindDesc
@@ -122,6 +135,7 @@ struct HgiTextureBindDesc
     HgiBindResourceType resourceType;
     uint32_t bindingIndex;
     HgiShaderStage stageUsage;
+    bool writable;
 };
 using HgiTextureBindDescVector = std::vector<HgiTextureBindDesc>;
 
@@ -140,8 +154,6 @@ bool operator!=(
 /// Describes a set of resources that are bound to the GPU during encoding.
 ///
 /// <ul>
-/// <li>pipelineType:
-///   Bind point for pipeline.</li>
 /// <li>buffers:
 ///   The buffers to be bound (E.g. uniform or shader storage).</li>
 /// <li>textures:
@@ -154,7 +166,6 @@ struct HgiResourceBindingsDesc
     HgiResourceBindingsDesc();
 
     std::string debugName;
-    HgiPipelineType pipelineType;
     HgiBufferBindDescVector buffers;
     HgiTextureBindDescVector textures;
 };
@@ -198,10 +209,40 @@ private:
     HgiResourceBindings(const HgiResourceBindings&) = delete;
 };
 
-/// Explicitly instantiate and define ResourceBindings handle
-template class HgiHandle<class HgiResourceBindings>;
-using HgiResourceBindingsHandle = HgiHandle<class HgiResourceBindings>;
+using HgiResourceBindingsHandle = HgiHandle<HgiResourceBindings>;
 using HgiResourceBindingsHandleVector = std::vector<HgiResourceBindingsHandle>;
+
+/// \struct HgiVertexBufferBinding
+///
+/// Describes a buffer to be bound during encoding.
+///
+/// <ul>
+/// <li>buffer:
+///   The buffer to be bound (e.g. uniform, storage, vertex).</li>
+/// <li>byteOffset:
+///   The byte offset into the buffer from where the data will be bound.</li>
+/// <li>index:
+///   The binding index to which the buffer will be bound.</li>
+/// </ul>
+///
+struct HgiVertexBufferBinding
+{
+    HGI_API
+    HgiVertexBufferBinding(HgiBufferHandle const &buffer,
+                           uint32_t byteOffset,
+                           uint32_t index)
+        : buffer(buffer)
+        , byteOffset(byteOffset)
+        , index(index)
+    {
+    }
+
+    HgiBufferHandle buffer;
+    uint32_t byteOffset;
+    uint32_t index;
+};
+
+using HgiVertexBufferBindingVector = std::vector<HgiVertexBufferBinding>;
 
 
 PXR_NAMESPACE_CLOSE_SCOPE

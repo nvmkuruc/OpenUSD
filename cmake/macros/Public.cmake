@@ -24,28 +24,44 @@
 include(Private)
 
 function(pxr_build_documentation)
-    configure_file(${CMAKE_SOURCE_DIR}/pxr/usd/usd/Doxyfile.in
+    configure_file(${CMAKE_SOURCE_DIR}/docs/doxygen/Doxyfile.in
                    ${CMAKE_BINARY_DIR}/Doxyfile)
-    set(DOCS_DIR "${CMAKE_BINARY_DIR}")
-    set(GEN_SCRIPT "${PROJECT_SOURCE_DIR}/cmake/macros/generateDocs.py")
-    set(PXR_SOURCE_DIR "${CMAKE_SOURCE_DIR}/pxr")
-    set(THIRD_PARTY_SOURCE_DIR "${CMAKE_SOURCE_DIR}/third_party")
 
     add_custom_target(
         documentation
         ALL
-        COMMAND ${PYTHON_EXECUTABLE} ${GEN_SCRIPT} ${PXR_SOURCE_DIR} ${THIRD_PARTY_SOURCE_DIR} ${CMAKE_BINARY_DIR} ${DOCS_DIR} ${DOXYGEN_EXECUTABLE} ${DOT_EXECUTABLE}
-        DEPENDS ${CMAKE_BINARY_DIR}/include/pxr/pxr.h
+        # We need to manually copy pxr.h into the docs/include directory
+        # since it's generated outside of the libraries.
+        COMMAND
+            ${CMAKE_COMMAND} -E copy
+            "${CMAKE_BINARY_DIR}/include/pxr/pxr.h"
+            "${CMAKE_BINARY_DIR}/docs/include/pxr/pxr.h"
+        COMMAND 
+            ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/docs"
+            "${CMAKE_BINARY_DIR}/docs"
     )
 
-    set(BUILT_HTML_DOCS "${DOCS_DIR}/docs/doxy_html")
+    # Execute doxygen during the install step. All of the files we want
+    # doxygen to process should already have been copied to the docs
+    # directory during the build step
+    install(CODE "execute_process(COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_BINARY_DIR}/Doxyfile)")
+
     set(INST_DOCS_ROOT  "${CMAKE_INSTALL_PREFIX}/docs")
+
+    set(BUILT_DOCS_TAG_FILE "${CMAKE_BINARY_DIR}/docs/USD.tag")
+    install(
+        FILES ${BUILT_DOCS_TAG_FILE}
+        DESTINATION ${INST_DOCS_ROOT}
+    )
+
+    set(BUILT_HTML_DOCS "${CMAKE_BINARY_DIR}/docs/doxy_html")
     install(
         DIRECTORY ${BUILT_HTML_DOCS}
         DESTINATION ${INST_DOCS_ROOT}
     )
 
-    set(BUILT_XML_DOCS "${DOCS_DIR}/docs/doxy_xml")
+    set(BUILT_XML_DOCS "${CMAKE_BINARY_DIR}/docs/doxy_xml")
     install(
         DIRECTORY ${BUILT_XML_DOCS}
         DESTINATION ${INST_DOCS_ROOT}
@@ -210,6 +226,7 @@ function(pxr_library NAME)
         CPPFILES
         LIBRARIES
         INCLUDE_DIRS
+        DOXYGEN_FILES
         RESOURCE_FILES
         PYTHON_PUBLIC_CLASSES
         PYTHON_PRIVATE_CLASSES
@@ -318,6 +335,7 @@ function(pxr_library NAME)
         LIBRARIES "${args_LIBRARIES}"
         INCLUDE_DIRS "${args_INCLUDE_DIRS}"
         RESOURCE_FILES "${args_RESOURCE_FILES}"
+        DOXYGEN_FILES "${args_DOXYGEN_FILES}"
         PRECOMPILED_HEADERS "${pch}"
         PRECOMPILED_HEADER_NAME "${args_PRECOMPILED_HEADER_NAME}"
         LIB_INSTALL_PREFIX_RESULT libInstallPrefix
@@ -624,10 +642,22 @@ function(pxr_register_test TEST_NAME)
         return()
     endif()
 
+    set(OPTIONS RUN_SERIAL PYTHON REQUIRES_SHARED_LIBS REQUIRES_PYTHON_MODULES PERCEPTUAL)
+    set(ONE_VALUE_ARGS
+            CUSTOM_PYTHON
+            COMMAND
+            STDOUT_REDIRECT STDERR_REDIRECT
+            POST_COMMAND POST_COMMAND_STDOUT_REDIRECT POST_COMMAND_STDERR_REDIRECT
+            PRE_COMMAND PRE_COMMAND_STDOUT_REDIRECT PRE_COMMAND_STDERR_REDIRECT
+            FILES_EXIST FILES_DONT_EXIST
+            CLEAN_OUTPUT
+            EXPECTED_RETURN_CODE
+            TESTENV
+            WARN WARN_PERCENT HARD_WARN FAIL FAIL_PERCENT HARD_FAIL)
+    set(MULTI_VALUE_ARGS DIFF_COMPARE IMAGE_DIFF_COMPARE ENV PRE_PATH POST_PATH)
+
     cmake_parse_arguments(bt
-        "RUN_SERIAL;PYTHON;REQUIRES_SHARED_LIBS;REQUIRES_PYTHON_MODULES" 
-        "CUSTOM_PYTHON;COMMAND;STDOUT_REDIRECT;STDERR_REDIRECT;POST_COMMAND;POST_COMMAND_STDOUT_REDIRECT;POST_COMMAND_STDERR_REDIRECT;PRE_COMMAND;PRE_COMMAND_STDOUT_REDIRECT;PRE_COMMAND_STDERR_REDIRECT;FILES_EXIST;FILES_DONT_EXIST;CLEAN_OUTPUT;EXPECTED_RETURN_CODE;TESTENV"
-        "DIFF_COMPARE;ENV;PRE_PATH;POST_PATH"
+        "${OPTIONS}" "${ONE_VALUE_ARGS}" "${MULTI_VALUE_ARGS}"
         ${ARGN}
     )
 
@@ -699,12 +729,62 @@ function(pxr_register_test TEST_NAME)
         foreach(compareFile ${bt_DIFF_COMPARE})
             set(testWrapperCmd ${testWrapperCmd} --diff-compare=${compareFile})
         endforeach()
+    endif()
+
+    if (bt_IMAGE_DIFF_COMPARE)
+        if (IMAGE_DIFF_TOOL)
+            foreach (compareFile ${bt_IMAGE_DIFF_COMPARE})
+                set(testWrapperCmd ${testWrapperCmd} --image-diff-compare=${compareFile})
+            endforeach ()
+
+            if (bt_WARN)
+                set(testWrapperCmd ${testWrapperCmd} --warn=${bt_WARN})
+            endif()
+
+            if (bt_WARN_PERCENT)
+                set(testWrapperCmd ${testWrapperCmd} --warnpercent=${bt_WARN_PERCENT})
+            endif()
+
+            if (bt_HARD_WARN)
+                set(testWrapperCmd ${testWrapperCmd} --hardwarn=${bt_HARD_WARN})
+            endif()
+
+            if (bt_FAIL)
+                set(testWrapperCmd ${testWrapperCmd} --fail=${bt_FAIL})
+            endif()
+
+            if (bt_FAIL_PERCENT)
+                set(testWrapperCmd ${testWrapperCmd} --failpercent=${bt_FAIL_PERCENT})
+            endif()
+
+            if (bt_HARD_FAIL)
+                set(testWrapperCmd ${testWrapperCmd} --hardfail=${bt_HARD_FAIL})
+            endif()
+
+            if(bt_PERCEPTUAL)
+                set(testWrapperCmd ${testWrapperCmd} --perceptual)
+            endif()
+
+            # Make sure to add the image diff tool to the PATH so
+            # it can be easily found within the testWrapper
+            get_filename_component(IMAGE_DIFF_TOOL_PATH ${IMAGE_DIFF_TOOL} DIRECTORY)
+            set(testWrapperCmd ${testWrapperCmd} --post-path=${IMAGE_DIFF_TOOL_PATH})
+        endif()
+    endif()
+
+    if (bt_DIFF_COMPARE OR bt_IMAGE_DIFF_COMPARE)
+        # Common settings we only want to set once if either is used
 
         # For now the baseline directory is assumed by convention from the test
         # name. There may eventually be cases where we'd want to specify it by
         # an argument though.
         set(baselineDir ${testenvDir}/baseline)
         set(testWrapperCmd ${testWrapperCmd} --baseline-dir=${baselineDir})
+
+        # <PXR_CTEST_RUN_ID> will be set by CTestCustom.cmake, and then
+        # expanded by testWrapper.py
+        set(failuresDir ${CMAKE_BINARY_DIR}/Testing/Failed-Diffs/<PXR_CTEST_RUN_ID>/${TEST_NAME})
+        set(testWrapperCmd ${testWrapperCmd} --failures-dir=${failuresDir})
     endif()
 
     if (bt_CLEAN_OUTPUT)
@@ -758,12 +838,7 @@ function(pxr_register_test TEST_NAME)
     # we set the PXR_PLUGINPATH_NAME env var to point to the "lib/usd"
     # directory where these files are installed.
     if (NOT TARGET shared_libs)
-        set(_plugSearchPathEnvName "PXR_PLUGINPATH_NAME")
-        if (PXR_OVERRIDE_PLUGINPATH_NAME)
-            set(_plugSearchPathEnvName ${PXR_OVERRIDE_PLUGINPATH_NAME})
-        endif()
-
-        set(testWrapperCmd ${testWrapperCmd} --env-var=${_plugSearchPathEnvName}=${CMAKE_INSTALL_PREFIX}/lib/usd)
+        set(testWrapperCmd ${testWrapperCmd} --env-var=${PXR_PLUGINPATH_NAME}=${CMAKE_INSTALL_PREFIX}/lib/usd)
     endif()
 
     # Ensure that Python imports the Python files built by this build.
@@ -936,6 +1011,7 @@ function(pxr_toplevel_prologue)
             _get_install_dir("lib" libInstallPrefix)
             install(
                 TARGETS usd_ms
+                EXPORT pxrTargets
                 LIBRARY DESTINATION ${libInstallPrefix}
                 ARCHIVE DESTINATION ${libInstallPrefix}
                 RUNTIME DESTINATION ${libInstallPrefix}
@@ -971,20 +1047,21 @@ function(pxr_toplevel_epilogue)
         # that we carefully avoid adding the usd_m target itself by using
         # TARGET_FILE.  Linking the usd_m target would link usd_m and
         # everything it links to.
+        
         if(MSVC)
             target_link_libraries(usd_ms
                 PRIVATE
-                    -WHOLEARCHIVE:$<TARGET_FILE:usd_m>
+                    -WHOLEARCHIVE:$<BUILD_INTERFACE:$<TARGET_FILE:usd_m>>
             )
         elseif(CMAKE_COMPILER_IS_GNUCXX)
             target_link_libraries(usd_ms
                 PRIVATE
-                    -Wl,--whole-archive $<TARGET_FILE:usd_m> -Wl,--no-whole-archive
+                    -Wl,--whole-archive $<BUILD_INTERFACE:$<TARGET_FILE:usd_m>> -Wl,--no-whole-archive
             )
         elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
             target_link_libraries(usd_ms
                 PRIVATE
-                    -Wl,-force_load $<TARGET_FILE:usd_m>
+                    -Wl,-force_load $<BUILD_INTERFACE:$<TARGET_FILE:usd_m>>
             )
         endif()
 
@@ -997,16 +1074,16 @@ function(pxr_toplevel_epilogue)
         # usd_m target.
         target_compile_definitions(usd_ms
             PUBLIC
-                $<TARGET_PROPERTY:usd_m,INTERFACE_COMPILE_DEFINITIONS>
+                $<BUILD_INTERFACE:$<TARGET_PROPERTY:usd_m,INTERFACE_COMPILE_DEFINITIONS>>
         )
         target_include_directories(usd_ms
             PUBLIC
-                $<TARGET_PROPERTY:usd_m,INTERFACE_INCLUDE_DIRECTORIES>
+                $<BUILD_INTERFACE:$<TARGET_PROPERTY:usd_m,INTERFACE_INCLUDE_DIRECTORIES>>
         )
         target_include_directories(usd_ms
             SYSTEM
             PUBLIC
-                $<TARGET_PROPERTY:usd_m,INTERFACE_SYSTEM_INCLUDE_DIRECTORIES>
+                $<BUILD_INTERFACE:$<TARGET_PROPERTY:usd_m,INTERFACE_SYSTEM_INCLUDE_DIRECTORIES>>
         )
         foreach(lib ${PXR_OBJECT_LIBS})
             get_property(libs TARGET ${lib} PROPERTY INTERFACE_LINK_LIBRARIES)
@@ -1167,3 +1244,19 @@ function(pxr_core_epilogue)
         set(_building_core FALSE PARENT_SCOPE)
     endif()
 endfunction() # pxr_core_epilogue
+
+function(pxr_tests_prologue)
+    add_custom_target(
+        test_setup
+        ALL
+        DEPENDS "${CMAKE_BINARY_DIR}/CTestCustom.cmake"
+    )
+    add_custom_command(
+        OUTPUT "${CMAKE_BINARY_DIR}/CTestCustom.cmake"
+        COMMAND ${CMAKE_COMMAND} -E copy
+            "${CMAKE_CURRENT_SOURCE_DIR}/cmake/defaults/CTestCustom.cmake"
+            "${CMAKE_BINARY_DIR}/CTestCustom.cmake"
+        DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/defaults/CTestCustom.cmake"
+        COMMENT "Copying CTestCustom.cmake"
+    )
+endfunction() # pxr_tests_prologue

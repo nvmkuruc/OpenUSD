@@ -75,8 +75,9 @@ UsdGeomNurbsPatch::Define(
 }
 
 /* virtual */
-UsdSchemaType UsdGeomNurbsPatch::_GetSchemaType() const {
-    return UsdGeomNurbsPatch::schemaType;
+UsdSchemaKind UsdGeomNurbsPatch::_GetSchemaKind() const
+{
+    return UsdGeomNurbsPatch::schemaKind;
 }
 
 /* static */

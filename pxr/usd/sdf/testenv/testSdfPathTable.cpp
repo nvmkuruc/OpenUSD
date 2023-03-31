@@ -129,7 +129,39 @@ static void DoUnitTest()
     TF_AXIOM(table.size() == 4);
     TF_AXIOM(!table.empty());
 
+    // Test NodeHandle interface.
+    Table::NodeHandle node;
+    TF_AXIOM(!node);
+    node = Table::NodeHandle::New(SdfPath("/foo/node"), "/foo/node");
+    TF_AXIOM(node);
+    SdfPath const *stablePathAddr = &node.GetKey();
+    std::string const *stableMappedAddr = &node.GetMapped();
+    TF_AXIOM(stablePathAddr);
+    TF_AXIOM(stableMappedAddr);
+    result = table.insert(std::move(node));
+    TF_AXIOM(result.second);
+    TF_AXIOM(result.first->first == SdfPath("/foo/node"));
+    TF_AXIOM(result.first->second == "/foo/node");
+    TF_AXIOM(&result.first->first == stablePathAddr);
+    TF_AXIOM(&result.first->second == stableMappedAddr);
+    
+    TF_AXIOM(table.size() == 5);
 
+    TF_AXIOM(!node);
+    node = Table::NodeHandle::New(SdfPath("/foo/node"), "dupe");
+    TF_AXIOM(node);
+    result = table.insert(std::move(node));
+    TF_AXIOM(!result.second);
+    TF_AXIOM(result.first->first == SdfPath("/foo/node"));
+    TF_AXIOM(result.first->second == "/foo/node");
+    TF_AXIOM(node.GetKey() == SdfPath("/foo/node"));
+    TF_AXIOM(node.GetMapped() == "dupe");
+    TF_AXIOM(table.size() == 5);
+
+    table.erase(result.first);
+    TF_AXIOM(table.size() == 4);
+
+    // Test implicit ancestor insertion.
     result = table.
         insert(make_pair(SdfPath("/foo/anim/chars/MeridaGroup/Merida"),
                          "Merida"));
@@ -242,6 +274,34 @@ static void DoUnitTest()
     table.ClearInParallel();
     TF_AXIOM(table.empty());
     TF_AXIOM(table.size() == 0);
+
+    // build a table and then parallel-iterate over it
+    for (char ch='a'; ch<='z'; ++ch) {
+        std::string value(1, ch);
+        for (char n='0'; n<='9'; ++n) {
+            char p[] = { '/', ch, n, '/', ch, n, '/', ch, n, '/', ch, n, '\0' };
+            table.insert({SdfPath(p), value});
+        }
+    }
+    // const parallel for each...
+    std::atomic_int z_count(0);
+    const Table& ctable = table;
+    ctable.ParallelForEach([&z_count](const SdfPath &p, const string &v) {
+        if (v == "z") { ++z_count; }
+    });
+    TF_AXIOM(z_count.load() == 10);
+    // non-const parallel for each...
+    table.ParallelForEach([](const SdfPath &p, string &v) {
+        if (p.GetName() == "a2") {
+            v = "found";
+        }
+    });
+    TF_AXIOM(table.find(SdfPath("/a2/a2/a2/a2"))->second == "found");
+    TF_AXIOM(table.find(SdfPath("/a3/a3/a3/a3"))->second == "a");
+
+    // Test iterator.HasChild()
+    TF_AXIOM(table.find(SdfPath("/a2/a2/a2")).HasChild() == true);
+    TF_AXIOM(table.find(SdfPath("/a2/a2/a2/a2")).HasChild() == false);
 }
 
 
@@ -250,7 +310,7 @@ static void ReadPaths(string const &fileName, vector<SdfPath> *out)
     printf("Reading paths...");
     fflush(stdout);
 
-    ArchFile* fp = ArchOpenFile(fileName.c_str(), "rb");
+    FILE* fp = fopen(fileName.c_str(), "rb");
     if (!fp)
         return;
 
@@ -259,10 +319,8 @@ static void ReadPaths(string const &fileName, vector<SdfPath> *out)
     TfStopwatch sw; sw.Start();
     string all(src.get(), length);
     sw.Stop(); printf("reading all took %f sec\n", sw.GetSeconds());
-    // NV aluk
-    // We need to align ArchFile and FILE functionality.
-    //src.reset();
-    //fclose(fp);
+    src.reset();
+    fclose(fp);
 
     sw.Reset(); sw.Start();
     vector<string> lines = TfStringTokenize(all);

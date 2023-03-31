@@ -35,7 +35,6 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 class WorkDispatcher;
-class WorkArenaDispatcher;
 
 /// \class WorkSingularTask
 ///
@@ -75,21 +74,10 @@ public:
     WorkSingularTask(WorkDispatcher &dispatcher,
                      Callable &&c, A1 &&a1, A2 &&a2, ... AN &&aN);
 
-    /// \overload
-    template <class Callable, class A1, class A2, ... class AN>
-    WorkSingularTask(WorkArenaDispatcher &dispatcher,
-                     Callable &&c, A1 &&a1, A2 &&a2, ... AN &&aN);
-
 #else // doxygen
 
     template <class Callable, class... Args>
     WorkSingularTask(WorkDispatcher &d, Callable &&c, Args&&... args)
-        : _waker(_MakeWaker(d, std::bind(std::forward<Callable>(c),
-                                         std::forward<Args>(args)...)))
-        , _count(0) {}
-
-    template <class Callable, class... Args>
-    WorkSingularTask(WorkArenaDispatcher &d, Callable &&c, Args&&... args)
         : _waker(_MakeWaker(d, std::bind(std::forward<Callable>(c),
                                          std::forward<Args>(args)...)))
         , _count(0) {}
@@ -120,7 +108,7 @@ private:
                     // case we go again to ensure the task can do whatever it
                     // was awakened to do.  Once we successfully take the count
                     // to zero, we stop.
-                    size_t old = count;
+                    std::size_t old = count;
                     do { _fn(); } while (
                         !count.compare_exchange_strong(old, 0));
                 });

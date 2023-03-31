@@ -154,8 +154,8 @@ class UsdCollectionAPI : public UsdAPISchemaBase
 public:
     /// Compile time constant representing what kind of schema this class is.
     ///
-    /// \sa UsdSchemaType
-    static const UsdSchemaType schemaType = UsdSchemaType::MultipleApplyAPI;
+    /// \sa UsdSchemaKind
+    static const UsdSchemaKind schemaKind = UsdSchemaKind::MultipleApplyAPI;
 
     /// Construct a UsdCollectionAPI on UsdPrim \p prim with
     /// name \p name . Equivalent to
@@ -185,14 +185,20 @@ public:
     virtual ~UsdCollectionAPI();
 
     /// Return a vector of names of all pre-declared attributes for this schema
+    /// class and all its ancestor classes.  Does not include attributes that
+    /// may be authored by custom/extended methods of the schemas involved.
+    USD_API
+    static const TfTokenVector &
+    GetSchemaAttributeNames(bool includeInherited=true);
+
+    /// Return a vector of names of all pre-declared attributes for this schema
     /// class and all its ancestor classes for a given instance name.  Does not
     /// include attributes that may be authored by custom/extended methods of
     /// the schemas involved. The names returned will have the proper namespace
     /// prefix.
     USD_API
-    static const TfTokenVector &
-    GetSchemaAttributeNames(
-        bool includeInherited=true, const TfToken instanceName=TfToken());
+    static TfTokenVector
+    GetSchemaAttributeNames(bool includeInherited, const TfToken &instanceName);
 
     /// Returns the name of this multiple-apply schema instance
     TfToken GetName() const {
@@ -223,6 +229,12 @@ public:
     static UsdCollectionAPI
     Get(const UsdPrim &prim, const TfToken &name);
 
+    /// Return a vector of all named instances of UsdCollectionAPI on the 
+    /// given \p prim.
+    USD_API
+    static std::vector<UsdCollectionAPI>
+    GetAll(const UsdPrim &prim);
+
     /// Checks if the given name \p baseName is the base name of a property
     /// of CollectionAPI.
     USD_API
@@ -235,7 +247,27 @@ public:
     USD_API
     static bool
     IsCollectionAPIPath(const SdfPath &path, TfToken *name);
-private:
+
+    /// Returns true if this <b>multiple-apply</b> API schema can be applied,
+    /// with the given instance name, \p name, to the given \p prim. If this 
+    /// schema can not be a applied the prim, this returns false and, if 
+    /// provided, populates \p whyNot with the reason it can not be applied.
+    /// 
+    /// Note that if CanApply returns false, that does not necessarily imply
+    /// that calling Apply will fail. Callers are expected to call CanApply
+    /// before calling Apply if they want to ensure that it is valid to 
+    /// apply a schema.
+    /// 
+    /// \sa UsdPrim::GetAppliedSchemas()
+    /// \sa UsdPrim::HasAPI()
+    /// \sa UsdPrim::CanApplyAPI()
+    /// \sa UsdPrim::ApplyAPI()
+    /// \sa UsdPrim::RemoveAPI()
+    ///
+    USD_API
+    static bool 
+    CanApply(const UsdPrim &prim, const TfToken &name, 
+             std::string *whyNot=nullptr);
 
     /// Applies this <b>multiple-apply</b> API schema to the given \p prim 
     /// along with the given instance name, \p name. 
@@ -252,18 +284,20 @@ private:
     /// 
     /// \sa UsdPrim::GetAppliedSchemas()
     /// \sa UsdPrim::HasAPI()
+    /// \sa UsdPrim::CanApplyAPI()
     /// \sa UsdPrim::ApplyAPI()
     /// \sa UsdPrim::RemoveAPI()
     ///
+    USD_API
     static UsdCollectionAPI 
-    _Apply(const UsdPrim &prim, const TfToken &name);
+    Apply(const UsdPrim &prim, const TfToken &name);
 
 protected:
-    /// Returns the type of schema this class belongs to.
+    /// Returns the kind of schema this class belongs to.
     ///
-    /// \sa UsdSchemaType
+    /// \sa UsdSchemaKind
     USD_API
-    UsdSchemaType _GetSchemaType() const override;
+    UsdSchemaKind _GetSchemaKind() const override;
 
 private:
     // needs to invoke _GetStaticTfType.
@@ -384,23 +418,6 @@ public:
     // --(BEGIN CUSTOM CODE)--
 
 public:
-    /// Adds a new collection named \p name on the given prim, \p prim with the 
-    /// specified expansion-rule, \p expansionRule.
-    /// 
-    /// If a collection named \p name already exists, its expansion-rule is 
-    /// updated with the provided value and it is returned.
-    /// 
-    /// The name of a collection, \p name may itself be namespaced, to facilitate 
-    /// organization of collections into groups. However, the base-name of a 
-    /// collection (i.e. the last component of the collection name) should not 
-    /// be the same as one of the core collection schema properties,
-    /// i.e. should not be 'expansionRule' or 'includes' or 'excludes'.
-    USD_API
-    static UsdCollectionAPI ApplyCollection(
-        const UsdPrim& prim, 
-        const TfToken &name, 
-        const TfToken &expansionRule=UsdTokens->expandPrims);
-
     /// Returns the collection represented by the given collection path, 
     /// \p collectionPath on the given USD stage.
     USD_API
@@ -413,7 +430,8 @@ public:
     static UsdCollectionAPI GetCollection(const UsdPrim &prim, 
                                           const TfToken &name);
 
-    /// Returns all the named collections on the given USD prim. 
+    /// Returns all the named collections on the given USD prim.
+    /// \deprecated Use GetAll(prim) instead.
     USD_API
     static std::vector<UsdCollectionAPI> GetAllCollections(const UsdPrim &prim);
 
@@ -545,6 +563,11 @@ public:
     /// (assuming there are no opinions in stronger edit targets).
     USD_API
     bool BlockCollection() const;
+
+    /// Test whether a given \p name contains the "collection:" prefix
+    ///
+    USD_API
+    static bool CanContainPropertyName(const TfToken &name);
 
 private:
 

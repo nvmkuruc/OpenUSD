@@ -68,7 +68,18 @@ UsdUsdcFileFormat::~UsdUsdcFileFormat()
 SdfAbstractDataRefPtr
 UsdUsdcFileFormat::InitData(const FileFormatArguments& args) const
 {
-    auto newData = new Usd_CrateData();
+    auto newData = new Usd_CrateData(/* detached = */ false);
+
+    // The pseudo-root spec must always exist in a layer's SdfData, so
+    // add it here.
+    newData->CreateSpec(SdfPath::AbsoluteRootPath(), SdfSpecTypePseudoRoot);
+    return TfCreateRefPtr(newData);
+}
+
+SdfAbstractDataRefPtr
+UsdUsdcFileFormat::_InitDetachedData(const FileFormatArguments& args) const
+{
+    auto newData = new Usd_CrateData(/* detached = */ true);
 
     // The pseudo-root spec must always exist in a layer's SdfData, so
     // add it here.
@@ -83,17 +94,59 @@ UsdUsdcFileFormat::CanRead(const string& filePath) const
 }
 
 bool
+UsdUsdcFileFormat::_CanReadFromAsset(const string& filePath,
+                                     const std::shared_ptr<ArAsset>& asset) const
+{
+    return Usd_CrateData::CanRead(filePath, asset);
+}
+
+bool
 UsdUsdcFileFormat::Read(SdfLayer* layer,
                         const string& resolvedPath,
                         bool metadataOnly) const
 {
     TRACE_FUNCTION();
+    return _ReadHelper(layer, resolvedPath, metadataOnly,
+                       /* detached = */ false);
+}
 
+bool
+UsdUsdcFileFormat::_ReadDetached(
+    SdfLayer* layer,
+    const std::string& resolvedPath,
+    bool metadataOnly) const
+{
+    TRACE_FUNCTION();
+    return _ReadHelper(layer, resolvedPath, metadataOnly, 
+                       /* detached = */ true);
+}
+
+bool
+UsdUsdcFileFormat::_ReadFromAsset(SdfLayer* layer,
+                                  const string& resolvedPath,
+                                  const std::shared_ptr<ArAsset>& asset,
+                                  bool metadataOnly,
+                                  bool detached) const
+{
+    TRACE_FUNCTION();
+    return _ReadHelper(layer, resolvedPath, metadataOnly, asset, detached);
+}
+
+template <class ...Args>
+bool
+UsdUsdcFileFormat::_ReadHelper(
+    SdfLayer* layer, 
+    const std::string& resolvedPath,
+    bool metadataOnly,
+    Args&&... args) const
+{
     SdfAbstractDataRefPtr data = InitData(layer->GetFileFormatArguments());
     auto crateData = TfDynamic_cast<Usd_CrateDataRefPtr>(data);
 
-    if (!crateData || !crateData->Open(resolvedPath))
+    if (!crateData || 
+        !crateData->Open(resolvedPath, std::forward<Args>(args)...)) {
         return false;
+    }
 
     _SetLayerData(layer, data);
     return true;

@@ -21,6 +21,8 @@
 # KIND, either express or implied. See the Apache License for the specific
 # language governing permissions and limitations under the Apache License.
 #
+from __future__ import print_function
+
 from .qt import QtGui, QtWidgets
 from .usdviewContextMenuItem import UsdviewContextMenuItem
 import os
@@ -421,7 +423,7 @@ class SetAsActiveCamera(PrimContextMenuItem):
         PrimContextMenuItem.__init__(self, appController, item)
 
         self._nonActiveCameraPrim = None
-        if len(self._selectionDataModel.getPrims()) is 1:
+        if len(self._selectionDataModel.getPrims()) == 1:
             prim = self._selectionDataModel.getPrims()[0]
             from pxr import UsdGeom
             cam = UsdGeom.Camera(prim)

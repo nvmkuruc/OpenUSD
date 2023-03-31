@@ -75,8 +75,9 @@ UsdSkelBlendShape::Define(
 }
 
 /* virtual */
-UsdSchemaType UsdSkelBlendShape::_GetSchemaType() const {
-    return UsdSkelBlendShape::schemaType;
+UsdSchemaKind UsdSkelBlendShape::_GetSchemaKind() const
+{
+    return UsdSkelBlendShape::schemaKind;
 }
 
 /* static */

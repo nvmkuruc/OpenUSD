@@ -34,7 +34,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_REGISTRY_FUNCTION(TfType)
 {
     TfType::Define<UsdLuxDistantLight,
-        TfType::Bases< UsdLuxLight > >();
+        TfType::Bases< UsdLuxNonboundableLightBase > >();
     
     // Register the usd prim typename as an alias under UsdSchemaBase. This
     // enables one to call
@@ -75,8 +75,9 @@ UsdLuxDistantLight::Define(
 }
 
 /* virtual */
-UsdSchemaType UsdLuxDistantLight::_GetSchemaType() const {
-    return UsdLuxDistantLight::schemaType;
+UsdSchemaKind UsdLuxDistantLight::_GetSchemaKind() const
+{
+    return UsdLuxDistantLight::schemaKind;
 }
 
 /* static */
@@ -105,30 +106,13 @@ UsdLuxDistantLight::_GetTfType() const
 UsdAttribute
 UsdLuxDistantLight::GetAngleAttr() const
 {
-    return GetPrim().GetAttribute(UsdLuxTokens->angle);
+    return GetPrim().GetAttribute(UsdLuxTokens->inputsAngle);
 }
 
 UsdAttribute
 UsdLuxDistantLight::CreateAngleAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdLuxTokens->angle,
-                       SdfValueTypeNames->Float,
-                       /* custom = */ false,
-                       SdfVariabilityVarying,
-                       defaultValue,
-                       writeSparsely);
-}
-
-UsdAttribute
-UsdLuxDistantLight::GetIntensityAttr() const
-{
-    return GetPrim().GetAttribute(UsdLuxTokens->intensity);
-}
-
-UsdAttribute
-UsdLuxDistantLight::CreateIntensityAttr(VtValue const &defaultValue, bool writeSparsely) const
-{
-    return UsdSchemaBase::_CreateAttr(UsdLuxTokens->intensity,
+    return UsdSchemaBase::_CreateAttr(UsdLuxTokens->inputsAngle,
                        SdfValueTypeNames->Float,
                        /* custom = */ false,
                        SdfVariabilityVarying,
@@ -153,12 +137,11 @@ const TfTokenVector&
 UsdLuxDistantLight::GetSchemaAttributeNames(bool includeInherited)
 {
     static TfTokenVector localNames = {
-        UsdLuxTokens->angle,
-        UsdLuxTokens->intensity,
+        UsdLuxTokens->inputsAngle,
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(
-            UsdLuxLight::GetSchemaAttributeNames(true),
+            UsdLuxNonboundableLightBase::GetSchemaAttributeNames(true),
             localNames);
 
     if (includeInherited)

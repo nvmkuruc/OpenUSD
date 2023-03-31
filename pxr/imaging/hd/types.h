@@ -26,6 +26,7 @@
 
 #include "pxr/pxr.h"
 #include "pxr/imaging/hd/api.h"
+#include "pxr/imaging/hd/enums.h"
 #include "pxr/imaging/hd/version.h"
 #include "pxr/base/vt/value.h"
 #include <algorithm>
@@ -102,6 +103,23 @@ enum HdMagFilter
     HdMagFilterLinear,
 };
 
+/// \enum HdBorderColor
+///
+/// Border color to use for clamped texture values.
+///
+/// <ul>
+///     <li>HdBorderColorTransparentBlack</li>
+///     <li>HdBorderColorOpaqueBlack</li>
+///     <li>HdBorderColorOpaqueWhite</li>
+/// </ul>
+///
+enum HdBorderColor 
+{
+    HdBorderColorTransparentBlack,
+    HdBorderColorOpaqueBlack,
+    HdBorderColorOpaqueWhite,
+};
+
 /// \class HdSamplerParameters
 ///
 /// Collection of standard parameters such as wrap modes to sample a texture.
@@ -113,6 +131,19 @@ public:
     HdWrap wrapR;
     HdMinFilter minFilter;
     HdMagFilter magFilter;
+    HdBorderColor borderColor;
+    bool enableCompare;
+    HdCompareFunction compareFunction;
+
+    HD_API
+    HdSamplerParameters();   
+
+    HD_API
+    HdSamplerParameters(HdWrap wrapS, HdWrap wrapT, HdWrap wrapR, 
+        HdMinFilter minFilter, HdMagFilter magFilter, 
+        HdBorderColor borderColor=HdBorderColorTransparentBlack,
+        bool enableCompare=false, 
+        HdCompareFunction compareFunction=HdCmpFuncNever);
 
     HD_API 
     bool operator==(const HdSamplerParameters &other) const;
@@ -317,6 +348,8 @@ enum HdType
     /// Corresponds to GL_INT_2_10_10_10_REV.
     /// \see HdVec4f_2_10_10_10_REV
     HdTypeInt32_2_10_10_10_REV,
+
+    HdTypeCount
 };
 
 /// HdTupleType represents zero, one, or more values of the same HdType.
@@ -336,6 +369,14 @@ struct HdTupleType {
         return !(*this == rhs);
     }
 };
+
+// Support TfHash.
+template <class HashState>
+void
+TfHashAppend(HashState &h, HdTupleType const &tt)
+{
+    h.Append(tt.type, tt.count);
+}
 
 /// Returns a direct pointer to the data held by a VtValue.
 /// Returns nullptr if the VtValue is empty or holds a type unknown to Hd.
@@ -408,6 +449,18 @@ enum HdFormat
     HdFormatFloat32Vec2,
     HdFormatFloat32Vec3,
     HdFormatFloat32Vec4,
+
+    // Int16 - a 2-byte signed integer
+    HdFormatInt16,
+    HdFormatInt16Vec2,
+    HdFormatInt16Vec3,
+    HdFormatInt16Vec4,
+
+    // UInt16 - a 2-byte unsigned integer
+    HdFormatUInt16,
+    HdFormatUInt16Vec2,
+    HdFormatUInt16Vec3,
+    HdFormatUInt16Vec4,
 
     // Int32 - a 4-byte signed integer
     HdFormatInt32,

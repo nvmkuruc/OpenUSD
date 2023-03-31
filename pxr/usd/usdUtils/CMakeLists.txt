@@ -55,13 +55,22 @@ pxr_library(usdUtils
     PYMODULE_FILES
         __init__.py
         complianceChecker.py
+        constantsGroup.py
+        fixBrokenPixarSchemas.py
+        updateSchemaWithSdrNode.py
+        usdzUtils.py
+
+    DOXYGEN_FILES
+        overview.dox
 )
 
 pxr_test_scripts(
     testenv/testUsdUtilsAuthoring.py
     testenv/testUsdUtilsCoalescingDiagnosticDelegate.py
     testenv/testUsdUtilsConditionalAbortDiagnosticDelegate.py
+    testenv/testUsdUtilsConstantsGroup.py
     testenv/testUsdUtilsCreateNewUsdzPackage.py
+    testenv/testUsdUtilsDependencies.py
     testenv/testUsdUtilsDependencyExtractor.py
     testenv/testUsdUtilsFlattenLayerStack.py
     testenv/testUsdUtilsIntrospection.py
@@ -72,6 +81,7 @@ pxr_test_scripts(
     testenv/testUsdUtilsStitch.py
     testenv/testUsdUtilsStitchClips.py
     testenv/testUsdUtilsTimeCodeRange.py
+    testenv/testUsdUtilsUpdateSchemaWithSdrNode.py
     testenv/testUsdUtilsVarSelsSessionLayer.py
 )
 
@@ -109,6 +119,12 @@ pxr_install_test_dir(
     DEST testUsdUtilsAuthoring
 )
 
+pxr_register_test(testUsdUtilsConstantsGroup
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUtilsConstantsGroup"
+    EXPECTED_RETURN_CODE 0
+)
+
 pxr_install_test_dir(
     SRC testenv/testUsdUtilsCreateNewUsdzPackage
     DEST testUsdUtilsCreateNewARKitUsdzPackage
@@ -117,6 +133,11 @@ pxr_install_test_dir(
 pxr_install_test_dir(
     SRC testenv/testUsdUtilsCreateNewUsdzPackage
     DEST testUsdUtilsCreateNewUsdzPackage
+)
+
+pxr_install_test_dir(
+    SRC testenv/testUsdUtilsDependencies
+    DEST testUsdUtilsDependencies
 )
 
 pxr_install_test_dir(
@@ -167,6 +188,16 @@ pxr_install_test_dir(
 pxr_install_test_dir(
     SRC testenv/testUsdUtilsStitchClips.testenv
     DEST testUsdUtilsStitchClips
+)
+
+pxr_install_test_dir(
+    SRC testenv/testUsdUtilsUpdateSchemaWithSdrNode
+    DEST testUsdUtilsUpdateSchemaWithSdrNode
+)
+
+pxr_install_test_dir(
+    SRC testenv/testUsdUtilsUpdateSchemaWithSdrNode
+    DEST testUsdUtilsUpdateSchemaWithSdrNodeError
 )
 
 pxr_register_test(testUsdUtilsAuthoring
@@ -347,21 +378,24 @@ pxr_register_test(testUsdUtilsCoalescingDiagnosticDelegateCpp
     EXPECTED_RETURN_CODE 0
 )
 
-# #nv begin #in-memory-io
-# Disabled while ArchFile* vs FILE* output resulting in differing usdz contents are investigated.
-# pxr_register_test(testUsdUtilsCreateNewARKitUsdzPackage
-    # PYTHON
-    # COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUtilsCreateNewUsdzPackage --check --arkit -l contents_arkit.txt package.usdz root.usd"
-    # EXPECTED_RETURN_CODE 0
-# )
+pxr_register_test(testUsdUtilsCreateNewARKitUsdzPackage
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUtilsCreateNewUsdzPackage --check --arkit -l contents_arkit.txt package.usdz root.usd"
+    EXPECTED_RETURN_CODE 0
+)
 
-# pxr_register_test(testUsdUtilsCreateNewUsdzPackage
-    # PYTHON
-    # COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUtilsCreateNewUsdzPackage --check -l contents.txt package.usdz root.usd"
-    # DIFF_COMPARE contents.txt
-    # EXPECTED_RETURN_CODE 0
-# )
-# nv end
+pxr_register_test(testUsdUtilsCreateNewUsdzPackage
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUtilsCreateNewUsdzPackage --check -l contents.txt package.usdz root.usd"
+    DIFF_COMPARE contents.txt
+    EXPECTED_RETURN_CODE 0
+)
+
+pxr_register_test(testUsdUtilsDependencies
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUtilsDependencies"
+    EXPECTED_RETURN_CODE 0
+)
 
 pxr_register_test(testUsdUtilsDependencyExtractor1
     PYTHON
@@ -438,6 +472,28 @@ pxr_register_test(testUsdUtilsStitchClips
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUtilsStitchClips"
     EXPECTED_RETURN_CODE 0
+)
+
+pxr_register_test(testUsdUtilsUpdateSchemaWithSdrNode
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUtilsUpdateSchemaWithSdrNode"
+    DIFF_COMPARE resultAPISchema.usda
+    DIFF_COMPARE resultAPIIdentifierMissing.usda
+    DIFF_COMPARE result_override.usda
+    DIFF_COMPARE resultUsdShadeConnectableAPIMetadata.usda
+    DIFF_COMPARE resultUsdShadeConnectableAPIMetadata2.usda
+    DIFF_COMPARE duplicateProp.usda
+    DIFF_COMPARE duplicatePropTypeMisMatch.usda
+    DIFF_COMPARE schemaConcrete.usda
+    DIFF_COMPARE testSdrNodeNonShaderNamespacePrefixResult.usda
+    DIFF_COMPARE testSdrNodeShaderNamespacePrefixResult.usda
+    EXPECTED_RETURN_CODE 0
+)
+
+pxr_register_test(testUsdUtilsUpdateSchemaWithSdrNodeError
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUtilsUpdateSchemaWithSdrNode TestUsdUpdateSchemaWithSdrNode True"
+    EXPECTED_RETURN_CODE 1
 )
 
 pxr_register_test(testUsdUtilsStitchCpp

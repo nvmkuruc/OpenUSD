@@ -27,6 +27,7 @@
 #include "pxr/usd/sdf/primSpec.h"
 
 #include "pxr/usd/usd/pyConversions.h"
+#include "pxr/base/tf/pyAnnotatedBoolResult.h"
 #include "pxr/base/tf/pyContainerConversions.h"
 #include "pxr/base/tf/pyResultConversions.h"
 #include "pxr/base/tf/pyUtils.h"
@@ -58,11 +59,29 @@ _Repr(const UsdShadeMaterialBindingAPI &self)
         primRepr.c_str());
 }
 
+struct UsdShadeMaterialBindingAPI_CanApplyResult : 
+    public TfPyAnnotatedBoolResult<std::string>
+{
+    UsdShadeMaterialBindingAPI_CanApplyResult(bool val, std::string const &msg) :
+        TfPyAnnotatedBoolResult<std::string>(val, msg) {}
+};
+
+static UsdShadeMaterialBindingAPI_CanApplyResult
+_WrapCanApply(const UsdPrim& prim)
+{
+    std::string whyNot;
+    bool result = UsdShadeMaterialBindingAPI::CanApply(prim, &whyNot);
+    return UsdShadeMaterialBindingAPI_CanApplyResult(result, whyNot);
+}
+
 } // anonymous namespace
 
 void wrapUsdShadeMaterialBindingAPI()
 {
     typedef UsdShadeMaterialBindingAPI This;
+
+    UsdShadeMaterialBindingAPI_CanApplyResult::Wrap<UsdShadeMaterialBindingAPI_CanApplyResult>(
+        "_CanApplyResult", "whyNot");
 
     class_<This, bases<UsdAPISchemaBase> >
         cls("MaterialBindingAPI");
@@ -74,6 +93,9 @@ void wrapUsdShadeMaterialBindingAPI()
 
         .def("Get", &This::Get, (arg("stage"), arg("path")))
         .staticmethod("Get")
+
+        .def("CanApply", &_WrapCanApply, (arg("prim")))
+        .staticmethod("CanApply")
 
         .def("Apply", &This::Apply, (arg("prim")))
         .staticmethod("Apply")
@@ -173,6 +195,10 @@ WRAP_CUSTOM {
         .def("GetBindingRel", &This::CollectionBinding::GetBindingRel,
              return_value_policy<return_by_value>())
         .def("IsValid", &This::CollectionBinding::IsValid)
+        .def("IsCollectionBindingRel", &UsdShadeMaterialBindingAPI \
+            ::CollectionBinding::IsCollectionBindingRel,
+            arg("bindingRel"))
+            .staticmethod("IsCollectionBindingRel")
         ;
     
     to_python_converter<This::CollectionBindingVector,
@@ -243,6 +269,14 @@ WRAP_CUSTOM {
              (arg("prim"), arg("bindingName"),
               arg("materialPurpose")=UsdShadeTokens->allPurpose))
 
+        .def("GetMaterialPurposes", &This::GetMaterialPurposes)
+             .staticmethod("GetMaterialPurposes")
+
+        .def("GetResolvedTargetPathFromBindingRel",
+             &UsdShadeMaterialBindingAPI::GetResolvedTargetPathFromBindingRel,
+             arg("bindingRel"))
+            .staticmethod("GetResolvedTargetPathFromBindingRel")
+
         .def("ComputeBoundMaterial", &_WrapComputeBoundMaterial,
              arg("materialPurpose")=UsdShadeTokens->allPurpose)
 
@@ -262,6 +296,10 @@ WRAP_CUSTOM {
              (arg("familyType")))
         .def("GetMaterialBindSubsetsFamilyType",
              &This::GetMaterialBindSubsetsFamilyType)
+        .def("CanContainPropertyName", 
+            &UsdShadeMaterialBindingAPI::CanContainPropertyName, 
+            arg("name"))
+        .staticmethod("CanContainPropertyName")
     ;
 }
 

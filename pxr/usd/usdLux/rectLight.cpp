@@ -34,7 +34,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_REGISTRY_FUNCTION(TfType)
 {
     TfType::Define<UsdLuxRectLight,
-        TfType::Bases< UsdLuxLight > >();
+        TfType::Bases< UsdLuxBoundableLightBase > >();
     
     // Register the usd prim typename as an alias under UsdSchemaBase. This
     // enables one to call
@@ -75,8 +75,9 @@ UsdLuxRectLight::Define(
 }
 
 /* virtual */
-UsdSchemaType UsdLuxRectLight::_GetSchemaType() const {
-    return UsdLuxRectLight::schemaType;
+UsdSchemaKind UsdLuxRectLight::_GetSchemaKind() const
+{
+    return UsdLuxRectLight::schemaKind;
 }
 
 /* static */
@@ -105,13 +106,13 @@ UsdLuxRectLight::_GetTfType() const
 UsdAttribute
 UsdLuxRectLight::GetWidthAttr() const
 {
-    return GetPrim().GetAttribute(UsdLuxTokens->width);
+    return GetPrim().GetAttribute(UsdLuxTokens->inputsWidth);
 }
 
 UsdAttribute
 UsdLuxRectLight::CreateWidthAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdLuxTokens->width,
+    return UsdSchemaBase::_CreateAttr(UsdLuxTokens->inputsWidth,
                        SdfValueTypeNames->Float,
                        /* custom = */ false,
                        SdfVariabilityVarying,
@@ -122,13 +123,13 @@ UsdLuxRectLight::CreateWidthAttr(VtValue const &defaultValue, bool writeSparsely
 UsdAttribute
 UsdLuxRectLight::GetHeightAttr() const
 {
-    return GetPrim().GetAttribute(UsdLuxTokens->height);
+    return GetPrim().GetAttribute(UsdLuxTokens->inputsHeight);
 }
 
 UsdAttribute
 UsdLuxRectLight::CreateHeightAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdLuxTokens->height,
+    return UsdSchemaBase::_CreateAttr(UsdLuxTokens->inputsHeight,
                        SdfValueTypeNames->Float,
                        /* custom = */ false,
                        SdfVariabilityVarying,
@@ -139,13 +140,13 @@ UsdLuxRectLight::CreateHeightAttr(VtValue const &defaultValue, bool writeSparsel
 UsdAttribute
 UsdLuxRectLight::GetTextureFileAttr() const
 {
-    return GetPrim().GetAttribute(UsdLuxTokens->textureFile);
+    return GetPrim().GetAttribute(UsdLuxTokens->inputsTextureFile);
 }
 
 UsdAttribute
 UsdLuxRectLight::CreateTextureFileAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdLuxTokens->textureFile,
+    return UsdSchemaBase::_CreateAttr(UsdLuxTokens->inputsTextureFile,
                        SdfValueTypeNames->Asset,
                        /* custom = */ false,
                        SdfVariabilityVarying,
@@ -170,13 +171,13 @@ const TfTokenVector&
 UsdLuxRectLight::GetSchemaAttributeNames(bool includeInherited)
 {
     static TfTokenVector localNames = {
-        UsdLuxTokens->width,
-        UsdLuxTokens->height,
-        UsdLuxTokens->textureFile,
+        UsdLuxTokens->inputsWidth,
+        UsdLuxTokens->inputsHeight,
+        UsdLuxTokens->inputsTextureFile,
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(
-            UsdLuxLight::GetSchemaAttributeNames(true),
+            UsdLuxBoundableLightBase::GetSchemaAttributeNames(true),
             localNames);
 
     if (includeInherited)
@@ -195,3 +196,61 @@ PXR_NAMESPACE_CLOSE_SCOPE
 // 'PXR_NAMESPACE_OPEN_SCOPE', 'PXR_NAMESPACE_CLOSE_SCOPE'.
 // ===================================================================== //
 // --(BEGIN CUSTOM CODE)--
+
+#include "pxr/usd/usdGeom/boundableComputeExtent.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
+
+static bool
+_ComputeLocalExtent(const float width, 
+                    const float height, 
+                    VtVec3fArray *extent)
+{
+    extent->resize(2);
+    (*extent)[1] = GfVec3f(width * 0.5f, height * 0.5f, 0.0f);
+    (*extent)[0] = -(*extent)[1];
+    return true;
+}
+
+static bool 
+_ComputeExtent(
+    const UsdGeomBoundable &boundable,
+    const UsdTimeCode &time,
+    const GfMatrix4d *transform,
+    VtVec3fArray *extent)
+{
+    const UsdLuxRectLight light(boundable);
+    if (!TF_VERIFY(light)) {
+        return false;
+    }
+
+    float width;
+    if (!light.GetWidthAttr().Get(&width, time)) {
+        return false;
+    }
+
+    float height;
+    if (!light.GetHeightAttr().Get(&height, time)) {
+        return false;
+    }
+
+    if (!_ComputeLocalExtent(width, height, extent)) {
+        return false;
+    }
+
+    if (transform) {
+        GfBBox3d bbox(GfRange3d((*extent)[0], (*extent)[1]), *transform);
+        GfRange3d range = bbox.ComputeAlignedRange();
+        (*extent)[0] = GfVec3f(range.GetMin());
+        (*extent)[1] = GfVec3f(range.GetMax());
+    }
+
+    return true;
+}
+
+TF_REGISTRY_FUNCTION(UsdGeomBoundable)
+{
+    UsdGeomRegisterComputeExtentFunction<UsdLuxRectLight>(_ComputeExtent);
+}
+
+PXR_NAMESPACE_CLOSE_SCOPE

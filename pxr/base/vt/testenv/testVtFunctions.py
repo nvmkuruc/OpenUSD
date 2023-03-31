@@ -22,7 +22,8 @@
 # KIND, either express or implied. See the Apache License for the specific
 # language governing permissions and limitations under the Apache License.
 #
-
+# pylint: disable=range-builtin-not-iterating
+#
 import unittest
 from pxr import Tf, Vt
 
@@ -32,7 +33,7 @@ class TestVtFunctions(unittest.TestCase):
 
     def test_Constructors(self):
         v = Vt.FloatArray((1,2,3,4,5,6))
-        w = Vt.FloatArray(list(range(9)))
+        w = Vt.FloatArray(range(9))
 
     def test_Cat(self):
         v = Vt.FloatArray((1,2,3,4,5,6))

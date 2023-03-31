@@ -21,11 +21,8 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/imaging/glf/glew.h"
-#include "pxr/imaging/glf/contextCaps.h"
-
-#include "pxr/imaging/hdSt/bufferArrayRangeGL.h"
-#include "pxr/imaging/hdSt/bufferResourceGL.h"
+#include "pxr/imaging/hdSt/bufferArrayRange.h"
+#include "pxr/imaging/hdSt/bufferResource.h"
 #include "pxr/imaging/hdSt/glslProgram.h"
 #include "pxr/imaging/hdSt/resourceRegistry.h"
 #include "pxr/imaging/hdSt/flatNormals.h"
@@ -35,9 +32,13 @@
 #include "pxr/imaging/hd/tokens.h"
 #include "pxr/imaging/hd/vtBufferSource.h"
 
-#include "pxr/imaging/hgiGL/shaderProgram.h"
-
 #include "pxr/imaging/hf/perfLog.h"
+
+#include "pxr/imaging/hgi/hgi.h"
+#include "pxr/imaging/hgi/computeCmds.h"
+#include "pxr/imaging/hgi/computePipeline.h"
+#include "pxr/imaging/hgi/shaderProgram.h"
+#include "pxr/imaging/hgi/tokens.h"
 
 #include "pxr/base/vt/array.h"
 
@@ -47,6 +48,91 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+namespace {
+
+enum {
+    BufferBinding_Uniforms,
+    BufferBinding_Points,
+    BufferBinding_Normals,
+    BufferBinding_Indices,
+    BufferBinding_PrimitiveParam
+};
+
+HgiResourceBindingsSharedPtr
+_CreateResourceBindings(
+    Hgi* hgi,
+    HgiBufferHandle const& points,
+    HgiBufferHandle const& normals,
+    HgiBufferHandle const& indices,
+    HgiBufferHandle const& primitiveParam)
+{
+    // Begin the resource set
+    HgiResourceBindingsDesc resourceDesc;
+    resourceDesc.debugName = "FlatNormals";
+
+    if (points) {
+        HgiBufferBindDesc bufBind0;
+        bufBind0.bindingIndex = BufferBinding_Points;
+        bufBind0.resourceType = HgiBindResourceTypeStorageBuffer;
+        bufBind0.stageUsage = HgiShaderStageCompute;
+        bufBind0.writable = false;
+        bufBind0.offsets.push_back(0);
+        bufBind0.buffers.push_back(points);
+        resourceDesc.buffers.push_back(std::move(bufBind0));
+    }
+
+    if (normals) {
+        HgiBufferBindDesc bufBind1;
+        bufBind1.bindingIndex = BufferBinding_Normals;
+        bufBind1.resourceType = HgiBindResourceTypeStorageBuffer;
+        bufBind1.stageUsage = HgiShaderStageCompute;
+        bufBind1.writable = true;
+        bufBind1.offsets.push_back(0);
+        bufBind1.buffers.push_back(normals);
+        resourceDesc.buffers.push_back(std::move(bufBind1));
+    }
+
+    if (indices) {
+        HgiBufferBindDesc bufBind2;
+        bufBind2.bindingIndex = BufferBinding_Indices;
+        bufBind2.resourceType = HgiBindResourceTypeStorageBuffer;
+        bufBind2.stageUsage = HgiShaderStageCompute;
+        bufBind2.writable = false;
+        bufBind2.offsets.push_back(0);
+        bufBind2.buffers.push_back(indices);
+        resourceDesc.buffers.push_back(std::move(bufBind2));
+    }
+
+    if (primitiveParam) {
+        HgiBufferBindDesc bufBind3;
+        bufBind3.bindingIndex = BufferBinding_PrimitiveParam;
+        bufBind3.resourceType = HgiBindResourceTypeStorageBuffer;
+        bufBind3.stageUsage = HgiShaderStageCompute;
+        bufBind3.writable = false;
+        bufBind3.offsets.push_back(0);
+        bufBind3.buffers.push_back(primitiveParam);
+        resourceDesc.buffers.push_back(std::move(bufBind3));
+    }
+
+    return std::make_shared<HgiResourceBindingsHandle>(
+        hgi->CreateResourceBindings(resourceDesc));
+}
+
+HgiComputePipelineSharedPtr
+_CreatePipeline(
+    Hgi* hgi,
+    uint32_t constantValuesSize,
+    HgiShaderProgramHandle const& program)
+{
+    HgiComputePipelineDesc desc;
+    desc.debugName = "FlatNormals";
+    desc.shaderProgram = program;
+    desc.shaderConstantsDesc.byteSize = constantValuesSize;
+    return std::make_shared<HgiComputePipelineHandle>(
+        hgi->CreateComputePipeline(desc));
+}
+
+} // Anonymous namespace
 
 HdSt_FlatNormalsComputationGPU::HdSt_FlatNormalsComputationGPU(
     HdBufferArrayRangeSharedPtr const &topologyRange,
@@ -80,29 +166,28 @@ HdSt_FlatNormalsComputationGPU::Execute(
     HD_TRACE_FUNCTION();
     HF_MALLOC_TAG_FUNCTION();
 
-    if (!glDispatchCompute)
-        return;
     if (_srcDataType == HdTypeInvalid)
         return;
 
-    HdStBufferArrayRangeGLSharedPtr range =
-        std::static_pointer_cast<HdStBufferArrayRangeGL> (range_);
-    HdStBufferArrayRangeGLSharedPtr vertexRange =
-        std::static_pointer_cast<HdStBufferArrayRangeGL> (_vertexRange);
-    HdStBufferArrayRangeGLSharedPtr topologyRange =
-        std::static_pointer_cast<HdStBufferArrayRangeGL> (_topologyRange);
+    HdStBufferArrayRangeSharedPtr range =
+        std::static_pointer_cast<HdStBufferArrayRange> (range_);
+    HdStBufferArrayRangeSharedPtr vertexRange =
+        std::static_pointer_cast<HdStBufferArrayRange> (_vertexRange);
+    HdStBufferArrayRangeSharedPtr topologyRange =
+        std::static_pointer_cast<HdStBufferArrayRange> (_topologyRange);
 
     // buffer resources for GPU computation
-    HdStBufferResourceGLSharedPtr points = vertexRange->GetResource(_srcName);
-    HdStBufferResourceGLSharedPtr normals = range->GetResource(_dstName);
-    HdStBufferResourceGLSharedPtr indices = topologyRange->GetResource(
+    HdStBufferResourceSharedPtr points = vertexRange->GetResource(_srcName);
+    HdStBufferResourceSharedPtr normals = range->GetResource(_dstName);
+    HdStBufferResourceSharedPtr indices = topologyRange->GetResource(
         HdTokens->indices);
-    HdStBufferResourceGLSharedPtr primitiveParam = topologyRange->GetResource(
+    HdStBufferResourceSharedPtr primitiveParam = topologyRange->GetResource(
         HdTokens->primitiveParam);
 
     // select shader by datatype
     TfToken shaderToken;
     int indexArity = HdGetComponentCount(indices->GetTupleType().type);
+    int indexCount = indices->GetTupleType().count;
     if (indexArity == 3) {
         if (_srcDataType == HdTypeFloatVec3) {
             if (_dstDataType == HdTypeFloatVec3) {
@@ -117,7 +202,7 @@ HdSt_FlatNormalsComputationGPU::Execute(
                 shaderToken = HdStGLSLProgramTokens->flatNormalsTriDoubleToPacked;
             }
         }
-    } else if (indexArity == 4) {
+    } else if (indexCount == 4) {
         if (_srcDataType == HdTypeFloatVec3) {
             if (_dstDataType == HdTypeFloatVec3) {
                 shaderToken = HdStGLSLProgramTokens->flatNormalsQuadFloatToFloat;
@@ -131,18 +216,23 @@ HdSt_FlatNormalsComputationGPU::Execute(
                 shaderToken = HdStGLSLProgramTokens->flatNormalsQuadDoubleToPacked;
             }
         }
+    } else if (indexCount == 6) {
+        if (_srcDataType == HdTypeFloatVec3) {
+            if (_dstDataType == HdTypeFloatVec3) {
+                shaderToken = HdStGLSLProgramTokens->flatNormalsTriQuadFloatToFloat;
+            } else if (_dstDataType == HdTypeInt32_2_10_10_10_REV) {
+                shaderToken = HdStGLSLProgramTokens->flatNormalsTriQuadFloatToPacked;
+            }
+        } else if (_srcDataType == HdTypeDoubleVec3) {
+            if (_dstDataType == HdTypeDoubleVec3) {
+                shaderToken = HdStGLSLProgramTokens->flatNormalsTriQuadDoubleToDouble;
+            } else if (_dstDataType == HdTypeInt32_2_10_10_10_REV) {
+                shaderToken = HdStGLSLProgramTokens->flatNormalsTriQuadDoubleToPacked;
+            }
+        }
     }
     if (!TF_VERIFY(!shaderToken.IsEmpty())) return;
 
-    HdStGLSLProgramSharedPtr computeProgram
-        = HdStGLSLProgram::GetComputeProgram(shaderToken,
-            static_cast<HdStResourceRegistry*>(resourceRegistry));
-    if (!computeProgram) return;
-
-    HgiShaderProgramHandle const& hgiProgram = computeProgram->GetProgram();
-    GLuint program = hgiProgram->GetRawResource();
-
-    // prepare uniform buffer for GPU computation
     struct Uniform {
         int vertexOffset;
         int elementOffset;
@@ -155,8 +245,73 @@ HdSt_FlatNormalsComputationGPU::Execute(
         int indexStride;
         int pParamOffset;
         int pParamStride;
+        int primIndexEnd;
     } uniform;
 
+    HdStResourceRegistry* hdStResourceRegistry =
+        static_cast<HdStResourceRegistry*>(resourceRegistry);
+    HdStGLSLProgramSharedPtr computeProgram
+        = HdStGLSLProgram::GetComputeProgram(shaderToken, hdStResourceRegistry,
+          [&](HgiShaderFunctionDesc &computeDesc) {
+            computeDesc.debugName = shaderToken.GetString();
+            computeDesc.shaderStage = HgiShaderStageCompute;
+            computeDesc.computeDescriptor.localSize = GfVec3i(64, 1, 1);
+
+            TfToken srcType;
+            TfToken dstType;
+            if (_srcDataType == HdTypeFloatVec3) {
+                srcType = HdStTokens->_float;
+            } else {
+                srcType = HdStTokens->_double;
+            }
+
+            if (_dstDataType == HdTypeFloatVec3) {
+                dstType = HdStTokens->_float;
+            } else if (_dstDataType == HdTypeDoubleVec3) {
+                dstType = HdStTokens->_double;
+            } else if (_dstDataType == HdTypeInt32_2_10_10_10_REV) {
+                dstType = HdStTokens->_int;
+            }
+            HgiShaderFunctionAddBuffer(
+                &computeDesc, "points", srcType,
+                BufferBinding_Points, HgiBindingTypePointer);
+            HgiShaderFunctionAddWritableBuffer(
+                &computeDesc, "normals", dstType,
+                BufferBinding_Normals);
+            HgiShaderFunctionAddBuffer(
+                &computeDesc, "indices", HdStTokens->_int,
+                BufferBinding_Indices, HgiBindingTypePointer);
+            HgiShaderFunctionAddBuffer(
+                &computeDesc, "primitiveParam", HdStTokens->_int,
+                BufferBinding_PrimitiveParam, HgiBindingTypePointer);
+
+            static const std::string params[] = {
+                "vertexOffset",       // offset in aggregated buffer
+                "elementOffset",      // offset in aggregated buffer
+                "topologyOffset",     // offset in aggregated buffer
+                "pointsOffset",       // interleave offset
+                "pointsStride",       // interleave stride
+                "normalsOffset",      // interleave offset
+                "normalsStride",      // interleave stride
+                "indexOffset",        // interleave offset
+                "indexStride",        // interleave stride
+                "pParamOffset",       // interleave offset
+                "pParamStride",       // interleave stride
+                "primIndexEnd"
+            };
+            static_assert((sizeof(Uniform) / sizeof(int)) ==
+                          (sizeof(params) / sizeof(params[0])), "");
+            for (std::string const & param : params) {
+                HgiShaderFunctionAddConstantParam(
+                    &computeDesc, param, HdStTokens->_int);
+            }
+            HgiShaderFunctionAddStageInput(
+                &computeDesc, "hd_GlobalInvocationID", "uvec3",
+                HgiShaderKeywordTokens->hdGlobalInvocationID);
+        });
+    if (!computeProgram) return;
+
+    // prepare uniform buffer for GPU computation
     // coherent vertex offset in aggregated buffer array
     uniform.vertexOffset = vertexRange->GetElementOffset();
     // coherent element offset in aggregated buffer array
@@ -192,56 +347,67 @@ HdSt_FlatNormalsComputationGPU::Execute(
         HdDataSizeOfType(HdGetComponentType(primitiveParam->GetTupleType().type));
     uniform.pParamOffset = primitiveParam->GetOffset() / pParamComponentSize;
     uniform.pParamStride = primitiveParam->GetStride() / pParamComponentSize;
+    
+    const int numPrims = topologyRange->GetNumElements();
+    uniform.primIndexEnd = numPrims;
 
-    // transfer uniform buffer
-    // XXX Accessing shader program until we can use Hgi::SetConstantValues via
-    // GfxCmds.
-    const size_t uboSize = sizeof(uniform);
-    HgiGLShaderProgram * const hgiGLProgram =
-        dynamic_cast<HgiGLShaderProgram*>(hgiProgram.Get());
-    GLuint ubo = hgiGLProgram->GetUniformBuffer(uboSize);
-    GlfContextCaps const &caps = GlfContextCaps::GetInstance();
-    if (caps.directStateAccessEnabled) {
-        glNamedBufferData(ubo, uboSize, &uniform, GL_STATIC_DRAW);
-    } else {
-        glBindBuffer(GL_UNIFORM_BUFFER, ubo);
-        glBufferData(GL_UNIFORM_BUFFER, uboSize, &uniform, GL_STATIC_DRAW);
-        glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    Hgi* hgi = hdStResourceRegistry->GetHgi();
+
+    // Generate hash for resource bindings and pipeline.
+    // XXX Needs fingerprint hash to avoid collisions
+    uint64_t rbHash = (uint64_t) TfHash::Combine(
+        points->GetHandle().Get(),
+        normals->GetHandle().Get(),
+        indices->GetHandle().Get(),
+        primitiveParam->GetHandle().Get());
+
+    uint64_t pHash = (uint64_t) TfHash::Combine(
+        computeProgram->GetProgram().Get(),
+        sizeof(uniform));
+
+    // Get or add resource bindings in registry.
+    HdInstance<HgiResourceBindingsSharedPtr> resourceBindingsInstance =
+        hdStResourceRegistry->RegisterResourceBindings(rbHash);
+    if (resourceBindingsInstance.IsFirstInstance()) {
+        HgiResourceBindingsSharedPtr rb =
+            _CreateResourceBindings(hgi,
+                                    points->GetHandle(),
+                                    normals->GetHandle(),
+                                    indices->GetHandle(),
+                                    primitiveParam->GetHandle());
+        resourceBindingsInstance.SetValue(rb);
     }
 
-    GLuint pointsId =
-        points->GetId() ? points->GetId()->GetRawResource() : 0;
-    GLuint normalsId =
-        normals->GetId() ? normals->GetId()->GetRawResource() : 0;
-    GLuint indicesId =
-        indices->GetId() ? indices->GetId()->GetRawResource() : 0;
-    GLuint primitiveParamId =
-        primitiveParam->GetId() ? primitiveParam->GetId()->GetRawResource() : 0;
+    HgiResourceBindingsSharedPtr const& resourceBindingsPtr =
+        resourceBindingsInstance.GetValue();
+    HgiResourceBindingsHandle resourceBindings = *resourceBindingsPtr.get();
 
-    glBindBufferBase(GL_UNIFORM_BUFFER, 0, ubo);
-    glBindBufferBase(
-        GL_SHADER_STORAGE_BUFFER, 0, pointsId);
-    glBindBufferBase(
-        GL_SHADER_STORAGE_BUFFER, 1, normalsId);
-    glBindBufferBase(
-        GL_SHADER_STORAGE_BUFFER, 2, indicesId);
-    glBindBufferBase(
-        GL_SHADER_STORAGE_BUFFER, 3, primitiveParamId);
+    // Get or add pipeline in registry.
+    HdInstance<HgiComputePipelineSharedPtr> computePipelineInstance =
+        hdStResourceRegistry->RegisterComputePipeline(pHash);
+    if (computePipelineInstance.IsFirstInstance()) {
+        HgiComputePipelineSharedPtr pipe = _CreatePipeline(
+            hgi, sizeof(uniform), computeProgram->GetProgram());
+        computePipelineInstance.SetValue(pipe);
+    }
 
-    // dispatch compute kernel
-    glUseProgram(program);
+    HgiComputePipelineSharedPtr const& pipelinePtr =
+        computePipelineInstance.GetValue();
+    HgiComputePipelineHandle pipeline = *pipelinePtr.get();
 
-    int numPrims = topologyRange->GetNumElements();
-    glDispatchCompute(numPrims, 1, 1);
+    HgiComputeCmds* computeCmds = hdStResourceRegistry->GetGlobalComputeCmds();
+    computeCmds->PushDebugGroup("Flat Normals Cmds");
+    computeCmds->BindResources(resourceBindings);
+    computeCmds->BindPipeline(pipeline);
 
-    glUseProgram(0);
-    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    // transfer uniform buffer
+    computeCmds->SetConstantValues(
+        pipeline, BufferBinding_Uniforms, sizeof(uniform), &uniform);
 
-    glBindBufferBase(GL_UNIFORM_BUFFER, 0, 0);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, 0);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, 0);
+    // Queue compute work
+    computeCmds->Dispatch(numPrims, 1);
+
+    computeCmds->PopDebugGroup();
 }
 
 void

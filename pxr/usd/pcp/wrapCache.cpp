@@ -241,12 +241,14 @@ wrapCache()
         // Note: The following parameters are not wrapped as a properties
         // because setting them may require returning additional out-
         // parameters representing the resulting cache invalidation.
-        .def("GetLayerStackIdentifier", &PcpCache::GetLayerStackIdentifier)
+        .def("GetLayerStackIdentifier", &PcpCache::GetLayerStackIdentifier,
+             return_value_policy<return_by_value>())
         .def("SetVariantFallbacks", &_SetVariantFallbacks)
         .def("GetVariantFallbacks", &PcpCache::GetVariantFallbacks,
              return_value_policy<TfPyMapToDictionary>())
         .def("GetUsedLayers", &PcpCache::GetUsedLayers,
              return_value_policy<TfPySequenceToList>())
+        .def("GetUsedLayersRevision", &PcpCache::GetUsedLayersRevision)
         .def("IsPayloadIncluded", &PcpCache::IsPayloadIncluded)
         .def("RequestPayloads", &_RequestPayloads)
         .def("RequestLayerMuting", &_RequestLayerMuting,
@@ -265,6 +267,10 @@ wrapCache()
                                     return_value_policy<return_by_value>()))
 
         .def("ComputeLayerStack", &_ComputeLayerStack)
+        .def("HasRootLayerStack",
+             (bool (PcpCache::*)(PcpLayerStackPtr const &) const)
+             &PcpCache::HasRootLayerStack)
+        .def("UsesLayerStack", &PcpCache::UsesLayerStack)
         .def("ComputePrimIndex", &_ComputePrimIndex)
         .def("FindPrimIndex", &_FindPrimIndex)
         .def("ComputePropertyIndex", &_ComputePropertyIndex)

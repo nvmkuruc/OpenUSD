@@ -60,10 +60,10 @@ _AddToken(T& cls, const char* name, const TfToken& token)
 
 } // anonymous
 
-void wrapUsdMdlTokens()
+void wrapUsdMdlAPITokens()
 {
-    boost::python::class_<UsdMdlTokensType, boost::noncopyable>
+    boost::python::class_<UsdMdlAPITokensType, boost::noncopyable>
         cls("Tokens", boost::python::no_init);
-    _AddToken(cls, "infoMdlSourceAsset", UsdMdlTokens->infoMdlSourceAsset);
-    _AddToken(cls, "infoMdlSourceAssetSubIdentifier", UsdMdlTokens->infoMdlSourceAssetSubIdentifier);
+    _AddToken(cls, "infoMdlSourceAsset", UsdMdlAPITokens->infoMdlSourceAsset);
+    _AddToken(cls, "infoMdlSourceAssetSubIdentifier", UsdMdlAPITokens->infoMdlSourceAssetSubIdentifier);
 }

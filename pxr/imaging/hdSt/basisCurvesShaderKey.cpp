@@ -76,6 +76,8 @@ TF_DEFINE_PRIVATE_TOKENS(
     ((curveCubicWidthsLinear,          "Curves.Cubic.Widths.Linear"))
     ((curveCubicNormalsBasis,          "Curves.Cubic.Normals.Basis"))
     ((curveCubicNormalsLinear,         "Curves.Cubic.Normals.Linear"))
+    ((curvesLinearVaryingInterp,       "Curves.Linear.VaryingInterpolation"))
+    ((curvesCubicVaryingInterp,        "Curves.Cubic.VaryingInterpolation"))
 
     ((curvesTessControlShared,         "Curves.TessControl.Shared"))
     ((curvesTessControlLinearRibbon,   "Curves.TessControl.Linear.Ribbon"))
@@ -108,10 +110,12 @@ TF_DEFINE_PRIVATE_TOKENS(
     ((instancing,                      "Instancing.Transform"))
 
     // terminals
-    ((surfaceFS,                       "Fragment.Surface"))
+    ((commonFS,                        "Fragment.CommonTerminals"))
     ((hullColorFS,                     "Fragment.HullColor"))
     ((pointColorFS,                    "Fragment.PointColor"))
-    ((commonFS,                        "Fragment.CommonTerminals"))
+    ((pointShadedFS,                    "Fragment.PointShaded"))
+    ((surfaceFS,                       "Fragment.Surface"))
+    ((surfaceUnlitFS,                  "Fragment.SurfaceUnlit"))
     ((scalarOverrideFS,                "Fragment.ScalarOverride"))
 );
 
@@ -132,7 +136,8 @@ HdSt_BasisCurvesShaderKey::HdSt_BasisCurvesShaderKey(
     bool basisWidthInterpolation,
     bool basisNormalInterpolation,
     TfToken shadingTerminal,
-    bool hasAuthoredTopologicalVisibility)
+    bool hasAuthoredTopologicalVisibility,
+    bool pointsShadingEnabled)
     : glslfx(_tokens->baseGLSLFX)
 {
     bool drawThick = (drawStyle == HdSt_BasisCurvesShaderKey::HALFTUBE) || 
@@ -201,7 +206,8 @@ HdSt_BasisCurvesShaderKey::HdSt_BasisCurvesShaderKey(
             TES[3] = _tokens->curvesTessEvalLinearPatch;
             TES[4] = oriented ? _tokens->curvesTessEvalRibbonOriented
                             : _tokens->curvesTessEvalRibbonImplicit;
-            TES[5] = TfToken();
+            TES[5] = _tokens->curvesLinearVaryingInterp;
+            TES[6] = TfToken();
             break;
         }
         case HdSt_BasisCurvesShaderKey::HALFTUBE:
@@ -216,7 +222,8 @@ HdSt_BasisCurvesShaderKey::HdSt_BasisCurvesShaderKey(
             TES[2] = _tokens->curvesFallback;
             TES[3] = _tokens->curvesTessEvalLinearPatch;
             TES[4] = _tokens->curvesTessEvalHalfTube;
-            TES[5] = TfToken();
+            TES[5] = _tokens->curvesLinearVaryingInterp;
+            TES[6] = TfToken();
             break;
         }
         default:
@@ -239,7 +246,8 @@ HdSt_BasisCurvesShaderKey::HdSt_BasisCurvesShaderKey(
             TES[0] = _tokens->instancing;
             TES[1] = _tokens->curvesTessEvalCubicWire;
             TES[2] = HdSt_BasisToShaderKey(basis);
-            TES[3] = TfToken();
+            TES[3] = _tokens->curvesCubicVaryingInterp;
+            TES[4] = TfToken();
             break;
         }
         case HdSt_BasisCurvesShaderKey::RIBBON:
@@ -262,7 +270,8 @@ HdSt_BasisCurvesShaderKey::HdSt_BasisCurvesShaderKey(
             TES[6] = basisNormalInterpolation ?
                         _tokens->curveCubicNormalsBasis :
                         _tokens->curveCubicNormalsLinear;
-            TES[7] = TfToken();
+            TES[7] = _tokens->curvesCubicVaryingInterp;
+            TES[8] = TfToken();
             break;
         }
         case HdSt_BasisCurvesShaderKey::HALFTUBE:
@@ -283,7 +292,8 @@ HdSt_BasisCurvesShaderKey::HdSt_BasisCurvesShaderKey(
             TES[6] = basisNormalInterpolation ?
                         _tokens->curveCubicNormalsBasis :
                         _tokens->curveCubicNormalsLinear;
-            TES[7] = TfToken();
+            TES[7] = _tokens->curvesCubicVaryingInterp;
+            TES[8] = TfToken();
             break;
         }
         default:
@@ -298,8 +308,18 @@ HdSt_BasisCurvesShaderKey::HdSt_BasisCurvesShaderKey(
     if (shadingTerminal == HdBasisCurvesReprDescTokens->hullColor) {
         FS[fsIndex++] = _tokens->hullColorFS;
     } else if (shadingTerminal == HdBasisCurvesReprDescTokens->pointColor) {
-        FS[fsIndex++] = _tokens->pointColorFS;
-    }else {
+        if (pointsShadingEnabled) {
+            // Let points for these curves be affected by the associated
+            // material so as to appear coherent with the other shaded surfaces
+            // that may be part of this rprim.
+            FS[fsIndex++] = _tokens->pointShadedFS;
+        } else {
+            FS[fsIndex++] = _tokens->pointColorFS;
+        }
+    } else if (shadingTerminal ==
+               HdBasisCurvesReprDescTokens->surfaceShaderUnlit) {
+        FS[fsIndex++] = _tokens->surfaceUnlitFS;
+    } else {
         FS[fsIndex++] = _tokens->surfaceFS;
     }
     FS[fsIndex++] = _tokens->scalarOverrideFS;

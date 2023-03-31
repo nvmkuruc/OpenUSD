@@ -132,6 +132,9 @@ TF_API double TfStringToDouble(const std::string& txt);
 /// \overload
 TF_API double TfStringToDouble(const char *text);
 
+/// \overload
+TF_API double TfStringToDouble(const char *text, int len);
+
 /// Convert a sequence of digits in \p txt to a long int value.  Caller is
 /// responsible for ensuring that \p txt has content matching:
 ///
@@ -225,10 +228,6 @@ TfStringStartsWith(const std::string& s, const std::string& prefix) {
     return TfStringStartsWith(s, prefix.c_str());
 }
 
-/// \overload
-TF_API
-bool TfStringStartsWith(const std::string &s, const TfToken& prefix);
-
 inline bool
 Tf_StringEndsWithImpl(char const *s, size_t slen,
                       char const *suffix, size_t suflen)
@@ -249,10 +248,6 @@ TfStringEndsWith(const std::string& s, const std::string& suffix)
 {
     return TfStringEndsWith(s, suffix.c_str());
 }
-
-/// \overload
-TF_API
-bool TfStringEndsWith(const std::string &s, const TfToken& suffix);
 
 /// Returns true if \p s contains \p substring.
 // \ingroup group_tf_String
@@ -348,7 +343,7 @@ std::string TfGetPathName(const std::string& fileName);
 
 /// Replaces all occurrences of string \p from with \p to in \p source
 ///
-/// Returns a new string which is created by copying \p string and replacing
+/// Returns a new string which is created by copying \p source and replacing
 /// every occurrence of \p from with \p to. Correctly handles the case in which
 /// \p to contains \p from.
 TF_API
@@ -420,6 +415,10 @@ std::vector<std::string> TfStringSplit(std::string const &src,
 /// The string \p source is broken apart into individual words, where a word
 /// is delimited by the characters in \p delimiters.  Delimiters default to
 /// white space (space, tab, and newline).
+///
+/// No empty strings are returned: delimiters at the start or end are ignored,
+/// consecutive delimiters are treated as though they were one, and an empty
+/// input will result in an empty return vector.
 TF_API
 std::vector<std::string> TfStringTokenize(const std::string& source,
                                           const char* delimiters = " \t\n");
@@ -510,7 +509,26 @@ struct TfDictionaryLessThan {
     /// \code
     ///     bool aIsFirst = TfDictionaryLessThan()(aString, bString);
     /// \endcode
-    TF_API bool operator()(const std::string &lhs, const std::string &rhs) const;
+    inline bool operator()(const std::string &lhs,
+                           const std::string &rhs) const {
+        // Check first chars first.  By far, it is most common that these
+        // characters are letters of the same case that differ, or of different
+        // case that differ.  It is very rare that we have to account for
+        // different cases, or numerical comparisons, so we special-case this
+        // first.
+        char l = lhs.c_str()[0], r = rhs.c_str()[0];
+        if (((l & ~0x20) != (r & ~0x20)) & bool(l & r & ~0x3f)) {
+            // This bit about add 5 mod 32 makes it so that '_' sorts less than
+            // all letters, which preserves existing behavior.
+            return ((l + 5) & 31) < ((r + 5) & 31);
+        }
+        else {
+            return _LessImpl(lhs, rhs);
+        }
+    }
+private:
+    TF_API bool _LessImpl(const std::string &lhs,
+                          const std::string &rhs) const;
 };
 
 /// Convert an arbitrary type into a string
@@ -625,14 +643,21 @@ std::string TfStringGlobToRegex(const std::string& s);
 /// \li \\ddd:   octal constant
 ///
 /// So, if the two-character sequence "\\n" appears in the string, it is
-/// replaced by an actual newline.  Each hex and octal constant translates
-/// into one character in the output string.  Hex constants can be any length,
-/// while octal constants are limited to 3 characters.  Both are terminated by
-/// a character that is not a valid constant.  Illegal escape sequences are
-/// replaced by the character following the backslash, so the two character
-/// sequence "\\c" would become "c".  Processing continues until the input
-/// hits a NUL character in the input string - anything appearing after the
-/// NUL will be ignored.
+/// replaced by an actual newline.  Each hex and octal constant translates into
+/// one character in the output string.  Hex constants can be up to 2 digits,
+/// octal constants can be up to 3 digits.  Both are terminated by a character
+/// that is not a valid constant.  Note that it is good practice to encode hex
+/// and octal constants with maximum width (2 and 3 digits, respectively) using
+/// leading zeroes if necessary.  This avoids problems where characters after
+/// the hex/octal constant that shouldn't be part of the constant get
+/// interpreted as part of it.  For example, the sequence "\x2defaced" will
+/// produce the characters "-efaced" when what was probably intended was the
+/// character 0x02 (STX) followed by "defaced".
+//
+/// Illegal escape sequences are replaced by the character following the
+/// backslash, so the two character sequence "\\c" would become "c".  Processing
+/// continues until the input hits a NUL character in the input string -
+/// anything appearing after the NUL will be ignored.
 TF_API std::string TfEscapeString(const std::string &in);
 TF_API void TfEscapeStringReplaceChar(const char** in, char** out);
 

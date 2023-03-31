@@ -64,8 +64,8 @@ class UsdContrivedBase : public UsdTyped
 public:
     /// Compile time constant representing what kind of schema this class is.
     ///
-    /// \sa UsdSchemaType
-    static const UsdSchemaType schemaType = UsdSchemaType::AbstractTyped;
+    /// \sa UsdSchemaKind
+    static const UsdSchemaKind schemaKind = UsdSchemaKind::AbstractTyped;
 
     /// Construct a UsdContrivedBase on UsdPrim \p prim .
     /// Equivalent to UsdContrivedBase::Get(prim.GetStage(), prim.GetPath())
@@ -110,11 +110,11 @@ public:
 
 
 protected:
-    /// Returns the type of schema this class belongs to.
+    /// Returns the kind of schema this class belongs to.
     ///
-    /// \sa UsdSchemaType
+    /// \sa UsdSchemaKind
     USDCONTRIVED_API
-    UsdSchemaType _GetSchemaType() const override;
+    UsdSchemaKind _GetSchemaKind() const override;
 
 private:
     // needs to invoke _GetStaticTfType.
@@ -139,7 +139,7 @@ public:
     /// | Declaration | `token myVaryingToken = "VariableTokenDefault"` |
     /// | C++ Type | TfToken |
     /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Token |
-    /// | \ref UsdContrivedTokens "Allowed Values" | VariableTokenAllowed1, VariableTokenAllowed2, "" |
+    /// | \ref UsdContrivedTokens "Allowed Values" | VariableTokenAllowed1, VariableTokenAllowed2, VariableTokenAllowed<3>, "" |
     USDCONTRIVED_API
     UsdAttribute GetMyVaryingTokenAttr() const;
 
@@ -163,7 +163,7 @@ public:
     /// | C++ Type | VtArray<TfToken> |
     /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->TokenArray |
     /// | \ref SdfVariability "Variability" | SdfVariabilityUniform |
-    /// | \ref UsdContrivedTokens "Allowed Values" | VariableTokenArrayAllowed1, VariableTokenArrayAllowed2, "" |
+    /// | \ref UsdContrivedTokens "Allowed Values" | VariableTokenArrayAllowed1, VariableTokenArrayAllowed2, VariableTokenArrayAllowed<3>, "" |
     USDCONTRIVED_API
     UsdAttribute GetMyVaryingTokenArrayAttr() const;
 
@@ -2243,6 +2243,81 @@ public:
     /// the default for \p writeSparsely is \c false.
     USDCONTRIVED_API
     UsdAttribute CreateFrame4dArrayAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+
+public:
+    // --------------------------------------------------------------------- //
+    // OVERRIDEBASEFALSEDERIVEDFALSE 
+    // --------------------------------------------------------------------- //
+    /// API schema override explicitly set to False in Base.
+    /// API schema override explicitly set to False in Derived.
+    /// Generates API functions in Base. (1/3)
+    /// 
+    ///
+    /// | ||
+    /// | -- | -- |
+    /// | Declaration | `int overrideBaseFalseDerivedFalse = 1` |
+    /// | C++ Type | int |
+    /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Int |
+    USDCONTRIVED_API
+    UsdAttribute GetOverrideBaseFalseDerivedFalseAttr() const;
+
+    /// See GetOverrideBaseFalseDerivedFalseAttr(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    USDCONTRIVED_API
+    UsdAttribute CreateOverrideBaseFalseDerivedFalseAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+
+public:
+    // --------------------------------------------------------------------- //
+    // OVERRIDEBASEFALSEDERIVEDNONE 
+    // --------------------------------------------------------------------- //
+    /// API schema override explicitly set to False in Base.
+    /// API schema override has no opinion in Derived.
+    /// Generates API functions in Base. (2/3)
+    /// 
+    ///
+    /// | ||
+    /// | -- | -- |
+    /// | Declaration | `int overrideBaseFalseDerivedNone = 1` |
+    /// | C++ Type | int |
+    /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Int |
+    USDCONTRIVED_API
+    UsdAttribute GetOverrideBaseFalseDerivedNoneAttr() const;
+
+    /// See GetOverrideBaseFalseDerivedNoneAttr(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    USDCONTRIVED_API
+    UsdAttribute CreateOverrideBaseFalseDerivedNoneAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+
+public:
+    // --------------------------------------------------------------------- //
+    // OVERRIDEBASENONEDERIVEDFALSE 
+    // --------------------------------------------------------------------- //
+    /// API schema override has no opinion in Base.
+    /// API schema override explicitly set to False in Derived.
+    /// Generates API functions in Base. (3/3)
+    /// 
+    ///
+    /// | ||
+    /// | -- | -- |
+    /// | Declaration | `int overrideBaseNoneDerivedFalse = 1` |
+    /// | C++ Type | int |
+    /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Int |
+    USDCONTRIVED_API
+    UsdAttribute GetOverrideBaseNoneDerivedFalseAttr() const;
+
+    /// See GetOverrideBaseNoneDerivedFalseAttr(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    USDCONTRIVED_API
+    UsdAttribute CreateOverrideBaseNoneDerivedFalseAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
     // ===================================================================== //

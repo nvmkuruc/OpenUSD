@@ -45,27 +45,24 @@ SdfLayerStateDelegateBase::IsDirty()
     return _IsDirty();
 }
 
-// #nv begin #fast-updates
 void 
 SdfLayerStateDelegateBase::SetField(
     const SdfPath& path,
     const TfToken& field,
     const VtValue& value,
-    const VtValue *oldValue,
-    bool fastUpdates)
+    VtValue *oldValue)
 {
     _OnSetField(path, field, value);
     _layer->_PrimSetField(
-        path, field, value, oldValue, /* useDelegate = */ false, fastUpdates);
+        path, field, value, oldValue, /* useDelegate = */ false);
 }
-// nv end
 
 void 
 SdfLayerStateDelegateBase::SetField(
     const SdfPath &path,
     const TfToken& field,
     const SdfAbstractDataConstValue& value,
-    const VtValue *oldValue)
+    VtValue *oldValue)
 {
     _OnSetField(path, field, value);
     _layer->_PrimSetField(
@@ -77,7 +74,7 @@ SdfLayerStateDelegateBase::SetFieldDictValueByKey(
     const TfToken& field,
     const TfToken& keyPath,
     const VtValue& value,
-    const VtValue *oldValue)
+    VtValue *oldValue)
 {
     _OnSetFieldDictValueByKey(path, field, keyPath, value);
     _layer->_PrimSetFieldDictValueByKey(
@@ -90,7 +87,7 @@ SdfLayerStateDelegateBase::SetFieldDictValueByKey(
     const TfToken& field,
     const TfToken& keyPath,
     const SdfAbstractDataConstValue& value,
-    const VtValue *oldValue)
+    VtValue *oldValue)
 {
     _OnSetFieldDictValueByKey(path, field, keyPath, value);
     _layer->_PrimSetFieldDictValueByKey(

@@ -94,6 +94,10 @@ class GfQuatd
     GF_API
     GfQuatd(class GfQuath const &other);
 
+    /// Return the zero quaternion, with real coefficient 0 and an
+    /// imaginary coefficients all zero.
+    static GfQuatd GetZero() { return GfQuatd(0.0); }
+
     /// Return the identity quaternion, with real coefficient 1 and an
     /// imaginary coefficients all zero.
     static GfQuatd GetIdentity() { return GfQuatd(1.0); }
@@ -146,6 +150,16 @@ class GfQuatd
     GfQuatd GetInverse() const {
         return GetConjugate() / _GetLengthSquared();
     }
+
+    /// Transform the GfVec3d point. If the quaternion is normalized,
+    /// the transformation is a rotation. Given a GfQuatd q, q.Transform(point)
+    /// is equivalent to:
+    ///
+    ///     (q * GfQuatd(0, point) * q.GetInverse()).GetImaginary()
+    ///
+    /// but is more efficient.
+    GF_API
+    GfVec3d Transform(const GfVec3d& point) const;
 
     /// Hash.
     friend inline size_t hash_value(const GfQuatd &q) {

@@ -33,6 +33,7 @@
 #include <boost/noncopyable.hpp>
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_queue.h>
+#include <mutex>
 #include <unordered_map>
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -64,20 +65,14 @@ public:
     /// given collection, and establishes a cache entry.  If a
     /// prior entry existed for the collection at this path,
     /// it is removed first.
-    // #nv begin #light-link-refresh
-    /// Returns true for new collection or
-    /// if the hash of the collection is different from any previous collection
+    /// Returns true for newly created collection or
+    /// if the hash of the collection is different from the previous collection
     bool
     UpdateCollection(UsdCollectionAPI const& collection);
-
-    // #nv begin #light-link-refresh
-
-    /// Remove any cached entry for the given collection.
-    /// Does nothing if no cache entry exists.
+ 
     /// Returns the hash of the removed collection, or 0 if no collection existed
     size_t
     RemoveCollection(UsdStageWeakPtr const& stage, SdfPath const& path);
-    // #nv end
 
     /// Return the cached entry for the given collection.
     TfToken
@@ -88,7 +83,6 @@ public:
     VtArray<TfToken>
     ComputeCollectionsContainingPath(SdfPath const& path) const;
 
-    // #nv begin #light-link-refresh
     /// Return the cached MembershipQuery for a given id
     void
     GetMembershipQuery(TfToken const& id, const Query** query) const;
@@ -101,8 +95,6 @@ public:
     /// Clears the internal dirty flags
     void
     ClearDirtyPaths();
-    
-    // #nv end
 
 private:
     // The cache boils down to tracking the correspondence of
@@ -120,12 +112,10 @@ private:
     std::unordered_map<SdfPath, TfToken, SdfPath::Hash> _idForPath;
     std::unordered_map<Query, SdfPathSet, Query::Hash> _pathsForQuery;
 
-    // #nv begin #light-link-refresh
     void
     _MarkCollectionContentDirty(UsdStageWeakPtr const& stage, UsdCollectionAPI::MembershipQuery const& query);
 
     SdfPathSet _dirtyPaths;
-    // #nv end
 
     std::mutex _mutex;
 };

@@ -35,6 +35,13 @@ using namespace boost::python;
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
+// Wrap this with a function so that add_property does not
+// try to return an lvalue (and fail)
+static TfEnum _GetErrorType(PcpErrorBasePtr const& err)
+{
+    return err->errorType;
+}
+
 void 
 wrapErrors()
 {    
@@ -49,7 +56,7 @@ wrapErrors()
 
     class_<PcpErrorBase, boost::noncopyable, PcpErrorBasePtr>
         ("ErrorBase", "", no_init)
-        .add_property("errorType", &PcpErrorBase::errorType)
+        .add_property("errorType", _GetErrorType)
         .def("__str__", &PcpErrorBase::ToString)
         ;
 
@@ -67,6 +74,11 @@ wrapErrors()
         ("ErrorArcPermissionDenied", "", no_init)
         ;
 
+    class_<PcpErrorCapacityExceeded, bases<PcpErrorBase>,
+        PcpErrorCapacityExceededPtr >
+        ("ErrorCapacityExceeded", "", no_init)
+        ;
+
     class_<PcpErrorInconsistentPropertyType, bases<PcpErrorBase>,
         PcpErrorInconsistentPropertyTypePtr>
         ("ErrorInconsistentPropertyType", "", no_init)
@@ -80,11 +92,6 @@ wrapErrors()
     class_<PcpErrorInconsistentAttributeVariability, bases<PcpErrorBase>,
         PcpErrorInconsistentAttributeVariabilityPtr>
         ("ErrorInconsistentAttributeVariability", "", no_init)
-        ;
-
-    class_<PcpErrorInternalAssetPath, bases<PcpErrorBase>,
-        PcpErrorInternalAssetPathPtr>
-        ("ErrorInternalAssetPath", "", no_init)
         ;
 
     class_<PcpErrorInvalidPrimPath, bases<PcpErrorBase>,
@@ -142,11 +149,6 @@ wrapErrors()
         ("ErrorInvalidSublayerPath", "", no_init)
         ;
 
-    class_<PcpErrorInvalidVariantSelection, bases<PcpErrorBase>,
-           PcpErrorInvalidVariantSelectionPtr>
-        ("ErrorInvalidVariantSelection", "", no_init)
-        ;
-
     class_<PcpErrorOpinionAtRelocationSource, bases<PcpErrorBase>, 
            PcpErrorOpinionAtRelocationSourcePtr>
         ("ErrorOpinionAtRelocationSource", "", no_init)
@@ -185,16 +187,15 @@ wrapErrors()
         TfPyContainerConversions::variable_capacity_policy >();
 }
 
-TF_REFPTR_CONST_VOLATILE_GET(PcpErrorInvalidVariantSelection)
 TF_REFPTR_CONST_VOLATILE_GET(PcpErrorPropertyPermissionDenied)
 TF_REFPTR_CONST_VOLATILE_GET(PcpErrorBase)
 TF_REFPTR_CONST_VOLATILE_GET(PcpErrorTargetPathBase)
 TF_REFPTR_CONST_VOLATILE_GET(PcpErrorArcCycle)
 TF_REFPTR_CONST_VOLATILE_GET(PcpErrorArcPermissionDenied)
+TF_REFPTR_CONST_VOLATILE_GET(PcpErrorCapacityExceeded)
 TF_REFPTR_CONST_VOLATILE_GET(PcpErrorInconsistentPropertyType)
 TF_REFPTR_CONST_VOLATILE_GET(PcpErrorInconsistentAttributeType)
 TF_REFPTR_CONST_VOLATILE_GET(PcpErrorInconsistentAttributeVariability)
-TF_REFPTR_CONST_VOLATILE_GET(PcpErrorInternalAssetPath)
 TF_REFPTR_CONST_VOLATILE_GET(PcpErrorInvalidPrimPath)
 TF_REFPTR_CONST_VOLATILE_GET(PcpErrorInvalidAssetPathBase)
 TF_REFPTR_CONST_VOLATILE_GET(PcpErrorInvalidAssetPath)

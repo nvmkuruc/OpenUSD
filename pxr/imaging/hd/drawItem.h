@@ -153,6 +153,14 @@ public:
             _drawingCoord.GetVertexPrimvarIndex());
     }
 
+    /// Returns a BufferArrayRange of varying primvars.
+    HD_API
+    HdBufferArrayRangeSharedPtr const &GetVaryingPrimvarRange() const {
+        return _sharedData->barContainer.Get(
+            _drawingCoord.GetVaryingPrimvarIndex());
+    }
+
+
     /// Returns a BufferArrayRange of face-varying primvars.
     HD_API
     HdBufferArrayRangeSharedPtr const &GetFaceVaryingPrimvarRange() const {
@@ -169,6 +177,20 @@ public:
     HD_API
     bool GetVisible() const { return _sharedData->visible; }
 
+    HD_API
+    TfToken const& GetMaterialTag() const {
+        return _materialTag;
+    }
+
+    HD_API
+    void SetMaterialTag(TfToken const &materialTag) {
+        _materialTag = materialTag;
+    }
+
+    TopologyToPrimvarVector const &GetFvarTopologyToPrimvarVector() const {
+        return _sharedData->fvarTopologyToPrimvarVector;
+    }
+
     /// Returns true if the drawItem has instancer.
     HD_API
     bool HasInstancer() const {
@@ -184,6 +206,13 @@ public:
     HD_API
     size_t GetBufferArraysHash() const;
 
+    /// Returns the hash of the element offsets of the underlying BARs.
+    /// When the hash changes, it means that any drawing coord caching
+    /// buffer (e.g. the indirect dispatch buffer) has to be rebuilt.
+    /// Note that this value is a hash, not sequential.
+    HD_API
+    size_t GetElementOffsetsHash() const;
+
     /// Tests the intersection with the view projection matrix.
     /// Returns true if this drawItem is in the frustum.
     ///
@@ -196,6 +225,9 @@ public:
                                      const HdDrawItem& self);
 
 protected:
+    // TfHash support.
+    template <class HashState>
+    friend void TfHashAppend(HashState &h, HdDrawItem const &di);
 
     /// Returns the shared data
     HD_API
@@ -209,6 +241,12 @@ protected:
     HD_API
     virtual size_t _GetBufferArraysHash() const;
 
+    /// Allows derived classes to return a hash of the element offsets of 
+    /// the underlying BARs they manage.
+    /// Called by GetBufferArraysHash.
+    HD_API
+    virtual size_t _GetElementOffsetsHash() const;
+
 private:
     // configuration of how to bundle the drawing coordinate for this draw item
     // out of BARs in sharedData
@@ -217,6 +255,12 @@ private:
     // pointer to shared data across reprs, owned by rprim:
     //    bufferArrayRanges, bounds, visibility
     HdRprimSharedData const *_sharedData;
+
+    /// The materialTag allows the draw items of rprims to be organized into 
+    /// different collections based on properties of the prim's material.
+    /// E.g. A renderer may wish to organize opaque and translucent prims 
+    /// into different collections so they can be rendered seperately.
+    TfToken _materialTag;
 };
 
 

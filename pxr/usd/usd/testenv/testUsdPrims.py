@@ -134,18 +134,31 @@ class TestUsdPrim(unittest.TestCase):
 
         stage = Usd.Stage.Open(payload)
         over = stage.OverridePrim(primPath)
-        over.GetReferences().AddReference(Sdf.Reference(basicOver.identifier, primPath))
+        over.GetReferences().AddReference(
+            Sdf.Reference(basicOver.identifier, primPath, 
+                          Sdf.LayerOffset(0.0, 2.0)))
 
         stage = Usd.Stage.Open(base)
         prim = stage.DefinePrim(primPath)
-        prim.GetPayloads().AddPayload(payload.identifier, primPath)
+        prim.GetPayloads().AddPayload(
+            Sdf.Payload(payload.identifier, primPath, Sdf.LayerOffset(10.0)))
         stage.GetRootLayer().subLayerPaths.append(sublayer.identifier) 
+        stage.GetRootLayer().subLayerOffsets[0] = Sdf.LayerOffset(20.0)
 
         expectedPrimStack = [layer.GetPrimAtPath(primPath) for layer in layers]
         stage = Usd.Stage.Open(base)
         prim = stage.GetPrimAtPath(primPath)
 
         assert prim.GetPrimStack() == expectedPrimStack
+
+        expectedPrimStackWithLayerOffsets = [
+            (expectedPrimStack[0], Sdf.LayerOffset()),
+            (expectedPrimStack[1], Sdf.LayerOffset(20.0)),
+            (expectedPrimStack[2], Sdf.LayerOffset(10.0)),
+            (expectedPrimStack[3], Sdf.LayerOffset(10.0, 2.0)),
+        ]
+        assert (prim.GetPrimStackWithLayerOffsets() == 
+                    expectedPrimStackWithLayerOffsets)
 
     def test_GetCachedPrimBits(self):
         layerFile = 'test.usda'
@@ -181,38 +194,42 @@ class TestUsdPrim(unittest.TestCase):
             globalClass, pureOver, group, propertyOrder])
         self.assertEqual(list(root.GetChildren()), [propertyOrder])
 
+        def _TestFilteredChildren(predicate, expectedChildren):
+            self.assertEqual(list(root.GetFilteredChildren(predicate)), 
+                             expectedChildren)
+            self.assertEqual(list(root.GetFilteredChildrenNames(predicate)), 
+                             [c.GetName() for c in expectedChildren])
+
         # Manually construct the "normal" view using the default predicate.
-        self.assertEqual(list(root.GetFilteredChildren(
-            Usd.PrimDefaultPredicate)), [propertyOrder])
+        _TestFilteredChildren(Usd.PrimDefaultPredicate, [propertyOrder])
 
         # Manually construct the "normal" view using the individual terms
         # from the default predicate.
-        self.assertEqual(list(root.GetFilteredChildren(
+        _TestFilteredChildren(
             Usd.PrimIsActive & Usd.PrimIsLoaded &
-            Usd.PrimIsDefined & ~Usd.PrimIsAbstract)), [propertyOrder])
+            Usd.PrimIsDefined & ~Usd.PrimIsAbstract, [propertyOrder])
 
         # Only abstract prims.
-        self.assertEqual(list(root.GetFilteredChildren(Usd.PrimIsAbstract)),
-                    [globalClass])
+        _TestFilteredChildren(Usd.PrimIsAbstract, [globalClass])
 
         # Abstract & defined prims -- still just the class.
-        self.assertEqual(list(root.GetFilteredChildren(
-            Usd.PrimIsAbstract & Usd.PrimIsDefined)), [globalClass])
+        _TestFilteredChildren(
+            Usd.PrimIsAbstract & Usd.PrimIsDefined, [globalClass])
 
         # Abstract | unloaded prims -- the class and the group.
-        self.assertEqual(list(root.GetFilteredChildren(
-            Usd.PrimIsAbstract | ~Usd.PrimIsLoaded)), [globalClass, group])
+        _TestFilteredChildren(
+            Usd.PrimIsAbstract | ~Usd.PrimIsLoaded, [globalClass, group])
 
         # Models only.
-        self.assertEqual(list(root.GetFilteredChildren(Usd.PrimIsModel)), [group])
+        _TestFilteredChildren(Usd.PrimIsModel, [group])
 
         # Non-models only.
-        self.assertEqual(list(root.GetFilteredChildren(~Usd.PrimIsModel)),
+        _TestFilteredChildren(~Usd.PrimIsModel,
                     [globalClass, pureOver, propertyOrder])
 
         # Models or undefined.
-        self.assertEqual(list(root.GetFilteredChildren(
-            Usd.PrimIsModel | ~Usd.PrimIsDefined)), [pureOver, group])
+        _TestFilteredChildren(
+            Usd.PrimIsModel | ~Usd.PrimIsDefined, [pureOver, group])
 
         # Check individual flags.
         assert root.IsActive()
@@ -221,6 +238,8 @@ class TestUsdPrim(unittest.TestCase):
         assert root.IsGroup()
         assert not root.IsAbstract()
         assert root.IsDefined()
+        assert root.HasDefiningSpecifier()
+        assert root.GetSpecifier() == Sdf.SpecifierDef
 
         assert globalClass.IsActive()
         assert globalClass.IsLoaded()
@@ -228,6 +247,8 @@ class TestUsdPrim(unittest.TestCase):
         assert not globalClass.IsGroup()
         assert globalClass.IsAbstract()
         assert globalClass.IsDefined()
+        assert globalClass.HasDefiningSpecifier()
+        assert globalClass.GetSpecifier() == Sdf.SpecifierClass
 
         assert abstractSubscope.IsActive()
         assert abstractSubscope.IsLoaded()
@@ -235,6 +256,8 @@ class TestUsdPrim(unittest.TestCase):
         assert not abstractSubscope.IsGroup()
         assert abstractSubscope.IsAbstract()
         assert abstractSubscope.IsDefined()
+        assert abstractSubscope.HasDefiningSpecifier()
+        assert abstractSubscope.GetSpecifier() == Sdf.SpecifierDef
 
         assert abstractOver.IsActive()
         assert abstractOver.IsLoaded()
@@ -242,6 +265,8 @@ class TestUsdPrim(unittest.TestCase):
         assert not abstractOver.IsGroup()
         assert abstractOver.IsAbstract()
         assert not abstractOver.IsDefined()
+        assert not abstractOver.HasDefiningSpecifier()
+        assert abstractOver.GetSpecifier() == Sdf.SpecifierOver
 
         assert pureOver.IsActive()
         assert pureOver.IsLoaded()
@@ -249,6 +274,8 @@ class TestUsdPrim(unittest.TestCase):
         assert not pureOver.IsGroup()
         assert not pureOver.IsAbstract()
         assert not pureOver.IsDefined()
+        assert not pureOver.HasDefiningSpecifier()
+        assert pureOver.GetSpecifier() == Sdf.SpecifierOver
 
         assert undefSubscope.IsActive()
         assert undefSubscope.IsLoaded()
@@ -256,6 +283,8 @@ class TestUsdPrim(unittest.TestCase):
         assert not undefSubscope.IsGroup()
         assert not undefSubscope.IsAbstract()
         assert not undefSubscope.IsDefined()
+        assert undefSubscope.HasDefiningSpecifier()
+        assert undefSubscope.GetSpecifier() == Sdf.SpecifierDef
 
         assert group.IsActive()
         assert not group.IsLoaded()
@@ -263,6 +292,8 @@ class TestUsdPrim(unittest.TestCase):
         assert group.IsGroup()
         assert not group.IsAbstract()
         assert group.IsDefined()
+        assert group.HasDefiningSpecifier()
+        assert group.GetSpecifier() == Sdf.SpecifierDef
 
         assert modelChild.IsActive()
         assert not modelChild.IsLoaded()
@@ -270,6 +301,8 @@ class TestUsdPrim(unittest.TestCase):
         assert not modelChild.IsGroup()
         assert not modelChild.IsAbstract()
         assert modelChild.IsDefined()
+        assert modelChild.HasDefiningSpecifier()
+        assert modelChild.GetSpecifier() == Sdf.SpecifierDef
 
         assert localChild.IsActive()
         assert not localChild.IsLoaded()
@@ -277,6 +310,8 @@ class TestUsdPrim(unittest.TestCase):
         assert not localChild.IsGroup()
         assert not localChild.IsAbstract()
         assert localChild.IsDefined()
+        assert localChild.HasDefiningSpecifier()
+        assert localChild.GetSpecifier() == Sdf.SpecifierDef
 
         assert undefModelChild.IsActive()
         assert not undefModelChild.IsLoaded()
@@ -284,6 +319,8 @@ class TestUsdPrim(unittest.TestCase):
         assert not undefModelChild.IsGroup()
         assert not undefModelChild.IsAbstract()
         assert not undefModelChild.IsDefined()
+        assert not undefModelChild.HasDefiningSpecifier()
+        assert undefModelChild.GetSpecifier() == Sdf.SpecifierOver
 
         assert not deactivatedScope.IsActive()
         assert not deactivatedScope.IsLoaded()
@@ -291,6 +328,8 @@ class TestUsdPrim(unittest.TestCase):
         assert not deactivatedScope.IsGroup()
         assert not deactivatedScope.IsAbstract()
         assert deactivatedScope.IsDefined()
+        assert deactivatedScope.HasDefiningSpecifier()
+        assert deactivatedScope.GetSpecifier() == Sdf.SpecifierDef
         assert not stage.GetPrimAtPath(
             deactivatedScope.GetPath().AppendChild('child'))
 
@@ -303,6 +342,8 @@ class TestUsdPrim(unittest.TestCase):
         assert not deactivatedScope.IsGroup()
         assert not deactivatedScope.IsAbstract()
         assert deactivatedScope.IsDefined()
+        assert deactivatedScope.HasDefiningSpecifier()
+        assert deactivatedScope.GetSpecifier() == Sdf.SpecifierDef
         assert stage.GetPrimAtPath(
             deactivatedScope.GetPath().AppendChild('child'))
 
@@ -315,6 +356,8 @@ class TestUsdPrim(unittest.TestCase):
         assert not deactivatedScope.IsGroup()
         assert not deactivatedScope.IsAbstract()
         assert deactivatedScope.IsDefined()
+        assert deactivatedScope.HasDefiningSpecifier()
+        assert deactivatedScope.GetSpecifier() == Sdf.SpecifierDef
         assert stage.GetPrimAtPath(
             deactivatedScope.GetPath().AppendChild('child'))
 
@@ -327,6 +370,8 @@ class TestUsdPrim(unittest.TestCase):
         assert not deactivatedScope.IsGroup()
         assert not deactivatedScope.IsAbstract()
         assert deactivatedScope.IsDefined()
+        assert deactivatedScope.HasDefiningSpecifier()
+        assert deactivatedScope.GetSpecifier() == Sdf.SpecifierDef
         assert not stage.GetPrimAtPath(
             deactivatedScope.GetPath().AppendChild('child'))
 
@@ -336,6 +381,8 @@ class TestUsdPrim(unittest.TestCase):
         assert not deactivatedModel.IsGroup()
         assert not deactivatedModel.IsAbstract()
         assert deactivatedModel.IsDefined()
+        assert deactivatedScope.HasDefiningSpecifier()
+        assert deactivatedScope.GetSpecifier() == Sdf.SpecifierDef
         assert not stage.GetPrimAtPath(
             deactivatedModel.GetPath().AppendChild('child'))
 
@@ -345,6 +392,8 @@ class TestUsdPrim(unittest.TestCase):
         assert not deactivatedOver.IsGroup()
         assert not deactivatedOver.IsAbstract()
         assert not deactivatedOver.IsDefined()
+        assert deactivatedScope.HasDefiningSpecifier()
+        assert deactivatedScope.GetSpecifier() == Sdf.SpecifierDef
         assert not stage.GetPrimAtPath(
             deactivatedOver.GetPath().AppendChild('child'))
 
@@ -357,6 +406,8 @@ class TestUsdPrim(unittest.TestCase):
         assert group.IsGroup()
         assert not group.IsAbstract()
         assert group.IsDefined()
+        assert group.HasDefiningSpecifier()
+        assert group.GetSpecifier() == Sdf.SpecifierDef
 
         # child should be loaded now.
         assert localChild.IsActive()
@@ -365,6 +416,8 @@ class TestUsdPrim(unittest.TestCase):
         assert not localChild.IsGroup()
         assert not localChild.IsAbstract()
         assert localChild.IsDefined()
+        assert localChild.HasDefiningSpecifier()
+        assert localChild.GetSpecifier() == Sdf.SpecifierDef
 
         # undef child should be loaded and defined, due to payload inclusion.
         assert undefModelChild.IsActive()
@@ -383,6 +436,8 @@ class TestUsdPrim(unittest.TestCase):
         assert not payloadChild.IsGroup()
         assert not payloadChild.IsAbstract()
         assert payloadChild.IsDefined()
+        assert undefModelChild.HasDefiningSpecifier()
+        assert undefModelChild.GetSpecifier() == Sdf.SpecifierDef
 
         # check deactivated scope again.
         assert not deactivatedScope.IsActive()
@@ -391,6 +446,8 @@ class TestUsdPrim(unittest.TestCase):
         assert not deactivatedScope.IsGroup()
         assert not deactivatedScope.IsAbstract()
         assert deactivatedScope.IsDefined()
+        assert deactivatedScope.HasDefiningSpecifier()
+        assert deactivatedScope.GetSpecifier() == Sdf.SpecifierDef
         assert not stage.GetPrimAtPath(
             deactivatedScope.GetPath().AppendChild('child'))
 
@@ -402,6 +459,8 @@ class TestUsdPrim(unittest.TestCase):
         assert not deactivatedScope.IsGroup()
         assert not deactivatedScope.IsAbstract()
         assert deactivatedScope.IsDefined()
+        assert deactivatedScope.HasDefiningSpecifier()
+        assert deactivatedScope.GetSpecifier() == Sdf.SpecifierDef
         assert stage.GetPrimAtPath(
             deactivatedScope.GetPath().AppendChild('child'))
 
@@ -413,6 +472,8 @@ class TestUsdPrim(unittest.TestCase):
         assert not deactivatedScope.IsGroup()
         assert not deactivatedScope.IsAbstract()
         assert deactivatedScope.IsDefined()
+        assert deactivatedScope.HasDefiningSpecifier()
+        assert deactivatedScope.GetSpecifier() == Sdf.SpecifierDef
         assert not stage.GetPrimAtPath(
             deactivatedScope.GetPath().AppendChild('child'))
 
@@ -521,16 +582,17 @@ class TestUsdPrim(unittest.TestCase):
             sphereRefs = sphere.GetReferences()
             s3 = Usd.Stage.CreateNew("refTest2."+fmt)
             box = s3.DefinePrim("/Box", "Cube")
-            assert s2.ResolveIdentifierToEditTarget(
-                s1.GetRootLayer().identifier) != ""
-            assert s2.ResolveIdentifierToEditTarget("./refTest2."+fmt) != ""
-            assert s2.ResolveIdentifierToEditTarget(
-                s2.GetRootLayer().realPath) != ""
+            self.assertEqual(s2.ResolveIdentifierToEditTarget(
+                s1.GetRootLayer().identifier), s1.GetRootLayer().identifier)
+            self.assertNotEqual(s2.ResolveIdentifierToEditTarget(
+                "./refTest2."+fmt), "")
+            self.assertNotEqual(s2.ResolveIdentifierToEditTarget(
+                s2.GetRootLayer().realPath), "")
             # but paths to non-existent files fail
-            assert s2.ResolveIdentifierToEditTarget("./noFile."+fmt) == ""
-            # and paths relative to in-memory layers fail (expected errors?)
-            print("bazRefs = " + s1.ResolveIdentifierToEditTarget("./refTest2."+fmt))
-            assert s1.ResolveIdentifierToEditTarget("./refTest2."+fmt) == "" 
+            self.assertEqual(s2.ResolveIdentifierToEditTarget("./noFile."+fmt), "")
+            # paths relative to in-memory layers resolve relative to the cwd
+            # (under the default resolver)
+            self.assertNotEqual(s1.ResolveIdentifierToEditTarget("./refTest2."+fmt), "")
 
             # A good reference generates no errors or exceptions
             assert bazRefs.AddReference(s2.GetRootLayer().identifier, "/Sphere")
@@ -613,6 +675,120 @@ class TestUsdPrim(unittest.TestCase):
             f.SetPropertyOrder(l('gfedcba'))
             self.assertEqual(f.GetPropertyNames(), l('gfedcba'))
 
+            f.ClearPropertyOrder()
+            self.assertEqual(f.GetPropertyNames(), l('abcdefg'))
+
+    def test_ChildrenReorder(self):
+        def l(chars):
+            return list(x for x in chars)
+
+        def _TestAllChildren(p, expectedNames):
+            self.assertEqual(p.GetAllChildrenNames(), expectedNames)
+            self.assertEqual(p.GetAllChildren(), 
+                             [p.GetChild(name) for name in expectedNames])
+
+        def _TestChildren(p, expectedNames):
+            self.assertEqual(p.GetChildrenNames(), expectedNames)
+            self.assertEqual(p.GetChildren(), 
+                             [p.GetChild(name) for name in expectedNames])
+
+        def _TestOrder(s, parentPath):
+
+            f = s.DefinePrim(parentPath) if parentPath else s.GetPseudoRoot()
+
+            s.SetEditTarget(s.GetRootLayer())
+            for name in l('abcd'):
+                s.DefinePrim(parentPath + '/' + name)
+
+            s.SetEditTarget(s.GetSessionLayer())
+            for name in l('defg'):
+                s.OverridePrim(parentPath + '/' + name)
+
+            # Start with no primOrder set. Default order.
+            self.assertIsNone(f.GetMetadata("primOrder"))
+            self.assertEqual(f.GetChildrenReorder(), [])
+            _TestAllChildren(f, l('abcdefg'))
+            _TestChildren(f, l('abcd'))
+
+            # Set partial ordering. 
+            f.SetChildrenReorder(l('edc'))
+            self.assertEqual(f.GetMetadata("primOrder"), l('edc'))
+            self.assertEqual(f.GetChildrenReorder(), l('edc'))
+            _TestAllChildren(f, l('abefgdc'))
+            _TestChildren(f, l('abdc'))
+
+            # Empty ordering. Back to default order.
+            f.SetChildrenReorder([])
+            self.assertEqual(f.GetMetadata("primOrder"), [])
+            self.assertEqual(f.GetChildrenReorder(), [])
+            _TestAllChildren(f, l('abcdefg'))
+            _TestChildren(f, l('abcd'))
+
+            # Single entry in order. Still maintains default ordering.
+            f.SetChildrenReorder(l('d'))
+            self.assertEqual(f.GetMetadata("primOrder"), l('d'))
+            self.assertEqual(f.GetChildrenReorder(), l('d'))
+            _TestAllChildren(f, l('abcdefg'))
+            _TestChildren(f, l('abcd'))
+
+            # Set ordering with no valid names. Default ordering.
+            f.SetChildrenReorder(l('xyz'))
+            self.assertEqual(f.GetMetadata("primOrder"), l('xyz'))
+            self.assertEqual(f.GetChildrenReorder(), l('xyz'))
+            _TestAllChildren(f, l('abcdefg'))
+            _TestChildren(f, l('abcd'))
+
+            # Set reorder with interspersed invalid names. Reorders with just 
+            # the valid names.
+            f.SetChildrenReorder(l('xeydzc'))
+            self.assertEqual(f.GetMetadata("primOrder"), l('xeydzc'))
+            self.assertEqual(f.GetChildrenReorder(), l('xeydzc'))
+            _TestAllChildren(f, l('abefgdc'))
+            _TestChildren(f, l('abdc'))
+
+            # Full reorder containing all the child prims.
+            f.SetChildrenReorder(l('gfedcba'))
+            self.assertEqual(f.GetMetadata("primOrder"), l('gfedcba'))
+            self.assertEqual(f.GetChildrenReorder(), l('gfedcba'))
+            _TestAllChildren(f, l('gfedcba'))
+            _TestChildren(f, l('dcba'))
+
+            # Clear the reorder on the session layer. Return to original order.
+            f.ClearChildrenReorder()
+            self.assertIsNone(f.GetMetadata("primOrder"))
+            self.assertEqual(f.GetChildrenReorder(), [])
+            _TestAllChildren(f, l('abcdefg'))
+            _TestChildren(f, l('abcd'))
+
+            # Do a full reorder on the root layer.
+            with Usd.EditContext(s, s.GetRootLayer()):
+                f.SetChildrenReorder(l('gfedcba'))
+            self.assertEqual(f.GetMetadata("primOrder"), l('gfedcba'))
+            self.assertEqual(f.GetChildrenReorder(), l('gfedcba'))
+            # Because the reorder is authored on the root layer, it only 
+            # reorders the prims that are defined on the root layer because 
+            # prim order is processed during composition. The prims defined on
+            # the session layer are not reordered.
+            _TestAllChildren(f, l('dcbaefg'))
+            _TestChildren(f, l('dcba'))
+
+            # Set an empty ordering on session layer. The strongest resolved
+            # metadata is now empty, but the reordering from the root layer
+            # metadata still takes place.
+            f.SetChildrenReorder([])
+            self.assertEqual(f.GetMetadata("primOrder"), [])
+            self.assertEqual(f.GetChildrenReorder(), [])
+            _TestAllChildren(f, l('dcbaefg'))
+            _TestChildren(f, l('dcba'))
+
+        for fmt in allFormats:
+            sl = Sdf.Layer.CreateAnonymous(fmt)
+            s = Usd.Stage.CreateInMemory('PrimReorder.'+fmt, sl)
+            # Test the pseudoroot first before testing on a "real" prim parent
+            # which gets added as a pseudoroot child.
+            _TestOrder(s, '')
+            _TestOrder(s, '/foo')
+
     def test_DefaultPrim(self):
         for fmt in allFormats:
             # No default prim to start.
@@ -691,31 +867,6 @@ class TestUsdPrim(unittest.TestCase):
             make(s, names, 4)
             test(s.GetPseudoRoot())
 
-    def test_PrimOrder(self):
-        # Create a stage with three root prims.
-        orderBefore = ['Foo', 'Bar', 'Baz']
-        orderAfter = ['Baz', 'Foo', 'Bar']
-
-        for fmt in allFormats:
-            s = Usd.Stage.CreateInMemory('PrimOrder.'+fmt)
-            children = [s.DefinePrim('/' + p) for p in orderBefore]
-            self.assertEqual(s.GetPseudoRoot().GetChildren(), children)
-
-            # Author reorder, assert they are reordered.
-            s.GetPseudoRoot().SetMetadata('primOrder', orderAfter)
-            self.assertEqual(s.GetPseudoRoot().GetChildren(),
-                        [s.GetPrimAtPath('/' + p) for p in orderAfter])
-
-            # Try the same thing with non-root prims.
-            s = Usd.Stage.CreateInMemory('PrimOrder.'+fmt)
-            children = [s.DefinePrim('/Root/' + p) for p in orderBefore]
-            self.assertEqual(s.GetPrimAtPath('/Root').GetChildren(), children)
-
-            # Author reorder, assert they are reordered.
-            s.GetPrimAtPath('/Root').SetMetadata('primOrder', orderAfter)
-            self.assertEqual(s.GetPrimAtPath('/Root').GetChildren(),
-                        [s.GetPrimAtPath('/Root/' + p) for p in orderAfter])
-
     def test_Instanceable(self):
         for fmt in allFormats:
             s = Usd.Stage.CreateInMemory('Instanceable.'+fmt)
@@ -783,14 +934,14 @@ class TestUsdPrim(unittest.TestCase):
             _ValidatePrimIndexes(s.GetPrimAtPath('/Ref'))
             _ValidatePrimIndexes(s.GetPrimAtPath('/Ref/Child'))
 
-            # Master prims do not expose a valid prim index.
-            master = s.GetMasters()[0]
-            _ValidateNoPrimIndexes(master)
+            # Prototype prims do not expose a valid prim index.
+            prototype = s.GetPrototypes()[0]
+            _ValidateNoPrimIndexes(prototype)
 
-            # However, prims beneath masters do expose a valid prim index.
+            # However, prims beneath prototypes do expose a valid prim index.
             # Note this prim index may change from run to run depending on
-            # which is selected as the source for the master.
-            _ValidatePrimIndexes(master.GetChild('Child'))
+            # which is selected as the source for the prototype.
+            _ValidatePrimIndexes(prototype.GetChild('Child'))
             
     def test_PseudoRoot(self):
         for fmt in allFormats:
@@ -836,13 +987,18 @@ class TestUsdPrim(unittest.TestCase):
         self.assertTrue(Usd.CollectionAPI().IsMultipleApplyAPISchema())
 
         self.assertTrue(
-            Usd.CollectionAPI().GetSchemaType() == Usd.SchemaType.MultipleApplyAPI)
+            Usd.CollectionAPI().GetSchemaKind() == Usd.SchemaKind.MultipleApplyAPI)
         self.assertTrue(
-            Usd.CollectionAPI().GetSchemaType() != Usd.SchemaType.SingleApplyAPI)
+            Usd.CollectionAPI().GetSchemaKind() != Usd.SchemaKind.SingleApplyAPI)
         self.assertTrue(
-            Usd.ModelAPI().GetSchemaType() == Usd.SchemaType.NonAppliedAPI)
+            Usd.ModelAPI().GetSchemaKind() == Usd.SchemaKind.NonAppliedAPI)
         self.assertTrue(
-            Usd.ClipsAPI().GetSchemaType() == Usd.SchemaType.NonAppliedAPI)
+            Usd.ClipsAPI().GetSchemaKind() == Usd.SchemaKind.NonAppliedAPI)
+
+        # Verify that we an exception but don't crash when applying to the 
+        # null prim.
+        with self.assertRaises(Tf.ErrorException):
+            self.assertFalse(Usd.CollectionAPI.Apply(Usd.Prim(), "root"))
 
         for fmt in allFormats:
             sessionLayer = Sdf.Layer.CreateNew("SessionLayer.%s" % fmt)
@@ -853,7 +1009,7 @@ class TestUsdPrim(unittest.TestCase):
             world= s.OverridePrim('/world')
             self.assertEqual([], world.GetAppliedSchemas())
 
-            rootCollAPI = Usd.CollectionAPI.ApplyCollection(world, "root")
+            rootCollAPI = Usd.CollectionAPI.Apply(world, "root")
             self.assertTrue(rootCollAPI)
 
             world = rootCollAPI.GetPrim()
@@ -879,7 +1035,7 @@ class TestUsdPrim(unittest.TestCase):
 
             # Switch the edit target to the session layer and test bug 156929
             s.SetEditTarget(Usd.EditTarget(s.GetSessionLayer()))
-            sessionCollAPI = Usd.CollectionAPI.ApplyCollection(world, "session")
+            sessionCollAPI = Usd.CollectionAPI.Apply(world, "session")
             self.assertTrue(sessionCollAPI)
             self.assertEqual(['CollectionAPI:session', 'CollectionAPI:root'],
                              world.GetAppliedSchemas())
@@ -887,8 +1043,7 @@ class TestUsdPrim(unittest.TestCase):
             self.assertTrue(world.HasAPI(Usd.CollectionAPI))
 
             # Ensure duplicates aren't picked up
-            anotherSessionCollAPI = Usd.CollectionAPI.ApplyCollection(world, 
-                                                                       "session")
+            anotherSessionCollAPI = Usd.CollectionAPI.Apply(world, "session")
             self.assertTrue(anotherSessionCollAPI)
             self.assertEqual(['CollectionAPI:session', 'CollectionAPI:root'],
                              world.GetAppliedSchemas())
@@ -896,8 +1051,7 @@ class TestUsdPrim(unittest.TestCase):
             # Add a duplicate in the root layer and ensure that there are no 
             # duplicates in the composed result.
             s.SetEditTarget(Usd.EditTarget(s.GetRootLayer()))
-            rootLayerSessionCollAPI = Usd.CollectionAPI.ApplyCollection(world,
-                    "session")
+            rootLayerSessionCollAPI = Usd.CollectionAPI.Apply(world, "session")
             self.assertTrue(rootLayerSessionCollAPI)
             self.assertEqual(['CollectionAPI:session', 'CollectionAPI:root'],
                              world.GetAppliedSchemas())

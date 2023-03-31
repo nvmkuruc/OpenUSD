@@ -25,11 +25,11 @@
 #define PXR_IMAGING_HGIGL_SHADERFUNCTION_H
 
 #include "pxr/imaging/hgi/shaderFunction.h"
-
 #include "pxr/imaging/hgiGL/api.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+class Hgi;
 
 ///
 /// \class HgiGLShaderFunction
@@ -62,7 +62,7 @@ protected:
     friend class HgiGL;
 
     HGIGL_API
-    HgiGLShaderFunction(HgiShaderFunctionDesc const& desc);
+    HgiGLShaderFunction(Hgi const* hgi, HgiShaderFunctionDesc const& desc);
 
 private:
     HgiGLShaderFunction() = delete;

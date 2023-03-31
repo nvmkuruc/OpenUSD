@@ -79,6 +79,27 @@ class SdfAssetPath;
 /// down the -Z axis, with +Y as the up axis, and +X pointing to the right.
 /// This describes a __right handed coordinate system__. 
 /// 
+/// \section UsdGeom_CameraUnits Units of Measure for Camera Properties
+/// 
+/// Despite the familiarity of millimeters for specifying some physical
+/// camera properties, UsdGeomCamera opts for greater consistency with all
+/// other UsdGeom schemas, which measure geometric properties in scene units,
+/// as determined by UsdGeomGetStageMetersPerUnit().  We do make a
+/// concession, however, in that lens and filmback properties are measured in
+/// __tenths of a scene unit__ rather than "raw" scene units.  This means
+/// that with the fallback value of .01 for _metersPerUnit_ - i.e. scene unit
+/// of centimeters - then these "tenth of scene unit" properties are
+/// effectively millimeters.
+/// 
+/// \note If one adds a Camera prim to a UsdStage whose scene unit is not
+/// centimeters, the fallback values for filmback properties will be
+/// incorrect (or at the least, unexpected) in an absolute sense; however,
+/// proper imaging through a "default camera" with focusing disabled depends
+/// only on ratios of the other properties, so the camera is still usable.
+/// However, it follows that if even one property is authored in the correct
+/// scene units, then they all must be.
+/// 
+/// 
 /// \sa \ref UsdGeom_LinAlgBasics
 /// 
 ///
@@ -92,8 +113,8 @@ class UsdGeomCamera : public UsdGeomXformable
 public:
     /// Compile time constant representing what kind of schema this class is.
     ///
-    /// \sa UsdSchemaType
-    static const UsdSchemaType schemaType = UsdSchemaType::ConcreteTyped;
+    /// \sa UsdSchemaKind
+    static const UsdSchemaKind schemaKind = UsdSchemaKind::ConcreteTyped;
 
     /// Construct a UsdGeomCamera on UsdPrim \p prim .
     /// Equivalent to UsdGeomCamera::Get(prim.GetStage(), prim.GetPath())
@@ -163,11 +184,11 @@ public:
     Define(const UsdStagePtr &stage, const SdfPath &path);
 
 protected:
-    /// Returns the type of schema this class belongs to.
+    /// Returns the kind of schema this class belongs to.
     ///
-    /// \sa UsdSchemaType
+    /// \sa UsdSchemaKind
     USDGEOM_API
-    UsdSchemaType _GetSchemaType() const override;
+    UsdSchemaKind _GetSchemaKind() const override;
 
 private:
     // needs to invoke _GetStaticTfType.
@@ -208,9 +229,9 @@ public:
     // --------------------------------------------------------------------- //
     // HORIZONTALAPERTURE 
     // --------------------------------------------------------------------- //
-    /// Horizontal aperture in millimeters (or, more general, tenths
-    /// of a world unit).
-    /// Defaults to the standard 35mm spherical projector aperture.
+    /// Horizontal aperture in tenths of a scene unit; see 
+    /// \ref UsdGeom_CameraUnits . Default is the equivalent of 
+    /// the standard 35mm spherical projector aperture.
     ///
     /// | ||
     /// | -- | -- |
@@ -232,9 +253,9 @@ public:
     // --------------------------------------------------------------------- //
     // VERTICALAPERTURE 
     // --------------------------------------------------------------------- //
-    /// Vertical aperture in millimeters (or, more general, tenths of
-    /// a world unit).
-    /// Defaults to the standard 35mm spherical projector aperture.
+    /// Vertical aperture in tenths of a scene unit; see 
+    /// \ref UsdGeom_CameraUnits . Default is the equivalent of 
+    /// the standard 35mm spherical projector aperture.
     ///
     /// | ||
     /// | -- | -- |
@@ -302,8 +323,8 @@ public:
     // --------------------------------------------------------------------- //
     // FOCALLENGTH 
     // --------------------------------------------------------------------- //
-    /// Perspective focal length in millimeters (or, more general,
-    /// tenths of a world unit).
+    /// Perspective focal length in tenths of a scene unit; see 
+    /// \ref UsdGeom_CameraUnits .
     ///
     /// | ||
     /// | -- | -- |
@@ -325,8 +346,8 @@ public:
     // --------------------------------------------------------------------- //
     // CLIPPINGRANGE 
     // --------------------------------------------------------------------- //
-    /// Near and far clipping distances in centimeters (or, more
-    /// general, world units).
+    /// Near and far clipping distances in scene units; see 
+    /// \ref UsdGeom_CameraUnits .
     ///
     /// | ||
     /// | -- | -- |
@@ -395,8 +416,8 @@ public:
     // --------------------------------------------------------------------- //
     // FOCUSDISTANCE 
     // --------------------------------------------------------------------- //
-    /// Distance from the camera to the focus plane in centimeters (or
-    /// more general, world units).
+    /// Distance from the camera to the focus plane in scene units; see 
+    /// \ref UsdGeom_CameraUnits .
     ///
     /// | ||
     /// | -- | -- |
@@ -489,6 +510,31 @@ public:
     UsdAttribute CreateShutterCloseAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
+    // --------------------------------------------------------------------- //
+    // EXPOSURE 
+    // --------------------------------------------------------------------- //
+    /// Exposure adjustment, as a log base-2 value.  The default
+    /// of 0.0 has no effect.  A value of 1.0 will double the
+    /// image-plane intensities in a rendered image; a value of
+    /// -1.0 will halve them.
+    ///
+    /// | ||
+    /// | -- | -- |
+    /// | Declaration | `float exposure = 0` |
+    /// | C++ Type | float |
+    /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Float |
+    USDGEOM_API
+    UsdAttribute GetExposureAttr() const;
+
+    /// See GetExposureAttr(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    USDGEOM_API
+    UsdAttribute CreateExposureAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+
+public:
     // ===================================================================== //
     // Feel free to add custom code below this line, it will be preserved by 
     // the code generator. 
@@ -517,13 +563,14 @@ public:
     ///  - clippingPlanes
     ///  - fStop
     ///  - focalDistance
-    ///  - xformOpOrder and xformOp:transform **
-    /// **NOTE: This will clear any existing xformOpOrder and replace
+    ///  - xformOpOrder and xformOp:transform
+    /// 
+    /// \note This will clear any existing xformOpOrder and replace
     /// it with a single xformOp:transform entry. The xformOp:transform
     /// property is created or updated here to match the transform
-    /// on \p camera . This operation will fail if there is an xformOpOrder
-    /// opinion containing xformOp:transform in the composed layer stack that
-    /// is stronger than that of the current edit target.
+    /// on \p camera . This operation will fail if there are stronger xform op
+    /// opinions in the composed layer stack that are stronger than that of
+    /// the current edit target.
     ///
     USDGEOM_API
     void SetFromCamera(const GfCamera &camera, const UsdTimeCode &time);

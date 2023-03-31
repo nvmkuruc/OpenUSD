@@ -29,7 +29,6 @@
 #include "pxr/pxr.h"
 #include "pxr/base/vt/api.h"
 #include "pxr/base/vt/hash.h"
-#include "pxr/base/vt/operators.h"
 #include "pxr/base/vt/streamOut.h"
 #include "pxr/base/vt/traits.h"
 #include "pxr/base/vt/types.h"
@@ -145,9 +144,9 @@ protected:
 /// Originally, VtArray was built to mimic the arrays in menv2x's MDL language,
 /// but since VtArray has typed elements, the multidimensionality has found
 /// little use.  For example, if you have only scalar elements, then to
-/// represent a list of vectors you need an two dimensional array.  To represent
+/// represent a list of vectors you need a two dimensional array.  To represent
 /// a list of matrices you need a three dimensional array.  However with
-/// VtArray<GfVec3d> and VtArray<GfMatrix4d>, the VtArray is one dimensional,
+/// VtArray<GfVec3d> and VtArray<GfMatrix4d>, the VtArray is one dimensional and
 /// the extra dimensions are encoded in the element types themselves.
 ///
 /// For this reason, VtArray has been moving toward being more like std::vector,
@@ -157,7 +156,7 @@ protected:
 /// First, VtArray shares data between instances using a copy-on-write scheme.
 /// This means that making copies of VtArray instances is cheap: it only copies
 /// the pointer to the data.  But on the other hand, invoking any non-const
-/// member function will incur a copy of the underlying data if it is not
+/// member function incurs a copy of the underlying data if it is not
 /// uniquely owned.  For example, assume 'a' and 'b' are VtArray<int>:
 ///
 /// \code
@@ -190,6 +189,41 @@ protected:
 /// }
 /// \endcode
 ///
+/// This can be quite subtle.  In C++, calling a member function that has const
+/// and non-const overloads on a non-const object must invoke the non-const
+/// version, even if the const version would suffice.  So something as simple
+/// this:
+///
+/// \code
+/// float x = array[123];
+/// \endcode
+///
+/// Invokes the non-const operator[] if \p array is non-const.  That means this
+/// kind of benign looking code can cause a copy-on-write detachment of the
+/// entire array, and thus is not safe to invoke concurrently with any other
+/// member function.  If we were building this class today we would make
+/// different choices about this API, but changing this now is a gargantuan
+/// task, so it remains.
+///
+/// So, it is best practice to ensure you use const VtArray, or const VtArray &,
+/// or VtArray::AsConst(), as well as the `c`-prefixed member functions like
+/// cbegin()/cend(), cfront()/cback() to avoid these pitfalls when your intent
+/// is not to mutate the array.
+///
+/// Regarding thread safety, for the same reasons spelled out above, all
+/// mutating member functions must be invoked exclusively to all other member
+/// functions, even if they are invoked in a way that does not mutate (as in the
+/// operator[] example above).  This is the same general rule that the STL
+/// abides by.
+///
+/// Also, and again for the same reasons, all mutating member functions can
+/// invalidate iterators, even if the member functions are invoked in a way that
+/// does not mutate (as in the operator[] example above).
+///
+/// The TfEnvSetting 'VT_LOG_STACK_ON_ARRAY_DETACH_COPY' can be set to help
+/// determine where unintended copy-on-write detaches come from.  When set,
+/// VtArray will log a stack trace for every copy-on-write detach that occurs.
+///
 template<typename ELEM>
 class VtArray : public Vt_ArrayBase {
   public:
@@ -198,45 +232,27 @@ class VtArray : public Vt_ArrayBase {
     typedef ELEM ElementType;
     typedef ELEM value_type;
 
-    template <typename Value>
-    class PointerIterator
-        : public boost::iterator_adaptor<PointerIterator<Value>, Value *> {
-    public:
-        PointerIterator() :
-            PointerIterator::iterator_adaptor_(0) {}
-        explicit PointerIterator(Value *p) :
-            PointerIterator::iterator_adaptor_(p) {}
-        template <typename OtherValue>
-        PointerIterator(PointerIterator<OtherValue> const &other,
-                        typename boost::enable_if_convertible
-                        <OtherValue*, Value*>::type* = 0) :
-            PointerIterator::iterator_adaptor_(other.base()) {}
-      private:
-        friend class boost::iterator_core_access;
-    };
-
     /// \defgroup STL_API STL-like API
     /// @{
 
     /// Iterator type.
-    typedef PointerIterator<ElementType> iterator;
+    using iterator = ElementType *;
     /// Const iterator type.
-    typedef PointerIterator<const ElementType> const_iterator;
+    using const_iterator = ElementType const *;
+    
     /// Reverse iterator type.
     typedef boost::reverse_iterator<iterator> reverse_iterator;
     /// Reverse const iterator type.
     typedef boost::reverse_iterator<const_iterator> const_reverse_iterator;
 
     /// Reference type.
-    typedef typename PointerIterator<ElementType>::reference
-        reference;
+    typedef ElementType &reference;
     /// Const reference type.
-    typedef typename PointerIterator<const ElementType>::reference
-        const_reference;
+    typedef ElementType const &const_reference;
     /// Pointer type.
-    typedef typename PointerIterator<ElementType>::pointer pointer;
+    typedef ElementType *pointer;
     /// Const pointer type.
-    typedef typename PointerIterator<const ElementType>::pointer const_pointer;
+    typedef ElementType const *const_pointer;
 
     /// @}
 
@@ -344,6 +360,18 @@ class VtArray : public Vt_ArrayBase {
 
     ~VtArray() { _DecRef(); }
     
+    /// Return *this as a const reference.  This ensures that all operations on
+    /// the result do not mutate and thus are safe to invoke concurrently with
+    /// other non-mutating operations, and will never cause a copy-on-write
+    /// detach.
+    ///
+    /// Note that the return is a const reference to this object, so it is only
+    /// valid within the lifetime of this array object.  Take special care
+    /// invoking AsConst() on VtArray temporaries/rvalues.
+    VtArray const &AsConst() const noexcept {
+        return *this;
+    }
+
     /// \addtogroup STL_API
     /// @{
     
@@ -393,9 +421,13 @@ class VtArray : public Vt_ArrayBase {
     /// Return a const pointer to the data held by this array.
     const_pointer cdata() const { return _data; }
 
-    /// Append an element to array.  The underlying data is first copied if it
-    /// is not uniquely owned.
-    void push_back(ElementType const &elem) {
+    /// Initializes a new element at the end of the array. The underlying data
+    /// is first copied if it is not uniquely owned.
+    ///
+    /// \sa push_back(ElementType const&)
+    /// \sa push_back(ElementType&&)
+    template <typename... Args>
+    void emplace_back(Args&&... args) {
         // If this is a non-pxr array with rank > 1, disallow push_back.
         if (ARCH_UNLIKELY(_shapeData.otherDims[0])) {
             TF_CODING_ERROR("Array rank %u != 1", _shapeData.GetRank());
@@ -411,9 +443,28 @@ class VtArray : public Vt_ArrayBase {
             _data = newData;
         }
         // Copy the value.
-        ::new (static_cast<void*>(_data + curSize)) value_type(elem);
+        ::new (static_cast<void*>(_data + curSize)) value_type(
+            std::forward<Args>(args)...);
         // Adjust size.
         ++_shapeData.totalSize;
+    }
+
+    /// Appends an element at the end of the array. The underlying data
+    /// is first copied if it is not uniquely owned.
+    ///
+    /// \sa emplace_back
+    /// \sa push_back(ElementType&&)
+    void push_back(ElementType const& element) {
+        emplace_back(element);
+    }
+
+    /// Appends an element at the end of the array. The underlying data
+    /// is first copied if it is not uniquely owned.
+    ///
+    /// \sa emplace_back
+    /// \sa push_back(ElementType const&)
+    void push_back(ElementType&& element) {
+        emplace_back(std::move(element));
     }
 
     /// Remove the last element of an array.  The underlying data is first
@@ -471,6 +522,9 @@ class VtArray : public Vt_ArrayBase {
     /// Return a const reference to the first element in this array.  Invokes
     /// undefined behavior if the array is empty.
     const_reference front() const { return *begin(); }
+    /// Return a const reference to the first element in this array.  Invokes
+    /// undefined behavior if the array is empty.
+    const_reference cfront() const { return *begin(); }
 
     /// Return a reference to the last element in this array.  The underlying
     /// data is copied if it is not uniquely owned.  Invokes undefined behavior
@@ -479,6 +533,9 @@ class VtArray : public Vt_ArrayBase {
     /// Return a const reference to the last element in this array.  Invokes
     /// undefined behavior if the array is empty.
     const_reference back() const { return *rbegin(); }
+    /// Return a const reference to the last element in this array.  Invokes
+    /// undefined behavior if the array is empty.
+    const_reference cback() const { return *rbegin(); }
 
     /// Resize this array.  Preserve existing elements that remain,
     /// value-initialize any newly added elements.  For example, calling
@@ -731,18 +788,6 @@ class VtArray : public Vt_ArrayBase {
         return !(*this == other);
     }
 
-ARCH_PRAGMA_PUSH
-ARCH_PRAGMA_FORCING_TO_BOOL
-ARCH_PRAGMA_UNSAFE_USE_OF_BOOL
-ARCH_PRAGMA_UNARY_MINUS_ON_UNSIGNED
-    VTOPERATOR_CPPARRAY(+)
-    VTOPERATOR_CPPARRAY(-)
-    VTOPERATOR_CPPARRAY(*)
-    VTOPERATOR_CPPARRAY(/)
-    VTOPERATOR_CPPARRAY(%)
-    VTOPERATOR_CPPARRAY_UNARY(-)
-ARCH_PRAGMA_POP
-
   public:
     // XXX -- Public so VtValue::_ArrayHelper<T,U>::GetShapeData() has access.
     Vt_ShapeData const *_GetShapeData() const {
@@ -853,6 +898,12 @@ ARCH_PRAGMA_POP
     value_type *_data;
 };
 
+// Declare basic array instantiations as extern templates.  They are explicitly
+// instantiated in array.cpp.
+#define VT_ARRAY_EXTERN_TMPL(r, unused, elem) \
+    extern template class VtArray< VT_TYPE(elem) >;
+BOOST_PP_SEQ_FOR_EACH(VT_ARRAY_EXTERN_TMPL, ~, VT_SCALAR_VALUE_TYPES)
+
 template <class ELEM>
 typename std::enable_if<VtIsHashable<ELEM>(), size_t>::type
 hash_value(VtArray<ELEM> const &array) {
@@ -866,6 +917,112 @@ hash_value(VtArray<ELEM> const &array) {
 // Specialize traits so others can figure out that VtArray is an array.
 template <typename T>
 struct VtIsArray< VtArray <T> > : public std::true_type {};
+
+
+#define VTOPERATOR_CPPARRAY(op)                                                \
+    template <class T>                                                         \
+    VtArray<T>                                                                 \
+    operator op (VtArray<T> const &lhs, VtArray<T> const &rhs)                 \
+    {                                                                          \
+        /* accept empty vecs */                                                \
+        if (!lhs.empty() && !rhs.empty() && lhs.size() != rhs.size()) {        \
+            TF_CODING_ERROR("Non-conforming inputs for operator %s", #op);     \
+            return VtArray<T>();                                               \
+        }                                                                      \
+        /* promote empty vecs to vecs of zeros */                              \
+        const bool leftEmpty = lhs.size() == 0, rightEmpty = rhs.size() == 0;  \
+        VtArray<T> ret(leftEmpty ? rhs.size() : lhs.size());                   \
+        T zero = VtZero<T>();                                                  \
+        if (leftEmpty) {                                                       \
+            std::transform(rhs.begin(), rhs.end(), ret.begin(),                \
+                           [zero](T const &r) { return T(zero op r); });       \
+        }                                                                      \
+        else if (rightEmpty) {                                                 \
+            std::transform(lhs.begin(), lhs.end(), ret.begin(),                \
+                           [zero](T const &l) { return T(l op zero); });       \
+        }                                                                      \
+        else {                                                                 \
+            std::transform(lhs.begin(), lhs.end(), rhs.begin(), ret.begin(),   \
+                           [](T const &l, T const &r) { return T(l op r); });  \
+        }                                                                      \
+        return ret;                                                            \
+    }
+
+ARCH_PRAGMA_PUSH
+ARCH_PRAGMA_FORCING_TO_BOOL
+ARCH_PRAGMA_UNSAFE_USE_OF_BOOL
+ARCH_PRAGMA_UNARY_MINUS_ON_UNSIGNED
+
+VTOPERATOR_CPPARRAY(+);
+VTOPERATOR_CPPARRAY(-);
+VTOPERATOR_CPPARRAY(*);
+VTOPERATOR_CPPARRAY(/);
+VTOPERATOR_CPPARRAY(%);
+    
+template <class T>
+VtArray<T>
+operator-(VtArray<T> const &a) {
+    VtArray<T> ret(a.size());
+    std::transform(a.begin(), a.end(), ret.begin(),
+                   [](T const &x) { return -x; });
+    return ret;
+}
+
+ARCH_PRAGMA_POP
+
+// Operations on scalars and arrays
+// These are free functions defined in Array.h
+#define VTOPERATOR_CPPSCALAR_TYPE(op,arraytype,scalartype,rettype)      \
+    template<typename arraytype>                                        \
+    VtArray<ElemType>                                                   \
+    operator op (scalartype const &scalar,                              \
+                 VtArray<arraytype> const &vec) {                       \
+        VtArray<rettype> ret(vec.size());                               \
+        for (size_t i = 0; i<vec.size(); ++i) {                         \
+            ret[i] = scalar op vec[i];                                  \
+        }                                                               \
+        return ret;                                                     \
+    }                                                                   \
+    template<typename arraytype>                                        \
+    VtArray<ElemType>                                                   \
+    operator op (VtArray<arraytype> const &vec,                         \
+                 scalartype const &scalar) {                            \
+        VtArray<rettype> ret(vec.size());                               \
+        for (size_t i = 0; i<vec.size(); ++i) {                         \
+            ret[i] = vec[i] op scalar;                                  \
+        }                                                               \
+        return ret;                                                     \
+    } 
+
+#define VTOPERATOR_CPPSCALAR(op)                                        \
+    VTOPERATOR_CPPSCALAR_TYPE(op,ElemType,ElemType,ElemType)
+
+// define special-case operators on arrays and doubles - except if the array
+// holds doubles, in which case we already defined the operator (with
+// VTOPERATOR_CPPSCALAR above) so we can't do it again!
+#define VTOPERATOR_CPPSCALAR_DOUBLE(op)                                        \
+    template<typename ElemType>                                                \
+    typename boost::disable_if<boost::is_same<ElemType, double>,               \
+                               VtArray<ElemType> >::type                       \
+    operator op (double const &scalar,                                         \
+                 VtArray<ElemType> const &vec) {                               \
+        VtArray<ElemType> ret(vec.size());                                     \
+        for (size_t i = 0; i<vec.size(); ++i) {                                \
+            ret[i] = scalar op vec[i];                                         \
+        }                                                                      \
+        return ret;                                                            \
+    }                                                                          \
+    template<typename ElemType>                                                \
+    typename boost::disable_if<boost::is_same<ElemType, double>,               \
+                               VtArray<ElemType> >::type                       \
+    operator op (VtArray<ElemType> const &vec,                                 \
+                 double const &scalar) {                                       \
+        VtArray<ElemType> ret(vec.size());                                     \
+        for (size_t i = 0; i<vec.size(); ++i) {                                \
+            ret[i] = vec[i] op scalar;                                         \
+        }                                                                      \
+        return ret;                                                            \
+    } 
 
 // free functions for operators combining scalar and array types
 ARCH_PRAGMA_PUSH

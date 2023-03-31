@@ -23,11 +23,13 @@
 //
 #include "pxr/usdImaging/usdImaging/coneAdapter.h"
 
+#include "pxr/usdImaging/usdImaging/dataSourceImplicits-Impl.h"
 #include "pxr/usdImaging/usdImaging/delegate.h"
-#include "pxr/usdImaging/usdImaging/implicitSurfaceMeshUtils.h"
 #include "pxr/usdImaging/usdImaging/indexProxy.h"
 #include "pxr/usdImaging/usdImaging/tokens.h"
 
+#include "pxr/imaging/geomUtil/coneMeshGenerator.h"
+#include "pxr/imaging/hd/coneSchema.h"
 #include "pxr/imaging/hd/mesh.h"
 #include "pxr/imaging/hd/meshTopology.h"
 #include "pxr/imaging/hd/perfLog.h"
@@ -40,6 +42,9 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+namespace {
+using _PrimSource = UsdImagingDataSourceImplicitsPrim<UsdGeomCone, HdConeSchema>;
+}
 
 TF_REGISTRY_FUNCTION(TfType)
 {
@@ -50,6 +55,48 @@ TF_REGISTRY_FUNCTION(TfType)
 
 UsdImagingConeAdapter::~UsdImagingConeAdapter() 
 {
+}
+
+TfTokenVector
+UsdImagingConeAdapter::GetImagingSubprims()
+{
+    return { TfToken() };
+}
+
+TfToken
+UsdImagingConeAdapter::GetImagingSubprimType(TfToken const& subprim)
+{
+    if (subprim.IsEmpty()) {
+        return HdPrimTypeTokens->cone;
+    }
+    return TfToken();
+}
+
+HdContainerDataSourceHandle
+UsdImagingConeAdapter::GetImagingSubprimData(
+        TfToken const& subprim,
+        UsdPrim const& prim,
+        const UsdImagingDataSourceStageGlobals &stageGlobals)
+{
+    if (subprim.IsEmpty()) {
+        return _PrimSource::New(
+            prim.GetPath(),
+            prim,
+            stageGlobals);
+    }
+    return nullptr;
+}
+
+HdDataSourceLocatorSet
+UsdImagingConeAdapter::InvalidateImagingSubprim(
+        TfToken const& subprim,
+        TfTokenVector const& properties)
+{
+    if (subprim.IsEmpty()) {
+        return _PrimSource::Invalidate(subprim, properties);
+    }
+    
+    return HdDataSourceLocatorSet();
 }
 
 bool
@@ -98,6 +145,9 @@ UsdImagingConeAdapter::TrackVariability(UsdPrim const& prim,
     // base adapter invocation) that might result in the bit being set, we need
     // to be careful not to reset it.  Translation: only check _IsVarying for a
     // given cause IFF the bit wasn't already set by a previous invocation.
+
+    // Check DirtyPoints before doing variability checks, in case we can skip
+    // any of them...
     if ((*timeVaryingBits & HdChangeTracker::DirtyPoints) == 0) {
         _IsVarying(prim, UsdGeomTokens->height,
                    HdChangeTracker::DirtyPoints,
@@ -118,37 +168,29 @@ UsdImagingConeAdapter::TrackVariability(UsdPrim const& prim,
     }
 }
 
-// Thread safe.
-//  * Populate dirty bits for the given \p time.
-void 
-UsdImagingConeAdapter::UpdateForTime(UsdPrim const& prim,
-                               SdfPath const& cachePath, 
-                               UsdTimeCode time,
-                               HdDirtyBits requestedBits,
-                               UsdImagingInstancerContext const* 
-                                   instancerContext) const
+HdDirtyBits
+UsdImagingConeAdapter::ProcessPropertyChange(UsdPrim const& prim,
+                                             SdfPath const& cachePath,
+                                             TfToken const& propertyName)
 {
-    BaseAdapter::UpdateForTime(
-        prim, cachePath, time, requestedBits, instancerContext);
-    UsdImagingValueCache* valueCache = _GetValueCache();
-    if (requestedBits & HdChangeTracker::DirtyTopology) {
-        valueCache->GetTopology(cachePath) = GetMeshTopology();
+    if (propertyName == UsdGeomTokens->height ||
+        propertyName == UsdGeomTokens->radius ||
+        propertyName == UsdGeomTokens->axis) {
+        return HdChangeTracker::DirtyPoints;
     }
+
+    // Allow base class to handle change processing.
+    return BaseAdapter::ProcessPropertyChange(prim, cachePath, propertyName);
 }
 
 /*virtual*/
 VtValue
 UsdImagingConeAdapter::GetPoints(UsdPrim const& prim,
-                                 SdfPath const& cachePath,
                                  UsdTimeCode time) const
 {
-    TF_UNUSED(cachePath);
-    return GetMeshPoints(prim, time);   
-}
+    TRACE_FUNCTION();
+    HF_MALLOC_TAG_FUNCTION();
 
-static GfMatrix4d
-_GetImplicitGeomScaleTransform(UsdPrim const& prim, UsdTimeCode time)
-{
     UsdGeomCone cone(prim);
 
     double height = 2.0;
@@ -167,48 +209,44 @@ _GetImplicitGeomScaleTransform(UsdPrim const& prim, UsdTimeCode time)
             prim.GetPath().GetText());
     }
 
-    return UsdImagingGenerateConeOrCylinderTransform(height, radius, axis);
-}
+    // The cone point generator computes points such that the "rings" of the
+    // cone lie on a plane parallel to the XY plane, with the Z-axis being
+    // the "spine" of the cone. These need to be transformed to the right
+    // basis when a different spine axis is used.
+    const GfMatrix4d basis = UsdImagingGprimAdapter::GetImplicitBasis(axis);
 
-/*static*/
-VtValue
-UsdImagingConeAdapter::GetMeshPoints(UsdPrim const& prim,
-                                     UsdTimeCode time)
-{
-    // Return scaled points (and not that of a unit geometry)
-    VtVec3fArray points = UsdImagingGetUnitConeMeshPoints();
-    GfMatrix4d scale = _GetImplicitGeomScaleTransform(prim, time);
-    for (GfVec3f& pt : points) {
-        pt = scale.Transform(pt);
-    }
+    const size_t numPoints =
+        GeomUtilConeMeshGenerator::ComputeNumPoints(numRadial);
+
+    VtVec3fArray points(numPoints);
+        
+    GeomUtilConeMeshGenerator::GeneratePoints(
+        points.begin(),
+        numRadial,
+        radius,
+        height,
+        &basis
+    );
 
     return VtValue(points);
 }
 
-/*static*/
+/*virtual*/ 
 VtValue
-UsdImagingConeAdapter::GetMeshTopology()
+UsdImagingConeAdapter::GetTopology(UsdPrim const& prim,
+                                   SdfPath const& cachePath,
+                                   UsdTimeCode time) const
 {
-    // Topology is constant and identical for all cones.
-    return VtValue(HdMeshTopology(UsdImagingGetUnitConeMeshTopology()));
-}
+    TRACE_FUNCTION();
+    HF_MALLOC_TAG_FUNCTION();
 
-// #nv begin #clean-property-invalidation
-/*virtual*/
-HdDirtyBits
-UsdImagingConeAdapter::ProcessPropertyChange(
-    UsdPrim const& prim,
-    SdfPath const& cachePath,
-    TfToken const& propertyName)
-{
-    if ((propertyName == UsdGeomTokens->height) || (propertyName == UsdGeomTokens->radius) ||
-        (propertyName == UsdGeomTokens->axis))
-        return HdChangeTracker::DirtyPoints;
+    // All cones share the same topology.
+    static const HdMeshTopology topology =
+        HdMeshTopology(GeomUtilConeMeshGenerator::GenerateTopology(
+                            numRadial));
 
-    // Allow base class to handle change processing.
-    return BaseAdapter::ProcessPropertyChange(prim, cachePath, propertyName);
+    return VtValue(topology);
 }
-// nv end
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

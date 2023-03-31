@@ -28,6 +28,7 @@
 
 #include "pxr/usd/ar/asset.h"
 #include "pxr/usd/ar/definePackageResolver.h"
+#include "pxr/usd/ar/resolvedPath.h"
 #include "pxr/usd/ar/resolver.h"
 
 #include <tbb/concurrent_hash_map.h>
@@ -77,7 +78,7 @@ Usd_UsdzResolverCache::AssetAndZipFile
 Usd_UsdzResolverCache::_OpenZipFile(const std::string& path)
 {
     AssetAndZipFile result;
-    result.first = ArGetResolver().OpenAsset(path);
+    result.first = ArGetResolver().OpenAsset(ArResolvedPath(path));
     if (result.first) {
         result.second = UsdZipFile::Open(result.first);
     }
@@ -166,12 +167,12 @@ public:
     {
     }
 
-    virtual size_t GetSize() override
+    size_t GetSize() const override
     {
         return _sizeInZipFile;
     }
 
-    virtual std::shared_ptr<const char> GetBuffer() override
+    std::shared_ptr<const char> GetBuffer() const override
     {
         struct _Deleter
         {
@@ -188,15 +189,18 @@ public:
         return std::shared_ptr<const char>(_dataInZipFile, d);
     }
 
-    virtual size_t Read(void* buffer, size_t count, size_t offset)
+    size_t Read(void* buffer, size_t count, size_t offset) const override
     {
+        if (ARCH_UNLIKELY(offset + count > _sizeInZipFile)) {
+            return 0;
+        }
         memcpy(buffer, _dataInZipFile + offset, count);
         return count;
     }
     
-    virtual std::pair<ArchFile*, size_t> GetFileUnsafe() override
+    std::pair<FILE*, size_t> GetFileUnsafe() const override
     {
-        std::pair<ArchFile*, size_t> result = _sourceAsset->GetFileUnsafe();
+        std::pair<FILE*, size_t> result = _sourceAsset->GetFileUnsafe();
         if (result.first) {
             result.second += _offsetInZipFile;
         }

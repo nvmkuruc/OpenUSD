@@ -15,6 +15,7 @@ pxr_library(arch
         ${PLATFORM_LIBS}
 
     PUBLIC_CLASSES
+        align
         attributes
         daemon
         debugger
@@ -37,7 +38,6 @@ pxr_library(arch
         vsnprintf
 
     PUBLIC_HEADERS
-        align.h
         api.h
         buildMode.h
         defines.h
@@ -55,6 +55,9 @@ pxr_library(arch
     CPPFILES
         assumptions.cpp
         initConfig.cpp
+
+    DOXYGEN_FILES
+        overview.dox
 )
 
 pxr_build_test_shared_lib(testArchAbiPlugin
@@ -111,6 +114,12 @@ pxr_build_test(testArchMath
     CPPFILES
         testenv/testMath.cpp
 )
+pxr_build_test(testArchPRead
+    LIBRARIES
+        arch
+    CPPFILES
+        testenv/testArchPRead.cpp
+)
 pxr_build_test(testArchStackTrace
     LIBRARIES
         arch
@@ -148,6 +157,26 @@ pxr_build_test(testArchVsnprintf
     CPPFILES
         testenv/testVsnprintf.cpp
 )
+
+# On windows, in debug mode, we need to copy testArchStackTrace.pdb into the
+# testing folder, so the test can find it (and print out the right stack),
+# even if the build or test folder has been moved (ie, when the baked-in path in
+# executable, where it also looks for the pdb, doesn't work)
+
+if (PXR_BUILD_TESTS AND WIN32)
+    # This effectively creates a test-env dir (similar to pxr_install_test_dir),
+    # and adds a single file, testArchStackTrace.pdb, to it.  The test-env dir
+    # ensures that the .pdb is copied into the temporary test dir, which is
+    # the PWD when the tests are run.  The PWD (and some subdirs) is the only
+    # place that .pdbs will be searched for, other than the baked-in absolute
+    # path in the windows binary
+    install(
+        FILES $<TARGET_PDB_FILE:testArchStackTrace>
+        DESTINATION tests/ctest/testArchStackTrace
+        CONFIGURATIONS Debug RelWithDebInfo
+    )
+endif()
+
 
 pxr_register_test(testArchAbi
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testArchAbi"

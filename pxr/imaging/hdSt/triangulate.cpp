@@ -31,29 +31,10 @@
 #include "pxr/imaging/hd/tokens.h"
 #include "pxr/imaging/hd/vtBufferSource.h"
 
-// #nv begin #skip-edge-indices
-// THIS IS ONLY NEEDED FOR USD-20.08, NEWER USD VERSION ARE MUCH FASTER!
-#include "pxr/base/tf/envSetting.h"
-// #nv end
-
 
 #include "pxr/base/gf/vec3i.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
-
-// #nv begin #skip-edge-indices
-TF_DEFINE_ENV_SETTING(HD_SKIP_EDGE_INDICES, 1,
-                      "Skip computing of edge indices");
-
-static bool
-_SkipEdgeIndices()
-{
-    static bool enabled =
-        (TfGetEnvSetting(HD_SKIP_EDGE_INDICES) == 1);
-    return enabled;
-}
-// #nv end
-
 
 HdSt_TriangleIndexBuilderComputation::HdSt_TriangleIndexBuilderComputation(
     HdSt_MeshTopology *topology, SdfPath const &id)
@@ -69,9 +50,9 @@ HdSt_TriangleIndexBuilderComputation::GetBufferSpecs(
     // triangles don't support ptex indexing (at least for now).
     specs->emplace_back(HdTokens->primitiveParam,
                         HdTupleType{HdTypeInt32, 1});
-    // 3 edge indices per triangle
+    // 1 edge index per triangle
     specs->emplace_back(HdTokens->edgeIndices,
-                        HdTupleType{HdTypeInt32Vec3, 1});
+                        HdTupleType{HdTypeInt32, 1});
 }
 
 bool
@@ -83,35 +64,25 @@ HdSt_TriangleIndexBuilderComputation::Resolve()
 
     VtVec3iArray trianglesFaceVertexIndices;
     VtIntArray primitiveParam;
-    VtVec3iArray trianglesEdgeIndices;
+    VtIntArray trianglesEdgeIndices;
 
     HdMeshUtil meshUtil(_topology, _id);
-// #nv begin #skip-edge-indices
-    if (_SkipEdgeIndices()) {
-        meshUtil.ComputeTriangleIndices(
-                &trianglesFaceVertexIndices,
-                &primitiveParam,
-                nullptr);
-        _trianglesEdgeIndices.reset();
-    } else {
-        meshUtil.ComputeTriangleIndices(
-                &trianglesFaceVertexIndices,
-                &primitiveParam,
-                &trianglesEdgeIndices);
-        _trianglesEdgeIndices.reset(new HdVtBufferSource(
-                                    HdTokens->edgeIndices,
-                                    VtValue(trianglesEdgeIndices)));
-    }
-// #nv end
+    meshUtil.ComputeTriangleIndices(
+            &trianglesFaceVertexIndices,
+            &primitiveParam,
+            &trianglesEdgeIndices);
 
-    _SetResult(HdBufferSourceSharedPtr(
-                   new HdVtBufferSource(
+    _SetResult(std::make_shared<HdVtBufferSource>(
                        HdTokens->indices,
-                       VtValue(trianglesFaceVertexIndices))));
+                       VtValue(trianglesFaceVertexIndices)));
 
     _primitiveParam.reset(new HdVtBufferSource(
                               HdTokens->primitiveParam,
                               VtValue(primitiveParam)));
+
+    _trianglesEdgeIndices.reset(new HdVtBufferSource(
+                                   HdTokens->edgeIndices,
+                                   VtValue(trianglesEdgeIndices)));
 
     _SetResolved();
     return true;
@@ -126,13 +97,7 @@ HdSt_TriangleIndexBuilderComputation::HasChainedBuffer() const
 HdBufferSourceSharedPtrVector
 HdSt_TriangleIndexBuilderComputation::GetChainedBuffers() const
 {
-// #nv begin #skip-edge-indices
-    if (_SkipEdgeIndices()) {
-        return { _primitiveParam };
-    } else {
-        return { _primitiveParam, _trianglesEdgeIndices };
-    }
-// #nv end
+    return { _primitiveParam, _trianglesEdgeIndices };
 }
 
 bool
@@ -169,10 +134,9 @@ HdSt_TriangulateFaceVaryingComputation::Resolve()
             _source->GetNumElements(),
             _source->GetTupleType().type,
             &result)) {
-        _SetResult(HdBufferSourceSharedPtr(
-                    new HdVtBufferSource(
+        _SetResult(std::make_shared<HdVtBufferSource>(
                         _source->GetName(),
-                        result)));
+                        result));
     } else {
         _SetResult(_source);
     }

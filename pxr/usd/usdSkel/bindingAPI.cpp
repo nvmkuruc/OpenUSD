@@ -62,8 +62,17 @@ UsdSkelBindingAPI::Get(const UsdStagePtr &stage, const SdfPath &path)
 
 
 /* virtual */
-UsdSchemaType UsdSkelBindingAPI::_GetSchemaType() const {
-    return UsdSkelBindingAPI::schemaType;
+UsdSchemaKind UsdSkelBindingAPI::_GetSchemaKind() const
+{
+    return UsdSkelBindingAPI::schemaKind;
+}
+
+/* static */
+bool
+UsdSkelBindingAPI::CanApply(
+    const UsdPrim &prim, std::string *whyNot)
+{
+    return prim.CanApplyAPI<UsdSkelBindingAPI>(whyNot);
 }
 
 /* static */
@@ -306,7 +315,7 @@ PXR_NAMESPACE_CLOSE_SCOPE
 
 
 #include "pxr/usd/usdGeom/boundable.h"
-#include "pxr/usd/usdGeom/imageable.h"
+#include "pxr/usd/usdGeom/primvarsAPI.h"
 #include "pxr/usd/usdGeom/tokens.h"
 
 #include "pxr/usd/usdSkel/skeleton.h"
@@ -327,7 +336,7 @@ UsdGeomPrimvar
 UsdSkelBindingAPI::CreateJointIndicesPrimvar(bool constant,
                                              int elementSize) const
 {
-    return UsdGeomImageable(GetPrim()).CreatePrimvar(
+    return UsdGeomPrimvarsAPI(GetPrim()).CreatePrimvar(
         UsdSkelTokens->primvarsSkelJointIndices,
         SdfValueTypeNames->IntArray,
         constant ? UsdGeomTokens->constant : UsdGeomTokens->vertex,
@@ -346,7 +355,7 @@ UsdGeomPrimvar
 UsdSkelBindingAPI::CreateJointWeightsPrimvar(bool constant,
                                              int elementSize) const
 {
-    return UsdGeomImageable(GetPrim()).CreatePrimvar(
+    return UsdGeomPrimvarsAPI(GetPrim()).CreatePrimvar(
         UsdSkelTokens->primvarsSkelJointWeights,
         SdfValueTypeNames->FloatArray,
         constant ? UsdGeomTokens->constant : UsdGeomTokens->vertex,
@@ -383,7 +392,7 @@ UsdGeomPrimvar
 UsdSkelBindingAPI::CreateSkinningBlendWeightsPrimvar(bool constant,
     int elementSize) const
 {
-    return UsdGeomImageable(GetPrim()).CreatePrimvar(
+    return UsdGeomPrimvarsAPI(GetPrim()).CreatePrimvar(
         UsdSkelTokens->primvarsSkelSkinningBlendWeights,
         SdfValueTypeNames->FloatArray,
         constant ? UsdGeomTokens->constant : UsdGeomTokens->vertex,

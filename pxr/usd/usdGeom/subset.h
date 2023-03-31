@@ -61,13 +61,13 @@ class SdfAssetPath;
 /// could be extended in the future to support subsets representing edges, 
 /// segments, points etc.
 /// 
-/// To apply to a geometric prim, a GeomSubset prim must be defined as a 
-/// child of it in namespace. This restriction makes it easy and efficient 
-/// to discover subsets of a prim. We might want to relax this restriction if 
-/// it's common to have multiple <b>families</b> of subsets on a gprim and if 
-/// it's useful to be able to organize subsets belonging to a </b>family</b> 
-/// under a common scope. See 'familyName' attribute for more info on defining 
-/// a family of subsets.
+/// To apply to a geometric prim, a GeomSubset prim must be the prim's direct 
+/// child in namespace, and possess a concrete defining specifier (i.e. def). 
+/// This restriction makes it easy and efficient to discover subsets of a prim. 
+/// We might want to relax this restriction if it's common to have multiple 
+/// <b>families</b> of subsets on a gprim and if it's useful to be able to 
+/// organize subsets belonging to a </b>family</b> under a common scope. See 
+/// 'familyName' attribute for more info on defining a family of subsets.
 /// 
 /// Note that a GeomSubset isn't an imageable (i.e. doesn't derive from
 /// UsdGeomImageable). So, you can't author <b>visibility</b> for it or 
@@ -87,8 +87,8 @@ class UsdGeomSubset : public UsdTyped
 public:
     /// Compile time constant representing what kind of schema this class is.
     ///
-    /// \sa UsdSchemaType
-    static const UsdSchemaType schemaType = UsdSchemaType::ConcreteTyped;
+    /// \sa UsdSchemaKind
+    static const UsdSchemaKind schemaKind = UsdSchemaKind::ConcreteTyped;
 
     /// Construct a UsdGeomSubset on UsdPrim \p prim .
     /// Equivalent to UsdGeomSubset::Get(prim.GetStage(), prim.GetPath())
@@ -158,11 +158,11 @@ public:
     Define(const UsdStagePtr &stage, const SdfPath &path);
 
 protected:
-    /// Returns the type of schema this class belongs to.
+    /// Returns the kind of schema this class belongs to.
     ///
-    /// \sa UsdSchemaType
+    /// \sa UsdSchemaKind
     USDGEOM_API
-    UsdSchemaType _GetSchemaType() const override;
+    UsdSchemaKind _GetSchemaKind() const override;
 
 private:
     // needs to invoke _GetStaticTfType.

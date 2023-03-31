@@ -21,17 +21,13 @@
 # KIND, either express or implied. See the Apache License for the specific
 # language governing permissions and limitations under the Apache License.
 #
-from . import _usdUtils
 from pxr import Tf
-Tf.PrepareModule(_usdUtils, locals())
-del _usdUtils, Tf
-
-try:
-    from . import __DOC
-    __DOC.Execute(locals())
-    del __DOC
-except Exception:
-    pass
-
+Tf.PreparePythonModule()
+del Tf
 
 from .complianceChecker import ComplianceChecker
+from .updateSchemaWithSdrNode import UpdateSchemaWithSdrNode, \
+        SchemaDefiningKeys, SchemaDefiningMiscConstants, PropertyDefiningKeys
+from .fixBrokenPixarSchemas import FixBrokenPixarSchemas
+from .usdzUtils import CheckUsdzCompliance, CreateUsdzPackage, \
+        ExtractUsdzPackage, UsdzAssetIterator 

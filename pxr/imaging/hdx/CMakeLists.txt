@@ -31,21 +31,19 @@ pxr_library(hdx
         hgiInterop
         cameraUtil
         sdf
-        ${GLEW_LIBRARY}
         ${optionalLibs}
 
     INCLUDE_DIRS
-        ${GLEW_INCLUDE_DIR}
         ${optionalIncludeDirs}
 
     PUBLIC_CLASSES
         aovInputTask
+        boundingBoxTask
         colorizeSelectionTask
         colorChannelTask
         colorCorrectionTask
-        drawTargetRenderPass
         drawTargetTask
-        drawTargetResolveTask
+        freeCameraSceneDelegate
         fullscreenShader
         hgiConversions
         oitBufferAccessor
@@ -62,10 +60,12 @@ pxr_library(hdx
         selectionTracker
         shadowTask
         simpleLightTask
+        skydomeTask
         task
         taskController
         tokens
         types
+        visualizeAovTask
 
     PUBLIC_HEADERS
         shadowMatrixComputation.h
@@ -81,24 +81,33 @@ pxr_library(hdx
 
     RESOURCE_FILES
         plugInfo.json
+        shaders/boundingBox.glslfx
         shaders/colorChannel.glslfx
         shaders/colorCorrection.glslfx
         shaders/fullscreen.glslfx
+        shaders/oitResolveImageShader.glslfx
+        shaders/outline.glslfx
         shaders/renderPass.glslfx
-        shaders/renderPassShader.glslfx
+        shaders/renderPassColorShader.glslfx
+        shaders/renderPassColorAndSelectionShader.glslfx
+        shaders/renderPassColorWithOccludedSelectionShader.glslfx
         shaders/renderPassIdShader.glslfx
         shaders/renderPassPickingShader.glslfx
-        shaders/renderPassShadowShader.glslfx
-        shaders/selection.glslfx
         shaders/renderPassOitShader.glslfx
         shaders/renderPassOitOpaqueShader.glslfx
         shaders/renderPassOitVolumeShader.glslfx
-        shaders/oitResolveImageShader.glslfx
-        shaders/outline.glslfx
-        textures/StinsonBeach.exr
+        shaders/renderPassShadowShader.glslfx
+        shaders/selection.glslfx
+        shaders/skydome.glslfx
+        shaders/visualize.glslfx
+        textures/StinsonBeach.hdr
+        textures/StinsonBeach.tex
+
+    DOXYGEN_FILES
+        overview.dox
 )
 
-if (X11_FOUND)
+if (X11_FOUND OR APPLE)
 pxr_build_test(testHdxRenderTask
     LIBRARIES
         hdx
@@ -123,6 +132,9 @@ pxr_build_test(testHdxLightAndShadow
     CPPFILES
         testenv/testHdxLightAndShadow.cpp
 )
+endif()
+
+if (X11_FOUND)
 pxr_build_test(testHdxIdRender
     LIBRARIES
         hdx
@@ -202,7 +214,7 @@ pxr_build_test(testHdxUnpickablesAsOccluders
         unitTestUtils.cpp
         testenv/testHdxUnpickablesAsOccluders.cpp
 )
-pxr_build_test(testHdxPickSubprims
+pxr_build_test(testHdxPickTarget
     LIBRARIES
         hdx
         hd
@@ -214,6 +226,20 @@ pxr_build_test(testHdxPickSubprims
         tf
     CPPFILES
         unitTestUtils.cpp
-        testenv/testHdxPickSubprims.cpp
+        testenv/testHdxPickTarget.cpp
+)
+pxr_build_test(testHdxPickResolveMode
+    LIBRARIES
+        hdx
+        hd
+        hdSt
+        sdf
+        glf
+        garch
+        arch
+        tf
+    CPPFILES
+        unitTestUtils.cpp
+        testenv/testHdxPickResolveMode.cpp
 )
 endif()

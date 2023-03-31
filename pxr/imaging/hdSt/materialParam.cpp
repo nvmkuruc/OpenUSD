@@ -31,7 +31,13 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 HdSt_MaterialParam::HdSt_MaterialParam()
     : paramType(ParamTypeFallback)
+    , name()
+    , fallbackValue()
+    , samplerCoords()
     , textureType(HdTextureType::Uv)
+    , swizzle()
+    , isPremultiplied(false)
+    , arrayOfTexturesSize(0)
 {
 }
 
@@ -40,13 +46,17 @@ HdSt_MaterialParam::HdSt_MaterialParam(ParamType paramType,
                                  VtValue const& fallbackValue,
                                  TfTokenVector const& samplerCoords,
                                  HdTextureType textureType,
-                                 std::string const& swizzle)
+                                 std::string const& swizzle,
+                                 bool const isPremultiplied,
+                                 size_t const arrayOfTexturesSize)
     : paramType(paramType)
     , name(name)
     , fallbackValue(fallbackValue)
     , samplerCoords(samplerCoords)
     , textureType(textureType)
     , swizzle(swizzle)
+    , isPremultiplied(isPremultiplied)
+    , arrayOfTexturesSize(arrayOfTexturesSize)
 {
 }
 
@@ -62,6 +72,8 @@ HdSt_MaterialParam::ComputeHash(HdSt_MaterialParamVector const &params)
         }
         boost::hash_combine(hash, param.textureType);
         boost::hash_combine(hash, param.swizzle);
+        boost::hash_combine(hash, param.isPremultiplied);
+        boost::hash_combine(hash, param.arrayOfTexturesSize);
     }
     return hash;
 }

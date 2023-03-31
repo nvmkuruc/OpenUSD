@@ -72,6 +72,9 @@ public:
     /// Returns true if this range is marked as immutable.
     virtual bool IsImmutable() const = 0;
 
+    /// Returns true if this needs a staging buffer for CPU to GPU copies.
+    virtual bool RequiresStaging() const = 0;
+
     /// Resize memory area for this range. Returns true if it causes container
     /// buffer reallocation.
     virtual bool Resize(int numElements) = 0;
@@ -150,9 +153,14 @@ public:
     void Set(int index, HdBufferArrayRangeSharedPtr const &range);
 
     /// Returns the bar at \p index. returns null if either the index
-    // is out of range or not yet set.
+    /// is out of range or not yet set.
     HD_API
     HdBufferArrayRangeSharedPtr const &Get(int index) const;
+
+    /// Resize the buffer array range container to size \p size.
+    /// Used to explicitly resize or shrink the container.
+    HD_API
+    void Resize(int size);
 
 private:
     std::vector<HdBufferArrayRangeSharedPtr> _ranges;

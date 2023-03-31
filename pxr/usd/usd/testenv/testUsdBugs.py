@@ -22,11 +22,13 @@
 # KIND, either express or implied. See the Apache License for the specific
 # language governing permissions and limitations under the Apache License.
 
+from __future__ import division
+
 import unittest
 
 class TestUsdBugs(unittest.TestCase):
     def test_153956(self):
-        from pixar import Sdf
+        from pxr import Sdf
 
         # Create a crate-backed .usd file and populate it with an
         # attribute connection. These files do not store specs for
@@ -183,9 +185,9 @@ class TestUsdBugs(unittest.TestCase):
     def test_156222(self):
         from pxr import Sdf, Usd
 
-        # Test that removing all instances for a master prim and adding a new
-        # instance with the same instancing key as the master causes the new
-        # instance to be assigned to the master.
+        # Test that removing all instances for a prototype prim and adding a new
+        # instance with the same instancing key as the prototype causes the new
+        # instance to be assigned to the prototype.
         l = Sdf.Layer.CreateAnonymous('.usda')
         Sdf.CreatePrimInLayer(l, '/Ref')
 
@@ -203,13 +205,13 @@ class TestUsdBugs(unittest.TestCase):
         nonInstancePrim.referenceList.Add(Sdf.Reference(primPath = '/Ref'))
 
         s = Usd.Stage.Open(l)
-        self.assertEqual(len(s.GetMasters()), 1)
+        self.assertEqual(len(s.GetPrototypes()), 1)
 
-        # Check that the master prim is using one of the instanceable prim
+        # Check that the prototype prim is using one of the instanceable prim
         # index for its source.
-        master = s.GetMasters()[0]
-        masterPath = master.GetPath()
-        self.assertIn(master._GetSourcePrimIndex().rootNode.path,
+        prototype = s.GetPrototypes()[0]
+        prototypePath = prototype.GetPath()
+        self.assertIn(prototype._GetSourcePrimIndex().rootNode.path,
                       instancePrimPaths)
 
         # In a single change block, uninstance all of the instanceable prims,
@@ -219,12 +221,12 @@ class TestUsdBugs(unittest.TestCase):
                 l.GetPrimAtPath(path).instanceable = False
             nonInstancePrim.instanceable = True
 
-        # This should not cause a new master prim to be generated; instead, 
-        # the master prim should now be using the newly-instanced prim index 
+        # This should not cause a new prototype prim to be generated; instead, 
+        # the prototype prim should now be using the newly-instanced prim index 
         # as its source.
-        master = s.GetMasters()[0]
-        self.assertEqual(master.GetPath(), masterPath)
-        self.assertEqual(master._GetSourcePrimIndex().rootNode.path,
+        prototype = s.GetPrototypes()[0]
+        self.assertEqual(prototype.GetPath(), prototypePath)
+        self.assertEqual(prototype._GetSourcePrimIndex().rootNode.path,
                          nonInstancePrim.path)
 
     def test_157758(self):
@@ -237,7 +239,8 @@ class TestUsdBugs(unittest.TestCase):
         self.assertEqual(a.Get(), Vt.Vec3fArray(3, [(1,2,3), (2,3,4), (3,4,5)]))
         a.Set(((3,2,1), (4,3,2), (5,4,3)))
         self.assertEqual(a.Get(), Vt.Vec3fArray(3, [(3,2,1), (4,3,2), (5,4,3)]))
-        a.Set(list(zip(list(range(3)), list(range(3)), list(range(3)))))
+        # pylint: disable=range-builtin-not-iterating,zip-builtin-not-iterating
+        a.Set(zip(range(3), range(3), range(3)))
         self.assertEqual(a.Get(), Vt.Vec3fArray(3, [(0,0,0), (1,1,1), (2,2,2)]))
 
 
@@ -377,7 +380,7 @@ class TestUsdBugs(unittest.TestCase):
 
     def test_USD_4936(self):
         # Test that relationships resolve correctly with nested instancing and
-        # instance proxies within masters.
+        # instance proxies within prototypes.
         from pxr import Usd, Sdf
         l1 = Sdf.Layer.CreateAnonymous('.usd')
         l1.ImportFromString('''#usda 1.0
@@ -419,15 +422,15 @@ class TestUsdBugs(unittest.TestCase):
             layer = Sdf.Layer.CreateNew(f.name)
             foo = Sdf.CreatePrimInLayer(layer, '/foo')
             attr = Sdf.AttributeSpec(foo, 'attr', Sdf.ValueTypeNames.IntArray)
-            ints = range(1024**2)
+            ints = list(range(1024**2))
             random.shuffle(ints)
             attr.default = Vt.IntArray(ints)
             layer.Save()
             del layer
             # Now truncate layer to corrupt it.
-            fobj = open(f.name, "rw+")
+            fobj = open(f.name, "r+")
             size = os.path.getsize(f.name)
-            fobj.truncate(size / 2)
+            fobj.truncate(size // 2)
             fobj.close()
             # Attempting to open the file should raise an exception.
             with self.assertRaises(Tf.ErrorException):
@@ -484,7 +487,7 @@ def "OtherWorld"
         s.CreateClassPrim('/_someClass')
         p = s.GetPrimAtPath('/OtherWorld/i/inner')
         self.assertTrue(p.IsInstance())
-        self.assertTrue(p.GetMaster())
+        self.assertTrue(p.GetPrototype())
 
     def test_USD_5386(self):
         from pxr import Usd, Sdf
@@ -554,9 +557,10 @@ def "geo" ( append payload = @%s@ )
 
     def test_USD_5709(self):
         # Population masks with paths descendant to instances were not working
-        # correctly, since we incorrectly applied the mask to the _master_ prim
-        # paths when populating master prim hierarchies.  This test ensures that
-        # masks with paths descendant to instances work as expected.
+        # correctly, since we incorrectly applied the mask to the _prototype_
+        # prim paths when populating prototype prim hierarchies.  This test
+        # ensures that masks with paths descendant to instances work as
+        # expected.
         from pxr import Usd, Sdf
         l = Sdf.Layer.CreateAnonymous('.usda')
         l.ImportFromString('''#usda 1.0

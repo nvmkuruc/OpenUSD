@@ -494,6 +494,7 @@ void
 Hd_PrimTypeIndex<HdSprim>::_TrackerRemovePrim(HdChangeTracker &tracker,
                                               const SdfPath &path)
 {
+    tracker.RemoveSprimFromSprimSprimDependencies(path);
     tracker.SprimRemoved(path);
 }
 

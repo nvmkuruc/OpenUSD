@@ -143,11 +143,6 @@ class SdfAssetPath;
 /// ( 1.0 / UsdStage::GetTimeCodesPerSecond() ), because velocities are recorded
 /// in units/second, while we are interpolating in UsdTimeCode ordinates.
 /// 
-/// Additionally, if *motion:velocityScale* is authored or inherited (see
-/// UsdGeomMotionAPI::ComputeVelocityScale()), it is used to scale both the
-/// velocity and angular velocity by a constant value during computation. The
-/// *motion:velocityScale* attribute is encoded by UsdGeomMotionAPI.
-/// 
 /// We provide both high and low-level API's for dealing with the
 /// transformation as a matrix, both will compute the instance matrices using
 /// multiple threads; the low-level API allows the client to cache unvarying
@@ -232,7 +227,7 @@ class SdfAssetPath;
 /// 
 /// \section UsdGeomPointInstancer_protoProcessing Processing and Not Processing Prototypes
 /// 
-/// Any prim in the scenegraph can be targetted as a prototype by the
+/// Any prim in the scenegraph can be targeted as a prototype by the
 /// \em prototypes relationship.  We do not, however, provide a specific
 /// mechanism for identifying prototypes as geometry that should not be drawn
 /// (or processed) in their own, local spaces in the scenegraph.  We
@@ -251,7 +246,7 @@ class SdfAssetPath;
 /// \code
 /// 01 def PointInstancer "Crowd_Mid"
 /// 02 {
-/// 03     rel prototypes = [ </Crowd_Mid/Prototypes/MaleThin_Business>, </Crowd_Mid/Prototypes/MaleTine_Casual> ]
+/// 03     rel prototypes = [ </Crowd_Mid/Prototypes/MaleThin_Business>, </Crowd_Mid/Prototypes/MaleThin_Casual> ]
 /// 04     
 /// 05     over "Prototypes" 
 /// 06     {
@@ -276,8 +271,8 @@ class UsdGeomPointInstancer : public UsdGeomBoundable
 public:
     /// Compile time constant representing what kind of schema this class is.
     ///
-    /// \sa UsdSchemaType
-    static const UsdSchemaType schemaType = UsdSchemaType::ConcreteTyped;
+    /// \sa UsdSchemaKind
+    static const UsdSchemaKind schemaKind = UsdSchemaKind::ConcreteTyped;
 
     /// Construct a UsdGeomPointInstancer on UsdPrim \p prim .
     /// Equivalent to UsdGeomPointInstancer::Get(prim.GetStage(), prim.GetPath())
@@ -347,11 +342,11 @@ public:
     Define(const UsdStagePtr &stage, const SdfPath &path);
 
 protected:
-    /// Returns the type of schema this class belongs to.
+    /// Returns the kind of schema this class belongs to.
     ///
-    /// \sa UsdSchemaType
+    /// \sa UsdSchemaKind
     USDGEOM_API
-    UsdSchemaType _GetSchemaType() const override;
+    UsdSchemaKind _GetSchemaKind() const override;
 
 private:
     // needs to invoke _GetStaticTfType.
@@ -939,9 +934,7 @@ public:
     ///               This vector must be either the same size as
     ///               \p protoIndices or empty. If it is empty, no mask is
     ///               applied.
-    /// \param velocityScale - factor used to artificially increase the effect
-    ///                        of velocity and angular velocity on positions and
-    ///                        orientations respectively.
+    /// \param velocityScale - \deprecated.
     USDGEOM_API
     static bool
     ComputeInstanceTransformsAtTime(
@@ -1066,6 +1059,14 @@ public:
                         const std::vector<UsdTimeCode>& times,
                         const UsdTimeCode baseTime,
                         const GfMatrix4d& transform) const;
+
+    /// Returns the number of instances as defined by the size of the
+    /// _protoIndices_ array at _timeCode_.
+    ///
+    /// \snippetdoc snippets.dox GetCount
+    /// \sa GetProtoIndicesAttr()
+    USDGEOM_API
+    size_t GetInstanceCount(UsdTimeCode timeCode = UsdTimeCode::Default()) const;
 
 private:
 

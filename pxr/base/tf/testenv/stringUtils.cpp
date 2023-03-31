@@ -22,6 +22,7 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/pxr.h"
+#include "pxr/base/tf/diagnosticLite.h"
 #include "pxr/base/tf/regTest.h"
 #include "pxr/base/tf/stringUtils.h"
 #include "pxr/base/arch/defines.h"
@@ -156,7 +157,45 @@ TestPreds()
     TF_AXIOM(DictLessThan("foo", "foo") == 0);
     TF_AXIOM(DictLessThan("aa", "aaa"));
     TF_AXIOM(!DictLessThan("aaa", "aa"));
-
+    TF_AXIOM(DictLessThan("0a", "00A"));
+    TF_AXIOM(!DictLessThan("00A", "0a"));
+    TF_AXIOM(DictLessThan("000a", "0000a"));
+    TF_AXIOM(!DictLessThan("0000a", "000a"));
+    TF_AXIOM(DictLessThan("foo_bar", "foobar"));
+    TF_AXIOM(!DictLessThan("foobar", "foo_bar"));
+    TF_AXIOM(DictLessThan("_foobar", "foobar"));
+    TF_AXIOM(!DictLessThan("foobar", "_foobar"));
+    TF_AXIOM(DictLessThan("__foobar", "_foobar"));
+    TF_AXIOM(!DictLessThan("_foobar", "__foobar"));
+    TF_AXIOM(DictLessThan("Foo_Bar", "FooBar"));
+    TF_AXIOM(!DictLessThan("FooBar", "Foo_Bar"));
+    TF_AXIOM(DictLessThan("_FooBar", "FooBar"));
+    TF_AXIOM(!DictLessThan("FooBar", "_FooBar"));
+    TF_AXIOM(DictLessThan("__FooBar", "_FooBar"));
+    TF_AXIOM(!DictLessThan("_FooBar", "__FooBar"));
+    TF_AXIOM(DictLessThan("abc012300", "abc000012300"));
+    TF_AXIOM(!DictLessThan("abc0000123000", "abc0123000"));
+    TF_AXIOM(DictLessThan(
+                 "0345678987654321234567", "03456789876543212345670"));
+    TF_AXIOM(!DictLessThan(
+                 "03456789876543212345670", "0345678987654321234567"));
+    TF_AXIOM(DictLessThan(
+                 "0345678987654321234567", "0345678987654322234567"));
+    TF_AXIOM(!DictLessThan(
+                 "0345678987654322234567", "0345678987654321234567"));
+    TF_AXIOM(DictLessThan(
+                 "XXX_0345678987654321234567", "XXX_03456789876543212345670"));
+    TF_AXIOM(!DictLessThan(
+                 "XXX_03456789876543212345670", "XXX_0345678987654321234567"));
+    TF_AXIOM(DictLessThan(
+                 "XXX_0345678987654321234567", "XXX_0345678987654322234567"));
+    TF_AXIOM(!DictLessThan(
+                 "XXX_0345678987654322234567", "XXX_0345678987654321234567"));
+    TF_AXIOM(!DictLessThan("primvars:curveHierarchy__id",
+                           "primvars:curveHierarchy:id"));
+    TF_AXIOM(DictLessThan("primvars:curveHierarchy:id",
+                          "primvars:curveHierarchy__id"));
+        
     TF_AXIOM(TfIsValidIdentifier("f"));
     TF_AXIOM(TfIsValidIdentifier("foo"));
     TF_AXIOM(TfIsValidIdentifier("foo1"));
@@ -347,8 +386,8 @@ TestStrings()
     TF_AXIOM(TfEscapeString("\\c \\d") == "c d");
     TF_AXIOM(TfEscapeString("\\xB") == "\xB");
     TF_AXIOM(TfEscapeString("\\xab") == "\xab");
-    TF_AXIOM(TfEscapeString("\\x01f") == "\x01f");
-    TF_AXIOM(TfEscapeString("\\x008d") == "\x008d");
+    TF_AXIOM(TfEscapeString("\\x01f") == "\x1" "f");
+    TF_AXIOM(TfEscapeString("\\x008d") == string() + '\0' + "8d");
     TF_AXIOM(TfEscapeString("x\\x0x") == string() + 'x' + '\0' + 'x');
     TF_AXIOM(TfEscapeString("\\5") == "\5");
     TF_AXIOM(TfEscapeString("\\70") == "\70");
@@ -356,9 +395,9 @@ TestStrings()
     TF_AXIOM(TfEscapeString("\\007") == "\007");
     TF_AXIOM(TfEscapeString("\\008") == string() + '\0' + '8');
     TF_AXIOM(TfEscapeString("\\010") == "\010");
-    TF_AXIOM(TfEscapeString("\\0077") == "\0077");
-    TF_AXIOM(TfEscapeString("\\00107") == "\00107");
-    TF_AXIOM(TfEscapeString("\\005107") == "\005107");
+    TF_AXIOM(TfEscapeString("\\0077") == "\07" "7");
+    TF_AXIOM(TfEscapeString("\\00107") == "\01" "07");
+    TF_AXIOM(TfEscapeString("\\005107") == "\05" "107");
 
     TF_AXIOM(TfStringCatPaths("foo", "bar") == "foo/bar");
     TF_AXIOM(TfStringCatPaths("foo/crud", "../bar") == "foo/bar");

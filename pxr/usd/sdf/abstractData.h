@@ -129,6 +129,27 @@ public:
     SDF_API
     virtual bool StreamsData() const = 0;
 
+    /// Returns true if this data object is detached from its serialized
+    /// data store, false otherwise. A detached data object must not be
+    /// affected by external changes to the serialized data.
+    ///
+    /// Sdf allows clients to specify detached layers to avoid problems
+    /// that may occur if the underlying data is modified by an external
+    /// process. For example, a data object that maintains an open file
+    /// handle or memory mapping to the original layer on disk and reads
+    /// data on demand is not detached. But a data object that pulls all
+    /// of the layer contents into memory is detached.
+    ///
+    /// The default implementation returns !StreamsData(). Non-streaming
+    /// data objects are assumed to be detached from their serialized
+    /// data, while streaming objects are conservatively assumed to
+    /// not be detached. Note that it is possible to have a streaming
+    /// data object that is also detached -- for example, if the data
+    /// object were to make a private copy of the serialized data for
+    /// its own use and streamed data from it.
+    SDF_API
+    virtual bool IsDetached() const;
+
     /// Returns true if this data object has no specs, false otherwise.
     ///
     /// The default implementation uses a visitor to check if any specs
@@ -449,6 +470,7 @@ class SdfAbstractDataValue
 {
 public:
     virtual bool StoreValue(const VtValue& value) = 0;
+    virtual bool StoreValue(VtValue &&value) = 0;
     
     template <class T> 
     bool StoreValue(const T& v) 
@@ -457,6 +479,7 @@ public:
             *static_cast<T*>(value) = v;
             return true;
         }
+        typeMismatch = true;
         return false;
     }
 
@@ -469,12 +492,14 @@ public:
     void* value;
     const std::type_info& valueType;
     bool isValueBlock;
+    bool typeMismatch;
 
 protected:
     SdfAbstractDataValue(void* value_, const std::type_info& valueType_)
         : value(value_)
         , valueType(valueType_)
         , isValueBlock(false)
+        , typeMismatch(false)
     { }
 };
 
@@ -499,7 +524,7 @@ public:
         : SdfAbstractDataValue(value, typeid(T))
     { }
 
-    virtual bool StoreValue(const VtValue& v)
+    virtual bool StoreValue(const VtValue& v) override
     {
         if (ARCH_LIKELY(v.IsHolding<T>())) {
             *static_cast<T*>(value) = v.UncheckedGet<T>();
@@ -513,6 +538,28 @@ public:
             isValueBlock = true;
             return true;
         }
+
+        typeMismatch = true;
+
+        return false;
+    }
+
+    virtual bool StoreValue(VtValue &&v) override
+    {
+        if (ARCH_LIKELY(v.IsHolding<T>())) {
+            *static_cast<T*>(value) = v.UncheckedRemove<T>();
+            if (std::is_same<T, SdfValueBlock>::value) {
+                isValueBlock = true;
+            }
+            return true;
+        }
+        
+        if (v.IsHolding<SdfValueBlock>()) {
+            isValueBlock = true;
+            return true;
+        }
+
+        typeMismatch = true;
 
         return false;
     }

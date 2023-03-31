@@ -251,11 +251,6 @@ TfNormPath(string const &inPath, bool stripDriveSpecifier)
 string
 TfAbsPath(string const& path)
 {
-	std::string _result;
-	if (ArchTryAbsPath(path, _result)) {
-		return _result;
-	}
-
     return ArchAbsPath(path);
 }
 
@@ -288,10 +283,9 @@ TfReadLink(string const& path)
 bool TfIsRelativePath(std::string const& path)
 {
 #if defined(ARCH_OS_WINDOWS)
-// #nv begin #win32-utf-8
     return path.empty() ||
-        (PathIsRelativeW(ArchWindowsUtf8ToUtf16(path).c_str()) && path[0] != '/' && path[0] != '\\');
-// #nv end
+        (PathIsRelativeW(ArchWindowsUtf8ToUtf16(path).c_str()) &&
+         path[0] != '/' && path[0] != '\\');
 #else
     return path.empty() || path[0] != '/';
 #endif
@@ -347,9 +341,8 @@ Tf_Glob(
         // Conveniently GetFileAttributes() works on paths with a trailing
         // backslash.
         string path = prefix + pattern;
-// #nv begin #win32-utf-8
-        const DWORD attributes = GetFileAttributesW(ArchWindowsUtf8ToUtf16(path).c_str());
-// #nv end
+            const DWORD attributes =
+                GetFileAttributesW(ArchWindowsUtf8ToUtf16(path).c_str());
         if (attributes != INVALID_FILE_ATTRIBUTES) {
             // File exists.
 
@@ -382,16 +375,16 @@ Tf_Glob(
         const string leftmostDir = TfGetPathName(leftmostPattern);
 
         // Glob the leftmost pattern.
-// #nv begin #win32-utf-8
         WIN32_FIND_DATAW data;
-        HANDLE find = FindFirstFileW(ArchWindowsUtf8ToUtf16(leftmostPattern).c_str(), &data);
+            HANDLE find = FindFirstFileW(
+                ArchWindowsUtf8ToUtf16(leftmostPattern).c_str(), &data);
         if (find != INVALID_HANDLE_VALUE) {
             do {
                 // Recurse with next pattern.
-                Tf_Glob(result, leftmostDir + ArchWindowsUtf16ToUtf8(data.cFileName).c_str(),
+                Tf_Glob(result,
+                        leftmostDir + ArchWindowsUtf16ToUtf8(data.cFileName),
                         remainingPattern, flags);
             } while (FindNextFileW(find, &data));
-// #nv end
             FindClose(find);
         }
     }

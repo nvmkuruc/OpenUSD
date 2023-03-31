@@ -34,7 +34,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_REGISTRY_FUNCTION(TfType)
 {
     TfType::Define<UsdLuxGeometryLight,
-        TfType::Bases< UsdLuxLight > >();
+        TfType::Bases< UsdLuxNonboundableLightBase > >();
     
     // Register the usd prim typename as an alias under UsdSchemaBase. This
     // enables one to call
@@ -75,8 +75,9 @@ UsdLuxGeometryLight::Define(
 }
 
 /* virtual */
-UsdSchemaType UsdLuxGeometryLight::_GetSchemaType() const {
-    return UsdLuxGeometryLight::schemaType;
+UsdSchemaKind UsdLuxGeometryLight::_GetSchemaKind() const
+{
+    return UsdLuxGeometryLight::schemaKind;
 }
 
 /* static */
@@ -115,13 +116,28 @@ UsdLuxGeometryLight::CreateGeometryRel() const
                        /* custom = */ false);
 }
 
+namespace {
+static inline TfTokenVector
+_ConcatenateAttributeNames(const TfTokenVector& left,const TfTokenVector& right)
+{
+    TfTokenVector result;
+    result.reserve(left.size() + right.size());
+    result.insert(result.end(), left.begin(), left.end());
+    result.insert(result.end(), right.begin(), right.end());
+    return result;
+}
+}
+
 /*static*/
 const TfTokenVector&
 UsdLuxGeometryLight::GetSchemaAttributeNames(bool includeInherited)
 {
-    static TfTokenVector localNames;
+    static TfTokenVector localNames = {
+    };
     static TfTokenVector allNames =
-        UsdLuxLight::GetSchemaAttributeNames(true);
+        _ConcatenateAttributeNames(
+            UsdLuxNonboundableLightBase::GetSchemaAttributeNames(true),
+            localNames);
 
     if (includeInherited)
         return allNames;

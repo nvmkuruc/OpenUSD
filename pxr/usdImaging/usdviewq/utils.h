@@ -51,8 +51,9 @@ public:
         bool isImageable;
         bool isDefined;
         bool isAbstract;
-        bool isInMaster;
+        bool isInPrototype;
         bool isInstance;
+        bool supportsGuides;
         bool supportsDrawMode;
         bool isVisibilityInherited;
         bool visVaries;

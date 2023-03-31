@@ -25,7 +25,7 @@
 #include "pxr/usd/sdf/abstractData.h"
 #include "pxr/base/trace/trace.h"
 
-#include <iostream>
+#include <ostream>
 #include <vector>
 #include <utility>
 
@@ -67,6 +67,12 @@ SdfAbstractData::IsEmpty() const
     SdfAbstractData_IsEmptyChecker checker;
     VisitSpecs(&checker);
     return checker.isEmpty;
+}
+
+bool
+SdfAbstractData::IsDetached() const
+{
+    return !StreamsData();
 }
 
 struct SdfAbstractData_CopySpecs : public SdfAbstractDataSpecVisitor

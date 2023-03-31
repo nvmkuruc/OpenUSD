@@ -21,13 +21,16 @@ def Scope "Scene" (
                 uniform asset info:glslfx:sourceAsset = @shader1.glslfx@
                 uniform token info:implementationSource = "sourceAsset"
                 uniform float3 inputs:diffuseColor = (1, 0, 1)
+                token outputs:surface
             }
         }
     }
 
     def Xform "Geom"
     {
-        def Mesh "Mesh01"
+        def Mesh "Mesh01" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
         {
             uniform bool doubleSided = 0
             int[] faceVertexCounts = [4]
@@ -40,7 +43,9 @@ def Scope "Scene" (
             uniform token[] xformOpOrder = ["xformOp:transform", "xformOp:translate"]
         }
 
-        def Mesh "Mesh02"
+        def Mesh "Mesh02" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
         {
             uniform bool doubleSided = 0
             int[] faceVertexCounts = [4]
@@ -53,7 +58,9 @@ def Scope "Scene" (
             uniform token[] xformOpOrder = ["xformOp:transform", "xformOp:translate"]
         }
 
-        def Sphere "SphereWithFloatRadius"
+        def Sphere "SphereWithFloatRadius" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
         {
             rel material:binding = </Scene/Looks/AdditiveMat>
             color3f[] primvars:displayColor = [(0, 0, 1)]

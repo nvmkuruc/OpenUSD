@@ -27,12 +27,10 @@
 #include "pxr/pxr.h"
 #include "pxr/imaging/hdx/api.h"
 #include "pxr/imaging/hdx/version.h"
-#include "pxr/imaging/hd/tokens.h"
-#include "pxr/base/tf/iterator.h"
+#include "pxr/imaging/hgi/types.h"
+#include "pxr/imaging/hio/types.h"
 #include "pxr/base/tf/token.h"
 #include "pxr/base/vt/dictionary.h"
-
-#include "pxr/imaging/hd/enums.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -53,6 +51,9 @@ bool operator!=(const HdxShaderInputs& lhs, const HdxShaderInputs& rhs);
 HDX_API
 std::ostream& operator<<(std::ostream& out, const HdxShaderInputs& pv);
 
+/// Returns the HioFormat for the given HgiFormat
+HDX_API
+HioFormat HdxGetHioFormat(HgiFormat hgiFormat);
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

@@ -27,6 +27,7 @@
 #include "pxr/usd/usd/payloads.h"
 #include "pxr/usd/usd/relationship.h"
 #include "pxr/usd/usd/references.h"
+#include "pxr/usd/usd/resolveTarget.h"
 #include "pxr/usd/usd/inherits.h"
 #include "pxr/usd/usd/specializes.h"
 #include "pxr/usd/usd/variantSets.h"
@@ -36,11 +37,13 @@
 #include "pxr/usd/sdf/payload.h"
 #include "pxr/usd/sdf/primSpec.h"
 
+#include "pxr/base/tf/pyAnnotatedBoolResult.h"
 #include "pxr/base/tf/pyContainerConversions.h"
 #include "pxr/base/tf/pyFunction.h"
 #include "pxr/base/tf/pyResultConversions.h"
 
 #include <boost/python/class.hpp>
+#include <boost/python/def.hpp>
 #include <boost/python/operators.hpp>
 
 #include <string>
@@ -73,7 +76,7 @@ _FindAllAttributeConnectionPaths(
 {
     using Predicate = std::function<bool (UsdAttribute const &)>;
     Predicate pred;
-    if (pypred != boost::python::object())
+    if (!pypred.is_none())
         pred = boost::python::extract<Predicate>(pypred);
     return self.FindAllAttributeConnectionPaths(pred, recurseOnSources);
 }
@@ -86,7 +89,7 @@ _FindAllRelationshipTargetPaths(
 {
     using Predicate = std::function<bool (UsdRelationship const &)>;
     Predicate pred;
-    if (pypred != boost::python::object())
+    if (!pypred.is_none())
         pred = boost::python::extract<Predicate>(pypred);
     return self.FindAllRelationshipTargetPaths(pred, recurseOnTargets);
 }
@@ -140,10 +143,46 @@ _WrapGetAuthoredProperties(const UsdPrim &prim, boost::python::object predicate)
     return prim.GetAuthoredProperties(pred);
 }
 
+struct Usd_PrimCanApplyAPIResult : public TfPyAnnotatedBoolResult<string>
+{
+    Usd_PrimCanApplyAPIResult(bool val, string const &msg) :
+        TfPyAnnotatedBoolResult<string>(val, msg) {}
+};
+
+static Usd_PrimCanApplyAPIResult
+_WrapCanApplyAPI(
+    const UsdPrim &prim,
+    const TfType& schemaType)
+{
+    std::string whyNot;
+    bool result = prim.CanApplyAPI(schemaType, &whyNot);
+    return Usd_PrimCanApplyAPIResult(result, whyNot);
+}
+
+static Usd_PrimCanApplyAPIResult
+_WrapCanApplyAPI_2(
+    const UsdPrim &prim,
+    const TfType& schemaType,
+    const TfToken& instanceName)
+{
+    std::string whyNot;
+    bool result = prim.CanApplyAPI(schemaType, instanceName, &whyNot);
+    return Usd_PrimCanApplyAPIResult(result, whyNot);
+}
+
+static UsdStageWeakPtr
+_UnsafeGetStageForTesting(UsdObject const &obj)
+{
+    return obj.GetStage();
+}
+
 } // anonymous namespace 
 
 void wrapUsdPrim()
 {
+    Usd_PrimCanApplyAPIResult::Wrap<Usd_PrimCanApplyAPIResult>(
+        "_CanApplyAPIResult", "whyNot");
+
     // Predicate signature for FindAllRelationshipTargetPaths().
     TfPyFunctionFromPython<bool (UsdRelationship const &)>();
 
@@ -163,6 +202,9 @@ void wrapUsdPrim()
         .def("GetPrimDefinition", &UsdPrim::GetPrimDefinition,
              return_internal_reference<>())
         .def("GetPrimStack", &UsdPrim::GetPrimStack)
+        .def("GetPrimStackWithLayerOffsets", 
+             &UsdPrim::GetPrimStackWithLayerOffsets,
+             return_value_policy<TfPySequenceToList>())
 
         .def("GetSpecifier", &UsdPrim::GetSpecifier)
         .def("SetSpecifier", &UsdPrim::SetSpecifier, arg("specifier"))
@@ -229,8 +271,8 @@ void wrapUsdPrim()
 
         .def("GetPropertyOrder", &UsdPrim::GetPropertyOrder,
              return_value_policy<TfPySequenceToList>())
-
         .def("SetPropertyOrder", &UsdPrim::SetPropertyOrder, arg("order"))
+        .def("ClearPropertyOrder", &UsdPrim::ClearPropertyOrder)
 
         .def("IsA",
             (bool (UsdPrim::*)(const TfType&) const)&UsdPrim::IsA, 
@@ -239,14 +281,28 @@ void wrapUsdPrim()
             (bool (UsdPrim::*)(const TfType&, const TfToken&) const)
             &UsdPrim::HasAPI,
             (arg("schemaType"), arg("instanceName")=TfToken()))
+        .def("CanApplyAPI", 
+            &_WrapCanApplyAPI,
+            (arg("schemaType")))
+        .def("CanApplyAPI", 
+            &_WrapCanApplyAPI_2,
+            (arg("schemaType"), arg("instanceName")))
+        .def("ApplyAPI", 
+            (bool (UsdPrim::*)(const TfType&) const)
+            &UsdPrim::ApplyAPI,
+            (arg("schemaType")))
         .def("ApplyAPI", 
             (bool (UsdPrim::*)(const TfType&, const TfToken&) const)
             &UsdPrim::ApplyAPI,
-            (arg("schemaType"), arg("instanceName")=TfToken()))
+            (arg("schemaType"), arg("instanceName")))
+        .def("RemoveAPI", 
+            (bool (UsdPrim::*)(const TfType&) const)
+            &UsdPrim::RemoveAPI,
+            (arg("schemaType")))
         .def("RemoveAPI", 
             (bool (UsdPrim::*)(const TfType&, const TfToken&) const)
             &UsdPrim::RemoveAPI,
-            (arg("schemaType"), arg("instanceName")=TfToken()))
+            (arg("schemaType"), arg("instanceName")))
 
         .def("AddAppliedSchema", &UsdPrim::AddAppliedSchema)
         .def("RemoveAppliedSchema", &UsdPrim::RemoveAppliedSchema)
@@ -260,6 +316,18 @@ void wrapUsdPrim()
         .def("GetFilteredChildren", &UsdPrim::GetFilteredChildren,
              arg("predicate"),
              return_value_policy<TfPySequenceToList>())
+
+        .def("GetChildrenNames", &UsdPrim::GetChildrenNames,
+             return_value_policy<TfPySequenceToList>())
+        .def("GetAllChildrenNames", &UsdPrim::GetAllChildrenNames,
+             return_value_policy<TfPySequenceToList>())
+        .def("GetFilteredChildrenNames", &UsdPrim::GetFilteredChildrenNames,
+             return_value_policy<TfPySequenceToList>())
+
+        .def("GetChildrenReorder", &UsdPrim::GetChildrenReorder,
+             return_value_policy<TfPySequenceToList>())
+        .def("SetChildrenReorder", &UsdPrim::SetChildrenReorder, arg("order"))
+        .def("ClearChildrenReorder", &UsdPrim::ClearChildrenReorder)
 
         .def("GetParent", &UsdPrim::GetParent)
         .def("GetNextSibling", (UsdPrim (UsdPrim::*)() const)
@@ -363,13 +431,18 @@ void wrapUsdPrim()
         .def("ClearInstanceable", &UsdPrim::ClearInstanceable)
         .def("HasAuthoredInstanceable", &UsdPrim::HasAuthoredInstanceable)
 
+        .def("IsPrototypePath", &UsdPrim::IsPrototypePath, arg("path"))
+        .staticmethod("IsPrototypePath")
+        .def("IsPathInPrototype", &UsdPrim::IsPathInPrototype, arg("path"))
+        .staticmethod("IsPathInPrototype")
+
         .def("IsInstance", &UsdPrim::IsInstance)
-        .def("IsMaster", &UsdPrim::IsMaster)
-        .def("IsInMaster", &UsdPrim::IsInMaster)
-        .def("GetMaster", &UsdPrim::GetMaster)
+        .def("IsPrototype", &UsdPrim::IsPrototype)
+        .def("IsInPrototype", &UsdPrim::IsInPrototype)
+        .def("GetPrototype", &UsdPrim::GetPrototype)
 
         .def("IsInstanceProxy", &UsdPrim::IsInstanceProxy)
-        .def("GetPrimInMaster", &UsdPrim::GetPrimInMaster)
+        .def("GetPrimInPrototype", &UsdPrim::GetPrimInPrototype)
 
         .def("GetPrimAtPath", &UsdPrim::GetPrimAtPath, arg("path"))
         .def("GetObjectAtPath", &UsdPrim::GetObjectAtPath, arg("path"))
@@ -380,6 +453,11 @@ void wrapUsdPrim()
         .def("GetInstances", &UsdPrim::GetInstances,
                 return_value_policy<TfPySequenceToList>())
 
+        .def("MakeResolveTargetUpToEditTarget", 
+            &UsdPrim::MakeResolveTargetUpToEditTarget)
+        .def("MakeResolveTargetStrongerThanEditTarget", 
+            &UsdPrim::MakeResolveTargetStrongerThanEditTarget)
+        
         // Exposed only for testing and debugging.
         .def("_GetSourcePrimIndex", &Usd_PrimGetSourcePrimIndex,
              return_value_policy<return_by_value>())
@@ -389,4 +467,13 @@ void wrapUsdPrim()
                         TfPySequenceToPython<std::vector<UsdPrim>>>();
 
     TfPyRegisterStlSequencesFromPython<UsdPrim>();
+    TfPyContainerConversions::tuple_mapping_pair<
+        std::pair<SdfPrimSpecHandle, SdfLayerOffset>>();
+
+    // This is wrapped in order to let python call an API that will get through
+    // our usual Python API guards to access an invalid prim and throw an
+    // exception.
+    boost::python::def(
+        "_UnsafeGetStageForTesting", &_UnsafeGetStageForTesting);
+    
 }

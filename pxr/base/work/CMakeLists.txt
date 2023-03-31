@@ -11,7 +11,6 @@ pxr_library(work
         ${TBB_INCLUDE_DIRS}
 
     PUBLIC_CLASSES
-        arenaDispatcher
         detachedTask
         dispatcher
         loops
@@ -22,6 +21,7 @@ pxr_library(work
 
     PUBLIC_HEADERS
         api.h
+        withScopedParallelism.h
         
     PYTHON_CPPFILES
         moduleDeps.cpp
@@ -32,6 +32,9 @@ pxr_library(work
 
     PYMODULE_FILES
         __init__.py
+
+    DOXYGEN_FILES
+        overview.dox
 )
 
 pxr_build_test(testWorkDispatcher

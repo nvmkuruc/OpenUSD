@@ -28,13 +28,13 @@
 #include "pxr/imaging/hdx/api.h"
 #include "pxr/imaging/hdx/version.h"
 
-#include "pxr/imaging/hd/changeTracker.h"
 #include "pxr/imaging/hd/task.h"
 
 #include "pxr/imaging/glf/simpleLight.h"
 #include "pxr/imaging/glf/simpleMaterial.h"
 
-#include "pxr/base/gf/matrix4d.h"
+#include "pxr/imaging/cameraUtil/framing.h"
+
 #include "pxr/base/gf/vec3f.h"
 #include "pxr/base/tf/declarePtrs.h"
 
@@ -44,6 +44,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 class HdRenderIndex;
 class HdSceneDelegate;
+class HdCamera;
 
 using HdRenderPassSharedPtr = std::shared_ptr<class HdRenderPass>;
 using HdStSimpleLightingShaderSharedPtr =
@@ -54,40 +55,50 @@ using HdxShadowMatrixComputationSharedPtr =
 TF_DECLARE_REF_PTRS(GlfSimpleShadowArray);
 
 
-class HdxSimpleLightTask : public HdTask {
+class HdxSimpleLightTask : public HdTask
+{
 public:
     HDX_API
     HdxSimpleLightTask(HdSceneDelegate* delegate, SdfPath const& id);
 
     HDX_API
-    virtual ~HdxSimpleLightTask();
+    ~HdxSimpleLightTask() override;
 
     /// Sync the render pass resources
     HDX_API
-    virtual void Sync(HdSceneDelegate* delegate,
-                      HdTaskContext* ctx,
-                      HdDirtyBits* dirtyBits) override;
+    void Sync(HdSceneDelegate* delegate,
+              HdTaskContext* ctx,
+              HdDirtyBits* dirtyBits) override;
 
     /// Prepare the tasks resources
     HDX_API
-    virtual void Prepare(HdTaskContext* ctx,
-                         HdRenderIndex* renderIndex) override;
+    void Prepare(HdTaskContext* ctx,
+                 HdRenderIndex* renderIndex) override;
 
     /// Execute render pass task
     HDX_API
-    virtual void Execute(HdTaskContext* ctx) override;
+    void Execute(HdTaskContext* ctx) override;
 
 private:
+    std::vector<GfMatrix4d> _ComputeShadowMatrices(
+        const HdCamera * camera,
+        HdxShadowMatrixComputationSharedPtr const &computation) const;
+
     SdfPath _cameraId;
     std::map<TfToken, SdfPathVector> _lightIds;
     SdfPathVector _lightIncludePaths;
     SdfPathVector _lightExcludePaths;
-    size_t _numLights;
+    size_t _numLightIds;
+    size_t _maxLights;
+    unsigned _sprimIndexVersion;
+    unsigned _settingsVersion;
 
     // Should be weak ptrs
     HdStSimpleLightingShaderSharedPtr _lightingShader;
     bool _enableShadows;
     GfVec4f _viewport;
+    CameraUtilFraming _framing;
+    std::pair<bool, CameraUtilConformWindowPolicy> _overrideWindowPolicy;
 
     // XXX: compatibility hack for passing some unit tests until we have
     //      more formal material plumbing.
@@ -98,8 +109,13 @@ private:
     // the render graph.  Maybe long-term these could be change-tracked.
     GlfSimpleLightVector _glfSimpleLights;
 
+    HdBufferArrayRangeSharedPtr _lightingBar;
+    HdBufferArrayRangeSharedPtr _lightSourcesBar;
+    HdBufferArrayRangeSharedPtr _shadowsBar;
+    HdBufferArrayRangeSharedPtr _materialBar;
+
     size_t _AppendLightsOfType(HdRenderIndex &renderIndex,
-                               std::vector<TfToken> const &lightTypes,
+                               TfTokenVector const &lightTypes,
                                SdfPathVector const &lightIncludePaths,
                                SdfPathVector const &lightExcludePaths,
                                std::map<TfToken, SdfPathVector> *lights);
@@ -116,6 +132,7 @@ struct HdxSimpleLightTaskParams {
         , lightExcludePaths()
         , enableShadows(false)
         , viewport(0.0f)
+        , overrideWindowPolicy{false, CameraUtilFit}
         , material()
         , sceneAmbient(0) 
         {}
@@ -125,6 +142,8 @@ struct HdxSimpleLightTaskParams {
     SdfPathVector lightExcludePaths;
     bool enableShadows;
     GfVec4f viewport;
+    CameraUtilFraming framing;
+    std::pair<bool, CameraUtilConformWindowPolicy> overrideWindowPolicy;
     
     // XXX: compatibility hack for passing some unit tests until we have
     //      more formal material plumbing.

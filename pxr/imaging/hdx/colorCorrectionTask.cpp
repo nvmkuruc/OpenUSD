@@ -55,34 +55,35 @@ TF_DEFINE_PRIVATE_TOKENS(
 static const int HDX_DEFAULT_LUT3D_SIZE_OCIO = 65;
 
 HdxColorCorrectionTaskParams::HdxColorCorrectionTaskParams()
-    : colorCorrectionMode(HdxColorCorrectionTokens->disabled)
-    , lut3dSizeOCIO(HDX_DEFAULT_LUT3D_SIZE_OCIO)
+  : colorCorrectionMode(HdxColorCorrectionTokens->disabled)
+  , lut3dSizeOCIO(HDX_DEFAULT_LUT3D_SIZE_OCIO)
 {
 }
 
 HdxColorCorrectionTask::HdxColorCorrectionTask(
-    HdSceneDelegate* delegate, 
+    HdSceneDelegate* delegate,
     SdfPath const& id)
-    : HdxTask(id)
-    , _indexBuffer()
-    , _vertexBuffer()
-    , _texture3dLUT()
-    , _shaderProgram()
-    , _resourceBindings()
-    , _pipeline()
-    , _lut3dSizeOCIO(HDX_DEFAULT_LUT3D_SIZE_OCIO)
+  : HdxTask(id)
+  , _indexBuffer()
+  , _vertexBuffer()
+  , _texture3dLUT()
+  , _sampler()
+  , _shaderProgram()
+  , _resourceBindings()
+  , _pipeline()
+  , _lut3dSizeOCIO(HDX_DEFAULT_LUT3D_SIZE_OCIO)
+  , _screenSize{}
 {
 }
 
 HdxColorCorrectionTask::~HdxColorCorrectionTask()
 {
-    // #nv begin gl-errors
-    // Is this still needed?
-    // bool performedGLOperation = false;
-    // nv end
-
     if (_texture3dLUT) {
         _GetHgi()->DestroyTexture(&_texture3dLUT);
+    }
+
+    if (_sampler) {
+        _GetHgi()->DestroySampler(&_sampler);
     }
 
     if (_vertexBuffer) {
@@ -131,11 +132,11 @@ HdxColorCorrectionTask::_CreateOpenColorIOResources()
         // Use client provided OCIO values, or use default fallback values
         OCIO::ConstConfigRcPtr config = OCIO::GetCurrentConfig();
 
-        const char* display = _displayOCIO.empty() ? 
-                              config->getDefaultDisplay() : 
+        const char* display = _displayOCIO.empty() ?
+                              config->getDefaultDisplay() :
                               _displayOCIO.c_str();
 
-        const char* view = _viewOCIO.empty() ? 
+        const char* view = _viewOCIO.empty() ?
                            config->getDefaultView(display) :
                            _viewOCIO.c_str();
 
@@ -150,7 +151,9 @@ HdxColorCorrectionTask::_CreateOpenColorIOResources()
         }
 
         // Setup the transformation we need to apply
-        OCIO::DisplayTransformRcPtr transform = OCIO::DisplayTransform::Create();
+#if OCIO_VERSION_HEX < 0x02000000
+        OCIO::DisplayTransformRcPtr transform =
+            OCIO::DisplayTransform::Create();
         transform->setDisplay(display);
         transform->setView(view);
         transform->setInputColorSpaceName(inputColorSpace.c_str());
@@ -160,20 +163,35 @@ HdxColorCorrectionTask::_CreateOpenColorIOResources()
         } else {
             transform->setLooksOverrideEnabled(false);
         }
+#else
+        OCIO::DisplayViewTransformRcPtr transform =
+            OCIO::DisplayViewTransform::Create();
+        transform->setDisplay(display);
+        transform->setView(view);
+        transform->setSrc(inputColorSpace.c_str());
+#endif
 
         OCIO::ConstProcessorRcPtr processor = config->getProcessor(transform);
 
         // Create a GPU Shader Description
+#if OCIO_VERSION_HEX < 0x02000000
         OCIO::GpuShaderDesc shaderDesc;
         shaderDesc.setLanguage(OCIO::GPU_LANGUAGE_GLSL_1_3);
         shaderDesc.setFunctionName("OCIODisplay");
         shaderDesc.setLut3DEdgeLen(_lut3dSizeOCIO);
+#else
+        OCIO::GpuShaderDescRcPtr shaderDesc = OCIO::GpuShaderDesc::CreateShaderDesc();
+        shaderDesc->setLanguage(OCIO::GPU_LANGUAGE_GLSL_1_3);
+        shaderDesc->setFunctionName("OCIODisplay");
+#endif
 
         // Compute and the 3D LUT
         const int num3Dentries =
             3 * _lut3dSizeOCIO * _lut3dSizeOCIO * _lut3dSizeOCIO;
         std::vector<float> lut3d(num3Dentries);
+#if OCIO_VERSION_HEX < 0x02000000
         processor->getGpuLut3D(lut3d.data(), shaderDesc);
+#endif
 
         // Load the data into an OpenGL 3D Texture
         if (_texture3dLUT) {
@@ -193,7 +211,13 @@ HdxColorCorrectionTask::_CreateOpenColorIOResources()
         lutDesc.usage = HgiTextureUsageBitsShaderRead;
         _texture3dLUT = _GetHgi()->CreateTexture(lutDesc);
 
+#if OCIO_VERSION_HEX < 0x02000000
         const char* gpuShaderText = processor->getGpuShaderText(shaderDesc);
+#else
+        OCIO::ConstGPUProcessorRcPtr gpuProcessor = processor->getDefaultGPUProcessor();
+        gpuProcessor->extractGpuShaderInfo(shaderDesc);
+        const char* gpuShaderText = shaderDesc->getShaderText();
+#endif
 
         return std::string(gpuShaderText);
     #else
@@ -208,54 +232,64 @@ HdxColorCorrectionTask::_CreateShaderResources()
         return true;
     }
 
-    bool useOCIO =_GetUseOcio();
-    
-    // For Metal shaders we grab a different technique from the glslfx.
-    TfToken const& technique = _hgi->GetAPIName() == HgiTokens->Metal ?
-        HgiTokens->Metal : HioGlslfxTokens->defVal;
-
-    HioGlslfx glslfx(HdxPackageColorCorrectionShader(), technique);
+    const bool useOCIO =_GetUseOcio();
+    const HioGlslfx glslfx(
+            HdxPackageColorCorrectionShader(), HioGlslfxTokens->defVal);
 
     // Setup the vertex shader
     std::string vsCode;
     HgiShaderFunctionDesc vertDesc;
     vertDesc.debugName = _tokens->colorCorrectionVertex.GetString();
     vertDesc.shaderStage = HgiShaderStageVertex;
-    if (technique != HgiTokens->Metal) {
-        vsCode = "#version 450 \n";
-    }
+    HgiShaderFunctionAddStageInput(
+        &vertDesc, "position", "vec4");
+    HgiShaderFunctionAddStageInput(
+        &vertDesc, "uvIn", "vec2");
+    HgiShaderFunctionAddStageOutput(
+        &vertDesc, "gl_Position", "vec4", "position");
+    HgiShaderFunctionAddStageOutput(
+        &vertDesc, "uvOut", "vec2");
     vsCode += glslfx.GetSource(_tokens->colorCorrectionVertex);
-    vertDesc.shaderCode = vsCode.c_str();;
+    vertDesc.shaderCode = vsCode.c_str();
     HgiShaderFunctionHandle vertFn = _GetHgi()->CreateShaderFunction(vertDesc);
 
     // Setup the fragment shader
     std::string fsCode;
     HgiShaderFunctionDesc fragDesc;
+    HgiShaderFunctionAddStageInput(
+        &fragDesc, "uvOut", "vec2");
+    HgiShaderFunctionAddTexture(
+        &fragDesc, "colorIn");
+    if (useOCIO) {
+        HgiShaderFunctionAddTexture(
+            &fragDesc, "Lut3DIn", 3);
+    }
+    HgiShaderFunctionAddStageOutput(
+        &fragDesc, "hd_FragColor", "vec4", "color");
+    HgiShaderFunctionAddConstantParam(
+        &fragDesc, "screenSize", "vec2");
     fragDesc.debugName = _tokens->colorCorrectionFragment.GetString();
     fragDesc.shaderStage = HgiShaderStageFragment;
-    if (technique != HgiTokens->Metal) {
-        fsCode = "#version 450 \n";
-    }
-
     if (useOCIO) {
         fsCode += "#define GLSLFX_USE_OCIO\n";
         // Our current version of OCIO outputs 130 glsl and texture3D is
         // removed from glsl in 140.
         fsCode += "#define texture3D texture\n";
     }
-    fsCode += glslfx.GetSource(_tokens->colorCorrectionFragment);
     if (useOCIO) {
         std::string ocioGpuShaderText = _CreateOpenColorIOResources();
-        fsCode += ocioGpuShaderText;
+        fsCode = fsCode + ocioGpuShaderText;
     }
+    fsCode += glslfx.GetSource(_tokens->colorCorrectionFragment);
+
     fragDesc.shaderCode = fsCode.c_str();
     HgiShaderFunctionHandle fragFn = _GetHgi()->CreateShaderFunction(fragDesc);
 
     // Setup the shader program
     HgiShaderProgramDesc programDesc;
     programDesc.debugName =_tokens->colorCorrectionShader.GetString();
-    programDesc.shaderFunctions.emplace_back(std::move(vertFn));
-    programDesc.shaderFunctions.emplace_back(std::move(fragFn));
+    programDesc.shaderFunctions.push_back(std::move(vertFn));
+    programDesc.shaderFunctions.push_back(std::move(fragFn));
     _shaderProgram = _GetHgi()->CreateShaderProgram(programDesc);
 
     if (!_shaderProgram->IsValid() || !vertFn->IsValid() || !fragFn->IsValid()){
@@ -276,18 +310,17 @@ HdxColorCorrectionTask::_CreateBufferResources()
     }
 
     // A larger-than screen triangle made to fit the screen.
-    const size_t elementsPerVertex = 4;
-    static const float vertices[elementsPerVertex * 3] =
-        { -1,  3, 0, 1,
-          -1, -1, 0, 1,
-           3, -1, 0, 1 };
+    constexpr float vertData[][6] =
+            { { -1,  3, 0, 1,     0, 2 },
+              { -1, -1, 0, 1,     0, 0 },
+              {  3, -1, 0, 1,     2, 0 } };
 
     HgiBufferDesc vboDesc;
     vboDesc.debugName = "HdxColorCorrectionTask VertexBuffer";
     vboDesc.usage = HgiBufferUsageVertex;
-    vboDesc.initialData = vertices;
-    vboDesc.byteSize = sizeof(vertices) * sizeof(vertices[0]);
-    vboDesc.vertexStride = elementsPerVertex * sizeof(vertices[0]);
+    vboDesc.initialData = vertData;
+    vboDesc.byteSize = sizeof(vertData);
+    vboDesc.vertexStride = sizeof(vertData[0]);
     _vertexBuffer = _GetHgi()->CreateBuffer(vboDesc);
 
     static const int32_t indices[3] = {0,1,2};
@@ -296,9 +329,8 @@ HdxColorCorrectionTask::_CreateBufferResources()
     iboDesc.debugName = "HdxColorCorrectionTask IndexBuffer";
     iboDesc.usage = HgiBufferUsageIndex32;
     iboDesc.initialData = indices;
-    iboDesc.byteSize = sizeof(indices) * sizeof(indices[0]);
+    iboDesc.byteSize = sizeof(indices);
     _indexBuffer = _GetHgi()->CreateBuffer(iboDesc);
-
     return true;
 }
 
@@ -312,22 +344,23 @@ HdxColorCorrectionTask::_CreateResourceBindings(
     // Begin the resource set
     HgiResourceBindingsDesc resourceDesc;
     resourceDesc.debugName = "ColorCorrection";
-    resourceDesc.pipelineType = HgiPipelineTypeGraphics;
 
     HgiTextureBindDesc texBind0;
     texBind0.bindingIndex = 0;
-    texBind0.resourceType = HgiBindResourceTypeCombinedImageSampler;
     texBind0.stageUsage = HgiShaderStageFragment;
+    texBind0.writable = false;
     texBind0.textures.push_back(aovTexture);
-    resourceDesc.textures.emplace_back(std::move(texBind0));
+    texBind0.samplers.push_back(_sampler);
+    resourceDesc.textures.push_back(std::move(texBind0));
 
     if (useOCIO && _texture3dLUT) {
         HgiTextureBindDesc texBind1;
         texBind1.bindingIndex = 1;
-        texBind1.resourceType = HgiBindResourceTypeCombinedImageSampler;
         texBind1.stageUsage = HgiShaderStageFragment;
+        texBind1.writable = false;
         texBind1.textures.push_back(_texture3dLUT);
-        resourceDesc.textures.emplace_back(std::move(texBind1));
+        texBind1.samplers.push_back(_sampler);
+        resourceDesc.textures.push_back(std::move(texBind1));
     }
 
     // If nothing has changed in the descriptor we avoid re-creating the
@@ -353,27 +386,36 @@ HdxColorCorrectionTask::_CreatePipeline(HgiTextureHandle const& aovTexture)
         if (_attachment0.format == aovTexture->GetDescriptor().format) {
             return true;
         }
-        
+
         _GetHgi()->DestroyGraphicsPipeline(&_pipeline);
     }
 
     HgiGraphicsPipelineDesc desc;
     desc.debugName = "ColorCorrection Pipeline";
-    desc.resourceBindings = _resourceBindings;
     desc.shaderProgram = _shaderProgram;
-    
+
     // Describe the vertex buffer
     HgiVertexAttributeDesc posAttr;
     posAttr.format = HgiFormatFloat32Vec3;
     posAttr.offset = 0;
     posAttr.shaderBindLocation = 0;
 
-    HgiVertexBufferDesc vboDesc;
-    vboDesc.bindingIndex = 0;
-    vboDesc.vertexStride = sizeof(float) * 4;
-    vboDesc.vertexAttributes.push_back(posAttr);
+    HgiVertexAttributeDesc uvAttr;
+    uvAttr.format = HgiFormatFloat32Vec2;
+    uvAttr.offset = sizeof(float) * 4; // after posAttr
+    uvAttr.shaderBindLocation = 1;
 
-    desc.vertexBuffers.emplace_back(std::move(vboDesc));
+    size_t bindSlots = 0;
+
+    HgiVertexBufferDesc vboDesc;
+
+    vboDesc.bindingIndex = bindSlots++;
+    vboDesc.vertexStride = sizeof(float) * 6; // pos, uv
+    vboDesc.vertexAttributes.clear();
+    vboDesc.vertexAttributes.push_back(posAttr);
+    vboDesc.vertexAttributes.push_back(uvAttr);
+
+    desc.vertexBuffers.push_back(std::move(vboDesc));
 
     // Depth test and write can be off since we only colorcorrect the color aov.
     desc.depthState.depthTestEnabled = false;
@@ -387,19 +429,46 @@ HdxColorCorrectionTask::_CreatePipeline(HgiTextureHandle const& aovTexture)
     // pixels that were set with a clearColor alpha of 0.0.
     desc.multiSampleState.alphaToCoverageEnable = false;
 
-    // Setup raserization state
+    // The MSAA on renderPipelineState has to match the render target.
+    desc.multiSampleState.sampleCount = aovTexture->GetDescriptor().sampleCount;
+
+    // Setup rasterization state
     desc.rasterizationState.cullMode = HgiCullModeBack;
     desc.rasterizationState.polygonMode = HgiPolygonModeFill;
     desc.rasterizationState.winding = HgiWindingCounterClockwise;
-    
+
     // Setup attachment descriptor
     _attachment0.blendEnabled = false;
     _attachment0.loadOp = HgiAttachmentLoadOpDontCare;
     _attachment0.storeOp = HgiAttachmentStoreOpStore;
     _attachment0.format = aovTexture->GetDescriptor().format;
-    desc.colorAttachmentDescs.emplace_back(_attachment0);
+    _attachment0.usage = aovTexture->GetDescriptor().usage;
+    desc.colorAttachmentDescs.push_back(_attachment0);
+
+    desc.shaderConstantsDesc.stageUsage = HgiShaderStageFragment;
+    desc.shaderConstantsDesc.byteSize = sizeof(_screenSize);
 
     _pipeline = _GetHgi()->CreateGraphicsPipeline(desc);
+
+    return true;
+}
+
+bool
+HdxColorCorrectionTask::_CreateSampler()
+{
+    if (_sampler) {
+        return true;
+    }
+
+    HgiSamplerDesc sampDesc;
+
+    sampDesc.magFilter = HgiSamplerFilterLinear;
+    sampDesc.minFilter = HgiSamplerFilterLinear;
+
+    sampDesc.addressModeU = HgiSamplerAddressModeClampToEdge;
+    sampDesc.addressModeV = HgiSamplerAddressModeClampToEdge;
+
+    _sampler = _GetHgi()->CreateSampler(sampDesc);
 
     return true;
 }
@@ -412,18 +481,24 @@ HdxColorCorrectionTask::_ApplyColorCorrection(
 
     // Prepare graphics cmds.
     HgiGraphicsCmdsDesc gfxDesc;
-    gfxDesc.width = dimensions[0];
-    gfxDesc.height = dimensions[1];
-    gfxDesc.colorAttachmentDescs.emplace_back(_attachment0);
-    gfxDesc.colorTextures.emplace_back(aovTexture);
+    gfxDesc.colorAttachmentDescs.push_back(_attachment0);
+    gfxDesc.colorTextures.push_back(aovTexture);
 
     // Begin rendering
     HgiGraphicsCmdsUniquePtr gfxCmds = _GetHgi()->CreateGraphicsCmds(gfxDesc);
     gfxCmds->PushDebugGroup("ColorCorrection");
     gfxCmds->BindResources(_resourceBindings);
     gfxCmds->BindPipeline(_pipeline);
-    gfxCmds->BindVertexBuffers(0, {_vertexBuffer}, {0});
-    GfVec4i vp = GfVec4i(0, 0, dimensions[0], dimensions[1]);
+    gfxCmds->BindVertexBuffers({{_vertexBuffer, 0, 0}});
+    const GfVec4i vp(0, 0, dimensions[0], dimensions[1]);
+    _screenSize[0] = static_cast<float>(dimensions[0]);
+    _screenSize[1] = static_cast<float>(dimensions[1]);
+    gfxCmds->SetConstantValues(
+        _pipeline,
+        HgiShaderStageFragment,
+        0,
+        sizeof(_screenSize),
+        &_screenSize);
     gfxCmds->SetViewport(vp);
     gfxCmds->DrawIndexed(_indexBuffer, 3, 0, 0, 1, 0);
     gfxCmds->PopDebugGroup();
@@ -504,6 +579,9 @@ HdxColorCorrectionTask::Execute(HdTaskContext* ctx)
     if (!TF_VERIFY(_CreateBufferResources())) {
         return;
     }
+    if (!TF_VERIFY(_CreateSampler())) {
+        return;
+    }
     if (!TF_VERIFY(_CreateShaderResources())) {
         return;
     }
@@ -515,7 +593,7 @@ HdxColorCorrectionTask::Execute(HdTaskContext* ctx)
     }
 
     _ApplyColorCorrection(aovTextureIntermediate);
-    
+
     // Toggle color and colorIntermediate
     _ToggleRenderTarget(ctx);
 }
@@ -547,7 +625,7 @@ HdxColorCorrectionTask::_PrintCompileErrors()
 // -------------------------------------------------------------------------- //
 
 std::ostream& operator<<(
-    std::ostream& out, 
+    std::ostream& out,
     const HdxColorCorrectionTaskParams& pv)
 {
     out << "ColorCorrectionTask Params: (...) "

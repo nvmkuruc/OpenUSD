@@ -27,6 +27,7 @@
 #include "pxr/usd/sdf/primSpec.h"
 
 #include "pxr/usd/usd/pyConversions.h"
+#include "pxr/base/tf/pyAnnotatedBoolResult.h"
 #include "pxr/base/tf/pyContainerConversions.h"
 #include "pxr/base/tf/pyResultConversions.h"
 #include "pxr/base/tf/pyUtils.h"
@@ -79,11 +80,29 @@ _Repr(const UsdCollectionAPI &self)
         primRepr.c_str(), instanceName.c_str());
 }
 
+struct UsdCollectionAPI_CanApplyResult : 
+    public TfPyAnnotatedBoolResult<std::string>
+{
+    UsdCollectionAPI_CanApplyResult(bool val, std::string const &msg) :
+        TfPyAnnotatedBoolResult<std::string>(val, msg) {}
+};
+
+static UsdCollectionAPI_CanApplyResult
+_WrapCanApply(const UsdPrim& prim, const TfToken& name)
+{
+    std::string whyNot;
+    bool result = UsdCollectionAPI::CanApply(prim, name, &whyNot);
+    return UsdCollectionAPI_CanApplyResult(result, whyNot);
+}
+
 } // anonymous namespace
 
 void wrapUsdCollectionAPI()
 {
     typedef UsdCollectionAPI This;
+
+    UsdCollectionAPI_CanApplyResult::Wrap<UsdCollectionAPI_CanApplyResult>(
+        "_CanApplyResult", "whyNot");
 
     class_<This, bases<UsdAPISchemaBase> >
         cls("CollectionAPI");
@@ -105,10 +124,28 @@ void wrapUsdCollectionAPI()
             (arg("prim"), arg("name")))
         .staticmethod("Get")
 
+        .def("GetAll",
+            (std::vector<UsdCollectionAPI>(*)(const UsdPrim &prim))
+                &This::GetAll,
+            arg("prim"),
+            return_value_policy<TfPySequenceToList>())
+        .staticmethod("GetAll")
+
+        .def("CanApply", &_WrapCanApply, (arg("prim"), arg("name")))
+        .staticmethod("CanApply")
+
+        .def("Apply", &This::Apply, (arg("prim"), arg("name")))
+        .staticmethod("Apply")
+
         .def("GetSchemaAttributeNames",
-             &This::GetSchemaAttributeNames,
+             (const TfTokenVector &(*)(bool))&This::GetSchemaAttributeNames,
              arg("includeInherited")=true,
-             arg("instanceName")=TfToken(),
+             return_value_policy<TfPySequenceToList>())
+        .def("GetSchemaAttributeNames",
+             (TfTokenVector(*)(bool, const TfToken &))
+                &This::GetSchemaAttributeNames,
+             arg("includeInherited"),
+             arg("instanceName"),
              return_value_policy<TfPySequenceToList>())
         .staticmethod("GetSchemaAttributeNames")
 
@@ -195,11 +232,6 @@ WRAP_CUSTOM {
     scope collectionAPI = _class 
         .def(init<UsdPrim, TfToken>())
 
-        .def("ApplyCollection", &This::ApplyCollection, 
-             (arg("prim"), arg("name"), 
-              arg("expansionRule")=UsdTokens->expandPrims))
-            .staticmethod("ApplyCollection")
-
         .def("GetCollection", 
              (UsdCollectionAPI(*)(const UsdPrim &prim, 
                                   const TfToken &name))
@@ -248,6 +280,10 @@ WRAP_CUSTOM {
               arg("predicate")=UsdPrimDefaultPredicate),
              return_value_policy<TfPySequenceToList>())
              .staticmethod("ComputeIncludedPaths")
+
+        .def("CanContainPropertyName", 
+                This::CanContainPropertyName, arg("name"))
+        .staticmethod("CanContainPropertyName")
 
         .def("ResetCollection", &This::ResetCollection)
         .def("BlockCollection", &This::BlockCollection)

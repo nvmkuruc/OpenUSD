@@ -24,7 +24,7 @@
 #include "pxr/imaging/hd/bufferSpec.h"
 #include "pxr/imaging/hd/perfLog.h"
 
-#include <boost/functional/hash.hpp>
+#include "pxr/base/tf/hash.h"
 
 #include <iostream>
 
@@ -50,17 +50,26 @@ HdBufferSpecVector
 HdBufferSpec::ComputeUnion(HdBufferSpecVector const &specs1,
                            HdBufferSpecVector const &specs2)
 {
+    // This implementation assumes small inputs.
+
     HD_TRACE_FUNCTION();
 
-    std::set<HdBufferSpec> set;
-    for(HdBufferSpec const& spec : specs1) {
-        set.insert(spec);
+    HdBufferSpecVector r;
+
+    for (HdBufferSpec const& s : specs1) {
+        if (std::find(r.begin(), r.end(), s) != r.end()) {
+            continue;
+        }
+        r.push_back(s);
     }
-    for(HdBufferSpec const& spec : specs2) {
-        set.insert(spec);
+    for (HdBufferSpec const& s : specs2) {
+        if (std::find(r.begin(), r.end(), s) != r.end()) {
+            continue;
+        }
+        r.push_back(s);
     }
 
-    return HdBufferSpecVector(set.begin(), set.end());
+    return r;
 }
 
 /*static*/
@@ -68,28 +77,29 @@ HdBufferSpecVector
 HdBufferSpec::ComputeDifference(HdBufferSpecVector const &specs1,
                                 HdBufferSpecVector const &specs2)
 {
+    // This implementation assumes small inputs.
+
     HD_TRACE_FUNCTION();
 
-    std::set<HdBufferSpec> set;
-    for(HdBufferSpec const& spec : specs1) {
-        set.insert(spec);
-    }
-    for(HdBufferSpec const& spec : specs2) {
-        set.erase(spec);
+    HdBufferSpecVector r;
+
+    for(HdBufferSpec const& s : specs1) {
+        if (std::find(specs2.begin(), specs2.end(), s) != specs2.end()) {
+            continue;
+        }
+        if (std::find(r.begin(), r.end(), s) != r.end()) {
+            continue;
+        }
+        r.push_back(s);
     }
 
-    return HdBufferSpecVector(set.begin(), set.end());
+    return r;
 }
 
 size_t
 HdBufferSpec::Hash() const
 {
-    size_t hash = 0;
-    boost::hash_combine(hash, name.Hash());
-    boost::hash_combine(hash, (size_t) tupleType.type);
-    boost::hash_combine(hash, tupleType.count);
-
-    return hash;
+    return TfHash()(*this);
 }
 
 void

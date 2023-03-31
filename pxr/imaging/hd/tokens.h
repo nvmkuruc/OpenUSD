@@ -39,6 +39,7 @@ PXR_NAMESPACE_OPEN_SCOPE
     (bbox)                                      \
     (bezier)                                    \
     (bSpline)                                   \
+    (blurScale)                                 \
     (camera)                                    \
     (catmullRom)                                \
     (collection)                                \
@@ -76,7 +77,9 @@ PXR_NAMESPACE_OPEN_SCOPE
     (linear)                                    \
     (lightLink)                                 \
     (lightFilterLink)                           \
+    (meshLight)                                 \
     (materialParams)                            \
+    (nonlinearSampleCount)                      \
     (nonperiodic)                               \
     (normals)                                   \
 	/*NV_CHANGE FRZHANG*/						\
@@ -95,6 +98,7 @@ PXR_NAMESPACE_OPEN_SCOPE
     (primvar)                                   \
     (primID)                                    \
     (primitiveParam)                            \
+    (tessFactors)                               \
     (quadInfo)                                  \
     (renderTags)                                \
     (rightHanded)                               \
@@ -135,13 +139,20 @@ PXR_NAMESPACE_OPEN_SCOPE
     (wire)                                      \
     (wireOnSurf)
 
+#define HD_CULLSTYLE_TOKENS \
+    (dontCare) \
+    (nothing) \
+    (back) \
+    (front) \
+    (backUnlessDoubleSided) \
+    (frontUnlessDoubleSided)
+
 #define HD_PERF_TOKENS                          \
     (adjacencyBufSize)                          \
     (basisCurvesTopology)                       \
     (bufferSourcesResolved)                     \
-    (bufferArrayRangeMigrated)                    \
+    (bufferArrayRangeMigrated)                  \
     (bufferArrayRangeContainerResized)          \
-    (collectionsRefreshed)                      \
     (computationsCommited)                      \
     (drawBatches)                               \
     (drawCalls)                                 \
@@ -151,8 +162,6 @@ PXR_NAMESPACE_OPEN_SCOPE
     (garbageCollectedSsbo)                      \
     (garbageCollectedUbo)                       \
     (garbageCollectedVbo)                       \
-    (glBufferSubData)                           \
-    (glCopyBufferSubData)                       \
     (gpuMemoryUsed)                             \
     (instBasisCurvesTopology)                   \
     (instBasisCurvesTopologyRange)              \
@@ -174,7 +183,6 @@ PXR_NAMESPACE_OPEN_SCOPE
     (skipInvisibleRprimSync)                    \
     (subdivisionRefineCPU)                      \
     (subdivisionRefineGPU)                      \
-    (textureResourceMemory)                     \
     (textureMemory)                             \
     (triangulateFaceVarying)                    \
     (uboSize)                                   \
@@ -188,8 +196,10 @@ PXR_NAMESPACE_OPEN_SCOPE
     (cullStyle)                                 \
     (drawRange)                                 \
     (environmentMap)                            \
+    (displacementShader)                        \
     (fragmentShader)                            \
     (geometryShader)                            \
+    (imageToWorldMatrix)                        \
     (indicatorColor)                            \
     (lightingBlendAmount)                       \
     (overrideColor)                             \
@@ -201,12 +211,16 @@ PXR_NAMESPACE_OPEN_SCOPE
     (materialTag)                               \
     (tessControlShader)                         \
     (tessEvalShader)                            \
+    (postTessControlShader)                     \
+    (postTessVertexShader)                      \
     (tessLevel)                                 \
     (viewport)                                  \
     (vertexShader)                              \
     (wireframeColor)                            \
     (worldToViewMatrix)                         \
-    (worldToViewInverseMatrix)
+    (worldToViewInverseMatrix)                  \
+    (stepSize)                                  \
+    (stepSizeLighting)
 
 // Deprecated. Use: HdStMaterialTagTokens
 #define HD_MATERIALTAG_TOKENS                   \
@@ -226,16 +240,25 @@ PXR_NAMESPACE_OPEN_SCOPE
     (guide)                                     \
     (hidden)                                    \
     (proxy)                                     \
-    (render)
+    (render)                                    \
+    (widget)
+
+#define HD_RENDER_CONTEXT_TOKENS                \
+    ((universal, ""))
 
 #define HD_OPTION_TOKENS                        \
     (parallelRprimSync)                        
 
 #define HD_PRIMTYPE_TOKENS                      \
     /* Rprims */                                \
+    (capsule)                                   \
+    (cone)                                      \
+    (cube)                                      \
+    (cylinder)                                  \
     (mesh)                                      \
     (basisCurves)                               \
     (points)                                    \
+    (sphere)                                    \
     (volume)                                    \
                                                 \
     /* Sprims */                                \
@@ -243,21 +266,33 @@ PXR_NAMESPACE_OPEN_SCOPE
     (drawTarget)                                \
     (material)                                  \
     (coordSys)                                  \
+    (instancer)                                 \
+    (instance)                                  \
+    (sampleFilter)                              \
     /* Sprims Lights */                         \
     (simpleLight)                               \
     (cylinderLight)                             \
     (diskLight)                                 \
     (distantLight)                              \
     (domeLight)                                 \
+    (light)                                     \
     (lightFilter)                               \
+    (meshLight)                                 \
+    (pluginLight)                               \
     (rectLight)                                 \
     (sphereLight)                               \
     /* Sprims ExtComputations */                \
     (extComputation)                            \
                                                 \
     /* Bprims */                                \
-    (texture)                                   \
-    (renderBuffer)
+    (renderBuffer)                              \
+    (renderSettings)
+
+HD_API
+bool HdPrimTypeIsGprim(TfToken const& primType);
+
+HD_API
+bool HdPrimTypeIsLight(TfToken const& primType);
 
 #define HD_PRIMVAR_ROLE_TOKENS                  \
     ((none, ""))                                \
@@ -283,6 +318,10 @@ PXR_NAMESPACE_OPEN_SCOPE
      * depth of the final fragment.
      */                                         \
     (depth)                                     \
+    /* HdAovTokens->depthStencil represents the clip-space
+     * depth of the final fragment w/ 8-bit stencil.
+     */                                         \
+    (depthStencil)                              \
     /* HdAovTokens->cameraDepth represents the camera-space
      * depth of the final fragment.
      */                                         \
@@ -348,33 +387,44 @@ TfToken HdAovTokensMakeShader(TfToken const& shader);
     (enableShadows)                                   \
     (enableSceneMaterials)                            \
     (enableSceneLights)                               \
+    (domeLightCameraVisibility)                       \
     /* Raytracer sampling settings */                 \
     (convergedVariance)                               \
     (convergedSamplesPerPixel)                        \
     /* thread limit settings */                       \
     (threadLimit)                                     \
+    /* interactive vs offline */                      \
+    (enableInteractive)                               \
     /* #nv begin #parallel-syncprims */               \
     (staticMaterialNetworkTopology)                   \
     /* #nv end */
 
 #define HD_RESOURCE_TYPE_TOKENS                       \
-    (texture)                        
+    (texture)                                         \
+    (shaderFile)
+
+#define HD_SCENE_INDEX_EMULATION_TOKENS               \
+    (sceneDelegate)                                   \
 
 TF_DECLARE_PUBLIC_TOKENS(HdTokens, HD_API, HD_TOKENS);
 TF_DECLARE_PUBLIC_TOKENS(HdInstancerTokens, HD_API, HD_INSTANCER_TOKENS);
 TF_DECLARE_PUBLIC_TOKENS(HdReprTokens, HD_API, HD_REPR_TOKENS);
+TF_DECLARE_PUBLIC_TOKENS(HdCullStyleTokens, HD_API, HD_CULLSTYLE_TOKENS);
 TF_DECLARE_PUBLIC_TOKENS(HdPerfTokens, HD_API, HD_PERF_TOKENS);
 TF_DECLARE_PUBLIC_TOKENS(HdShaderTokens, HD_API, HD_SHADER_TOKENS);
 TF_DECLARE_PUBLIC_TOKENS(HdMaterialTagTokens, HD_API, HD_MATERIALTAG_TOKENS);
 TF_DECLARE_PUBLIC_TOKENS(HdMaterialTerminalTokens, HD_API,
                          HD_MATERIAL_TERMINAL_TOKENS);
 TF_DECLARE_PUBLIC_TOKENS(HdRenderTagTokens, HD_API, HD_RENDERTAG_TOKENS);
+TF_DECLARE_PUBLIC_TOKENS(HdRenderContextTokens, HD_API, HD_RENDER_CONTEXT_TOKENS);
 TF_DECLARE_PUBLIC_TOKENS(HdOptionTokens, HD_API, HD_OPTION_TOKENS);
 TF_DECLARE_PUBLIC_TOKENS(HdPrimTypeTokens, HD_API, HD_PRIMTYPE_TOKENS);
 TF_DECLARE_PUBLIC_TOKENS(HdPrimvarRoleTokens, HD_API, HD_PRIMVAR_ROLE_TOKENS);
 TF_DECLARE_PUBLIC_TOKENS(HdAovTokens, HD_API, HD_AOV_TOKENS);
 TF_DECLARE_PUBLIC_TOKENS(HdRenderSettingsTokens, HD_API, HD_RENDER_SETTINGS_TOKENS);
 TF_DECLARE_PUBLIC_TOKENS(HdResourceTypeTokens, HD_API, HD_RESOURCE_TYPE_TOKENS);
+TF_DECLARE_PUBLIC_TOKENS(HdSceneIndexEmulationTokens, HD_API, 
+                         HD_SCENE_INDEX_EMULATION_TOKENS);
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

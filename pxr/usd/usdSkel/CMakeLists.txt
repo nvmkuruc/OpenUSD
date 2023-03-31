@@ -79,6 +79,21 @@ pxr_library(usdSkel
         generatedSchema.usda
         plugInfo.json
         schema.usda:usdSkel/schema.usda
+
+    DOXYGEN_FILES
+        overview.dox
+        doxygen/apiIntro.dox
+        doxygen/bestPractices.dox
+        doxygen/instancing.dox
+        doxygen/intro.dox
+        doxygen/objectModel.dox
+        doxygen/schemaOverview.dox
+        doxygen/schemas.dox
+        doxygen/skinnedArm.usda
+        images/blendshapes.svg
+        images/blendshapesWithInbetweens.svg
+        images/influencesPrimvarLayout.svg
+        images/unboundedInterpolationExample.svg
 )
    
 pxr_test_scripts(
@@ -127,11 +142,25 @@ pxr_register_test(testUsdSkelAnimQuery
     EXPECTED_RETURN_CODE 0
 )
 
-pxr_register_test(testUsdSkelBakeSkinning
-    PYTHON
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdSkelBakeSkinning"
-    EXPECTED_RETURN_CODE 0
-)
+# Baselines for this test were generated on an x86_64 chip. The results may
+# differ on other architectures due to floating point precision issues. So, we
+# only perform the comparison on matching architectures. Ideally, we'd have a
+# diff tool with numerical tolerances that would allow using the same baseline
+# on all architectures.
+if ("${CMAKE_HOST_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+    pxr_register_test(testUsdSkelBakeSkinning
+        PYTHON
+        COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdSkelBakeSkinning"
+        EXPECTED_RETURN_CODE 0
+        DIFF_COMPARE blendshapes.baked.usda blendshapesWithNormals.baked.usda lbs.baked.usda lbs.bakedInterval.usda
+    )
+else ()
+    pxr_register_test(testUsdSkelBakeSkinning
+        PYTHON
+        COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdSkelBakeSkinning"
+        EXPECTED_RETURN_CODE 0
+    )
+endif()
 
 pxr_register_test(testUsdSkelBindingAPI
     PYTHON
@@ -149,6 +178,7 @@ pxr_register_test(testUsdSkelRoot
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdSkelRoot"
     EXPECTED_RETURN_CODE 0
+    DIFF_COMPARE root.computedExtents.usda
 )
 
 pxr_register_test(testUsdSkelSkeletonQuery

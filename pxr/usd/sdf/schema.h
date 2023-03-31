@@ -180,7 +180,9 @@ public:
         SDF_API TfTokenVector GetFields() const;
 
         /// Returns all value fields marked as required for this spec.
-        SDF_API TfTokenVector GetRequiredFields() const;
+        TfTokenVector const &GetRequiredFields() const {
+            return _requiredFields;
+        }
 
         /// Returns all value fields marked as metadata for this spec.
         SDF_API TfTokenVector GetMetadataFields() const;
@@ -205,6 +207,10 @@ public:
         typedef TfHashMap<TfToken, _FieldInfo, TfToken::HashFunctor> 
             _FieldMap;
         _FieldMap _fields;
+        
+        // A separate vector of required field names from _fields.  Access to
+        // these is in a hot path, so we cache them separately.
+        TfTokenVector _requiredFields;
 
     private:
         friend class _SpecDefiner;
@@ -263,16 +269,17 @@ public:
                                          TfToken const &metadataField) const;
 
     /// Returns all required fields registered for the given spec type.
-    SDF_API TfTokenVector GetRequiredFields(SdfSpecType specType) const;
+    SDF_API const TfTokenVector &GetRequiredFields(SdfSpecType specType) const;
 
     /// Return true if \p fieldName is a required field name for at least one
     /// spec type, return false otherwise.  The main use of this function is to
     /// quickly rule out field names that aren't required (and thus don't need
     /// special handling).
     inline bool IsRequiredFieldName(const TfToken &fieldName) const {
-        for (size_t i = 0; i != _requiredFieldNames.size(); ++i) {
-            if (_requiredFieldNames[i] == fieldName)
+        for (TfToken const &fname: _requiredFieldNames) {
+            if (fname == fieldName) {
                 return true;
+            }
         }
         return false;
     }
@@ -310,6 +317,7 @@ public:
     SdfAllowed IsValidValue(const VtValue& value) const;
 
     /// Returns all registered type names.
+    SDF_API
     std::vector<SdfValueTypeName> GetAllTypes() const;
 
     /// Return the type name object for the given type name token.
@@ -577,6 +585,7 @@ SDF_API_TEMPLATE_CLASS(TfSingleton<SdfSchema>);
     ((Default, "default"))                                   \
     ((DefaultPrim, "defaultPrim"))                           \
     ((DisplayGroup, "displayGroup"))                         \
+    ((DisplayGroupOrder, "displayGroupOrder"))               \
     ((DisplayName, "displayName"))                           \
     ((DisplayUnit, "displayUnit"))                           \
     ((Documentation, "documentation"))                       \

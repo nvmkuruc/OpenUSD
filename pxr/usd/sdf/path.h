@@ -303,7 +303,11 @@ public:
     
     /// Constructs the default, empty path.
     ///
-    constexpr SdfPath() = default;
+    SdfPath() noexcept {
+        // This generates a single instruction instead of 2 on gcc 6.3.  Seems
+        // to be fixed on gcc 7+ and newer clangs.  Remove when we're there!
+        memset(this, 0, sizeof(*this));
+    }
 
     /// Creates a path from the given string.
     ///
@@ -416,13 +420,52 @@ public:
         return !_primPart; 
     }
 
-    /// Returns the string representation of this path as a TfToken.
+    /// Return the string representation of this path as a TfToken.
+    ///
+    /// This function is recommended only for human-readable or diagnostic
+    /// output.  Use the SdfPath API to manipulate paths.  It is less
+    /// error-prone and has better performance.
+    SDF_API TfToken GetAsToken() const;
+
+    /// Return the string representation of this path as a TfToken lvalue.
+    ///
+    /// This function returns a persistent lvalue.  If an rvalue will suffice,
+    /// call GetAsToken() instead.  That avoids populating internal data
+    /// structures to hold the persistent token.
+    ///
+    /// This function is recommended only for human-readable or diagnostic
+    /// output.  Use the SdfPath API to manipulate paths.  It is less
+    /// error-prone and has better performance.
     SDF_API TfToken const &GetToken() const;
 
-    /// Returns the string representation of this path as a std::string.
+    /// Return the string representation of this path as a std::string.
+    ///
+    /// This function is recommended only for human-readable or diagnostic
+    /// output.  Use the SdfPath API to manipulate paths.  It is less
+    /// error-prone and has better performance.
+    SDF_API std::string GetAsString() const;
+
+    /// Return the string representation of this path as a std::string.
+    ///
+    /// This function returns a persistent lvalue.  If an rvalue will suffice,
+    /// call GetAsString() instead.  That avoids populating internal data
+    /// structures to hold the persistent string.
+    ///
+    /// This function is recommended only for human-readable or diagnostic
+    /// output.  Use the SdfPath API to manipulate paths.  It is less
+    /// error-prone and has better performance.
     SDF_API const std::string &GetString() const;
 
     /// Returns the string representation of this path as a c string.
+    ///
+    /// This function returns a pointer to a persistent c string.  If a
+    /// temporary c string will suffice, call GetAsString().c_str() instead.
+    /// That avoids populating internal data structures to hold the persistent
+    /// string.
+    ///
+    /// This function is recommended only for human-readable or diagnostic
+    /// output.  Use the SdfPath API to manipulate paths.  It is less
+    /// error-prone and has better performance.
     SDF_API const char *GetText() const;
 
     /// Returns the prefix paths of this path.
@@ -556,7 +599,9 @@ public:
     /// ('/foo').  For a prim property path (like '/foo/bar.property'), return
     /// the prim's path ('/foo/bar').  For a target path (like
     /// '/foo/bar.property[/target]') return the property path
-    /// ('/foo/bar.property').  For a relational attribute or mapper path (like
+    /// ('/foo/bar.property').  For a mapper path (like
+    /// '/foo/bar.property.mapper[/target]') return the property path
+    /// ('/foo/bar.property).  For a relational attribute path (like
     /// '/foo/bar.property[/target].relAttr') return the relationship target's
     /// path ('/foo/bar.property[/target]').  For a prim variant selection path
     /// (like '/foo/bar{var=sel}') return the prim path ('/foo/bar').  For a
@@ -854,37 +899,21 @@ public:
         return _LessThanInternal(*this, rhs);
     }
 
+    template <class HashState>
+    friend void TfHashAppend(HashState &h, SdfPath const &path) {
+        // The hash function is pretty sensitive performance-wise.  Be
+        // careful making changes here, and run tests.
+        uint32_t primPart, propPart;
+        memcpy(&primPart, &path._primPart, sizeof(primPart));
+        memcpy(&propPart, &path._propPart, sizeof(propPart));
+        h.Append(primPart);
+        h.Append(propPart);
+    }
+
     // For hash maps and sets
     struct Hash {
         inline size_t operator()(const SdfPath& path) const {
-            // The hash function is pretty sensitive performance-wise.  Be
-            // careful making changes here, and run tests.
-            uint32_t primPart, propPart;
-            memcpy(&primPart, &path._primPart, sizeof(primPart));
-            memcpy(&propPart, &path._propPart, sizeof(propPart));
-
-            // Important considerations here:
-            // - It must be fast to execute.
-            // - It must do well in hash tables that find indexes by taking
-            //   the remainder divided by a prime number of buckets.
-            // - It must do well in hash tables that find indexes by taking
-            //   just the low-order bits.
-
-            // This hash function maps the (primPart, propPart) pair to a single
-            // value by using triangular numbers.  So the first few path hash
-            // values would look like this, for primPart as X increasing
-            // left-to-right and for propPart as Y increasing top-to-bottom.
-            //
-            //  0  2  5  9 14 20
-            //  1  4  8 13 19 26
-            //  3  7 12 18 25 33
-            //  6 11 17 24 32 41
-            // 10 16 23 31 40 50
-            // 15 22 30 39 49 60
-
-            uint64_t x = primPart >> 8;
-            uint64_t y = x + (propPart >> 8);
-            return x + (y * (y + 1)) / 2;
+            return TfHash()(path);
         }
     };
 
@@ -980,6 +1009,9 @@ private:
         lhs._primPart.swap(rhs._primPart);
         lhs._propPart.swap(rhs._propPart);
     }
+
+    SDF_API friend char const *
+    Sdf_PathGetDebuggerPathText(SdfPath const &);
 
     Sdf_PathPrimNodeHandle _primPart;
     Sdf_PathPropNodeHandle _propPart;
@@ -1333,6 +1365,15 @@ SdfPathFindLongestStrictPrefix(
         std::map<SdfPath, T> &>(map, path, /*strictPrefix=*/true,
                                 TfGet<0>());
 }
+
+// A helper function for debugger pretty-printers, etc.  This function is *not*
+// thread-safe.  It writes to a static buffer and returns a pointer to it.
+// Subsequent calls to this function overwrite the memory written in prior
+// calls.  If the given path's string representation exceeds the static buffer
+// size, return a pointer to a message indicating so.
+SDF_API
+char const *
+Sdf_PathGetDebuggerPathText(SdfPath const &);
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

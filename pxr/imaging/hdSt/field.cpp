@@ -22,7 +22,7 @@
 // language governing permissions and limitations under the Apache License.
 //
 #include "pxr/imaging/hdSt/field.h"
-#include "pxr/imaging/hdSt/subtextureIdentifier.h"
+#include "pxr/imaging/hdSt/fieldSubtextureIdentifier.h"
 
 #include "pxr/imaging/hd/sceneDelegate.h"
 
@@ -32,10 +32,12 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
-    (fieldName)
+    (fieldIndex)
+    (fieldPurpose)
     (textureMemory)
 
     (openvdbAsset)
+    (field3dAsset)
 );
 
 HdStField::HdStField(SdfPath const& id, TfToken const & fieldType) 
@@ -53,7 +55,6 @@ HdStField::Sync(HdSceneDelegate *sceneDelegate,
                 HdRenderParam   *renderParam,
                 HdDirtyBits     *dirtyBits)
 {
-    // This code is similar to HdTexture::Sync.
     if (*dirtyBits & DirtyParams) {
 
         // Get asset path from scene delegate.
@@ -68,35 +69,44 @@ HdStField::Sync(HdSceneDelegate *sceneDelegate,
         // called.
         const TfToken resolvedFilePath = TfToken(filePath.GetResolvedPath());
 
-        if (_fieldType == _tokens->openvdbAsset) {
+        const VtValue fieldNameValue = sceneDelegate->Get(
+            GetId(), HdFieldTokens->fieldName);
+        const TfToken &fieldName = fieldNameValue.Get<TfToken>();
 
-            const VtValue fieldNameValue = sceneDelegate->Get(
-                GetId(), _tokens->fieldName);
-            const TfToken fieldName = fieldNameValue.Get<TfToken>();
+        const VtValue fieldIndexValue = sceneDelegate->Get(
+            GetId(), _tokens->fieldIndex);
+
+        const int fieldIndex = fieldIndexValue.Get<int>();
+
+        if (_fieldType == _tokens->openvdbAsset) {
+            _textureId = HdStTextureIdentifier(
+                resolvedFilePath,
+                std::make_unique<HdStOpenVDBAssetSubtextureIdentifier>(
+                    fieldName, fieldIndex));
+        } else {
+            const VtValue fieldPurposeValue = sceneDelegate->Get(
+                GetId(), _tokens->fieldPurpose);
+            const TfToken &fieldPurpose = fieldPurposeValue.Get<TfToken>();
 
             _textureId = HdStTextureIdentifier(
                 resolvedFilePath,
-                std::make_unique<HdStVdbSubtextureIdentifier>(fieldName));
-        } else {
-            TF_CODING_ERROR(
-                "FieldAsset of type %s not supported by Storm.",
-                _fieldType.GetString().c_str());
+                std::make_unique<HdStField3DAssetSubtextureIdentifier>(
+                    fieldName, fieldIndex, fieldPurpose));
         }
 
         const VtValue textureMemoryValue = sceneDelegate->Get(
             GetId(), _tokens->textureMemory);
-        // Note that the memory request is apparently authored as
-        // float even though it is in bytes and thus should be an
-        // integral type.
-        _textureMemory = textureMemoryValue.GetWithDefault<float>(0.0f);
+        _textureMemory =
+            1048576 * textureMemoryValue.GetWithDefault<float>(0.0f);
         
         if (_isInitialized) {
+            // This code is no longer needed when using scene indices
+            // or scene index emulation since this dependency is now tracked
+            // by the HdSt_DependencySceneIndexPlugin.
+            //
             // Force volume prim to pick up the new field resource and
             // recompute bounding box.
             //
-            // XXX:-matthias
-            // Ideally, this would be more fine-grained than blasting all
-            // rprims.
             HdChangeTracker& changeTracker =
                 sceneDelegate->GetRenderIndex().GetChangeTracker();
             changeTracker.MarkAllRprimsDirty(HdChangeTracker::DirtyVolumeField);
@@ -118,7 +128,8 @@ const TfTokenVector &
 HdStField::GetSupportedBprimTypes()
 {
     static const TfTokenVector result = {
-        _tokens->openvdbAsset
+        _tokens->openvdbAsset,
+        _tokens->field3dAsset
     };
     return result;
 }
@@ -126,7 +137,9 @@ HdStField::GetSupportedBprimTypes()
 bool
 HdStField::IsSupportedBprimType(const TfToken &bprimType)
 {
-    return bprimType == _tokens->openvdbAsset;
+    return 
+        bprimType == _tokens->openvdbAsset ||
+        bprimType == _tokens->field3dAsset;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

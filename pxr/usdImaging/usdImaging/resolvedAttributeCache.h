@@ -21,10 +21,10 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef PXR_USD_IMAGING_USD_IMAGING_INHERITED_CACHE_H
-#define PXR_USD_IMAGING_USD_IMAGING_INHERITED_CACHE_H
+#ifndef PXR_USD_IMAGING_USD_IMAGING_RESOLVED_ATTRIBUTE_CACHE_H
+#define PXR_USD_IMAGING_USD_IMAGING_RESOLVED_ATTRIBUTE_CACHE_H
 
-/// \file usdImaging/resolvedAttributeCache.h
+/// \file
 
 #include "pxr/pxr.h"
 #include "pxr/usdImaging/usdImaging/api.h"
@@ -41,8 +41,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-/// \class UsdImaging_ResolvedAttributeCache
-///
 /// A general caching mechanism for attributes that are nontrivial to resolve,
 /// such as attributes inherited up or down the ancestor chain or attributes
 /// with significant load-time processing involved.
@@ -112,8 +110,7 @@ public:
     value_type GetValue(const UsdPrim& prim) const
     {
         TRACE_FUNCTION();
-        if (!prim.GetPath().HasPrefix(_rootPath) 
-            && !prim.IsInMaster()) {
+        if (!prim.GetPath().HasPrefix(_rootPath) && !prim.IsInPrototype()) {
             TF_CODING_ERROR("Attempt to get value for: %s "
                             "which is not within the specified root: %s",
                             prim.GetPath().GetString().c_str(),
@@ -134,7 +131,7 @@ public:
 
     /// Clears all pre-cached values.
     void Clear() {
-        _cache.clear();
+        WorkSwapDestroyAsync(_cache);
         _cacheVersion = _GetInitialCacheVersion();
     }
 
@@ -403,7 +400,7 @@ UsdImaging_ResolvedAttributeCache<Strategy, ImplData>::_GetValue(
     static value_type const default_ = Strategy::MakeDefault();
 
     // Base case.
-    if (!prim || prim.IsMaster() || prim.GetPath() == _rootPath)
+    if (!prim || prim.IsPrototype() || prim.GetPath() == _rootPath)
         return &default_;
 
     _Entry* entry = _GetCacheEntryForPrim(prim);
@@ -455,16 +452,17 @@ struct UsdImaging_XfStrategy {
     value_type MakeDefault() { return GfMatrix4d(1); }
 
     static
-    query_type MakeQuery(UsdPrim prim, bool *) {
-        if (UsdGeomXformable xf = UsdGeomXformable(prim))
+    query_type MakeQuery(UsdPrim const& prim, bool *) {
+        if (const UsdGeomXformable xf = UsdGeomXformable(prim)) {
             return query_type(xf);
+        }
         return query_type();
     }
 
     static 
     value_type
     Compute(UsdImaging_XformCache const* owner, 
-            UsdPrim prim,
+            UsdPrim const& prim,
             query_type const* query)
     { 
         value_type xform = MakeDefault();
@@ -521,35 +519,49 @@ PXR_NAMESPACE_CLOSE_SCOPE
 PXR_NAMESPACE_OPEN_SCOPE
 
 struct UsdImaging_VisStrategy;
-typedef UsdImaging_ResolvedAttributeCache<UsdImaging_VisStrategy> UsdImaging_VisCache;
+using UsdImaging_VisCache =
+    UsdImaging_ResolvedAttributeCache<UsdImaging_VisStrategy>;
 
+/// Strategy used to cache inherited 'visibility' values, implementing pruning
+/// visibility semantics.
+///
 struct UsdImaging_VisStrategy {
     typedef TfToken value_type; // invisible, inherited
     typedef UsdAttributeQuery query_type;
 
     static
     bool ValueMightBeTimeVarying() { return true; }
+
     static
     value_type MakeDefault() { return UsdGeomTokens->inherited; }
 
     static
-    query_type MakeQuery(UsdPrim prim, bool *) {
-        if (UsdGeomImageable xf = UsdGeomImageable(prim))
+    query_type MakeQuery(UsdPrim const& prim, bool *)
+    {
+        if (const UsdGeomImageable xf = UsdGeomImageable(prim)) {
             return query_type(xf.GetVisibilityAttr());
+        }
         return query_type();
     }
 
     static 
     value_type
     Compute(UsdImaging_VisCache const* owner, 
-            UsdPrim prim,
+            UsdPrim const& prim,
             query_type const* query)
     { 
         value_type v = *owner->_GetValue(prim.GetParent());
-        if (v == UsdGeomTokens->invisible)
+
+        // If prim inherits 'invisible', then it's invisible, due to pruning
+        // visibility.
+        if (v == UsdGeomTokens->invisible) {
             return v;
-        if (*query)
+        }
+
+        // Otherwise, prim's value, if it has one, determines its visibility.
+        if (*query) {
             query->Get(&v, owner->GetTime());
+        }
         return v;
     }
 
@@ -583,15 +595,17 @@ struct UsdImaging_PurposeStrategy {
     }
 
     static
-    query_type MakeQuery(UsdPrim prim, bool *) {
-        UsdGeomImageable im = UsdGeomImageable(prim);
-        return im ? query_type(im.GetPurposeAttr()) : query_type();
+    query_type MakeQuery(UsdPrim const& prim, bool *) {
+        if (const UsdGeomImageable im = UsdGeomImageable(prim)) {
+            return query_type(im.GetPurposeAttr());
+        }
+        return query_type();
     }
 
     static 
     value_type
     Compute(UsdImaging_PurposeCache const* owner, 
-            UsdPrim prim,
+            UsdPrim const& prim,
             query_type const* query)
     {
         // Fallback to parent if the prim isn't imageable or doesn't have a 
@@ -687,8 +701,15 @@ typedef UsdImaging_ResolvedAttributeCache<UsdImaging_MaterialStrategy,
         UsdImaging_MaterialBindingCache;
 
 struct UsdImaging_MaterialStrategy {
-    typedef SdfPath value_type;         // inherited path to bound shader
-    typedef UsdShadeMaterial query_type;
+    // inherited path to bound target
+    // depending on the load state, override, etc bound target path might not be
+    // queried as a UsdShadeMaterial on the stage.
+    
+    // inherited path to bound target
+    typedef SdfPath value_type;         
+    // Hold the computed path of the bound material or target path of the
+    // winning material binding relationship
+    typedef SdfPath query_type; 
 
     using ImplData = UsdImaging_MaterialBindingImplData;
 
@@ -699,34 +720,44 @@ struct UsdImaging_MaterialStrategy {
 
     static
     query_type MakeQuery(
-        UsdPrim prim, 
+        UsdPrim const& prim, 
         ImplData *implData) 
     {
-        return UsdShadeMaterialBindingAPI(prim).ComputeBoundMaterial(
+        UsdRelationship bindingRel;
+        UsdShadeMaterial materialPrim = 
+            UsdShadeMaterialBindingAPI(prim).ComputeBoundMaterial(
                 &implData->GetBindingsCache(), 
                 &implData->GetCollectionQueryCache(),
-                implData->GetMaterialPurpose());
+                implData->GetMaterialPurpose(),
+                &bindingRel);
+
+        if (materialPrim) {
+            return materialPrim.GetPath();
+        }
+        
+        const SdfPath targetPath =
+            UsdShadeMaterialBindingAPI::GetResolvedTargetPathFromBindingRel(
+                    bindingRel);
+        return targetPath;
     }
  
     static 
     value_type
     Compute(UsdImaging_MaterialBindingCache const* owner,
-            UsdPrim prim,
+            UsdPrim const& prim,
             query_type const* query)
     { 
         TF_DEBUG(USDIMAGING_SHADERS).Msg("Looking for \"preview\" material "
                 "binding for %s\n", prim.GetPath().GetText());
-        if (*query) {
-            SdfPath binding = query->GetPath();
-            if (!binding.IsEmpty()) {
-                return binding;
-            }
-        }
+
         // query already contains the resolved material binding for the prim. 
         // Hence, we don't need to inherit the binding from the parent here. 
         // Futhermore, it may be wrong to inherit the binding from the parent,
         // because in the new scheme, a child of a bound prim can be unbound.
-        return value_type();
+        //
+        // Note that query could be an empty SdfPath, which is the default
+        // value.
+        return *query;
     }
 
     static
@@ -734,11 +765,18 @@ struct UsdImaging_MaterialStrategy {
     ComputeMaterialPath(UsdPrim const& prim, ImplData *implData) {
         // We don't need to walk up the namespace here since 
         // ComputeBoundMaterial does it for us.
-        if (UsdShadeMaterial mat = UsdShadeMaterialBindingAPI(prim).
-                    ComputeBoundMaterial(&implData->GetBindingsCache(), 
-                                         &implData->GetCollectionQueryCache(),
-                                         implData->GetMaterialPurpose())) {
-            return mat.GetPath();
+        UsdRelationship bindingRel;
+        UsdShadeMaterialBindingAPI(prim).ComputeBoundMaterial(
+                &implData->GetBindingsCache(), 
+                &implData->GetCollectionQueryCache(),
+                implData->GetMaterialPurpose(),
+                &bindingRel);
+
+        const SdfPath targetPath =
+            UsdShadeMaterialBindingAPI::GetResolvedTargetPathFromBindingRel(
+                    bindingRel);
+        if (!targetPath.IsEmpty()) {
+            return targetPath;
         }
         return value_type();
     }
@@ -760,7 +798,7 @@ typedef UsdImaging_ResolvedAttributeCache<UsdImaging_DrawModeStrategy>
 
 struct UsdImaging_DrawModeStrategy
 {
-    typedef TfToken value_type; // origin, bounds, cards, default
+    typedef TfToken value_type; // origin, bounds, cards, default, inherited
     typedef UsdAttributeQuery query_type;
 
     static
@@ -769,23 +807,35 @@ struct UsdImaging_DrawModeStrategy
     value_type MakeDefault() { return UsdGeomTokens->default_; }
 
     static
-    query_type MakeQuery(UsdPrim prim, bool *) {
-        if (UsdAttribute a = UsdGeomModelAPI(prim).GetModelDrawModeAttr())
-            return query_type(a);
+    query_type MakeQuery(UsdPrim const& prim, bool *) {
+        if (const UsdGeomModelAPI modelApi = UsdGeomModelAPI(prim)) {
+            return query_type(modelApi.GetModelDrawModeAttr());
+        }
         return query_type();
     }
 
     static
     value_type
     Compute(UsdImaging_DrawModeCache const* owner,
-            UsdPrim prim,
+            UsdPrim const& prim,
             query_type const* query)
     {
-        value_type v = UsdGeomTokens->default_;
-        if (*query && query->Get(&v)) {
+        // No attribute defined means inherited, means refer to the parent.
+        // Any defined attribute overrides parent opinion.
+        // If the drawMode is inherited all the way to the root of the scene,
+        // that means "default".
+        value_type v = UsdGeomTokens->inherited;
+        if (*query) {
+            query->Get(&v);
+        }
+        if (v != UsdGeomTokens->inherited) {
             return v;
         }
-        return *owner->_GetValue(prim.GetParent());
+        v = *owner->_GetValue(prim.GetParent());
+        if (v == UsdGeomTokens->inherited) {
+            return UsdGeomTokens->default_;
+        }
+        return v;
     }
 
     static
@@ -833,14 +883,14 @@ struct UsdImaging_PointInstancerIndicesStrategy
     value_type MakeDefault() { return value_type(); }
 
     static
-    query_type MakeQuery(UsdPrim prim, bool *) {
+    query_type MakeQuery(UsdPrim const& prim, bool *) {
         return 0;
     }
 
     static
     value_type
     Compute(UsdImaging_PointInstancerIndicesCache const* owner,
-            UsdPrim prim,
+            UsdPrim const& prim,
             query_type const* query)
     {
         return ComputePerPrototypeIndices(prim, owner->GetTime());
@@ -888,23 +938,13 @@ PXR_NAMESPACE_CLOSE_SCOPE
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-struct UsdImaging_CoordSysBindingImplData {
-    // Helper provided by the scene delegate to pre-convert
-    // the binding paths to the equivalent Hydra ID.
-    std::function<SdfPath(SdfPath)> usdToHydraPath;
-};
-
 struct UsdImaging_CoordSysBindingStrategy;
 
-typedef UsdImaging_ResolvedAttributeCache<
-    UsdImaging_CoordSysBindingStrategy,
-    UsdImaging_CoordSysBindingImplData>
+typedef UsdImaging_ResolvedAttributeCache<UsdImaging_CoordSysBindingStrategy>
     UsdImaging_CoordSysBindingCache;
 
 struct UsdImaging_CoordSysBindingStrategy
 {
-    using ImplData = UsdImaging_CoordSysBindingImplData;
-
     typedef std::vector<UsdShadeCoordSysAPI::Binding> UsdBindingVec;
     typedef std::shared_ptr<UsdBindingVec> UsdBindingVecPtr;
     typedef std::shared_ptr<SdfPathVector> IdVecPtr;
@@ -915,13 +955,6 @@ struct UsdImaging_CoordSysBindingStrategy
     };
     struct query_type {
         UsdShadeCoordSysAPI coordSysAPI;
-        ImplData *implData;
-
-        // Convert a USD binding relationship to a Hydra ID
-        SdfPath
-        _IdForBinding(UsdShadeCoordSysAPI::Binding const& binding) const {
-            return implData->usdToHydraPath(binding.bindingRelPath);
-        }
     };
 
     static
@@ -933,14 +966,14 @@ struct UsdImaging_CoordSysBindingStrategy
     }
 
     static
-    query_type MakeQuery(UsdPrim prim, ImplData *implData) {
-        return query_type({ UsdShadeCoordSysAPI(prim), implData });
+    query_type MakeQuery(UsdPrim const& prim, bool *) {
+        return query_type( {UsdShadeCoordSysAPI(prim)} );
     }
 
     static
     value_type
     Compute(UsdImaging_CoordSysBindingCache const* owner,
-            UsdPrim prim,
+            UsdPrim const& prim,
             query_type const* query)
     {
         value_type v;
@@ -959,14 +992,23 @@ struct UsdImaging_CoordSysBindingStrategy
                 if (v.usdBindingVecPtr) {
                     usdBindings = *v.usdBindingVecPtr;
                 }
-                for (auto const& binding:
+                for (auto const& binding :
                      query->coordSysAPI.GetLocalBindings()) {
+                    if (!prim.GetStage()->GetPrimAtPath(
+                        binding.coordSysPrimPath).IsValid()) {
+                        // The target xform prim does not exist, so ignore
+                        // this coord sys binding.
+                        TF_WARN("UsdImaging: Ignoring coordinate system "
+                                "binding to non-existent prim <%s>\n",
+                                binding.coordSysPrimPath.GetText());
+                        continue;
+                    }
                     bool found = false;
-                    for (size_t i=0, n=hdIds.size(); i<n; ++i) {
-                        if (usdBindings[i].name == binding.name) {
+                    for (size_t id = 0, n = hdIds.size(); id < n; ++id) {
+                        if (usdBindings[id].name == binding.name) {
                             // Found an override -- replace this binding.
-                            usdBindings[i] = binding;
-                            hdIds[i] = query->_IdForBinding(binding);
+                            usdBindings[id] = binding;
+                            hdIds[id] = binding.bindingRelPath;
                             found = true;
                             break;
                         }
@@ -974,7 +1016,7 @@ struct UsdImaging_CoordSysBindingStrategy
                     if (!found) {
                         // New binding, so append.
                         usdBindings.push_back(binding);
-                        hdIds.push_back(query->_IdForBinding(binding));
+                        hdIds.push_back(binding.bindingRelPath);
                     }
                 }
                 v.idVecPtr.reset(new SdfPathVector(hdIds));
@@ -982,6 +1024,137 @@ struct UsdImaging_CoordSysBindingStrategy
             }
         }
         return v;
+    }
+};
+
+PXR_NAMESPACE_CLOSE_SCOPE
+
+// -------------------------------------------------------------------------- //
+// Nonlinear sample count Primvar Cache
+// -------------------------------------------------------------------------- //
+
+#include "pxr/usd/usdGeom/motionAPI.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
+
+struct UsdImaging_NonlinearSampleCountStrategy;
+typedef UsdImaging_ResolvedAttributeCache<
+                                UsdImaging_NonlinearSampleCountStrategy>
+    UsdImaging_NonlinearSampleCountCache;
+
+struct UsdImaging_NonlinearSampleCountStrategy
+{
+    typedef int value_type;
+    typedef UsdAttributeQuery query_type;
+
+    // Used to indicate that no (valid) opinion exists
+    // for nonlinear sample count.
+    static constexpr value_type invalidValue = -1;
+
+    static
+    bool ValueMightBeTimeVarying() { return true; }
+
+    static
+    value_type MakeDefault() {
+        return invalidValue;
+    }
+
+    static
+    query_type MakeQuery(UsdPrim const& prim, bool *) {
+        if (const UsdGeomMotionAPI motionAPI = UsdGeomMotionAPI(prim)) {
+            return query_type(motionAPI.GetNonlinearSampleCountAttr());
+        }
+        return query_type();
+    }
+    
+    static
+    value_type
+    Compute(UsdImaging_NonlinearSampleCountCache const* owner, 
+            UsdPrim const& prim,
+            query_type const* query)
+    {
+        if (query->HasAuthoredValue()) {
+            int value;
+            if (query->Get(&value, owner->GetTime())) {
+                return value;
+            }
+        }
+        
+        return *owner->_GetValue(prim.GetParent());
+    }
+
+    static
+    value_type
+    ComputeNonlinearSampleCount(UsdPrim const &prim, UsdTimeCode time)
+    {
+        return UsdGeomMotionAPI(prim).ComputeNonlinearSampleCount(time);
+    }
+};
+
+PXR_NAMESPACE_CLOSE_SCOPE
+
+// -------------------------------------------------------------------------- //
+// Blur scale Primvar Cache
+// -------------------------------------------------------------------------- //
+
+#include "pxr/usd/usdGeom/motionAPI.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
+
+struct UsdImaging_BlurScaleStrategy;
+typedef UsdImaging_ResolvedAttributeCache<UsdImaging_BlurScaleStrategy>
+    UsdImaging_BlurScaleCache;
+
+struct UsdImaging_BlurScaleStrategy
+{
+    struct value_type {
+        float value;
+        bool has_value;
+    };
+
+    typedef UsdAttributeQuery query_type;
+
+    // Used to indicate that no (valid) opinion exists
+    // for blur scale.
+    static const value_type invalidValue;
+
+    static
+    bool ValueMightBeTimeVarying() { return true; }
+
+    static
+    value_type MakeDefault() {
+        return invalidValue;
+    }
+
+    static
+    query_type MakeQuery(UsdPrim const& prim, bool *) {
+        if (const UsdGeomMotionAPI motionAPI = UsdGeomMotionAPI(prim)) {
+            return query_type(motionAPI.GetMotionBlurScaleAttr());
+        }
+        return query_type();
+    }
+    
+    static
+    value_type
+    Compute(UsdImaging_BlurScaleCache const* owner, 
+            UsdPrim const& prim,
+            query_type const* query)
+    {
+        if (query->HasAuthoredValue()) {
+            float value;
+            if (query->Get(&value, owner->GetTime())) {
+                return { value, true };
+            }
+        }
+        
+        return *owner->_GetValue(prim.GetParent());
+    }
+
+    static
+    value_type
+    ComputeBlurScale(UsdPrim const &prim, UsdTimeCode time)
+    {
+        return { UsdGeomMotionAPI(prim).ComputeMotionBlurScale(time), true };
     }
 };
 
@@ -1019,13 +1192,13 @@ struct UsdImaging_InheritedPrimvarStrategy
     }
 
     static
-    query_type MakeQuery(UsdPrim prim, bool *) {
+    query_type MakeQuery(UsdPrim const& prim, bool *) {
         return query_type(UsdGeomPrimvarsAPI(prim));
     }
 
     static
     value_type Compute(UsdImaging_InheritedPrimvarCache const* owner,
-                       UsdPrim prim,
+                       UsdPrim const& prim,
                        query_type const* query)
     {
         value_type v;
@@ -1056,4 +1229,4 @@ struct UsdImaging_InheritedPrimvarStrategy
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
-#endif // PXR_USD_IMAGING_USD_IMAGING_INHERITED_CACHE_H
+#endif

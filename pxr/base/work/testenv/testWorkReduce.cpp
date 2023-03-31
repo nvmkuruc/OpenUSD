@@ -25,7 +25,6 @@
 #include "pxr/pxr.h"
 #include "pxr/base/work/reduce.h"
 
-#include "pxr/base/work/arenaDispatcher.h"
 #include "pxr/base/work/threadLimits.h"
 
 #include "pxr/base/tf/stopwatch.h"
@@ -37,6 +36,7 @@
 
 #include <cstdio>
 #include <iostream>
+#include <vector>
 
 using namespace std::placeholders;
 
@@ -147,7 +147,7 @@ main(int argc, char **argv)
     if (perfMode) {
 
         // XXX:perfgen only accepts metric names ending in _time.  See bug 97317
-        FILE *outputFile = fopen("perfstats.raw", "w");
+        FILE *outputFile = ArchOpenFile("perfstats.raw", "w");
         fprintf(outputFile,
         "{'profile':'TBB Reduce_time','metric':'time','value':%f,'samples':1}\n",
             tbbSeconds);        

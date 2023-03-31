@@ -168,6 +168,7 @@ class TestGfVec(unittest.TestCase):
 
     def OperatorsTest(self, Vec):
         v1 = Vec()
+        v1_original = v1
         v2 = Vec()
 
         # equality
@@ -187,6 +188,7 @@ class TestGfVec(unittest.TestCase):
         v1 += v2
         self.assertTrue(checkVec( v1, [8, 10, 6, 7] ))
         self.assertTrue(checkVec( v3, [8, 10, 6, 7] ))
+        self.assertTrue(v1 is v1_original)
 
         # component-wise subtraction
         SetVec( v1, [3, 1, 4, 1] )
@@ -195,6 +197,7 @@ class TestGfVec(unittest.TestCase):
         v1 -= v2
         self.assertTrue(checkVec( v1, [-2, -8, 2, -5] ))
         self.assertTrue(checkVec( v3, [-2, -8, 2, -5] ))
+        self.assertTrue(v1 is v1_original)
 
         # component-wise multiplication
         SetVec( v1, [3, 1, 4, 1] )
@@ -205,6 +208,7 @@ class TestGfVec(unittest.TestCase):
         self.assertTrue(checkVec( v1, [30, 10, 40, 10] ))
         self.assertTrue(checkVec( v4, [30, 10, 40, 10] ))
         self.assertTrue(checkVec( v5, [30, 10, 40, 10] ))
+        self.assertTrue(v1 is v1_original)
 
         # component-wise division
         SetVec( v1, [3, 6, 9, 12] )
@@ -212,6 +216,7 @@ class TestGfVec(unittest.TestCase):
         v1 /= 3
         self.assertTrue(checkVec( v1, [1, 2, 3, 4] ))
         self.assertTrue(checkVec( v3, [1, 2, 3, 4] ))
+        self.assertTrue(v1 is v1_original)
 
         # dot product
         SetVec( v1, [3, 1, 4, 1] )
@@ -504,7 +509,7 @@ class TestGfVec(unittest.TestCase):
                 v3 = Gf.Slerp(0.75, v1, v2)
                 self.assertTrue(Gf.IsClose(v3, Vec(-.70711, 0, -.70711), eps))
                 v3 = Gf.Slerp(1, v1, v2)
-                self.assertTrue(Gf.IsClose(v3, v3, eps))
+                self.assertTrue(Gf.IsClose(v3, v2, eps))
 
                 # test Slerp w/ opposing vectors
                 SetVec( v1, [0,1,0] )
@@ -519,7 +524,7 @@ class TestGfVec(unittest.TestCase):
                 v3 = Gf.Slerp(0.75, v1, v2)
                 self.assertTrue(Gf.IsClose(v3, Vec(0, -.70711, .70711), eps))
                 v3 = Gf.Slerp(1, v1, v2)
-                self.assertTrue(Gf.IsClose(v3, v3, eps))
+                self.assertTrue(Gf.IsClose(v3, v2, eps))
 
     def test_Types(self):
         vecTypes = [Gf.Vec2d,
@@ -624,6 +629,22 @@ class TestGfVec(unittest.TestCase):
             Gf.Dot(('a', 'b', 'c'), (1.0, 1.0, 1.0))
         with self.assertRaises(TypeError):
             Gf.Dot(('a', 'b', 'c', 'd'), (1.0, 1.0, 1.0, 1.0))
+
+        # Bug USD-6284 shows that we erroneously implemented the Python 2.x
+        # buffer protocol 'getcharbuffer' method to expose the binary content,
+        # where really a string is expected.  This tests that we correctly raise
+        # instead of treating the binary object representation as a string.
+        
+        # We get different exceptions between Python 2 & 3 here, see Python
+        # issue 41707 (https://bugs.python.org/issue41707).
+        excType = TypeError if sys.version_info.major < 3 else ValueError
+
+        with self.assertRaises(excType):
+            int(Gf.Vec3d(1,2,3))
+        with self.assertRaises(excType):
+            int(Gf.Vec3i(1,2,3))
+        with self.assertRaises(excType):
+            int(Gf.Vec3f(1,2,3))
 
 if __name__ == '__main__':
     unittest.main()

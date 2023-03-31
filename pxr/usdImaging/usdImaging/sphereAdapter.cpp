@@ -23,13 +23,15 @@
 //
 #include "pxr/usdImaging/usdImaging/sphereAdapter.h"
 
+#include "pxr/usdImaging/usdImaging/dataSourceImplicits-Impl.h"
 #include "pxr/usdImaging/usdImaging/delegate.h"
-#include "pxr/usdImaging/usdImaging/implicitSurfaceMeshUtils.h"
 #include "pxr/usdImaging/usdImaging/indexProxy.h"
 #include "pxr/usdImaging/usdImaging/tokens.h"
 
+#include "pxr/imaging/geomUtil/sphereMeshGenerator.h"
 #include "pxr/imaging/hd/mesh.h"
 #include "pxr/imaging/hd/meshTopology.h"
+#include "pxr/imaging/hd/sphereSchema.h"
 #include "pxr/imaging/hd/perfLog.h"
 #include "pxr/imaging/hd/tokens.h"
 
@@ -40,6 +42,9 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+namespace {
+using _PrimSource = UsdImagingDataSourceImplicitsPrim<UsdGeomSphere, HdSphereSchema>;
+}
 
 TF_REGISTRY_FUNCTION(TfType)
 {
@@ -50,6 +55,48 @@ TF_REGISTRY_FUNCTION(TfType)
 
 UsdImagingSphereAdapter::~UsdImagingSphereAdapter() 
 {
+}
+
+TfTokenVector
+UsdImagingSphereAdapter::GetImagingSubprims()
+{
+    return { TfToken() };
+}
+
+TfToken
+UsdImagingSphereAdapter::GetImagingSubprimType(TfToken const& subprim)
+{
+    if (subprim.IsEmpty()) {
+        return HdPrimTypeTokens->sphere;
+    }
+    return TfToken();
+}
+
+HdContainerDataSourceHandle
+UsdImagingSphereAdapter::GetImagingSubprimData(
+        TfToken const& subprim,
+        UsdPrim const& prim,
+        const UsdImagingDataSourceStageGlobals &stageGlobals)
+{
+    if (subprim.IsEmpty()) {
+        return _PrimSource::New(
+            prim.GetPath(),
+            prim,
+            stageGlobals);
+    }
+    return nullptr;
+}
+
+HdDataSourceLocatorSet
+UsdImagingSphereAdapter::InvalidateImagingSubprim(
+        TfToken const& subprim,
+        TfTokenVector const& properties)
+{
+    if (subprim.IsEmpty()) {
+        return _PrimSource::Invalidate(subprim, properties);
+    }
+    
+    return HdDataSourceLocatorSet();
 }
 
 bool
@@ -89,13 +136,8 @@ UsdImagingSphereAdapter::TrackVariability(UsdPrim const& prim,
         return;
     // nv end
 
-    // WARNING: This method is executed from multiple threads, the value cache
-    // has been carefully pre-populated to avoid mutating the underlying
-    // container during update.
-    
-    // The base adapter may already be setting that points dirty bit.
-    // _IsVarying will clear it, so check it isn't already marked as
-    // varying before checking for additional set cases.
+
+    // Check DirtyPoints before doing variability checks, to see if we can skip.
     if ((*timeVaryingBits & HdChangeTracker::DirtyPoints) == 0) {
         _IsVarying(prim, UsdGeomTokens->radius,
                       HdChangeTracker::DirtyPoints,
@@ -104,86 +146,62 @@ UsdImagingSphereAdapter::TrackVariability(UsdPrim const& prim,
     }
 }
 
-// Thread safe.
-//  * Populate dirty bits for the given \p time.
-void 
-UsdImagingSphereAdapter::UpdateForTime(UsdPrim const& prim,
-                               SdfPath const& cachePath, 
-                               UsdTimeCode time,
-                               HdDirtyBits requestedBits,
-                               UsdImagingInstancerContext const* 
-                                   instancerContext) const
+HdDirtyBits
+UsdImagingSphereAdapter::ProcessPropertyChange(UsdPrim const& prim,
+                                               SdfPath const& cachePath,
+                                               TfToken const& propertyName)
 {
-    BaseAdapter::UpdateForTime(
-        prim, cachePath, time, requestedBits, instancerContext);
-    UsdImagingValueCache* valueCache = _GetValueCache();
-    if (requestedBits & HdChangeTracker::DirtyTopology) {
-        valueCache->GetTopology(cachePath) = GetMeshTopology();
+    if (propertyName == UsdGeomTokens->radius) {
+        return HdChangeTracker::DirtyPoints;
     }
+
+    // Allow base class to handle change processing.
+    return BaseAdapter::ProcessPropertyChange(prim, cachePath, propertyName);
 }
 
 /*virtual*/
 VtValue
 UsdImagingSphereAdapter::GetPoints(UsdPrim const& prim,
-                                   SdfPath const& cachePath,
                                    UsdTimeCode time) const
 {
-    TF_UNUSED(cachePath);
-    return GetMeshPoints(prim, time);   
-}
-
-// #nv begin #fast-updates
-/*virtual*/
-HdDirtyBits
-UsdImagingSphereAdapter::ProcessPropertyChange(UsdPrim const& prim,
-    SdfPath const& cachePath,
-    TfToken const& propertyName)
-{
-    if (propertyName == UsdGeomTokens->radius)
-        return HdChangeTracker::DirtyPoints;
-
-    // Allow base class to handle change processing.
-    return BaseAdapter::ProcessPropertyChange(prim, cachePath, propertyName);
-}
-// nv end
-
-static GfMatrix4d
-_GetImplicitGeomScaleTransform(UsdPrim const& prim, UsdTimeCode time)
-{
     UsdGeomSphere sphere(prim);
-
     double radius = 1.0;
     if (!sphere.GetRadiusAttr().Get(&radius, time)) {
         TF_WARN("Could not evaluate double-valued radius attribute on prim %s",
             prim.GetPath().GetText());
     }
 
-    return UsdImagingGenerateSphereOrCubeTransform(2.0 * radius);
-}
+    const size_t numPoints =
+        GeomUtilSphereMeshGenerator::ComputeNumPoints(numRadial, numAxial);
 
-/*static*/
-VtValue
-UsdImagingSphereAdapter::GetMeshPoints(UsdPrim const& prim, 
-                                       UsdTimeCode time)
-{
-    // Return scaled points (and not that of a unit geometry)
-    VtVec3fArray points = UsdImagingGetUnitSphereMeshPoints();
-    GfMatrix4d scale = _GetImplicitGeomScaleTransform(prim, time);
-    for (GfVec3f& pt : points) {
-        pt = scale.Transform(pt);
-    }
+    VtVec3fArray points(numPoints);
+        
+    GeomUtilSphereMeshGenerator::GeneratePoints(
+        points.begin(),
+        numRadial,
+        numAxial,
+        radius
+    );
 
     return VtValue(points);
 }
 
-/*static*/
+/*virtual*/ 
 VtValue
-UsdImagingSphereAdapter::GetMeshTopology()
+UsdImagingSphereAdapter::GetTopology(UsdPrim const& prim,
+                                     SdfPath const& cachePath,
+                                     UsdTimeCode time) const
 {
-    // Topology is constant and identical for all spheres.
-    return VtValue(HdMeshTopology(UsdImagingGetUnitSphereMeshTopology()));
-}
+    TRACE_FUNCTION();
+    HF_MALLOC_TAG_FUNCTION();
 
+    // All spheres share the same topology.
+    static const HdMeshTopology topology =
+        HdMeshTopology(GeomUtilSphereMeshGenerator::GenerateTopology(
+                            numRadial, numAxial));
+
+    return VtValue(topology);
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

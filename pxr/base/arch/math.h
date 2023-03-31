@@ -32,6 +32,10 @@
 #include "pxr/base/arch/defines.h"
 #include "pxr/base/arch/inttypes.h"
 
+#if defined(ARCH_COMPILER_MSVC)
+#include <intrin.h>
+#endif
+
 #include <cmath>
 #if !defined(M_PI)
 #define M_PI 3.14159265358979323846
@@ -41,10 +45,8 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 /// \addtogroup group_arch_Math
 ///@{
-// nv begin #aarch64-support
-// adding defined(ARCH_CPU_ARM) below
-// nv end
-#if defined (ARCH_CPU_INTEL) || defined(ARCH_CPU_ARM) || defined(doxygen)
+
+#if defined (ARCH_CPU_INTEL) || defined (ARCH_CPU_ARM) || defined (doxygen)
 
 /// This is the smallest value e such that 1+e^2 == 1, using floats.
 /// True for all IEEE754 chipsets.
@@ -125,6 +127,30 @@ inline void ArchSinCos(double v, double *s, double *c) {
 #else
 #error Unknown architecture.
 #endif
+
+
+/// Return the number of consecutive 0-bits in \p x starting from the least
+/// significant bit position.  If \p x is 0, the result is undefined.
+inline int
+ArchCountTrailingZeros(uint64_t x)
+{
+#if defined(ARCH_COMPILER_GCC) || defined(ARCH_COMPILER_CLANG)
+    return __builtin_ctzl(x);
+#elif defined(ARCH_COMPILER_MSVC)
+    unsigned long index;
+    _BitScanForward64(&index, x);
+    return index;
+#else
+    // Flip trailing zeros to 1s, and clear all other bits, then count.
+    x = (x ^ (x - 1)) >> 1;
+    int c = 0;
+    for (; x; ++c) {
+        x >>= 1;
+    }
+    return c;
+#endif
+}
+
 
 ///@}
 

@@ -230,6 +230,14 @@ UsdAttribute::GetResolveInfo(UsdTimeCode time) const
     return resolveInfo;
 }
 
+UsdResolveInfo
+UsdAttribute::GetResolveInfo() const
+{
+    UsdResolveInfo resolveInfo;
+    _GetStage()->_GetResolveInfo(*this, &resolveInfo, nullptr);
+    return resolveInfo;
+}
+
 template <typename T>
 bool 
 UsdAttribute::_Set(const T& value, UsdTimeCode time) const
@@ -367,10 +375,10 @@ UsdAttribute::_GetPathForAuthoring(const SdfPath &path,
     if (!path.IsEmpty()) {
         SdfPath absPath =
             path.MakeAbsolutePath(GetPath().GetAbsoluteRootOrPrimPath());
-        if (Usd_InstanceCache::IsPathInMaster(absPath)) {
+        if (Usd_InstanceCache::IsPathInPrototype(absPath)) {
             if (whyNot) { 
-                *whyNot = "Cannot refer to a master or an object within a "
-                    "master.";
+                *whyNot = "Cannot refer to a prototype or an object within a "
+                    "prototype.";
             }
             return result;
         }
@@ -458,25 +466,6 @@ UsdAttribute::RemoveConnection(const SdfPath& source) const
         return false;
 
     attrSpec->GetConnectionPathList().Remove(pathToAuthor);
-    return true;
-}
-
-bool
-UsdAttribute::BlockConnections() const
-{
-    // NOTE! Do not insert any code that modifies scene description between the
-    // changeblock and the call to _CreateSpec!  Explanation: _CreateSpec calls
-    // code that inspects the composition graph and then does some authoring.
-    // We want that authoring to be inside the change block, but if any scene
-    // description changes are made after the block is created but before we
-    // call _CreateSpec, the composition structure may be invalidated.
-    SdfChangeBlock block;
-    SdfAttributeSpecHandle attrSpec = _CreateSpec();
-
-    if (!attrSpec)
-        return false;
-
-    attrSpec->GetConnectionPathList().ClearEditsAndMakeExplicit();
     return true;
 }
 

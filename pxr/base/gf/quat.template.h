@@ -96,6 +96,10 @@ class {{ QUAT }}
     {{ '' if ALLOW_IMPLICIT_CONVERSION(S, SCL) else 'explicit ' }}{{ QUAT }}(class {{ QUATNAME(S) }} const &other);
 {% endfor %}
 
+    /// Return the zero quaternion, with real coefficient 0 and an
+    /// imaginary coefficients all zero.
+    static {{ QUAT }} GetZero() { return {{ QUAT }}(0.0); }
+
     /// Return the identity quaternion, with real coefficient 1 and an
     /// imaginary coefficients all zero.
     static {{ QUAT }} GetIdentity() { return {{ QUAT }}(1.0); }
@@ -148,6 +152,16 @@ class {{ QUAT }}
     {{ QUAT }} GetInverse() const {
         return GetConjugate() / _GetLengthSquared();
     }
+
+    /// Transform the GfVec3{{ SUFFIX }} point. If the quaternion is normalized,
+    /// the transformation is a rotation. Given a {{ QUAT }} q, q.Transform(point)
+    /// is equivalent to:
+    ///
+    ///     (q * {{ QUAT }}(0, point) * q.GetInverse()).GetImaginary()
+    ///
+    /// but is more efficient.
+    GF_API
+    GfVec3{{ SUFFIX }} Transform(const GfVec3{{ SUFFIX }}& point) const;
 
     /// Hash.
     friend inline size_t hash_value(const {{ QUAT }} &q) {

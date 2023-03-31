@@ -33,10 +33,10 @@
 #include "pxr/imaging/hd/renderBuffer.h"
 
 #include "pxr/imaging/hd/camera.h"
-#include "pxr/imaging/hdSt/glslfxShader.h"
-#include "pxr/imaging/hdSt/package.h"
 #include "pxr/imaging/hdSt/renderPassShader.h"
 #include "pxr/imaging/hdSt/renderPassState.h"
+#include "pxr/imaging/hdSt/tokens.h"
+#include "pxr/imaging/hdSt/volume.h"
 
 #include "pxr/imaging/cameraUtil/conformWindow.h"
 
@@ -44,26 +44,20 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-HdStShaderCodeSharedPtr HdxRenderSetupTask::_overrideShader;
-
 HdxRenderSetupTask::HdxRenderSetupTask(HdSceneDelegate* delegate, SdfPath const& id)
     : HdTask(id)
-    , _renderPassState()
-    , _colorRenderPassShader()
-    , _idRenderPassShader()
-    , _viewport()
-    , _cameraId()
-    , _aovBindings()
+    , _colorRenderPassShader(
+        std::make_shared<HdStRenderPassShader>(
+            HdxPackageRenderPassColorShader()))
+    , _idRenderPassShader(
+        std::make_shared<HdStRenderPassShader>(
+            HdxPackageRenderPassIdShader()))
+    , _overrideWindowPolicy{false, CameraUtilFit}
+    , _viewport(0)
 {
-    _colorRenderPassShader.reset(
-        new HdStRenderPassShader(HdxPackageRenderPassShader()));
-    _idRenderPassShader.reset(
-        new HdStRenderPassShader(HdxPackageRenderPassIdShader()));
 }
 
-HdxRenderSetupTask::~HdxRenderSetupTask()
-{
-}
+HdxRenderSetupTask::~HdxRenderSetupTask() = default;
 
 void
 HdxRenderSetupTask::Sync(HdSceneDelegate* delegate,
@@ -90,14 +84,24 @@ void
 HdxRenderSetupTask::Prepare(HdTaskContext* ctx,
                             HdRenderIndex* renderIndex)
 {
-
     _PrepareAovBindings(ctx, renderIndex);
     PrepareCamera(renderIndex);
 
     HdRenderPassStateSharedPtr &renderPassState =
-            _GetRenderPassState(renderIndex);
+        _GetRenderPassState(renderIndex);
+
+    const float stepSize = renderIndex->GetRenderDelegate()->
+        GetRenderSetting<float>(
+            HdStRenderSettingsTokens->volumeRaymarchingStepSize,
+            HdStVolume::defaultStepSize);
+    const float stepSizeLighting = renderIndex->GetRenderDelegate()->
+        GetRenderSetting<float>(
+            HdStRenderSettingsTokens->volumeRaymarchingStepSizeLighting,
+            HdStVolume::defaultStepSizeLighting);
+    renderPassState->SetVolumeRenderingConstants(stepSize, stepSizeLighting);
 
     renderPassState->Prepare(renderIndex->GetResourceRegistry());
+    (*ctx)[HdxTokens->renderPassState] = VtValue(_renderPassState);
 }
 
 void
@@ -111,17 +115,11 @@ HdxRenderSetupTask::Execute(HdTaskContext* ctx)
 }
 
 void
-HdxRenderSetupTask::_SetHdStRenderPassState(HdxRenderTaskParams const &params,
-                                        HdStRenderPassState *renderPassState)
+HdxRenderSetupTask::_SetRenderpassShadersForStorm(
+    HdxRenderTaskParams const &params,
+    HdStRenderPassState *renderPassState)
 {
-    if (params.enableSceneMaterials) {
-        renderPassState->SetOverrideShader(HdStShaderCodeSharedPtr());
-    } else {
-        if (!_overrideShader) {
-            _CreateOverrideShader();
-        }
-        renderPassState->SetOverrideShader(_overrideShader);
-    }
+    renderPassState->SetUseSceneMaterials(params.enableSceneMaterials);
     if (params.enableIdRender) {
         renderPassState->SetRenderPassShader(_idRenderPassShader);
     } else {
@@ -139,56 +137,61 @@ HdxRenderSetupTask::SyncParams(HdSceneDelegate* delegate,
 
     renderPassState->SetOverrideColor(params.overrideColor);
     renderPassState->SetWireframeColor(params.wireframeColor);
-    renderPassState->SetMaskColor(params.maskColor);
-    renderPassState->SetIndicatorColor(params.indicatorColor);
     renderPassState->SetPointColor(params.pointColor);
     renderPassState->SetPointSize(params.pointSize);
-    renderPassState->SetPointSelectedSize(params.pointSelectedSize);
     renderPassState->SetLightingEnabled(params.enableLighting);
+    renderPassState->SetClippingEnabled(params.enableClipping);
     renderPassState->SetAlphaThreshold(params.alphaThreshold);
     renderPassState->SetCullStyle(params.cullStyle);
 
-    // depth bias
-    renderPassState->SetDepthBiasUseDefault(params.depthBiasUseDefault);
-    renderPassState->SetDepthBiasEnabled(params.depthBiasEnable);
-    renderPassState->SetDepthBias(params.depthBiasConstantFactor,
-                                  params.depthBiasSlopeFactor);
-    renderPassState->SetDepthFunc(params.depthFunc);
-    renderPassState->SetEnableDepthMask(params.depthMaskEnable);
+    renderPassState->SetMaskColor(params.maskColor);
+    renderPassState->SetIndicatorColor(params.indicatorColor);
+    renderPassState->SetPointSelectedSize(params.pointSelectedSize);
 
-    // stencil
-    renderPassState->SetStencilEnabled(params.stencilEnable);
-    renderPassState->SetStencil(params.stencilFunc, params.stencilRef,
-            params.stencilMask, params.stencilFailOp, params.stencilZFailOp,
-            params.stencilZPassOp);
+    // Storm render pipeline state
+    {
+        renderPassState->SetDepthBiasUseDefault(params.depthBiasUseDefault);
+        renderPassState->SetDepthBiasEnabled(params.depthBiasEnable);
+        renderPassState->SetDepthBias(params.depthBiasConstantFactor,
+                                    params.depthBiasSlopeFactor);
+        renderPassState->SetDepthFunc(params.depthFunc);
+        renderPassState->SetEnableDepthMask(params.depthMaskEnable);
 
-    // blend
-    renderPassState->SetBlendEnabled(params.blendEnable);
-    renderPassState->SetBlend(
-            params.blendColorOp,
-            params.blendColorSrcFactor, params.blendColorDstFactor,
-            params.blendAlphaOp,
-            params.blendAlphaSrcFactor, params.blendAlphaDstFactor);
-    renderPassState->SetBlendConstantColor(params.blendConstantColor);
-    
-    // alpha to coverage
-    // XXX:  Long-term Alpha to Coverage will be a render style on the
-    // task.  However, as there isn't a fallback we current force it
-    // enabled, unless a client chooses to manage the setting itself (aka usdImaging).
-    renderPassState->SetAlphaToCoverageUseDefault(
-        delegate->IsEnabled(HdxOptionTokens->taskSetAlphaToCoverage));
-    renderPassState->SetAlphaToCoverageEnabled(
-        params.enableAlphaToCoverage &&
-        !TfDebug::IsEnabled(HDX_DISABLE_ALPHA_TO_COVERAGE));
+        renderPassState->SetStencilEnabled(params.stencilEnable);
+        renderPassState->SetStencil(params.stencilFunc, params.stencilRef,
+                params.stencilMask, params.stencilFailOp, params.stencilZFailOp,
+                params.stencilZPassOp);
+
+        renderPassState->SetBlendEnabled(params.blendEnable);
+        renderPassState->SetBlend(
+                params.blendColorOp,
+                params.blendColorSrcFactor, params.blendColorDstFactor,
+                params.blendAlphaOp,
+                params.blendAlphaSrcFactor, params.blendAlphaDstFactor);
+        renderPassState->SetBlendConstantColor(params.blendConstantColor);
+        
+        renderPassState->SetAlphaToCoverageEnabled(
+            params.enableAlphaToCoverage &&
+            !TfDebug::IsEnabled(HDX_DISABLE_ALPHA_TO_COVERAGE));
+
+        if (HdStRenderPassState * const hdStRenderPassState =
+                    dynamic_cast<HdStRenderPassState*>(renderPassState.get())) {
+            hdStRenderPassState->SetUseAovMultiSample(
+                params.useAovMultiSample);
+            hdStRenderPassState->SetResolveAovMultiSample(
+                params.resolveAovMultiSample);
+            
+            _SetRenderpassShadersForStorm(
+                params, hdStRenderPassState);
+        }
+    }
 
     _viewport = params.viewport;
+    _framing = params.framing;
+    _overrideWindowPolicy = params.overrideWindowPolicy;
     _cameraId = params.camera;
     _aovBindings = params.aovBindings;
-
-    if (HdStRenderPassState* extendedState =
-            dynamic_cast<HdStRenderPassState*>(renderPassState.get())) {
-        _SetHdStRenderPassState(params, extendedState);
-    }
+    _aovInputBindings = params.aovInputBindings;
 }
 
 void
@@ -197,6 +200,10 @@ HdxRenderSetupTask::_PrepareAovBindings(HdTaskContext* ctx,
 {
     // Walk the aov bindings, resolving the render index references as they're
     // encountered.
+    //
+    // This is somewhat fragile. One of the clients is _BindTexture in
+    // hdSt/renderPassShader.cpp.
+    //
     for (size_t i = 0; i < _aovBindings.size(); ++i) {
         if (_aovBindings[i].renderBuffer == nullptr) {
             _aovBindings[i].renderBuffer = static_cast<HdRenderBuffer*>(
@@ -208,14 +215,7 @@ HdxRenderSetupTask::_PrepareAovBindings(HdTaskContext* ctx,
     HdRenderPassStateSharedPtr &renderPassState =
             _GetRenderPassState(renderIndex);
     renderPassState->SetAovBindings(_aovBindings);
-
-    if (!_aovBindings.empty()) {
-        // XXX Tasks that are not RenderTasks (OIT, ColorCorrection etc) also
-        // need access to AOVs, but cannot access SetupTask or RenderPassState.
-        // One option is to let them know about the aovs directly (as task
-        // parameters), but instead we do so via the task context.
-        (*ctx)[HdxTokens->aovBindings] = VtValue(_aovBindings);
-    }
+    renderPassState->SetAovInputBindings(_aovInputBindings);
 }
 
 void
@@ -229,28 +229,24 @@ HdxRenderSetupTask::PrepareCamera(HdRenderIndex* renderIndex)
 
     const HdCamera *camera = static_cast<const HdCamera *>(
         renderIndex->GetSprim(HdPrimTypeTokens->camera, _cameraId));
-    TF_VERIFY(camera);
+    if (!camera) {
+        // We don't require a valid camera to accommodate setup tasks used
+        // solely for specifying the AOV bindings for clearing or resolving the
+        // AOVs. The viewport transform is irrelevant in this scenario as well.
+        return;
+    }
 
-    HdRenderPassStateSharedPtr &renderPassState =
+    HdRenderPassStateSharedPtr const &renderPassState =
             _GetRenderPassState(renderIndex);
-    renderPassState->SetCameraAndViewport(camera, _viewport);
-}
 
-void
-HdxRenderSetupTask::_CreateOverrideShader()
-{
-    static std::mutex shaderCreateLock;
-
-    if (!_overrideShader) {
-        std::lock_guard<std::mutex> lock(shaderCreateLock);
-        if (!_overrideShader) {
-            _overrideShader = HdStShaderCodeSharedPtr(new HdStGLSLFXShader(
-                HioGlslfxSharedPtr(new HioGlslfx(
-                    HdStPackageFallbackSurfaceShader()))));
-        }
+    if (_framing.IsValid()) {
+        renderPassState->SetCameraAndFraming(
+            camera, _framing, _overrideWindowPolicy);
+    } else {
+        renderPassState->SetCameraAndViewport(
+            camera, _viewport);
     }
 }
-
 
 HdRenderPassStateSharedPtr &
 HdxRenderSetupTask::_GetRenderPassState(HdRenderIndex* renderIndex)
@@ -272,20 +268,24 @@ std::ostream& operator<<(std::ostream& out, const HdxRenderTaskParams& pv)
     out << "RenderTask Params: (...) " 
         << pv.overrideColor << " " 
         << pv.wireframeColor << " " 
-        << pv.maskColor << " " 
-        << pv.indicatorColor << " " 
         << pv.pointColor << " "
         << pv.pointSize << " "
-        << pv.pointSelectedSize << " "
         << pv.enableLighting << " "
         << pv.enableIdRender << " "
         << pv.alphaThreshold << " "
         << pv.enableSceneMaterials << " "
+        << pv.enableSceneLights << " "
+
+        << pv.maskColor << " " 
+        << pv.indicatorColor << " " 
+        << pv.pointSelectedSize << " "
+
         << pv.depthBiasUseDefault << " "
         << pv.depthBiasEnable << " "
         << pv.depthBiasConstantFactor << " "
         << pv.depthBiasSlopeFactor << " "
         << pv.depthFunc << " "
+        << pv.depthMaskEnable << " "
         << pv.stencilFunc << " "
         << pv.stencilRef << " "
         << pv.stencilMask << " "
@@ -302,53 +302,74 @@ std::ostream& operator<<(std::ostream& out, const HdxRenderTaskParams& pv)
         << pv.blendConstantColor << " "
         << pv.blendEnable << " "
         << pv.enableAlphaToCoverage << ""
-        << pv.cullStyle << " "
+        << pv.useAovMultiSample << ""
+        << pv.resolveAovMultiSample << ""
+
         << pv.camera << " "
-        << pv.viewport << " ";
-        for (auto const& a : pv.aovBindings) {
-            out << a << " ";
-        }
+        << pv.framing.displayWindow << " "
+        << pv.framing.dataWindow << " "
+        << pv.framing.pixelAspectRatio << " "
+        << pv.viewport << " "
+        << pv.cullStyle << " ";
+
+    for (auto const& a : pv.aovBindings) {
+        out << a << " ";
+    }
+    for (auto const& a : pv.aovInputBindings) {
+        out << a << " (input) ";
+    }
     return out;
 }
 
 bool operator==(const HdxRenderTaskParams& lhs, const HdxRenderTaskParams& rhs) 
 {
-    return lhs.overrideColor           == rhs.overrideColor           &&
-           lhs.wireframeColor          == rhs.wireframeColor          &&
-           lhs.maskColor               == rhs.maskColor               &&
-           lhs.indicatorColor          == rhs.indicatorColor          &&
-           lhs.pointColor              == rhs.pointColor              &&
-           lhs.pointSize               == rhs.pointSize               &&
-           lhs.pointSelectedSize       == rhs.pointSelectedSize       &&
-           lhs.enableLighting          == rhs.enableLighting          &&
-           lhs.enableIdRender          == rhs.enableIdRender          &&
-           lhs.alphaThreshold          == rhs.alphaThreshold          &&
-           lhs.enableSceneMaterials    == rhs.enableSceneMaterials    &&
-           lhs.depthBiasUseDefault     == rhs.depthBiasUseDefault     &&
-           lhs.depthBiasEnable         == rhs.depthBiasEnable         &&
-           lhs.depthBiasConstantFactor == rhs.depthBiasConstantFactor &&
-           lhs.depthBiasSlopeFactor    == rhs.depthBiasSlopeFactor    &&
-           lhs.depthFunc               == rhs.depthFunc               &&
-           lhs.stencilFunc             == rhs.stencilFunc             &&
-           lhs.stencilRef              == rhs.stencilRef              &&
-           lhs.stencilMask             == rhs.stencilMask             &&
-           lhs.stencilFailOp           == rhs.stencilFailOp           &&
-           lhs.stencilZFailOp          == rhs.stencilZFailOp          &&
-           lhs.stencilZPassOp          == rhs.stencilZPassOp          &&
-           lhs.stencilEnable           == rhs.stencilEnable           &&
-           lhs.blendColorOp            == rhs.blendColorOp            &&
-           lhs.blendColorSrcFactor     == rhs.blendColorSrcFactor     &&
-           lhs.blendColorDstFactor     == rhs.blendColorDstFactor     &&
-           lhs.blendAlphaOp            == rhs.blendAlphaOp            &&
-           lhs.blendAlphaSrcFactor     == rhs.blendAlphaSrcFactor     &&
-           lhs.blendAlphaDstFactor     == rhs.blendAlphaDstFactor     &&
-           lhs.blendConstantColor      == rhs.blendConstantColor      &&
-           lhs.blendEnable             == rhs.blendEnable             &&
-           lhs.enableAlphaToCoverage   == rhs.enableAlphaToCoverage   &&
-           lhs.cullStyle               == rhs.cullStyle               &&
-           lhs.aovBindings             == rhs.aovBindings             &&
-           lhs.camera                  == rhs.camera                  &&
-           lhs.viewport                == rhs.viewport;
+    return lhs.overrideColor            == rhs.overrideColor            &&
+           lhs.wireframeColor           == rhs.wireframeColor           &&
+           lhs.pointColor               == rhs.pointColor               &&
+           lhs.pointSize                == rhs.pointSize                &&
+           lhs.enableLighting           == rhs.enableLighting           &&
+           lhs.enableIdRender           == rhs.enableIdRender           &&
+           lhs.alphaThreshold           == rhs.alphaThreshold           &&
+           lhs.enableSceneMaterials     == rhs.enableSceneMaterials     &&
+           lhs.enableSceneLights        == rhs.enableSceneLights        &&
+ 
+           lhs.maskColor                == rhs.maskColor                &&
+           lhs.indicatorColor           == rhs.indicatorColor           &&
+           lhs.pointSelectedSize        == rhs.pointSelectedSize        &&
+ 
+           lhs.aovBindings              == rhs.aovBindings              &&
+           lhs.aovInputBindings         == rhs.aovInputBindings         &&
+           
+           lhs.depthBiasUseDefault      == rhs.depthBiasUseDefault      &&
+           lhs.depthBiasEnable          == rhs.depthBiasEnable          &&
+           lhs.depthBiasConstantFactor  == rhs.depthBiasConstantFactor  &&
+           lhs.depthBiasSlopeFactor     == rhs.depthBiasSlopeFactor     &&
+           lhs.depthFunc                == rhs.depthFunc                &&
+           lhs.depthMaskEnable          == rhs.depthMaskEnable          &&
+           lhs.stencilFunc              == rhs.stencilFunc              &&
+           lhs.stencilRef               == rhs.stencilRef               &&
+           lhs.stencilMask              == rhs.stencilMask              &&
+           lhs.stencilFailOp            == rhs.stencilFailOp            &&
+           lhs.stencilZFailOp           == rhs.stencilZFailOp           &&
+           lhs.stencilZPassOp           == rhs.stencilZPassOp           &&
+           lhs.stencilEnable            == rhs.stencilEnable            &&
+           lhs.blendColorOp             == rhs.blendColorOp             &&
+           lhs.blendColorSrcFactor      == rhs.blendColorSrcFactor      &&
+           lhs.blendColorDstFactor      == rhs.blendColorDstFactor      &&
+           lhs.blendAlphaOp             == rhs.blendAlphaOp             &&
+           lhs.blendAlphaSrcFactor      == rhs.blendAlphaSrcFactor      &&
+           lhs.blendAlphaDstFactor      == rhs.blendAlphaDstFactor      &&
+           lhs.blendConstantColor       == rhs.blendConstantColor       &&
+           lhs.blendEnable              == rhs.blendEnable              &&
+           lhs.enableAlphaToCoverage    == rhs.enableAlphaToCoverage    &&
+           lhs.useAovMultiSample        == rhs.useAovMultiSample        &&
+           lhs.resolveAovMultiSample    == rhs.resolveAovMultiSample    &&
+           
+           lhs.camera                   == rhs.camera                   &&
+           lhs.framing                  == rhs.framing                  &&
+           lhs.viewport                 == rhs.viewport                 &&
+           lhs.cullStyle                == rhs.cullStyle                &&
+           lhs.overrideWindowPolicy     == rhs.overrideWindowPolicy;
 }
 
 bool operator!=(const HdxRenderTaskParams& lhs, const HdxRenderTaskParams& rhs) 

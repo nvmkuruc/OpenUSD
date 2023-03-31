@@ -9,6 +9,7 @@ pxr_library(usdImaging
         trace
         vt
         work
+        geomUtil
         hd
         pxOsd
         sdf
@@ -16,6 +17,7 @@ pxr_library(usdImaging
         usdGeom
         usdSkel
         usdLux
+        usdRender
         usdShade
         usdVol
         ar
@@ -27,17 +29,34 @@ pxr_library(usdImaging
     PUBLIC_CLASSES
         adapterRegistry
         collectionCache
+        dataSourceAttribute
+        dataSourceBasisCurves
+        dataSourceCamera
+        dataSourceGprim
+        dataSourceMaterial
+        dataSourceMesh
+        dataSourcePointInstancer
+        dataSourcePoints
+        dataSourcePrim
+        dataSourcePrimvars
+        dataSourceRelationship
+        dataSourceStageGlobals
+        dataSourceVolume
         debugCodes
         delegate
         indexProxy
         materialParamUtils
+        modelSchema
+        primvarUtils
         resolvedAttributeCache
         instancerContext
+        stageSceneIndex
         tokens
-        valueCache
+        apiSchemaAdapter
         basisCurvesAdapter
         capsuleAdapter
         cameraAdapter
+        collectionAPIAdapter
         coneAdapter
         coordSysAdapter
         cubeAdapter
@@ -47,20 +66,30 @@ pxr_library(usdImaging
         distantLightAdapter
         domeLightAdapter
         fieldAdapter
+        geometryLightAdapter
         gprimAdapter
         hermiteCurvesAdapter
         implicitSurfaceMeshUtils
         instanceAdapter
         lightAdapter
+        lightAPIAdapter
         lightFilterAdapter
         materialAdapter
+        materialBindingAPIAdapter
         meshAdapter
         nurbsCurvesAdapter
         nurbsPatchAdapter
+        planeAdapter
+        pluginLightAdapter
+        pluginLightFilterAdapter
         pointsAdapter
         pointInstancerAdapter
+        portalLightAdapter
         primAdapter
+        primvarDescCache
         rectLightAdapter
+        renderSettingsAdapter
+        sampleFilterAdapter
         sphereAdapter
         sphereLightAdapter
         textureUtils
@@ -68,26 +97,18 @@ pxr_library(usdImaging
 
     PUBLIC_HEADERS
         api.h
+        dataSourceSchemaBased.h
         unitTestHelper.h
         version.h
+
+    PRIVATE_HEADERS
+        dataSourceImplicits-Impl.h
 
     RESOURCE_FILES
         plugInfo.json
 )
 
 # #nv begin #fast-updates
-pxr_build_test(testUsdImagingFastUpdates
-    LIBRARIES
-        trace
-        sdf
-        hd
-        usd
-        usdImaging
-        ${GLEW_LIBRARY}
-    CPPFILES
-        testenv/testUsdImagingFastUpdates.cpp
-)
-
 pxr_build_test(testUsdImagingPopulate_Perf
     LIBRARIES
         trace
@@ -98,10 +119,6 @@ pxr_build_test(testUsdImagingPopulate_Perf
         ${GLEW_LIBRARY}
     CPPFILES
         testenv/testUsdImagingPopulate_Perf.cpp
-)
-
-pxr_register_test(testUsdImagingFastUpdates
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdImagingFastUpdates"
 )
 
 pxr_register_test(testUsdImagingPopulate_Perf

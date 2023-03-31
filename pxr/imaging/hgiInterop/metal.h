@@ -24,11 +24,13 @@
 #ifndef PXR_IMAGING_HGIINTEROP_HGIINTEROPMETAL_H
 #define PXR_IMAGING_HGIINTEROP_HGIINTEROPMETAL_H
 
-#include <GL/glew.h>
+#include "pxr/imaging/garch/glApi.h"
+
 #include <Metal/Metal.h>
 #include <AppKit/AppKit.h>
 
 #include "pxr/pxr.h"
+#include "pxr/base/gf/vec4i.h"
 #include "pxr/imaging/hgi/texture.h"
 #include "pxr/imaging/hgiInterop/api.h"
 
@@ -37,12 +39,14 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 class Hgi;
 class HgiMetal;
+class VtValue;
 
 /// \class HgiInteropMetal
 ///
 /// Provides Metal/GL interop
 ///
-class HgiInteropMetal final {
+class HgiInteropMetal final
+{
 public:
 
     HGIINTEROP_API
@@ -55,7 +59,9 @@ public:
     HGIINTEROP_API
     void CompositeToInterop(
         HgiTextureHandle const &color,
-        HgiTextureHandle const &depth);
+        HgiTextureHandle const &depth,
+        VtValue const &framebuffer,
+        GfVec4i const &compRegion);
 
 private:
     HgiInteropMetal() = delete;
@@ -88,7 +94,8 @@ private:
         void* pointer;
     };
 
-    void _BlitToOpenGL(bool flipY, int shaderIndex);
+    void _BlitToOpenGL(VtValue const &framebuffer, GfVec4i const& compRegion,
+                       int shaderIndex);
     void _FreeTransientTextureCacheRefs();
     void _CaptureOpenGlState();
     void _RestoreOpenGlState();
@@ -129,6 +136,7 @@ private:
     
     NSOpenGLContext* _currentOpenGLContext;
 
+    int32_t _restoreDrawFbo;
     int32_t _restoreVao;
     int32_t _restoreVbo;
     bool _restoreDepthTest;

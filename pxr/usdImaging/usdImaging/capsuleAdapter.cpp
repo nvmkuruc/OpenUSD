@@ -23,11 +23,13 @@
 //
 #include "pxr/usdImaging/usdImaging/capsuleAdapter.h"
 
+#include "pxr/usdImaging/usdImaging/dataSourceImplicits-Impl.h"
 #include "pxr/usdImaging/usdImaging/delegate.h"
-#include "pxr/usdImaging/usdImaging/implicitSurfaceMeshUtils.h"
 #include "pxr/usdImaging/usdImaging/indexProxy.h"
 #include "pxr/usdImaging/usdImaging/tokens.h"
 
+#include "pxr/imaging/geomUtil/capsuleMeshGenerator.h"
+#include "pxr/imaging/hd/capsuleSchema.h"
 #include "pxr/imaging/hd/mesh.h"
 #include "pxr/imaging/hd/meshTopology.h"
 #include "pxr/imaging/hd/perfLog.h"
@@ -42,6 +44,9 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+namespace {
+using _PrimSource = UsdImagingDataSourceImplicitsPrim<UsdGeomCapsule, HdCapsuleSchema>;
+}
 
 TF_REGISTRY_FUNCTION(TfType)
 {
@@ -52,6 +57,48 @@ TF_REGISTRY_FUNCTION(TfType)
 
 UsdImagingCapsuleAdapter::~UsdImagingCapsuleAdapter() 
 {
+}
+
+TfTokenVector
+UsdImagingCapsuleAdapter::GetImagingSubprims()
+{
+    return { TfToken() };
+}
+
+TfToken
+UsdImagingCapsuleAdapter::GetImagingSubprimType(TfToken const& subprim)
+{
+    if (subprim.IsEmpty()) {
+        return HdPrimTypeTokens->capsule;
+    }
+    return TfToken();
+}
+
+HdContainerDataSourceHandle
+UsdImagingCapsuleAdapter::GetImagingSubprimData(
+        TfToken const& subprim,
+        UsdPrim const& prim,
+        const UsdImagingDataSourceStageGlobals &stageGlobals)
+{
+    if (subprim.IsEmpty()) {
+        return _PrimSource::New(
+            prim.GetPath(),
+            prim,
+            stageGlobals);
+    }
+    return nullptr;
+}
+
+HdDataSourceLocatorSet
+UsdImagingCapsuleAdapter::InvalidateImagingSubprim(
+        TfToken const& subprim,
+        TfTokenVector const& properties)
+{
+    if (subprim.IsEmpty()) {
+        return _PrimSource::Invalidate(subprim, properties);
+    }
+    
+    return HdDataSourceLocatorSet();
 }
 
 bool
@@ -101,6 +148,9 @@ UsdImagingCapsuleAdapter::TrackVariability(UsdPrim const& prim,
     // base adapter invocation) that might result in the bit being set, we need
     // to be careful not to reset it.  Translation: only check _IsVarying for a
     // given cause IFF the bit wasn't already set by a previous invocation.
+
+    // Check DirtyPoints before doing variability checks, in case we can skip
+    // any of them...
     if ((*timeVaryingBits & HdChangeTracker::DirtyPoints) == 0) {
         _IsVarying(prim, UsdGeomTokens->height,
                    HdChangeTracker::DirtyPoints,
@@ -121,39 +171,29 @@ UsdImagingCapsuleAdapter::TrackVariability(UsdPrim const& prim,
     }
 }
 
-// Thread safe.
-//  * Populate dirty bits for the given \p time.
-void 
-UsdImagingCapsuleAdapter::UpdateForTime(UsdPrim const& prim,
-                               SdfPath const& cachePath, 
-                               UsdTimeCode time,
-                               HdDirtyBits requestedBits,
-                               UsdImagingInstancerContext const* 
-                                   instancerContext) const
+HdDirtyBits
+UsdImagingCapsuleAdapter::ProcessPropertyChange(UsdPrim const& prim,
+                                                SdfPath const& cachePath,
+                                                TfToken const& propertyName)
 {
-    BaseAdapter::UpdateForTime(
-        prim, cachePath, time, requestedBits, instancerContext);
-    UsdImagingValueCache* valueCache = _GetValueCache();
-    if (requestedBits & HdChangeTracker::DirtyTopology) {
-        valueCache->GetTopology(cachePath) = GetMeshTopology();
+    if (propertyName == UsdGeomTokens->height ||
+        propertyName == UsdGeomTokens->radius ||
+        propertyName == UsdGeomTokens->axis) {
+        return HdChangeTracker::DirtyPoints;
     }
+
+    // Allow base class to handle change processing.
+    return BaseAdapter::ProcessPropertyChange(prim, cachePath, propertyName);
 }
 
 /*virtual*/
 VtValue
 UsdImagingCapsuleAdapter::GetPoints(UsdPrim const& prim,
-                 		    SdfPath const& cachePath,
                                     UsdTimeCode time) const
 {
-    TF_UNUSED(cachePath);
-    return GetMeshPoints(prim, time);   
-}
+    TRACE_FUNCTION();
+    HF_MALLOC_TAG_FUNCTION();
 
-/*static*/
-VtValue
-UsdImagingCapsuleAdapter::GetMeshPoints(UsdPrim const& prim, 
-                                        UsdTimeCode time)
-{
     UsdGeomCapsule capsule(prim);
     double height = 1.0;
     double radius = 0.5;
@@ -162,33 +202,45 @@ UsdImagingCapsuleAdapter::GetMeshPoints(UsdPrim const& prim,
     TF_VERIFY(capsule.GetRadiusAttr().Get(&radius, time));
     TF_VERIFY(capsule.GetAxisAttr().Get(&axis, time));
 
-    return VtValue(UsdImagingGenerateCapsuleMeshPoints(height, radius, axis));
+    // The capsule point generator computes points such that the "rings" of the
+    // capsule lie on a plane parallel to the XY plane, with the Z-axis being
+    // the "spine" of the capsule. These need to be transformed to the right
+    // basis when a different spine axis is used.
+    const GfMatrix4d basis = UsdImagingGprimAdapter::GetImplicitBasis(axis);
+
+    const size_t numPoints =
+        GeomUtilCapsuleMeshGenerator::ComputeNumPoints(numRadial, numCapAxial);
+
+    VtVec3fArray points(numPoints);
+        
+    GeomUtilCapsuleMeshGenerator::GeneratePoints(
+        points.begin(),
+        numRadial,
+        numCapAxial,
+        radius,
+        height,
+        &basis
+    );
+
+    return VtValue(points);
 }
 
-/*static*/
+/*virtual*/ 
 VtValue
-UsdImagingCapsuleAdapter::GetMeshTopology()
+UsdImagingCapsuleAdapter::GetTopology(UsdPrim const& prim,
+                                      SdfPath const& cachePath,
+                                      UsdTimeCode time) const
 {
-    // Topology is constant and identical for all capsules.
-    return VtValue(HdMeshTopology(UsdImagingGetCapsuleMeshTopology()));
-}
+    TRACE_FUNCTION();
+    HF_MALLOC_TAG_FUNCTION();
 
-// #nv begin #clean-property-invalidation
-/*virtual*/
-HdDirtyBits
-UsdImagingCapsuleAdapter::ProcessPropertyChange(
-    UsdPrim const& prim,
-    SdfPath const& cachePath,
-    TfToken const& propertyName)
-{
-    if ((propertyName == UsdGeomTokens->height) || (propertyName == UsdGeomTokens->radius) ||
-        (propertyName == UsdGeomTokens->axis))
-        return HdChangeTracker::DirtyPoints;
+    // All capsules share the same topology.
+    static const HdMeshTopology topology =
+        HdMeshTopology(GeomUtilCapsuleMeshGenerator::GenerateTopology(
+                            numRadial, numCapAxial));
 
-    // Allow base class to handle change processing.
-    return BaseAdapter::ProcessPropertyChange(prim, cachePath, propertyName);
+    return VtValue(topology);
 }
-// nv end
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

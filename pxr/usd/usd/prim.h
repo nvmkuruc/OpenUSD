@@ -57,9 +57,11 @@ class UsdPrimRange;
 class Usd_PrimData;
 
 class UsdAttribute;
+class UsdEditTarget;
 class UsdRelationship;
 class UsdPayloads;
 class UsdReferences;
+class UsdResolveTarget;
 class UsdSchemaBase;
 class UsdAPISchemaBase;
 class UsdInherits;
@@ -147,7 +149,9 @@ public:
     /// API schemas, and any fallback types defined on the stage for 
     /// unrecognized prim type names. The returned type structure contains the 
     /// "true" schema type used to create this prim's prim definition and answer
-    /// the IsA query. This value is cached and efficient to query.
+    /// the IsA query. This value is cached and efficient to query. The cached
+    /// values are guaranteed to exist for (at least) as long as the prim's
+    /// stage is open.
     /// \sa GetTypeName
     /// \sa GetAppliedSchemas
     /// \sa \ref Usd_OM_FallbackPrimTypes
@@ -180,6 +184,22 @@ public:
     /// opinion wins" semantics.
     USD_API
     SdfPrimSpecHandleVector GetPrimStack() const;
+
+    /// Return all the authored SdfPrimSpecs that may contain opinions for this
+    /// prim in order from strong to weak paired with the cumulative layer 
+    /// offset from the stage's root layer to the layer containing the prim 
+    /// spec.
+    ///
+    /// This behaves exactly the same as UsdPrim::GetPrimStack with the 
+    /// addition of providing the cumulative layer offset of each spec's layer.
+    ///
+    /// \note Use this method for debugging and diagnostic purposes.  It is
+    /// **not** advisable to retain a PrimStack for expedited metadata value
+    /// resolution, since not all metadata resolves with simple "strongest
+    /// opinion wins" semantics.
+    USD_API
+    std::vector<std::pair<SdfPrimSpecHandle, SdfLayerOffset>> 
+    GetPrimStackWithLayerOffsets() const;
 
     /// Author an opinion for this Prim's specifier at the current edit
     /// target.
@@ -428,8 +448,15 @@ public:
 
     /// Author an opinion for propertyOrder metadata on this prim at the current
     /// EditTarget.
-    USD_API
-    void SetPropertyOrder(const TfTokenVector &order) const;
+    void SetPropertyOrder(const TfTokenVector &order) const {
+        SetMetadata(SdfFieldKeys->PropertyOrder, order);
+    }
+
+    /// Remove the opinion for propertyOrder metadata on this prim at the current
+    /// EditTarget.
+    void ClearPropertyOrder() const {
+        ClearMetadata(SdfFieldKeys->PropertyOrder);
+    }
 
     /// Remove all scene description for the property with the
     /// given \p propName <em>in the current UsdEditTarget</em>.
@@ -469,31 +496,43 @@ private:
     USD_API
     bool _IsA(const TfType& schemaType, bool validateSchemaType) const;
 
-    // The non-templated implementation of UsdPrim::HasAPI using the
-    // TfType system. 
-    // 
-    // \p validateSchemaType is provided for python clients
-    // because they can't use compile time assertions on the input type.
-    // 
-    // \p instanceName is used to determine whether a particular instance 
-    // of a multiple-apply API schema has been applied to the prim.
+    // Separate implementations for UsdPrim::HasAPI for single and multiple
+    // apply API schema TfTypes.
     USD_API
-    bool _HasAPI(const TfType& schemaType, bool validateSchemaType,
-                 const TfToken &instanceName) const;
+    bool _HasSingleApplyAPI(const TfType& schemaType) const;
 
-    // Private implementation for all ApplyAPI methods. This does no input
-    // validation as the public methods are expected to have already done either
-    // compile time or runtime validation already.
     USD_API
-    bool _ApplyAPI(const TfType& schemaType,
-                   const TfToken& instanceName = TfToken()) const;
+    bool _HasMultiApplyAPI(const TfType& schemaType, 
+                           const TfToken &instanceName) const;
 
-    // Private implementation for all RemoveAPI methods. This does no input
-    // validation as the public methods are expected to have already done either
-    // compile time or runtime validation already.
+    // Private implementation for all ApplyAPI, CanApplyAPI, and RemoveAPI 
+    // methods for both single apply and multiple apply APIs. The multiple 
+    // apply API methods validate that the instance name is non-empty, but 
+    // otherwise all of these methods do no other input validation as the 
+    // public methods are expected to have already done either compile time or 
+    // runtime validation already.
+    USD_API
+    bool _CanApplyAPI(const TfType& schemaType, 
+                      std::string *whyNot) const;
+
+    USD_API
+    bool _CanApplyAPI(const TfType& schemaType, 
+                      const TfToken& instanceName,
+                      std::string *whyNot) const;
+
+    USD_API
+    bool _ApplyAPI(const TfType& schemaType) const;
+
+    USD_API
+    bool _ApplyAPI(const TfType& schemaType, 
+                   const TfToken& instanceName) const;
+
+    USD_API
+    bool _RemoveAPI(const TfType& schemaType) const;
+
     USD_API
     bool _RemoveAPI(const TfType& schemaType,
-                    const TfToken& instanceName = TfToken()) const;
+                    const TfToken& instanceName) const;
 
 public:
     /// Return true if the prim's schema type, is or inherits schema type T.
@@ -514,17 +553,7 @@ public:
     USD_API
     bool IsA(const TfType& schemaType) const;
 
-    /// Return true if the UsdPrim has had an API schema represented by the C++ 
-    /// class type <b>T</b> applied to it through the Apply() method provided 
-    /// on the API schema class. 
-    /// 
-    /// \p instanceName, if non-empty is used to determine if a particular 
-    /// instance of a multiple-apply API schema (eg. UsdCollectionAPI) has been 
-    /// applied to the prim. A coding error is issued if a non-empty 
-    /// \p instanceName is passed in and <b>T</b> represents a single-apply API 
-    /// schema.
-    /// 
-    /// <b>Using HasAPI in C++</b>
+    /// __Using HasAPI in C++__
     /// \code 
     /// UsdPrim prim = stage->OverridePrim("/path/to/prim");
     /// MyDomainBozAPI = MyDomainBozAPI::Apply(prim);
@@ -541,7 +570,7 @@ public:
     /// performed in python at run-time and a coding error is issued if 
     /// the given type is not a valid applied API schema.
     /// 
-    /// <b>Using HasAPI in Python</b>
+    /// __Using HasAPI in Python__
     /// \code{.py}
     /// prim = stage.OverridePrim("/path/to/prim")
     /// bozAPI = MyDomain.BozAPI.Apply(prim)
@@ -551,42 +580,145 @@ public:
     /// assert(prim.HasAPI(Usd.CollectionAPI))
     /// assert(prim.HasAPI(Usd.CollectionAPI, instanceName="geom"))
     /// \endcode
+    /// @{
+
+    /// Return true if the UsdPrim has had a single API schema represented by 
+    /// the C++ class type __T__ applied to it through the Apply() method 
+    /// provided on the API schema class. 
+    /// 
     template <typename T>
-    bool HasAPI(const TfToken &instanceName=TfToken()) const {
+    typename std::enable_if<T::schemaKind != UsdSchemaKind::MultipleApplyAPI, 
+        bool>::type
+    HasAPI() const {
         static_assert(std::is_base_of<UsdAPISchemaBase, T>::value,
                       "Provided type must derive UsdAPISchemaBase.");
         static_assert(!std::is_same<UsdAPISchemaBase, T>::value,
                       "Provided type must not be UsdAPISchemaBase.");
-        static_assert(
-            (T::schemaType == UsdSchemaType::SingleApplyAPI
-            || T::schemaType == UsdSchemaType::MultipleApplyAPI),
-            "Provided schema type must be an applied API schema.");
+        // Note that this function template is enabled for any schema kind, 
+        // other than MultipleApplyAPI, but is only valid for SingleApplyAPI. 
+        // This static assert provides better error information for calling 
+        // HasAPI with an invalid template type than if we limited HasAPI 
+        // substitution matching to just the two valid schema kinds.
+        static_assert(T::schemaKind == UsdSchemaKind::SingleApplyAPI,
+            "Provided schema type must be a single apply API schema.");
 
-        if (T::schemaType != UsdSchemaType::MultipleApplyAPI
-            && !instanceName.IsEmpty()) {
-            TF_CODING_ERROR("HasAPI: single application API schemas like %s do "
-                "not contain an application instanceName ( %s ).",
-                TfType::GetCanonicalTypeName(typeid(T)).c_str(),
-                instanceName.GetText());
-            return false;
-        }
-
-        return _HasAPI(TfType::Find<T>(), /*validateSchemaType=*/false, 
-                       instanceName);
+        return _HasSingleApplyAPI(TfType::Find<T>());
     }
-    
+
+    /// Return true if the UsdPrim has had a multiple-apply API schema 
+    /// represented by the C++ class type __T__ applied to it through the 
+    /// Apply() method provided on the API schema class. 
+    /// 
+    /// \p instanceName, if non-empty is used to determine if a particular 
+    /// instance of a multiple-apply API schema (eg. UsdCollectionAPI) has been 
+    /// applied to the prim, otherwise this returns true if any instance of
+    /// the multiple-apply API has been applied.
+    template <typename T>
+    typename std::enable_if<T::schemaKind == UsdSchemaKind::MultipleApplyAPI, 
+        bool>::type 
+    HasAPI(const TfToken &instanceName = TfToken()) const {
+        static_assert(std::is_base_of<UsdAPISchemaBase, T>::value,
+                      "Provided type must derive UsdAPISchemaBase.");
+        static_assert(!std::is_same<UsdAPISchemaBase, T>::value,
+                      "Provided type must not be UsdAPISchemaBase.");
+        static_assert(T::schemaKind == UsdSchemaKind::MultipleApplyAPI,
+            "Provided schema type must be a multi apply API schema.");
+
+        return _HasMultiApplyAPI(TfType::Find<T>(), instanceName);
+    }
+        
     /// Return true if a prim has an API schema with TfType \p schemaType.
     ///
     /// \p instanceName, if non-empty is used to determine if a particular 
     /// instance of a multiple-apply API schema (eg. UsdCollectionAPI) has been 
     /// applied to the prim. A coding error is issued if a non-empty 
-    /// \p instanceName is passed in and <b>T</b> represents a single-apply API 
+    /// \p instanceName is passed in and __T__ represents a single-apply API 
     /// schema.
+    ///
+    /// This function behaves exactly like the templated HasAPI functions
+    /// except for the runtime schemaType validation which happens at compile 
+    /// time in the templated versions. This method is provided for python 
+    /// clients. Use of the templated HasAPI functions are preferred.
     USD_API
     bool HasAPI(const TfType& schemaType,
                 const TfToken& instanceName=TfToken()) const;
 
-    /// Applies a <b>single-apply</b> API schema with the given C++ type 
+    /// }@
+
+    /// Returns whether a __single-apply__ API schema with the given C++ type 
+    /// 'SchemaType' can be applied to this prim. If the return value is false, 
+    /// and \p whyNot is provided, the reason the schema cannot be applied is 
+    /// written to whyNot.
+    /// 
+    /// Whether the schema can be applied is determined by the schema type 
+    /// definition which may specify that the API schema can only be applied to
+    /// certain prim types.
+    /// 
+    /// The return value of this function only indicates whether it would be 
+    /// valid to apply this schema to the prim. It has no bearing on whether
+    /// calling ApplyAPI will be successful or not.
+    template <typename SchemaType>
+    bool CanApplyAPI(std::string *whyNot = nullptr) const {
+        static_assert(std::is_base_of<UsdAPISchemaBase, SchemaType>::value,
+            "Provided type must derive UsdAPISchemaBase.");
+        static_assert(!std::is_same<UsdAPISchemaBase, SchemaType>::value,
+            "Provided type must not be UsdAPISchemaBase.");
+        static_assert(SchemaType::schemaKind == UsdSchemaKind::SingleApplyAPI,
+            "Provided schema type must be a single apply API schema.");
+
+        static const TfType schemaType = TfType::Find<SchemaType>();
+        return _CanApplyAPI(schemaType, whyNot);
+    }
+
+    /// Non-templated overload of the templated CanApplyAPI above.
+    ///
+    /// This function behaves exactly like the templated CanApplyAPI  
+    /// except for the runtime schemaType validation which happens at compile 
+    /// time in the templated version. This method is provided for python 
+    /// clients. Use of the templated CanApplyAPI is preferred.
+    USD_API
+    bool CanApplyAPI(const TfType& schemaType,
+                     std::string *whyNot = nullptr) const;
+
+    /// Returns whether a __multiple-apply__ API schema with the given C++ 
+    /// type 'SchemaType' can be applied to this prim with the given 
+    /// \p instanceName. If the return value is false, and \p whyNot is 
+    /// provided, the reason the schema cannot be applied is written to whyNot.
+    /// 
+    /// Whether the schema can be applied is determined by the schema type 
+    /// definition which may specify that the API schema can only be applied to 
+    /// certain prim types. It also determines whether the instance name is a 
+    /// valid instance name for the multiple apply schema.
+    /// 
+    /// The return value of this function only indicates whether it would be 
+    /// valid to apply this schema to the prim. It has no bearing on whether
+    /// calling ApplyAPI will be successful or not.
+    template <typename SchemaType>
+    bool CanApplyAPI(const TfToken &instanceName, 
+                     std::string *whyNot = nullptr) const {
+        static_assert(std::is_base_of<UsdAPISchemaBase, SchemaType>::value,
+            "Provided type must derive UsdAPISchemaBase.");
+        static_assert(!std::is_same<UsdAPISchemaBase, SchemaType>::value,
+            "Provided type must not be UsdAPISchemaBase.");
+        static_assert(SchemaType::schemaKind == UsdSchemaKind::MultipleApplyAPI,
+            "Provided schema type must be a multiple apply API schema.");
+
+        static const TfType schemaType = TfType::Find<SchemaType>();
+        return _CanApplyAPI(schemaType, instanceName, whyNot);
+    }
+
+    /// Non-templated overload of the templated CanApplyAPI above.
+    ///
+    /// This function behaves exactly like the templated CanApplyAPI  
+    /// except for the runtime schemaType validation which happens at compile 
+    /// time in the templated version. This method is provided for python 
+    /// clients. Use of the templated CanApplyAPI is preferred.
+    USD_API
+    bool CanApplyAPI(const TfType& schemaType,
+                     const TfToken& instanceName,
+                     std::string *whyNot = nullptr) const;
+
+    /// Applies a __single-apply__ API schema with the given C++ type 
     /// 'SchemaType' to this prim in the current edit target. 
     /// 
     /// This information is stored by adding the API schema's name token to the 
@@ -607,14 +739,23 @@ public:
             "Provided type must derive UsdAPISchemaBase.");
         static_assert(!std::is_same<UsdAPISchemaBase, SchemaType>::value,
             "Provided type must not be UsdAPISchemaBase.");
-        static_assert(SchemaType::schemaType == UsdSchemaType::SingleApplyAPI,
-            "Provided schema type must be an single apply API schema.");
+        static_assert(SchemaType::schemaKind == UsdSchemaKind::SingleApplyAPI,
+            "Provided schema type must be a single apply API schema.");
 
-        static TfType schemaType = TfType::Find<SchemaType>();
+        static const TfType schemaType = TfType::Find<SchemaType>();
         return _ApplyAPI(schemaType);
     }
 
-    /// Applies a </b>multiple-apply</b> API schema with the given C++ type 
+    /// Non-templated overload of the templated ApplyAPI above.
+    ///
+    /// This function behaves exactly like the templated ApplyAPI  
+    /// except for the runtime schemaType validation which happens at compile 
+    /// time in the templated version. This method is provided for python 
+    /// clients. Use of the templated ApplyAPI is preferred.
+    USD_API
+    bool ApplyAPI(const TfType& schemaType) const;
+
+    /// Applies a __multiple-apply__ API schema with the given C++ type 
     /// 'SchemaType' and instance name \p instanceName to this prim in the 
     /// current edit target. 
     /// 
@@ -640,39 +781,23 @@ public:
             "Provided type must derive UsdAPISchemaBase.");
         static_assert(!std::is_same<UsdAPISchemaBase, SchemaType>::value,
             "Provided type must not be UsdAPISchemaBase.");
-        static_assert(SchemaType::schemaType == UsdSchemaType::MultipleApplyAPI,
+        static_assert(SchemaType::schemaKind == UsdSchemaKind::MultipleApplyAPI,
             "Provided schema type must be a multiple apply API schema.");
 
-        if (instanceName.IsEmpty()) {
-            TF_CODING_ERROR("ApplyAPI: for mutiple apply API schema %s, a "
-                            "non-empty instance name must be provided.",
-                TfType::GetCanonicalTypeName(typeid(SchemaType)).c_str());
-            return false;
-        }
-
-        static TfType schemaType = TfType::Find<SchemaType>();
+        static const TfType schemaType = TfType::Find<SchemaType>();
         return _ApplyAPI(schemaType, instanceName);
     }
 
-    /// Applies an API schema with the given TfType \p schemaType on this prim
-    /// in the current edit target.
-    /// 
-    /// The \p schemaType must be an applied API schema type. If the 
-    /// \p schemaType is a multiple-apply schema, \p instanceName must
-    /// be non-empty while for single-apply schema, \p instanceName must be
-    /// empty. A error is issued and false returned if these conditions are
-    /// not met.
+    /// Non-templated overload of the templated ApplyAPI above.
     ///
-    /// This function behaves exactly like the templated ApplyAPI functions 
+    /// This function behaves exactly like the templated ApplyAPI  
     /// except for the runtime schemaType validation which happens at compile 
-    /// time for the templated functions. This method is provided for python 
+    /// time in the templated version. This method is provided for python 
     /// clients. Use of the templated ApplyAPI is preferred.
     USD_API
-    bool ApplyAPI(const TfType& schemaType,
-                  const TfToken& instanceName=TfToken()) const;
+    bool ApplyAPI(const TfType& schemaType, const TfToken& instanceName) const;
 
-
-    /// Removes a <b>single-apply</b> API schema with the given C++ type 
+    /// Removes a __single-apply__ API schema with the given C++ type 
     /// 'SchemaType' from this prim in the current edit target. 
     /// 
     /// This is done by removing the API schema's name token from the 
@@ -694,14 +819,23 @@ public:
             "Provided type must derive UsdAPISchemaBase.");
         static_assert(!std::is_same<UsdAPISchemaBase, SchemaType>::value,
             "Provided type must not be UsdAPISchemaBase.");
-        static_assert(SchemaType::schemaType == UsdSchemaType::SingleApplyAPI,
-            "Provided schema type must be an single apply API schema.");
+        static_assert(SchemaType::schemaKind == UsdSchemaKind::SingleApplyAPI,
+            "Provided schema type must be a single apply API schema.");
 
-        static TfType schemaType = TfType::Find<SchemaType>();
+        static const TfType schemaType = TfType::Find<SchemaType>();
         return _RemoveAPI(schemaType);
     }
 
-    /// Removes a </b>multiple-apply</b> API schema with the given C++ type 
+    /// Non-templated overload of the templated RemoveAPI above.
+    ///
+    /// This function behaves exactly like the templated RemoveAPI  
+    /// except for the runtime schemaType validation which happens at compile 
+    /// time in the templated version. This method is provided for python 
+    /// clients. Use of the templated RemoveAPI is preferred.
+    USD_API
+    bool RemoveAPI(const TfType& schemaType) const;
+
+    /// Removes a __multiple-apply__ API schema with the given C++ type 
     /// 'SchemaType' and instance name \p instanceName from this prim in the 
     /// current edit target. 
     /// 
@@ -728,29 +862,22 @@ public:
             "Provided type must derive UsdAPISchemaBase.");
         static_assert(!std::is_same<UsdAPISchemaBase, SchemaType>::value,
             "Provided type must not be UsdAPISchemaBase.");
-        static_assert(SchemaType::schemaType == UsdSchemaType::MultipleApplyAPI,
+        static_assert(SchemaType::schemaKind == UsdSchemaKind::MultipleApplyAPI,
             "Provided schema type must be a multiple apply API schema.");
 
-        static TfType schemaType = TfType::Find<SchemaType>();
+        static const TfType schemaType = TfType::Find<SchemaType>();
         return _RemoveAPI(schemaType, instanceName);
     }
 
-    /// Removes an API schema with the given TfType \p schemaType from this prim
-    /// in the current edit target.
-    /// 
-    /// The \p schemaType must be an applied API schema type. If the 
-    /// \p schemaType is a multiple-apply schema, \p instanceName must
-    /// be non-empty while for single-apply schema, \p instanceName must be
-    /// empty. A error is issued and false returned if these conditions are
-    /// not met.
+    /// Non-templated overload of the templated RemoveAPI above.
     ///
-    /// This function behaves exactly like the templated RemoveAPI functions 
+    /// This function behaves exactly like the templated RemoveAPI  
     /// except for the runtime schemaType validation which happens at compile 
-    /// time for the templated functions. This method is provided for python 
+    /// time in the templated version. This method is provided for python 
     /// clients. Use of the templated RemoveAPI is preferred.
     USD_API
     bool RemoveAPI(const TfType& schemaType,
-                   const TfToken& instanceName=TfToken()) const;
+                   const TfToken& instanceName) const;
 
     /// Adds the applied API schema name token \p appliedSchemaName to the 
     /// \em apiSchemas metadata for this prim at the current edit target. For
@@ -852,6 +979,22 @@ public:
     inline SiblingRange
     GetFilteredChildren(const Usd_PrimFlagsPredicate &predicate) const;
 
+    /// Return the names of the child prims in the order they appear when
+    /// iterating over GetChildren.  
+    USD_API
+    TfTokenVector GetChildrenNames() const;
+
+    /// Return the names of the child prims in the order they appear when
+    /// iterating over GetAllChildren.  
+    USD_API
+    TfTokenVector GetAllChildrenNames() const;
+
+    /// Return the names of the child prims in the order they appear when
+    /// iterating over GetFilteredChildren(\p predicate).  
+    USD_API
+    TfTokenVector GetFilteredChildrenNames(
+        const Usd_PrimFlagsPredicate &predicate) const;
+
     /// Return this prim's active, loaded, defined, non-abstract descendants as
     /// an iterable range.  Equivalent to:
     /// \code
@@ -901,6 +1044,26 @@ public:
     /// and \c UsdPrimRange for more general Stage traversal behaviors.
     inline SubtreeRange
     GetFilteredDescendants(const Usd_PrimFlagsPredicate &predicate) const;
+
+    /// Return the strongest opinion for the metadata used to reorder children 
+    /// of this prim. Due to how reordering of prim children is composed,
+    /// this value cannot be relied on to get the actual order of the prim's 
+    /// children. Use GetChidrenNames, GetAllChildrenNames, 
+    /// GetFilteredChildrenNames to get the true child order if needed.
+    USD_API
+    TfTokenVector GetChildrenReorder() const;
+
+    /// Author an opinion for the metadata used to reorder children of this 
+    /// prim at the current EditTarget.
+    void SetChildrenReorder(const TfTokenVector &order) const {
+        SetMetadata(SdfFieldKeys->PrimOrder, order);
+    }
+
+    /// Remove the opinion for the metadata used to reorder children of this 
+    /// prim at the current EditTarget.
+    void ClearChildrenReorder() const {
+        ClearMetadata(SdfFieldKeys->PrimOrder);
+    }
 
 public:
     // --------------------------------------------------------------------- //
@@ -1276,9 +1439,10 @@ public:
     /// Return a UsdPayloads object that allows one to add, remove, or
     /// mutate payloads <em>at the currently set UsdEditTarget</em>.
     ///
-    /// There is currently no facility for \em listing the currently authored
-    /// payloads on a prim... the problem is somewhat ill-defined, and
-    /// requires some thought.
+    /// While the UsdPayloads object has no methods for \em listing the 
+    /// currently authored payloads on a prim, one can use a 
+    /// UsdPrimCompositionQuery to query the payload arcs that are composed 
+    /// by this prim.
     USD_API
     UsdPayloads GetPayloads() const;
 
@@ -1307,9 +1471,12 @@ public:
     /// Return a UsdReferences object that allows one to add, remove, or
     /// mutate references <em>at the currently set UsdEditTarget</em>.
     ///
-    /// There is currently no facility for \em listing the currently authored
-    /// references on a prim... the problem is somewhat ill-defined, and
-    /// requires some thought.
+    /// While the UsdReferences object has no methods for \em listing the 
+    /// currently authored references on a prim, one can use a 
+    /// UsdPrimCompositionQuery to query the reference arcs that are composed 
+    /// by this prim.
+    /// 
+    /// \sa UsdPrimCompositionQuery::GetDirectReferences
     USD_API
     UsdReferences GetReferences() const;
 
@@ -1324,9 +1491,12 @@ public:
     /// Return a UsdInherits object that allows one to add, remove, or
     /// mutate inherits <em>at the currently set UsdEditTarget</em>.
     ///
-    /// There is currently no facility for \em listing the currently authored
-    /// inherits on a prim... the problem is somewhat ill-defined, and
-    /// requires some thought.
+    /// While the UsdInherits object has no methods for \em listing the 
+    /// currently authored inherits on a prim, one can use a 
+    /// UsdPrimCompositionQuery to query the inherits arcs that are composed 
+    /// by this prim.
+    /// 
+    /// \sa UsdPrimCompositionQuery::GetDirectInherits
     USD_API
     UsdInherits GetInherits() const;
 
@@ -1341,9 +1511,10 @@ public:
     /// Return a UsdSpecializes object that allows one to add, remove, or
     /// mutate specializes <em>at the currently set UsdEditTarget</em>.
     ///
-    /// There is currently no facility for \em listing the currently authored
-    /// specializes on a prim... the problem is somewhat ill-defined, and
-    /// requires some thought.
+    /// While the UsdSpecializes object has no methods for \em listing the 
+    /// currently authored specializes on a prim, one can use a 
+    /// UsdPrimCompositionQuery to query the specializes arcs that are composed 
+    /// by this prim.
     USD_API
     UsdSpecializes GetSpecializes() const;
 
@@ -1387,11 +1558,11 @@ public:
         return HasAuthoredMetadata(SdfFieldKeys->Instanceable);
     }
 
-    /// Return true if this prim is an instance of a master, false
+    /// Return true if this prim is an instance of a prototype, false
     /// otherwise.
     ///
-    /// If this prim is an instance, calling GetMaster() will return
-    /// the UsdPrim for the corresponding master prim.
+    /// If this prim is an instance, calling GetPrototype() will return
+    /// the UsdPrim for the corresponding prototype prim.
     bool IsInstance() const { return _Prim()->IsInstance(); }
 
     /// Return true if this prim is an instance proxy, false otherwise.
@@ -1401,39 +1572,58 @@ public:
         return Usd_IsInstanceProxy(_Prim(), _ProxyPrimPath());
     }
 
-    /// Return true if this prim is a master prim, false otherwise.
-    bool IsMaster() const { return _Prim()->IsMaster(); }
-
-    /// Return true if this prim is located in a subtree of prims
-    /// rooted at a master prim, false otherwise.
+    /// Return true if the given \p path identifies a prototype prim,
+    /// false otherwise.
     ///
-    /// If this function returns true, this prim is either a master prim
-    /// or a descendent of a master prim.
-    bool IsInMaster() const { 
+    /// This function will return false for prim and property paths
+    /// that are descendants of a prototype prim path.
+    ///
+    /// \sa IsPathInPrototype
+    USD_API
+    static bool IsPrototypePath(const SdfPath& path);
+
+    /// Return true if the given \p path identifies a prototype prim or
+    /// a prim or property descendant of a prototype prim, false otherwise.
+    ///
+    /// \sa IsPrototypePath
+    USD_API
+    static bool IsPathInPrototype(const SdfPath& path);
+
+    /// Return true if this prim is an instancing prototype prim,
+    /// false otherwise.
+    ///
+    /// \sa IsInPrototype
+    bool IsPrototype() const { return _Prim()->IsPrototype(); }
+
+    /// Return true if this prim is a prototype prim or a descendant
+    /// of a prototype prim, false otherwise.
+    ///
+    /// \sa IsPrototype
+    bool IsInPrototype() const { 
         return (IsInstanceProxy() ? 
-            _PrimPathIsInMaster() : _Prim()->IsInMaster());
+            IsPathInPrototype(GetPrimPath()) : _Prim()->IsInPrototype());
     }
 
     /// If this prim is an instance, return the UsdPrim for the corresponding
-    /// master. Otherwise, return an invalid UsdPrim.
+    /// prototype. Otherwise, return an invalid UsdPrim.
     USD_API
-    UsdPrim GetMaster() const;
+    UsdPrim GetPrototype() const;
 
     /// If this prim is an instance proxy, return the UsdPrim for the
-    /// corresponding prim in the instance's master. Otherwise, return an
+    /// corresponding prim in the instance's prototype. Otherwise, return an
     /// invalid UsdPrim.
-    UsdPrim GetPrimInMaster() const {
+    UsdPrim GetPrimInPrototype() const {
         if (IsInstanceProxy()) {
             return UsdPrim(_Prim(), SdfPath());
         }
         return UsdPrim();
     }
 
-    /// If this prim is a master prim, returns all prims that are instances of 
-    /// this master. Otherwise, returns an empty vector.
+    /// If this prim is a prototype prim, returns all prims that are instances
+    /// of this prototype. Otherwise, returns an empty vector.
     ///
-    /// Note that this function will return prims in masters for instances that 
-    /// are nested beneath other instances.
+    /// Note that this function will return prims in prototypes for instances
+    /// that are nested beneath other instances.
     USD_API
     std::vector<UsdPrim> GetInstances() const;
     /// @}
@@ -1455,11 +1645,11 @@ public:
     /// UsdPrim::ComputeExpandedPrimIndex to compute a prim index that includes 
     /// all possible sites that could contribute opinions.
     ///
-    /// This prim index will be empty for master prims. This ensures that these 
-    /// prims do not provide any attribute or metadata values. For all other 
-    /// prims in masters, this is the prim index that was chosen to be shared 
-    /// with all other instances. In either case, the prim index's path will 
-    /// not be the same as the prim's path.
+    /// This prim index will be empty for prototype prims. This ensures that
+    /// these prims do not provide any attribute or metadata values. For all
+    /// other prims in prototypes, this is the prim index that was chosen to
+    /// be shared with all other instances. In either case, the prim index's
+    /// path will not be the same as the prim's path.
     ///
     /// Prim indexes may be invalidated by changes to the UsdStage and cannot
     /// detect if they are expired. Clients should avoid keeping copies of the 
@@ -1482,6 +1672,28 @@ public:
     /// the additional site information is truly needed.
     USD_API
     PcpPrimIndex ComputeExpandedPrimIndex() const;
+
+    /// Creates and returns a resolve target that, when passed to a 
+    /// UsdAttributeQuery for one of this prim's attributes, causes value 
+    /// resolution to only consider weaker specs up to and including the spec 
+    /// that would be authored for this prim when using the given \p editTarget.
+    ///
+    /// If the edit target would not affect any specs that could contribute to
+    /// this prim, a null resolve target is returned.
+    USD_API
+    UsdResolveTarget MakeResolveTargetUpToEditTarget(
+        const UsdEditTarget &editTarget) const;
+
+    /// Creates and returns a resolve target that, when passed to a 
+    /// UsdAttributeQuery for one of this prim's attributes, causes value 
+    /// resolution to only consider specs that are stronger than the spec 
+    /// that would be authored for this prim when using the given \p editTarget.
+    ///
+    /// If the edit target would not affect any specs that could contribute to
+    /// this prim, a null resolve target is returned.
+    USD_API
+    UsdResolveTarget MakeResolveTargetStrongerThanEditTarget(
+        const UsdEditTarget &editTarget) const;
 
     /// @}
 
@@ -1542,23 +1754,25 @@ private:
     std::vector<UsdRelationship>
     _GetRelationships(bool onlyAuthored, bool applyOrder=false) const;
 
-    // Helper for determining whether this prim is in a master based
-    // on prim path.
-    USD_API
-    bool _PrimPathIsInMaster() const;
-
     friend const PcpPrimIndex &Usd_PrimGetSourcePrimIndex(const UsdPrim&);
     // Return a const reference to the source PcpPrimIndex for this prim.
     //
-    // For all prims in masters (which includes the master prim itself), 
+    // For all prims in prototypes (which includes the prototype prim itself), 
     // this is the prim index for the instance that was chosen to serve
-    // as the master for all other instances.  This prim index will not
+    // as the prototype for all other instances.  This prim index will not
     // have the same path as the prim's path.
     //
     // This is a private helper but is also wrapped out to Python
     // for testing and debugging purposes.
     const PcpPrimIndex &_GetSourcePrimIndex() const
     { return _Prim()->GetSourcePrimIndex(); }
+
+    // Helper function for MakeResolveTargetUpToEditTarget and 
+    // MakeResolveTargetStrongerThanEditTarget.
+    UsdResolveTarget 
+    _MakeResolveTargetFromEditTarget(
+        const UsdEditTarget &editTarget,
+        bool makeAsStrongerThan) const;
 };
 
 #ifdef doxygen

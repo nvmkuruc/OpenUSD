@@ -32,7 +32,7 @@
 
 from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdShade
 
-stage = Usd.Stage.CreateNew("simpleShading.usd")
+stage = Usd.Stage.CreateNew("simpleShading.usda")
 UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y)
 
 # We put both geometry and materials under a common "model root prim",
@@ -46,7 +46,7 @@ billboard.CreatePointsAttr([(-430, -145, 0), (430, -145, 0), (430, 145, 0), (-43
 billboard.CreateFaceVertexCountsAttr([4])
 billboard.CreateFaceVertexIndicesAttr([0,1,2,3])
 billboard.CreateExtentAttr([(-430, -145, 0), (430, 145, 0)])
-texCoords = billboard.CreatePrimvar("st", 
+texCoords = UsdGeom.PrimvarsAPI(billboard).CreatePrimvar("st", 
                                     Sdf.ValueTypeNames.TexCoord2fArray, 
                                     UsdGeom.Tokens.varying)
 texCoords.Set([(0, 0), (1, 0), (1,1), (0, 1)])
@@ -65,7 +65,7 @@ pbrShader.CreateIdAttr("UsdPreviewSurface")
 pbrShader.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(0.4)
 pbrShader.CreateInput("metallic", Sdf.ValueTypeNames.Float).Set(0.0)
 
-material.CreateSurfaceOutput().ConnectToSource(pbrShader, "surface")
+material.CreateSurfaceOutput().ConnectToSource(pbrShader.ConnectableAPI(), "surface")
 
 # create texture coordinate reader 
 stReader = UsdShade.Shader.Define(stage, '/TexModel/boardMat/stReader')
@@ -79,11 +79,12 @@ stReader.CreateInput('varname',Sdf.ValueTypeNames.Token).ConnectToSource(stInput
 diffuseTextureSampler = UsdShade.Shader.Define(stage,'/TexModel/boardMat/diffuseTexture')
 diffuseTextureSampler.CreateIdAttr('UsdUVTexture')
 diffuseTextureSampler.CreateInput('file', Sdf.ValueTypeNames.Asset).Set("USDLogoLrg.png")
-diffuseTextureSampler.CreateInput("st", Sdf.ValueTypeNames.Float2).ConnectToSource(stReader, 'result')
+diffuseTextureSampler.CreateInput("st", Sdf.ValueTypeNames.Float2).ConnectToSource(stReader.ConnectableAPI(), 'result')
 diffuseTextureSampler.CreateOutput('rgb', Sdf.ValueTypeNames.Float3)
-pbrShader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).ConnectToSource(diffuseTextureSampler, 'rgb')
+pbrShader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).ConnectToSource(diffuseTextureSampler.ConnectableAPI(), 'rgb')
 
 # Now bind the Material to the card
+billboard.GetPrim().ApplyAPI(UsdShade.MaterialBindingAPI)
 UsdShade.MaterialBindingAPI(billboard).Bind(material)
 
 stage.Save()

@@ -105,7 +105,7 @@ public:
     static void AccumulateCacheStats(
         const PcpCache* cache, Pcp_CacheStats* stats)
     {
-        typedef std::shared_ptr<PcpPrimIndex_Graph::_SharedData> 
+        typedef std::shared_ptr<PcpPrimIndex_Graph::_NodePool> 
             _SharedNodePool;
         std::set<_SharedNodePool> seenNodePools;
         TfHashSet<PcpMapFunction, MapFuncHash> allMapFuncs;
@@ -125,7 +125,7 @@ public:
                 primIndex, &stats->culledGraphStats, 
                 /* culledNodesOnly = */ true);
 
-            if (seenNodePools.insert(primIndex.GetGraph()->_data).second) {
+            if (seenNodePools.insert(primIndex.GetGraph()->_nodes).second) {
                 ++(stats->numGraphInstances);
 
                 AccumulateGraphStats(
@@ -170,7 +170,7 @@ public:
     struct _Helper {
         static std::string FormatNumber(size_t n)
         {
-            return TfStringPrintf("%'zd", n);
+            return TfStringPrintf("%zd", n);
         }
 
         static std::string FormatAverage(size_t n, size_t d)

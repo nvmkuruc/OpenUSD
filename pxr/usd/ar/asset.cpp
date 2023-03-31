@@ -1,5 +1,5 @@
 //
-// Copyright 2018 Pixar
+// Copyright 2021 Pixar
 //
 // Licensed under the Apache License, Version 2.0 (the "Apache License")
 // with the following modification; you may not use this file except in
@@ -23,6 +23,7 @@
 //
 #include "pxr/pxr.h"
 #include "pxr/usd/ar/asset.h"
+#include "pxr/usd/ar/inMemoryAsset.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -32,6 +33,12 @@ ArAsset::ArAsset()
 
 ArAsset::~ArAsset()
 {
+}
+
+std::shared_ptr<ArAsset>
+ArAsset::GetDetachedAsset() const
+{
+    return ArInMemoryAsset::FromAsset(*this);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -30,62 +30,60 @@
 #include "pxr/imaging/hdSt/shaderCode.h"
 #include "pxr/imaging/hd/material.h"
 #include "pxr/imaging/hf/perfLog.h"
-#include "pxr/base/tf/envSetting.h"
 
 #include <memory>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-using HdStSurfaceShaderSharedPtr = std::shared_ptr<class HdStSurfaceShader>;
-
-using HdStTextureResourceSharedPtr = 
-    std::shared_ptr<class HdStTextureResource>;
-using HdStTextureResourceHandleSharedPtr =
-    std::shared_ptr<class HdStTextureResourceHandle>;
-using HdStTextureResourceHandleSharedPtrVector =
-    std::vector<HdStTextureResourceHandleSharedPtr>;
-using HdStResourceRegistrySharedPtr =
-    std::shared_ptr<class HdStResourceRegistry>;
+using HdSt_MaterialNetworkShaderSharedPtr =
+        std::shared_ptr<class HdSt_MaterialNetworkShader>;
 
 class HioGlslfx;
 
-HDST_API
-extern TfEnvSetting<bool> HDST_USE_NEW_TEXTURE_SYSTEM;
-
-class HdStMaterial final: public HdMaterial {
+class HdStMaterial final: public HdMaterial
+{
 public:
     HF_MALLOC_TAG_NEW("new HdStMaterial");
+
+    /// For volumes, the corresponding draw items do not use the
+    /// HdStShaderCode produced by HdStMaterial. Instead HdStVolume is
+    /// using some data from the material to produce its own HdStShaderCode
+    /// based on the volume field bindings.
+    struct VolumeMaterialData final
+    {
+        /// glslfx source code for volume
+        std::string source;
+        HdSt_MaterialParamVector params;
+    };
 
     HDST_API
     HdStMaterial(SdfPath const& id);
     HDST_API
-    virtual ~HdStMaterial();
+    ~HdStMaterial() override;
 
     /// Synchronizes state from the delegate to this object.
     HDST_API
-    virtual void Sync(HdSceneDelegate *sceneDelegate,
-                      HdRenderParam   *renderParam,
-                      HdDirtyBits     *dirtyBits) override;
+    void Sync(HdSceneDelegate *sceneDelegate,
+              HdRenderParam   *renderParam,
+              HdDirtyBits     *dirtyBits) override;
+
+    HDST_API
+    void Finalize(HdRenderParam *renderParam) override;
 
     /// Returns the minimal set of dirty bits to place in the
     /// change tracker for use in the first sync of this prim.
     /// Typically this would be all dirty bits.
     HDST_API
-    virtual HdDirtyBits GetInitialDirtyBitsMask() const override;
+    HdDirtyBits GetInitialDirtyBitsMask() const override;
 
-    /// Causes the shader to be reloaded.
+    /// Obtains the GLSLFX code together with supporting information
+    /// such as material params and textures to render surfaces.
     HDST_API
-    virtual void Reload() override;
+    HdSt_MaterialNetworkShaderSharedPtr GetMaterialNetworkShader() const;
 
-    /// Obtains the render delegate specific representation of the shader.
-    HDST_API
-    HdStShaderCodeSharedPtr GetShaderCode() const;
-
-    /// Obtain the scene delegates's globally unique id for the texture
-    /// resource identified by textureId.
-    inline HdTextureResource::ID GetTextureResourceID(
-        HdSceneDelegate* sceneDelegate,
-        SdfPath const& textureId) const;
+    /// Obtains the GLSLFLX code together with material params to
+    /// render volumes.
+    inline const VolumeMaterialData &GetVolumeMaterialData() const;
 
     /// Summary flag. Returns true if the material is bound to one or more
     /// textures and any of those textures is a ptex texture.
@@ -106,22 +104,12 @@ public:
     /// Used to set the fallback shader for prim.
     /// This class takes ownership of the passed in object.
     HDST_API
-    void SetSurfaceShader(HdStSurfaceShaderSharedPtr &shaderCode);
+    void SetMaterialNetworkShader(
+        HdSt_MaterialNetworkShaderSharedPtr &shaderCode);
 
 private:
-    // Uses HdSceneDelegate::GetTextureResourceID and
-    // HdSceneDelegate::GetTextureResource (which will be obsoleted
-    // and removed at some point). Also resolves to a 1x1-texture with
-    // fallback value if the above calls return invalid results.
-    HdStTextureResourceHandleSharedPtr
-    _GetTextureResourceHandleFromSceneDelegate(
-        HdSceneDelegate * sceneDelegate,
-        HdStResourceRegistrySharedPtr const& resourceRegistry,
-        HdStMaterialNetwork::TextureDescriptor const &desc);
-
     // Processes the texture descriptors from a material network to
-    // create textures using either the Storm texture system or the
-    // HdSceneDelegate::GetTextureResource/ID.
+    // create textures using the Storm texture system.
     //
     // Adds buffer specs/sources necessary for textures, e.g., bindless
     // handles or sampling transform for field textures.
@@ -131,7 +119,6 @@ private:
         std::weak_ptr<HdStShaderCode> const &shaderCode,
         HdStMaterialNetwork::TextureDescriptorVector const &descs,
         HdStShaderCode::NamedTextureHandleVector * texturesFromStorm,
-        HdStShaderCode::TextureDescriptorVector * texturesFromSceneDelegate,
         HdBufferSpecVector * specs,
         HdBufferSourceSharedPtrVector * sources);
     
@@ -142,12 +129,8 @@ private:
 
     static HioGlslfx *_fallbackGlslfx;
 
-    HdStSurfaceShaderSharedPtr _surfaceShader;
-
-    // Holds fallback textures if a texture cannot be found, but also holds
-    // texture we discovered inside a material network that could not be found
-    // in the resource registry (no Bprim inserted).
-    HdStTextureResourceHandleSharedPtrVector _internalTextureResourceHandles;
+    HdSt_MaterialNetworkShaderSharedPtr _materialNetworkShader;
+    VolumeMaterialData _volumeMaterialData;
 
     bool _isInitialized : 1;
     bool _hasPtex : 1;
@@ -155,16 +138,10 @@ private:
     bool _hasDisplacement : 1;
 
     TfToken _materialTag;
+    size_t _textureHash;
 
     HdStMaterialNetwork _networkProcessor;
 };
-
-inline HdTextureResource::ID
-HdStMaterial::GetTextureResourceID(HdSceneDelegate* sceneDelegate,
-                               SdfPath const& textureId) const
-{
-    return sceneDelegate->GetTextureResourceID(textureId);
-}
 
 inline bool HdStMaterial::HasPtex() const
 {
@@ -185,6 +162,12 @@ inline const TfToken& HdStMaterial::GetMaterialTag() const
 {
     return _materialTag;
 }
+
+inline const HdStMaterial::VolumeMaterialData &
+HdStMaterial::GetVolumeMaterialData() const {
+    return _volumeMaterialData;
+}
+
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
