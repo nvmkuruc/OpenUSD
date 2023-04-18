@@ -312,6 +312,15 @@ pxr_build_test_shared_lib(TestTfRegistryFunctionPlugin
         testenv/TestTfRegistryFunctionPlugin.cpp
 )
 
+if(WIN32)
+    pxr_build_test(testAtomicRenameUtil
+        LIBRARIES
+            tf
+        CPPFILES
+            testenv/testAtomicRenameUtil.cpp
+    )
+endif()
+
 pxr_build_test(testTfCast
     LIBRARIES
         tf
@@ -378,6 +387,7 @@ pxr_build_test(testTf
 )
 
 pxr_test_scripts(
+    testenv/testTfAtomicRenameUtil.py
     testenv/testTfCrashHandler.py
     testenv/testTfFileUtils.py
     testenv/testTfNamedTemporaryFile.py
@@ -430,6 +440,12 @@ pxr_register_test(TfAnyUniquePtr
 pxr_register_test(TfAtomicOfstreamWrapper
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTf TfAtomicOfstreamWrapper"
 )
+if(WIN32)
+    pxr_register_test(TfAtomicRenameUtil
+        PYTHON
+        COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTfAtomicRenameUtil ${CMAKE_INSTALL_PREFIX}/tests/testAtomicRenameUtil.exe"
+    )
+endif()
 pxr_register_test(TfBitUtils
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTf TfBitUtils"
 )
