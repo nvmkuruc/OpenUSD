@@ -104,23 +104,6 @@ Tf_AtomicRenameFileOver(std::string const &srcFileName,
     static const int numRetries = std::max(TfGetEnvSetting(TF_FILE_LOCK_NUM_RETRIES), 0);
     static const int waitMS = TfGetEnvSetting(TF_FILE_LOCK_RETRY_WAIT_MS);
 
-    auto wasLocked = [](
-        const auto errorCode,
-        const std::string& sourceFile,
-        const std::string& destFile
-    ) {
-        switch(errorCode) {
-            case ERROR_SHARING_VIOLATION:
-            case ERROR_LOCK_VIOLATION:
-                return true;
-            case ERROR_ACCESS_DENIED:
-                // Access denied could be due to permissions or lock...
-                return HaveMovePermissions(sourceFile, destFile);
-            default:
-                return false;
-        }
-    };
-
     bool moved = false;
     DWORD lastError = 0;
 
@@ -130,7 +113,15 @@ Tf_AtomicRenameFileOver(std::string const &srcFileName,
             break;
         }
         lastError = ::GetLastError();
-        if (!wasLocked(lastError, srcFileName, dstFileName)) {
+        // Only check file perms the first time as an optimization - it's a
+        // filesystem operation, and possibly slow
+        if (i == 0 && !HaveMovePermissions(srcFileName, dstFileName)) {
+            break;
+        }
+        if (lastError != ERROR_SHARING_VIOLATION
+            && lastError != ERROR_LOCK_VIOLATION
+            && lastError != ERROR_ACCESS_DENIED
+        ) {
             break;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(waitMS));

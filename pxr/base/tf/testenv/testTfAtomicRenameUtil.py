@@ -24,6 +24,7 @@
 #
 import argparse
 import glob
+import math
 import os
 import platform
 import shutil
@@ -86,6 +87,7 @@ if platform.system() == "Windows":
             # directory that will contain the test output file - should either
             # be self.tempdir or a subdirectory
             self.testingdir = ""
+            self.timer_start = -math.inf
             super().__init__(*args, **kwargs)
 
         def assert_new_content(self):
@@ -159,12 +161,6 @@ if platform.system() == "Windows":
             self._assert_testAtomicRenameUtil(
                 do_retry, False, wait_for_file=wait_for_file, post_launch_callback=post_launch_callback
             )
-
-        def assertFast(self, func, *args, **kwargs):
-            start = time.perf_counter()
-            func(*args, **kwargs)
-            finish = time.perf_counter()
-            self.assertLess(finish - start, self.retry_wait_seconds)
 
         def wait_for_temp_files(self, proc: subprocess.Popen):
             start = time.perf_counter()
@@ -294,14 +290,18 @@ if platform.system() == "Windows":
                     # then create the wait_for_file
                     with open(sentry_path, "w", encoding="utf8") as _writer:
                         pass
+                    # then start our timer
+                    self.timer_start = time.perf_counter()
 
                 try:
-                    self.assertFast(
-                        self.assertFailure_testAtomicRenameUtil,
+                    self.assertFailure_testAtomicRenameUtil(
                         do_retries,
                         wait_for_file=sentry_path,
                         post_launch_callback=wait_for_temp_then_lock_then_create,
                     )
+                    timer_end = time.perf_counter()
+                    # Check that it didn't retry, and failed quickly
+                    self.assertLess(timer_end - self.timer_start, self.retry_wait_seconds)
                 finally:
                     folder_perms_reset(self.testingdir)
 
