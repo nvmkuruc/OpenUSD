@@ -266,7 +266,7 @@ UsdProcImagingGenerativeProceduralAdapter::TrackVariability(
     SdfPath const& cachePath,
     HdDirtyBits* timeVaryingBits,
     UsdImagingInstancerContext const* instancerContext,
-    // #nv begin fast-updates
+    // #nv begin #fast-updates
     bool checkVariability) const
     // nv end
 {

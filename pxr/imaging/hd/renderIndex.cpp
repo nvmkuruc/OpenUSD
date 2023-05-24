@@ -1082,7 +1082,7 @@ namespace {
             request.dirtyBits.push_back(dirtyBits);
         }
 
-        // #nv begin omni-hydra
+        // #nv begin #omni-hydra
         void Reserve(size_t newSize)
         {
             rprims.reserve(newSize);
@@ -1158,7 +1158,7 @@ namespace {
                      _CollectionReprSpecVector const &reprSpecs,
                      HdChangeTracker &tracker,
                      HdRenderParam *renderParam,
-                     // #nv begin omni-hydra
+                     // #nv begin #omni-hydra
                      bool useDefaultRepr = false)
                      // nv end
          : _sceneDelegate(sceneDelegate)
@@ -1700,7 +1700,7 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
                                    std::placeholders::_2));
     }
 
-    // #nv begin omni-hydra
+    // #nv begin #omni-hydra
 
     // sync each post scene delegate
     TF_FOR_ALL(dlgIt, _postSyncMap) {

@@ -553,7 +553,7 @@ public:
                     delegate->_timeVaryingPrimCacheValid = false;
                     adapter->TrackVariability(primInfo->usdPrim, affectedCachePath,
                         &primInfo->timeVaryingBits,
-                        // #nv begin fast-updates
+                        // #nv begin #fast-updates
                         nullptr /* instancerContext */, checkVariability);
                         // nv end
 
@@ -580,11 +580,11 @@ public:
 void 
 UsdImagingDelegate::_AddTask(
     UsdImagingDelegate::_Worker *worker, SdfPath const& cachePath,
-    // #nv begin fast-updates
+    // #nv begin #fast-updates
     bool checkVariability)
     // nv end
 {
-    // #nv begin fast-updates
+    // #nv begin #fast-updates
     worker->AddTask(cachePath);// ,
         //nullptr, nullptr, nullptr, checkVariability);
     // nv end
@@ -2950,6 +2950,14 @@ UsdImagingDelegate::ProcessNonAdapterBasedPropertyChange(UsdPrim const& prim,
         return HdChangeTracker::Clean;
 
     return HdChangeTracker::AllDirty;
+}
+// nv end
+
+// #nv begin #fast-updates
+bool
+UsdImagingDelegate::HasPendingFastUpdates() const
+{
+    return !(_fastUpdates.empty());
 }
 // nv end
 

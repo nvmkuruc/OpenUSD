@@ -101,7 +101,7 @@ struct HdMaterialNode
 {
     SdfPath path;
     TfToken identifier;
-// #nv begin #new-MDL-schema    
+// #nv begin #new-mdl-schema    
     TfToken subIdentifier;
 // #nv end    
     std::map<TfToken, VtValue> parameters;

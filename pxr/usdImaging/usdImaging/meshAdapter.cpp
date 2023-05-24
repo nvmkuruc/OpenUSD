@@ -149,17 +149,17 @@ UsdImagingMeshAdapter::TrackVariability(UsdPrim const& prim,
                                         HdDirtyBits* timeVaryingBits,
                                         UsdImagingInstancerContext const* 
                                             instancerContext,
-                                        // #nv begin fast-updates
+                                        // #nv begin #fast-updates
                                         bool checkVariability) const
                                         // nv end
 {
     BaseAdapter::TrackVariability(
         prim, cachePath, timeVaryingBits, instancerContext,
-        // #nv begin fast-updates
+        // #nv begin #fast-updates
         checkVariability);
         // nv end
 
-    // #nv begin fast-updates
+    // #nv begin #fast-updates
     // Early out, as base adapter will have populated the value cache.
     if (!checkVariability)
         return;

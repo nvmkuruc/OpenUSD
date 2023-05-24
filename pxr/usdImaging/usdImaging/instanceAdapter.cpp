@@ -549,7 +549,7 @@ UsdImagingInstanceAdapter::TrackVariability(UsdPrim const& prim,
                                   HdDirtyBits* timeVaryingBits,
                                   UsdImagingInstancerContext const* 
                                       instancerContext,
-                                  // #nv begin fast-updates
+                                  // #nv begin #fast-updates
                                   bool checkVariability) const
                                   // nv end
 {
@@ -565,7 +565,7 @@ UsdImagingInstanceAdapter::TrackVariability(UsdPrim const& prim,
         UsdPrim protoPrim = _GetPrim(proto.path);
         proto.adapter->TrackVariability(protoPrim, cachePath,
             timeVaryingBits, &instancerContext,
-            // #nv begin fast-updates
+            // #nv begin #fast-updates
             checkVariability);
             // nv end
     } else if (_InstancerData const* instrData =
@@ -577,7 +577,7 @@ UsdImagingInstanceAdapter::TrackVariability(UsdPrim const& prim,
         valueCache->GetPurpose(cachePath) = UsdGeomTokens->default_;
 #endif
 
-        // #nv begin fast-updates
+        // #nv begin #fast-updates
         if (checkVariability) {
         // nv end
             // Count how many instances there are in total (used for the loop
@@ -2159,7 +2159,7 @@ UsdImagingInstanceAdapter::_ResyncInstancer(SdfPath const& instancerPath,
         _instanceToInstancerMap.erase(it);
     }
 
-    // #nv begin instance-map-caching
+    // #nv begin #instance-map-caching
     if (UsdImagingInstancerAdapter_CacheInstanceMaps()) {
         tbb::spin_mutex::scoped_lock lock(_instanceMapCacheMutex);
         _instanceMapCache.erase(instIt->first);

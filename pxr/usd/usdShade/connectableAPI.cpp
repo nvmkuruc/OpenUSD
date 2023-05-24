@@ -31,7 +31,7 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-// #nv begin old-mdl-schema
+// #nv begin #old-mdl-schema
 static bool UsdShadeConnectableAPI_OldMdlSupported() {
     static bool _v = TfGetEnvSetting(USDSHADE_OLD_MDL_SCHEMA_SUPPORT) == 1;
     return _v;

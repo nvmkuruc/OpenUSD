@@ -356,7 +356,7 @@ public:
     HD_API
     virtual void Sync(HdSyncRequestVector* request);
 
-    // #nv begin #omni_hydra
+    // #nv begin #omni-hydra
     /// Opportunity for the delegate to add additional dirty bit after sync is done.
     /// This allows scene delegate derived from other scene delegate perform necessary modification to sync request,
     /// without affecting performance of render index.
