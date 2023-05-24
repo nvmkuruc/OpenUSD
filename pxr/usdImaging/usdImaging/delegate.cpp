@@ -2953,14 +2953,6 @@ UsdImagingDelegate::ProcessNonAdapterBasedPropertyChange(UsdPrim const& prim,
 }
 // nv end
 
-// #nv begin #fast-updates
-bool
-UsdImagingDelegate::HasPendingFastUpdates() const
-{
-    return !(_fastUpdates.empty());
-}
-// nv end
-
 /*virtual*/
 bool
 UsdImagingDelegate::GetVisible(SdfPath const& id)
