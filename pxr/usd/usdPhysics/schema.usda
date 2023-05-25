@@ -213,12 +213,21 @@ class "PhysicsDeformableBodyAPI"
         string className = "DeformableBodyAPI"
     }
 
-    doc = """Applied to a UsdGeomGPrim that is to be driven by a deformable body simulation.  The material properties of such a body are to be governed by the applied materials."""
+    doc = """Applied to either a UsdGeomTetMesh, UsdGeomMesh, UsdGeomBasisCurves/UsdGeomBasisCurveNetwork (a simulation state GPrim that supports a corresponding rest shape API), or to a Scope/XForm - in which case the Scope/XForm needs to be an immediate parent to either a simulation state GPrim or graphical GPrims suitable to define a simulation state GPrim implicitely.  The material properties of such a body are to be governed by the applied materials."""
     inherits = </APISchemaBase>
 	prepend apiSchemas = ["PhysicsBodyAPI"]
 )
 {
-	# empty
+	float physics:mass = 0.0 (
+        customData = {
+            string apiName = "mass"
+        }
+        displayName = "Mass"
+        doc = """If non-zero, directly specifies the mass of the deformable object
+        and overrides the mass properties derived from material density.
+        Note if mass is 0.0 it is ignored. Units: mass.
+        """
+    )
 }
 
 class "PhysicsMassAPI"
@@ -679,7 +688,7 @@ class "PhysicsSurfaceDeformableRestShapeAPI"
         string className = "SurfaceDeformableRestShapeAPI"
     }
 
-    doc = """Defines the rest shape for a UsdGeomMesh."""
+    doc = """Defines the rest shape for a UsdGeomMesh. The UsdGeomMesh needs to contain only triangular faces."""
     inherits = </APISchemaBase>
 )
 {
@@ -723,12 +732,12 @@ class "PhysicsCurveDeformableRestShapeAPI"
         string className = "CurveDeformableRestShapeAPI"
     }
 
-    doc = """Defines the rest shape for a UsdGeomCurves."""
+    doc = """Defines the rest shape for a UsdGeomBasisCurves or a UsdGeomBasisCurvesNetwork. The curve primitive needs to be composed of linear segments."""
     inherits = </APISchemaBase>
 )
 {
     point3f[] physics:restPoints (
-        doc = """Describes the rest shape in (local) space for a UsdGeomCurves."""
+        doc = """Describes the rest shape in (local) space for a UsdGeomBasisCurves or a UsdGeomBasisCurvesNetwork."""
     )
 
     int[] physics:restCurveVertexIndices (
