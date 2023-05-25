@@ -31,11 +31,24 @@ pxr_library(usdPhysics
         limitAPI
         massAPI
         materialAPI
+        rigidMaterialAPI
         meshCollisionAPI
         metrics
         prismaticJoint
         revoluteJoint
         rigidBodyAPI
+        bodyAPI
+        deformableBodyAPI
+        curveDeformableRestShapeAPI
+        curvesDeformableMaterialAPI
+        deformableMaterialAPI
+        deformableRestShapeAPI
+        surfaceDeformableMaterialAPI
+        surfaceDeformableRestShapeAPI
+        vCurveAttach
+        vTetAttach
+        vTriAttach
+        vtxVtxAttach
         scene
         sphericalJoint
         tokens        
@@ -65,6 +78,19 @@ pxr_library(usdPhysics
         wrapPrismaticJoint.cpp
         wrapRevoluteJoint.cpp
         wrapRigidBodyAPI.cpp
+        wrapBodyAPI.cpp
+        wrapDeformableBodyAPI.cpp
+        wrapCurveDeformableRestShapeAPI.cpp
+        wrapCurvesDeformableMaterialAPI.cpp
+        wrapRigidMaterialAPI.cpp
+        wrapDeformableMaterialAPI.cpp
+        wrapDeformableRestShapeAPI.cpp
+        wrapSurfaceDeformableMaterialAPI.cpp
+        wrapSurfaceDeformableRestShapeAPI.cpp
+        wrapVCurveAttach.cpp
+        wrapVTetAttach.cpp
+        wrapVTriAttach.cpp
+        wrapVtxVtxAttach.cpp
         wrapScene.cpp
         wrapSphericalJoint.cpp
         wrapTokens.cpp
