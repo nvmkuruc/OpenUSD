@@ -53,11 +53,11 @@ class SdfAssetPath;
 /// \class UsdPhysicsLimitAPI
 ///
 /// The PhysicsLimitAPI can be applied to a PhysicsJoint and will
-/// restrict the movement along an axis. PhysicsLimitAPI is a multipleApply 
-/// schema: The PhysicsJoint can be restricted along "transX", "transY", 
-/// "transZ", "rotX", "rotY", "rotZ", "distance". Setting these as a 
+/// restrict the movement along an axis. PhysicsLimitAPI is a multipleApply
+/// schema: The PhysicsJoint can be restricted along "transX", "transY",
+/// "transZ", "rotX", "rotY", "rotZ", "distance". Setting these as a
 /// multipleApply schema TfToken name will define the degree of freedom the
-/// PhysicsLimitAPI is applied to. Note that if the low limit is higher than 
+/// PhysicsLimitAPI is applied to. Note that if the low limit is higher than
 /// the high limit, motion along this axis is considered locked.
 ///
 class UsdPhysicsLimitAPI : public UsdAPISchemaBase
@@ -249,7 +249,7 @@ public:
     // --------------------------------------------------------------------- //
     // HIGH 
     // --------------------------------------------------------------------- //
-    /// Upper limit. Units: degrees or distance depending on trans or 
+    /// Upper limit. Units: degrees or distance depending on trans or
     /// rot axis applied to. inf means not limited in positive direction.
     ///
     /// | ||

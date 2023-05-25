@@ -166,6 +166,10 @@ struct UsdPhysicsTokensType {
     /// 
     /// UsdPhysicsSphericalJoint, UsdPhysicsPrismaticJoint, UsdPhysicsRevoluteJoint
     const TfToken physicsAxis;
+    /// \brief "physics:baryCoords"
+    /// 
+    /// UsdPhysicsVTetAttach
+    const TfToken physicsBaryCoords;
     /// \brief "physics:body0"
     /// 
     /// UsdPhysicsJoint
@@ -174,6 +178,10 @@ struct UsdPhysicsTokensType {
     /// 
     /// UsdPhysicsJoint
     const TfToken physicsBody1;
+    /// \brief "physics:bodyEnabled"
+    /// 
+    /// UsdPhysicsBodyAPI
+    const TfToken physicsBodyEnabled;
     /// \brief "physics:breakForce"
     /// 
     /// UsdPhysicsJoint
@@ -198,6 +206,38 @@ struct UsdPhysicsTokensType {
     /// 
     /// UsdPhysicsSphericalJoint
     const TfToken physicsConeAngle1Limit;
+    /// \brief "physics:curveBendStiffness"
+    /// 
+    /// UsdPhysicsCurvesDeformableMaterialAPI
+    const TfToken physicsCurveBendStiffness;
+    /// \brief "physics:curveSegmentCoords"
+    /// 
+    /// UsdPhysicsVCurveAttach
+    const TfToken physicsCurveSegmentCoords;
+    /// \brief "physics:curveSegmentIndices"
+    /// 
+    /// UsdPhysicsVCurveAttach
+    const TfToken physicsCurveSegmentIndices;
+    /// \brief "physics:curveSrc"
+    /// 
+    /// UsdPhysicsVCurveAttach
+    const TfToken physicsCurveSrc;
+    /// \brief "physics:curveStretchStiffness"
+    /// 
+    /// UsdPhysicsCurvesDeformableMaterialAPI
+    const TfToken physicsCurveStretchStiffness;
+    /// \brief "physics:curveThickness"
+    /// 
+    /// UsdPhysicsCurvesDeformableMaterialAPI
+    const TfToken physicsCurveThickness;
+    /// \brief "physics:curveTwistStiffness"
+    /// 
+    /// UsdPhysicsCurvesDeformableMaterialAPI
+    const TfToken physicsCurveTwistStiffness;
+    /// \brief "physics:damping"
+    /// 
+    /// UsdPhysicsVCurveAttach, UsdPhysicsVTetAttach, UsdPhysicsVTriAttach, UsdPhysicsVtxVtxAttach
+    const TfToken physicsDamping;
     /// \brief "physics:density"
     /// 
     /// UsdPhysicsMaterialAPI, UsdPhysicsMassAPI
@@ -210,10 +250,22 @@ struct UsdPhysicsTokensType {
     /// 
     /// UsdPhysicsMaterialAPI
     const TfToken physicsDynamicFriction;
+    /// \brief "physics:edgeBendAngles"
+    /// 
+    /// UsdPhysicsSurfaceDeformableRestShapeAPI
+    const TfToken physicsEdgeBendAngles;
+    /// \brief "physics:edgeVertPairs"
+    /// 
+    /// UsdPhysicsSurfaceDeformableRestShapeAPI
+    const TfToken physicsEdgeVertPairs;
     /// \brief "physics:excludeFromArticulation"
     /// 
     /// UsdPhysicsJoint
     const TfToken physicsExcludeFromArticulation;
+    /// \brief "physics:faceCoords"
+    /// 
+    /// UsdPhysicsVTriAttach
+    const TfToken physicsFaceCoords;
     /// \brief "physics:filteredGroups"
     /// 
     /// UsdPhysicsCollisionGroup
@@ -240,7 +292,7 @@ struct UsdPhysicsTokensType {
     const TfToken physicsJointEnabled;
     /// \brief "physics:kinematicEnabled"
     /// 
-    /// UsdPhysicsRigidBodyAPI
+    /// UsdPhysicsBodyAPI
     const TfToken physicsKinematicEnabled;
     /// \brief "physics:localPos0"
     /// 
@@ -278,30 +330,90 @@ struct UsdPhysicsTokensType {
     /// 
     /// UsdPhysicsDistanceJoint
     const TfToken physicsMinDistance;
+    /// \brief "physics:poissonsRatio"
+    /// 
+    /// UsdPhysicsDeformableMaterialAPI
+    const TfToken physicsPoissonsRatio;
     /// \brief "physics:principalAxes"
     /// 
     /// UsdPhysicsMassAPI
     const TfToken physicsPrincipalAxes;
+    /// \brief "physics:restCurveVertexIndices"
+    /// 
+    /// UsdPhysicsCurveDeformableRestShapeAPI
+    const TfToken physicsRestCurveVertexIndices;
+    /// \brief "physics:restFaceIndices"
+    /// 
+    /// UsdPhysicsSurfaceDeformableRestShapeAPI
+    const TfToken physicsRestFaceIndices;
     /// \brief "physics:restitution"
     /// 
-    /// UsdPhysicsMaterialAPI
+    /// UsdPhysicsRigidMaterialAPI
     const TfToken physicsRestitution;
-    /// \brief "physics:rigidBodyEnabled"
+    /// \brief "physics:restNormals"
     /// 
-    /// UsdPhysicsRigidBodyAPI
-    const TfToken physicsRigidBodyEnabled;
+    /// UsdPhysicsCurveDeformableRestShapeAPI
+    const TfToken physicsRestNormals;
+    /// \brief "physics:restPoints"
+    /// 
+    /// UsdPhysicsCurveDeformableRestShapeAPI
+    const TfToken physicsRestPoints;
+    /// \brief "physics:restShapePoints"
+    /// 
+    /// UsdPhysicsSurfaceDeformableRestShapeAPI, UsdPhysicsDeformableRestShapeAPI
+    const TfToken physicsRestShapePoints;
+    /// \brief "physics:restTetIndices"
+    /// 
+    /// UsdPhysicsDeformableRestShapeAPI
+    const TfToken physicsRestTetIndices;
     /// \brief "physics:simulationOwner"
     /// 
-    /// UsdPhysicsCollisionAPI, UsdPhysicsRigidBodyAPI
+    /// UsdPhysicsCollisionAPI, UsdPhysicsBodyAPI
     const TfToken physicsSimulationOwner;
     /// \brief "physics:startsAsleep"
     /// 
-    /// UsdPhysicsRigidBodyAPI
+    /// UsdPhysicsBodyAPI
     const TfToken physicsStartsAsleep;
     /// \brief "physics:staticFriction"
     /// 
     /// UsdPhysicsMaterialAPI
     const TfToken physicsStaticFriction;
+    /// \brief "physics:stiffness"
+    /// 
+    /// UsdPhysicsVCurveAttach, UsdPhysicsVTetAttach, UsdPhysicsVTriAttach, UsdPhysicsVtxVtxAttach
+    const TfToken physicsStiffness;
+    /// \brief "physics:surfaceBendStiffness"
+    /// 
+    /// UsdPhysicsSurfaceDeformableMaterialAPI
+    const TfToken physicsSurfaceBendStiffness;
+    /// \brief "physics:surfaceShearStiffness"
+    /// 
+    /// UsdPhysicsSurfaceDeformableMaterialAPI
+    const TfToken physicsSurfaceShearStiffness;
+    /// \brief "physics:surfaceStretchStiffness"
+    /// 
+    /// UsdPhysicsSurfaceDeformableMaterialAPI
+    const TfToken physicsSurfaceStretchStiffness;
+    /// \brief "physics:surfaceThickness"
+    /// 
+    /// UsdPhysicsSurfaceDeformableMaterialAPI
+    const TfToken physicsSurfaceThickness;
+    /// \brief "physics:tetIndices"
+    /// 
+    /// UsdPhysicsVTetAttach
+    const TfToken physicsTetIndices;
+    /// \brief "physics:tetSrc"
+    /// 
+    /// UsdPhysicsVTetAttach
+    const TfToken physicsTetSrc;
+    /// \brief "physics:triIndices"
+    /// 
+    /// UsdPhysicsVTriAttach
+    const TfToken physicsTriIndices;
+    /// \brief "physics:triSrc"
+    /// 
+    /// UsdPhysicsVTriAttach
+    const TfToken physicsTriSrc;
     /// \brief "physics:upperLimit"
     /// 
     /// UsdPhysicsPrismaticJoint, UsdPhysicsRevoluteJoint
@@ -310,6 +422,34 @@ struct UsdPhysicsTokensType {
     /// 
     /// UsdPhysicsRigidBodyAPI
     const TfToken physicsVelocity;
+    /// \brief "physics:vtxIndices"
+    /// 
+    /// UsdPhysicsVCurveAttach, UsdPhysicsVTetAttach, UsdPhysicsVTriAttach
+    const TfToken physicsVtxIndices;
+    /// \brief "physics:vtxIndices0"
+    /// 
+    /// UsdPhysicsVtxVtxAttach
+    const TfToken physicsVtxIndices0;
+    /// \brief "physics:vtxIndices1"
+    /// 
+    /// UsdPhysicsVtxVtxAttach
+    const TfToken physicsVtxIndices1;
+    /// \brief "physics:vtxSrc"
+    /// 
+    /// UsdPhysicsVCurveAttach, UsdPhysicsVTetAttach, UsdPhysicsVTriAttach
+    const TfToken physicsVtxSrc;
+    /// \brief "physics:vtxSrc1"
+    /// 
+    /// UsdPhysicsVtxVtxAttach
+    const TfToken physicsVtxSrc1;
+    /// \brief "physics:vtxSrc2"
+    /// 
+    /// UsdPhysicsVtxVtxAttach
+    const TfToken physicsVtxSrc2;
+    /// \brief "physics:youngsModulus"
+    /// 
+    /// UsdPhysicsDeformableMaterialAPI
+    const TfToken physicsYoungsModulus;
     /// \brief "rotX"
     /// 
     ///  This token represents the rotate around X axis degree of freedom used in Joint Limits and Drives. 

@@ -65,13 +65,6 @@ _CreateStaticFrictionAttr(UsdPhysicsMaterialAPI &self,
 }
         
 static UsdAttribute
-_CreateRestitutionAttr(UsdPhysicsMaterialAPI &self,
-                                      object defaultVal, bool writeSparsely) {
-    return self.CreateRestitutionAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float), writeSparsely);
-}
-        
-static UsdAttribute
 _CreateDensityAttr(UsdPhysicsMaterialAPI &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreateDensityAttr(
@@ -152,13 +145,6 @@ void wrapUsdPhysicsMaterialAPI()
              &This::GetStaticFrictionAttr)
         .def("CreateStaticFrictionAttr",
              &_CreateStaticFrictionAttr,
-             (arg("defaultValue")=object(),
-              arg("writeSparsely")=false))
-        
-        .def("GetRestitutionAttr",
-             &This::GetRestitutionAttr)
-        .def("CreateRestitutionAttr",
-             &_CreateRestitutionAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
         

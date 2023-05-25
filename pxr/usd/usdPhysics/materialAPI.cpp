@@ -143,23 +143,6 @@ UsdPhysicsMaterialAPI::CreateStaticFrictionAttr(VtValue const &defaultValue, boo
 }
 
 UsdAttribute
-UsdPhysicsMaterialAPI::GetRestitutionAttr() const
-{
-    return GetPrim().GetAttribute(UsdPhysicsTokens->physicsRestitution);
-}
-
-UsdAttribute
-UsdPhysicsMaterialAPI::CreateRestitutionAttr(VtValue const &defaultValue, bool writeSparsely) const
-{
-    return UsdSchemaBase::_CreateAttr(UsdPhysicsTokens->physicsRestitution,
-                       SdfValueTypeNames->Float,
-                       /* custom = */ false,
-                       SdfVariabilityVarying,
-                       defaultValue,
-                       writeSparsely);
-}
-
-UsdAttribute
 UsdPhysicsMaterialAPI::GetDensityAttr() const
 {
     return GetPrim().GetAttribute(UsdPhysicsTokens->physicsDensity);
@@ -195,7 +178,6 @@ UsdPhysicsMaterialAPI::GetSchemaAttributeNames(bool includeInherited)
     static TfTokenVector localNames = {
         UsdPhysicsTokens->physicsDynamicFriction,
         UsdPhysicsTokens->physicsStaticFriction,
-        UsdPhysicsTokens->physicsRestitution,
         UsdPhysicsTokens->physicsDensity,
     };
     static TfTokenVector allNames =

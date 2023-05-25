@@ -174,17 +174,17 @@ public:
     // APPROXIMATION 
     // --------------------------------------------------------------------- //
     /// Determines the mesh's collision approximation:
-    /// "none" - The mesh geometry is used directly as a collider without any 
+    /// "none" - The mesh geometry is used directly as a collider without any
     /// approximation.
-    /// "convexDecomposition" - A convex mesh decomposition is performed. This 
+    /// "convexDecomposition" - A convex mesh decomposition is performed. This
     /// results in a set of convex mesh colliders.
-    /// "convexHull" - A convex hull of the mesh is generated and used as the 
+    /// "convexHull" - A convex hull of the mesh is generated and used as the
     /// collider.
-    /// "boundingSphere" - A bounding sphere is computed around the mesh and used 
+    /// "boundingSphere" - A bounding sphere is computed around the mesh and used
     /// as a collider.
-    /// "boundingCube" - An optimally fitting box collider is computed around the 
+    /// "boundingCube" - An optimally fitting box collider is computed around the
     /// mesh.
-    /// "meshSimplification" - A mesh simplification step is performed, resulting 
+    /// "meshSimplification" - A mesh simplification step is performed, resulting
     /// in a simplified triangle mesh collider.
     ///
     /// | ||

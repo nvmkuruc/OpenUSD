@@ -54,12 +54,12 @@ class SdfAssetPath;
 
 /// \class UsdPhysicsCollisionGroup
 ///
-/// Defines a collision group for coarse filtering. When a collision 
+/// Defines a collision group for coarse filtering. When a collision
 /// occurs between two objects that have a PhysicsCollisionGroup assigned,
-/// they will collide with each other unless this PhysicsCollisionGroup pair 
+/// they will collide with each other unless this PhysicsCollisionGroup pair
 /// is filtered. See filteredGroups attribute.
 /// 
-/// A CollectionAPI:colliders maintains a list of PhysicsCollisionAPI rel-s that 
+/// A CollectionAPI:colliders maintains a list of PhysicsCollisionAPI rel-s that
 /// defines the members of this Collisiongroup.
 /// 
 ///
@@ -211,7 +211,7 @@ public:
     // --------------------------------------------------------------------- //
     // FILTEREDGROUPS 
     // --------------------------------------------------------------------- //
-    /// References a list of PhysicsCollisionGroups with which 
+    /// References a list of PhysicsCollisionGroups with which
     /// collisions should be ignored.
     ///
     USDPHYSICS_API

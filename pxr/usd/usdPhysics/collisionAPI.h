@@ -52,10 +52,10 @@ class SdfAssetPath;
 
 /// \class UsdPhysicsCollisionAPI
 ///
-/// Applies collision attributes to a UsdGeomXformable prim. If a 
-/// simulation is running, this geometry will collide with other geometries that 
+/// Applies collision attributes to a UsdGeomXformable prim. If a
+/// simulation is running, this geometry will collide with other geometries that
 /// have PhysicsCollisionAPI applied. If a prim in the parent hierarchy has the
-/// RigidBodyAPI applied, this collider is a part of that body. If there is 
+/// RigidBodyAPI applied, this collider is a part of that body. If there is
 /// no body in the parent hierarchy, this collider is considered to be static.
 ///
 class UsdPhysicsCollisionAPI : public UsdAPISchemaBase
@@ -192,7 +192,7 @@ public:
     // --------------------------------------------------------------------- //
     // SIMULATIONOWNER 
     // --------------------------------------------------------------------- //
-    /// Single PhysicsScene that will simulate this collider. 
+    /// Single PhysicsScene that will simulate this collider.
     /// By default this object belongs to the first PhysicsScene.
     /// Note that if a RigidBodyAPI in the hierarchy above has a different
     /// simulationOwner then it has a precedence over this relationship.

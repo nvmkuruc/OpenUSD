@@ -9,6 +9,7 @@ over "GLOBAL" (
 	customData = {
 	string libraryName = "usdPhysics"
 	string libraryPath = "pxr/usd/usdPhysics"
+    bool useLiteralIdentifier = 0
     dictionary libraryTokens = {
         dictionary colliders = {
             string doc = """
@@ -98,7 +99,7 @@ class PhysicsScene "PhysicsScene"
         }
         displayName = "Gravity Direction"
         doc = """Gravity direction vector in simulation world space. Will be
-        normalized before use. A zero vector is a request to use the negative 
+        normalized before use. A zero vector is a request to use the negative
         upAxis. Unitless."""
     )
 
@@ -107,38 +108,33 @@ class PhysicsScene "PhysicsScene"
             string apiName = "gravityMagnitude"
         }
         displayName = "Gravity Magnitude"
-        doc = """Gravity acceleration magnitude in simulation world space. 
-        A negative value is a request to use a value equivalent to earth 
-        gravity regardless of the metersPerUnit scaling used by this scene. 
+        doc = """Gravity acceleration magnitude in simulation world space.
+        A negative value is a request to use a value equivalent to earth
+        gravity regardless of the metersPerUnit scaling used by this scene.
         Units: distance/second/second."""
     )
 }
 
-class "PhysicsRigidBodyAPI"
+
+class "PhysicsBodyAPI"
 (
     customData = {
-        string className = "RigidBodyAPI"
-        string extraIncludes = """
-#include "pxr/base/gf/matrix3f.h"
-#include "pxr/base/gf/quatf.h" """
+        string className = "BodyAPI"
     }
-    doc = """Applies physics body attributes to any UsdGeomXformable prim and
-    marks that prim to be driven by a simulation. If a simulation is running
-    it will update this prim's pose. All prims in the hierarchy below this 
-    prim should move accordingly."""
+    doc = """Applies shared physics simulation attributes to any UsdGeomXformable prim and
+    marks that prim to be driven by a simulation. The specific behavior of the prim
+	depends on additional physics APIs applied."""
 
     inherits = </APISchemaBase>
-    
 )
 
 {
-
-    bool physics:rigidBodyEnabled = true (
+    bool physics:bodyEnabled = true (
         customData = {
-            string apiName = "rigidBodyEnabled"
+            string apiName = "bodyEnabled"
         }
-        displayName = "Rigid Body Enabled"
-        doc = """Determines if this PhysicsRigidBodyAPI is enabled."""
+        displayName = "Body Enabled"
+        doc = """Determines if this PhysicsBodyAPI is enabled."""
     )
 
   	bool physics:kinematicEnabled = false (
@@ -146,8 +142,8 @@ class "PhysicsRigidBodyAPI"
             string apiName = "kinematicEnabled"
         }
         displayName = "Kinematic Enabled"
-        doc = """Determines whether the body is kinematic or not. A kinematic 
-        body is a body that is moved through animated poses or through 
+        doc = """Determines whether the body is kinematic or not. A kinematic
+        body is a body that is moved through animated poses or through
         user defined poses. The simulation derives velocities for the
         kinematic body based on the external motion. When a continuous motion
         is not desired, this kinematic flag should be set to false."""
@@ -158,8 +154,8 @@ class "PhysicsRigidBodyAPI"
             string apiName = "simulationOwner"
         }
         displayName = "Simulation Owner"
-        doc = """Single PhysicsScene that will simulate this body. By 
-        default this is the first PhysicsScene found in the stage using 
+        doc = """Single PhysicsScene that will simulate this body. By
+        default this is the first PhysicsScene found in the stage using
         UsdStage::Traverse()."""
 
     )
@@ -171,13 +167,33 @@ class "PhysicsRigidBodyAPI"
         displayName = "Starts as Asleep"
         doc = "Determines if the body is asleep when the simulation starts."
     )
-    
+}
+
+class "PhysicsRigidBodyAPI"
+(
+    customData = {
+        string className = "RigidBodyAPI"
+        string extraIncludes = """
+#include "pxr/base/gf/matrix3f.h"
+#include "pxr/base/gf/quatf.h" """
+    }
+
+    doc = """Applies physics body attributes to any UsdGeomXformable prim and
+    marks that prim to be driven by a simulation. If a simulation is running
+    it will update this prim's pose. All prims in the hierarchy below this
+    prim should move accordingly."""
+
+    inherits = </APISchemaBase>
+	prepend apiSchemas = ["PhysicsBodyAPI"]
+)
+
+{
     vector3f physics:velocity= (0.0, 0.0, 0.0) (
         customData = {
             string apiName = "velocity"
         }
         displayName = "Linear Velocity"
-        doc = """Linear velocity in the same space as the node's xform. 
+        doc = """Linear velocity in the same space as the node's xform.
         Units: distance/second."""
     )
 
@@ -186,9 +202,23 @@ class "PhysicsRigidBodyAPI"
             string apiName = "angularVelocity"
         }
         displayName = "Angular Velocity"
-        doc = """Angular velocity in the same space as the node's xform. 
+        doc = """Angular velocity in the same space as the node's xform.
         Units: degrees/second."""
-    )    
+    )
+}
+
+class "PhysicsDeformableBodyAPI"
+(
+    customData = {
+        string className = "DeformableBodyAPI"
+    }
+
+    doc = """Applied to a UsdGeomGPrim that is to be driven by a deformable body simulation.  The material properties of such a body are to be governed by the applied materials."""
+    inherits = </APISchemaBase>
+	prepend apiSchemas = ["PhysicsBodyAPI"]
+)
+{
+	# empty
 }
 
 class "PhysicsMassAPI"
@@ -197,7 +227,7 @@ class "PhysicsMassAPI"
         string className = "MassAPI"
     }
 
-    doc = """Defines explicit mass properties (mass, density, inertia etc.).        
+    doc = """Defines explicit mass properties (mass, density, inertia etc.).
     MassAPI can be applied to any object that has a PhysicsCollisionAPI or
     a PhysicsRigidBodyAPI."""
 
@@ -212,10 +242,10 @@ class "PhysicsMassAPI"
         doc = """If non-zero, directly specifies the mass of the object.
         Note that any child prim can also have a mass when they apply massAPI.
         In this case, the precedence rule is 'parent mass overrides the
-        child's'. This may come as counter-intuitive, but mass is a computed 
-        quantity and in general not accumulative. For example, if a parent 
-        has mass of 10, and one of two children has mass of 20, allowing 
-        child's mass to override its parent results in a mass of -10 for the 
+        child's'. This may come as counter-intuitive, but mass is a computed
+        quantity and in general not accumulative. For example, if a parent
+        has mass of 10, and one of two children has mass of 20, allowing
+        child's mass to override its parent results in a mass of -10 for the
         other child. Note if mass is 0.0 it is ignored. Units: mass.
         """
     )
@@ -226,13 +256,13 @@ class "PhysicsMassAPI"
         }
         displayName = "Density"
         doc = """If non-zero, specifies the density of the object.
-        In the context of rigid body physics, density indirectly results in 
-        setting mass via (mass = density x volume of the object). How the 
+        In the context of rigid body physics, density indirectly results in
+        setting mass via (mass = density x volume of the object). How the
         volume is computed is up to implementation of the physics system.
         It is generally computed from the collision approximation rather than
-        the graphical mesh. In the case where both density and mass are 
-        specified for the same object, mass has precedence over density. 
-        Unlike mass, child's prim's density overrides parent prim's density 
+        the graphical mesh. In the case where both density and mass are
+        specified for the same object, mass has precedence over density.
+        Unlike mass, child's prim's density overrides parent prim's density
         as it is accumulative. Note that density of a collisionAPI can be also
         alternatively set through a PhysicsMaterialAPI. The material density
         has the weakest precedence in density definition. Note if density is
@@ -252,8 +282,8 @@ class "PhysicsMassAPI"
             string apiName = "diagonalInertia"
         }
         displayName = "Diagonal Inertia"
-        doc = """If non-zero, specifies diagonalized inertia tensor along the 
-        principal axes. Note if diagonalInertial is (0.0, 0.0, 0.0) it is 
+        doc = """If non-zero, specifies diagonalized inertia tensor along the
+        principal axes. Note if diagonalInertial is (0.0, 0.0, 0.0) it is
         ignored. Units: mass*distance*distance."""
     )
 
@@ -262,7 +292,7 @@ class "PhysicsMassAPI"
             string apiName = "principalAxes"
         }
         displayName = "Principal Axes"
-        doc = """Orientation of the inertia tensor's principal axes in the 
+        doc = """Orientation of the inertia tensor's principal axes in the
         prim's local space."""
     )
 }
@@ -272,10 +302,10 @@ class "PhysicsCollisionAPI"
     customData = {
         string className = "CollisionAPI"
     }
-    doc = """Applies collision attributes to a UsdGeomXformable prim. If a 
-    simulation is running, this geometry will collide with other geometries that 
+    doc = """Applies collision attributes to a UsdGeomXformable prim. If a
+    simulation is running, this geometry will collide with other geometries that
     have PhysicsCollisionAPI applied. If a prim in the parent hierarchy has the
-    RigidBodyAPI applied, this collider is a part of that body. If there is 
+    RigidBodyAPI applied, this collider is a part of that body. If there is
     no body in the parent hierarchy, this collider is considered to be static."""
 
     inherits = </APISchemaBase>
@@ -294,7 +324,7 @@ class "PhysicsCollisionAPI"
             string apiName = "simulationOwner"
         }
         displayName = "Simulation Owner"
-        doc = """Single PhysicsScene that will simulate this collider. 
+        doc = """Single PhysicsScene that will simulate this collider.
         By default this object belongs to the first PhysicsScene.
         Note that if a RigidBodyAPI in the hierarchy above has a different
         simulationOwner then it has a precedence over this relationship."""
@@ -319,70 +349,22 @@ class "PhysicsMeshCollisionAPI"
         }
 	allowedTokens = ["none","convexDecomposition","convexHull",
 		"boundingSphere","boundingCube","meshSimplification"]
-	
+
     displayName = "Approximation"
 	doc = """Determines the mesh's collision approximation:
-	"none" - The mesh geometry is used directly as a collider without any 
+	"none" - The mesh geometry is used directly as a collider without any
     approximation.
-	"convexDecomposition" - A convex mesh decomposition is performed. This 
+	"convexDecomposition" - A convex mesh decomposition is performed. This
     results in a set of convex mesh colliders.
-	"convexHull" - A convex hull of the mesh is generated and used as the 
+	"convexHull" - A convex hull of the mesh is generated and used as the
     collider.
-	"boundingSphere" - A bounding sphere is computed around the mesh and used 
+	"boundingSphere" - A bounding sphere is computed around the mesh and used
     as a collider.
-	"boundingCube" - An optimally fitting box collider is computed around the 
+	"boundingCube" - An optimally fitting box collider is computed around the
     mesh.
-	"meshSimplification" - A mesh simplification step is performed, resulting 
+	"meshSimplification" - A mesh simplification step is performed, resulting
     in a simplified triangle mesh collider."""
 	)
-}
-
-class "PhysicsMaterialAPI"
-(
-    customData = {
-        string className = "MaterialAPI"
-    }
-    doc = """ Adds simulation material properties to a Material. All collisions 
-    that have a relationship to this material will have their collision response 
-    defined through this material."""
-
-    inherits = </APISchemaBase>
-)
-{
-    float physics:dynamicFriction = 0.0 (
-        customData = {
-            string apiName = "dynamicFriction"
-        }
-        displayName = "Dynamic Friction"
-        doc = """Dynamic friction coefficient. Unitless."""
-    )
-
-    float physics:staticFriction = 0.0 (
-        customData = {
-            string apiName = "staticFriction"
-        }
-        displayName = "Static Friction"
-        doc = """Static friction coefficient. Unitless."""
-    )
-
-    float physics:restitution = 0.0 (
-        customData = {
-            string apiName = "restitution"
-        }
-        displayName = "Restitution"
-        doc = """Restitution coefficient. Unitless."""
-    )
-
-    float physics:density = 0.0 (
-        customData = {
-            string apiName = "density"
-        }
-        displayName = "Density"
-        doc = """If non-zero, defines the density of the material. This can be
-        used for body mass computation, see PhysicsMassAPI.
-        Note that if the density is 0.0 it is ignored. 
-        Units: mass/distance/distance/distance."""
-    )
 }
 
 class PhysicsCollisionGroup "PhysicsCollisionGroup"
@@ -391,13 +373,13 @@ class PhysicsCollisionGroup "PhysicsCollisionGroup"
         string className = "CollisionGroup"
         string extraIncludes = """
 #include "pxr/usd/usd/collectionAPI.h" """
-    }    
-    doc = """Defines a collision group for coarse filtering. When a collision 
+    }
+    doc = """Defines a collision group for coarse filtering. When a collision
     occurs between two objects that have a PhysicsCollisionGroup assigned,
-    they will collide with each other unless this PhysicsCollisionGroup pair 
+    they will collide with each other unless this PhysicsCollisionGroup pair
     is filtered. See filteredGroups attribute.
-    
-    A CollectionAPI:colliders maintains a list of PhysicsCollisionAPI rel-s that 
+
+    A CollectionAPI:colliders maintains a list of PhysicsCollisionAPI rel-s that
     defines the members of this Collisiongroup.
     """
 
@@ -405,13 +387,13 @@ class PhysicsCollisionGroup "PhysicsCollisionGroup"
     prepend apiSchemas = ["CollectionAPI:colliders"]
 )
 {
-	rel physics:filteredGroups (
+    rel physics:filteredGroups (
         customData = {
             string apiName = "filteredGroups"
         }
 
         displayName = "Filtered Groups"
-        doc = """References a list of PhysicsCollisionGroups with which 
+        doc = """References a list of PhysicsCollisionGroups with which
         collisions should be ignored."""
     )
 
@@ -448,13 +430,13 @@ class "PhysicsFilteredPairsAPI"
     doc = """API to describe fine-grained filtering. If a collision between
     two objects occurs, this pair might be filtered if the pair is defined
     through this API. This API can be applied either to a body or collision
-    or even articulation. The "filteredPairs" defines what objects it should 
-    not collide against. Note that FilteredPairsAPI filtering has precedence 
+    or even articulation. The "filteredPairs" defines what objects it should
+    not collide against. Note that FilteredPairsAPI filtering has precedence
     over CollisionGroup filtering."""
 
     inherits = </APISchemaBase>
 )
-{    
+{
     rel physics:filteredPairs (
         customData = {
             string apiName = "filteredPairs"
@@ -464,20 +446,602 @@ class "PhysicsFilteredPairsAPI"
     )
 }
 
+class "PhysicsMaterialAPI"
+(
+    customData = {
+        string className = "MaterialAPI"
+    }
+    doc = """ Adds simulation material properties to a Material. All collisions
+    that have a relationship to this material will have their collision response
+    defined through this material."""
+
+    inherits = </APISchemaBase>
+)
+{
+    float physics:dynamicFriction = 0.0 (
+        customData = {
+            string apiName = "dynamicFriction"
+        }
+        displayName = "Dynamic Friction"
+        doc = """Dynamic friction coefficient. Unitless."""
+    )
+
+    float physics:staticFriction = 0.0 (
+        customData = {
+            string apiName = "staticFriction"
+        }
+        displayName = "Static Friction"
+        doc = """Static friction coefficient. Unitless."""
+    )
+
+    float physics:density = 0.0 (
+        customData = {
+            string apiName = "density"
+        }
+        displayName = "Density"
+        doc = """If non-zero, defines the density of the material. This can be
+        used for body mass computation, see PhysicsMassAPI.
+        Note that if the density is 0.0 it is ignored.
+        Units: mass/distance/distance/distance."""
+    )
+}
+
+class "PhysicsRigidMaterialAPI"
+(
+    customData = {
+        string className = "RigidMaterialAPI"
+    }
+    doc = """ Adds rigid simulation material properties to a Material. All collisions
+    that have a relationship to this material will have their collision response
+    defined through this material."""
+
+    inherits = </APISchemaBase>
+	prepend apiSchemas = ["PhysicsMaterialAPI"]
+)
+{
+    float physics:restitution = 0.0 (
+        customData = {
+            string apiName = "restitution"
+        }
+        displayName = "Restitution"
+        doc = """Restitution coefficient. Unitless."""
+    )
+}
+
+class "PhysicsDeformableMaterialAPI"
+(
+    customData = {
+        string className = "DeformableMaterialAPI"
+    }
+
+    doc = """Defines additional material properties for volumetric deformable bodies."""
+    inherits = </APISchemaBase>
+	prepend apiSchemas = ["PhysicsMaterialAPI"]
+)
+{
+
+    float physics:youngsModulus = 0.0 (
+        customData = {
+            string apiName = "youngsModulus"
+        }
+
+### Units are equivalent to Pascals or force / area.
+
+        displayName = "Young's Modulus"
+        doc = """Young's modulus, i.e. the tensile stiffness of the material.
+            Range: [0, inf)
+            Units: mass/(distance*seconds*seconds)."""
+    )
+
+    float physics:poissonsRatio = 0.25 (
+        customData = {
+            string apiName = "poissonsRatio"
+        }
+
+        displayName = "Poisson's Ratio"
+        doc = """Poissons's ratio which defines the material's volume preservation under stress.
+            Range: [0, 0.5]
+            Units: dimensionless."""
+    )
+}
+
+class "PhysicsCurveDeformableMaterialAPI"
+(
+    customData = {
+        string className = "CurvesDeformableMaterialAPI"
+    }
+
+    doc = """Applied to USD Material in addition to a PhysicsMaterialAPI and
+             DeformableMaterialAPI. Defines additional material properties for
+             deformable curve geometry."""
+    inherits = </APISchemaBase>
+	prepend apiSchemas = ["PhysicsDeformableMaterialAPI"]
+)
+{
+    float physics:curveThickness = 0.0 (
+        customData = {
+            string apiName = "curveThickness"
+        }
+        displayName = "curveThickness"
+        doc = """Diameter along curve. Units: distance."""
+    )
+
+    float physics:curveStretchStiffness = 0.0 (
+        customData = {
+            string apiName = "curveStretchStiffness"
+        }
+        displayName = "Curve Stretch Stiffness"
+        doc = """Optional override for stretching stiffness; by default derived from youngsModulus and curveThickness.  Units are equivalent to Pascals or force / area.
+            Range: [0, inf)
+            Units: mass/(distance*seconds*seconds)."""
+    )
+
+    float physics:curveBendStiffness = 0.0 (
+        customData = {
+            string apiName = "curveBendStiffness"
+        }
+        displayName = "Curve Bend Stiffness"
+        doc = """Optional override for bending stiffness; by default derived from youngsModulus and curveThickness.  Units are equivalent to Pascals or force / area.
+            Range: [0, inf)
+            Units: mass/(distance*seconds*seconds)."""
+    )
+
+    float physics:curveTwistStiffness = 0.0 (
+        customData = {
+            string apiName = "curveTwistStiffness"
+        }
+        displayName = "Curve Twist Stiffness"
+        doc = """Optional override for twisting stiffness; by default derived from youngsModulus and curveThickness.  Units are equivalent to Pascals or force / area.
+            Range: [0, inf)
+            Units: mass/(distance*seconds*seconds)."""
+    )
+}
+class "PhysicsSurfaceDeformableMaterialAPI"
+(
+    customData = {
+        string className = "SurfaceDeformableMaterialAPI"
+    }
+
+    doc = """Applied to USD Material in addition to a PhysicsMaterialAPI and
+             DeformableMaterialAPI. Defines additional material properties for
+             deformable surface geometry."""
+    inherits = </APISchemaBase>
+	prepend apiSchemas = ["PhysicsDeformableMaterialAPI"]
+)
+{
+    float physics:surfaceThickness = 0.0 (
+        customData = {
+            string apiName = "surfaceThickness"
+        }
+        displayName = "surfaceThickness"
+        doc = """Surface thickness. Units: distance."""
+    )
+
+    float physics:surfaceStretchStiffness = 0.0 (
+        customData = {
+            string apiName = "surfaceStretchStiffness"
+        }
+        displayName = "Surface Stretch Stiffness"
+        doc = """Optional override for stretching stiffness; by default derived from youngsModulus and surfaceThickness.  Units are equivalent to Pascals or force / area.
+            Range: [0, inf)
+            Units: mass/(distance*seconds*seconds)."""
+    )
+
+    ### Is Newtons per degree of shear deformation the right unit description?
+    float physics:surfaceShearStiffness = 0.0 (
+        customData = {
+            string apiName = "surfaceShearStiffness"
+        }
+        displayName = "Surface Shear Stiffness"
+        doc = """Optional override for shearing stiffness; by default derived from youngsModulus and surfaceThickness.  Units are equivalent to Pascals or force / area.
+            Range: [0, inf)
+            Units: mass/(distance*seconds*seconds)."""
+    )
+
+    float physics:surfaceBendStiffness = 0.0 (
+        customData = {
+            string apiName = "surfaceBendStiffness"
+        }
+        displayName = "Surface Bend Stiffness"
+        doc = """Optional override for bending stiffness; by default derived from youngsModulus and surfaceThickness.  Units are equivalent to Pascals or force / area.
+            Range: [0, inf)
+            Units: mass/(distance*seconds*seconds)."""
+    )
+}
+
+class "PhysicsDeformableRestShapeAPI"
+(
+    customData = {
+        string className = "DeformableRestShapeAPI"
+    }
+
+    doc = """Defines the rest shape for a UsdGeomTetMesh."""
+    inherits = </APISchemaBase>
+)
+{
+
+    # These points define rest shape of a volume deformable.
+    point3f[] physics:restShapePoints (
+        doc = """Describes shape in (local) space for a PhysicsDeformable."""
+    )
+
+    int4[] physics:restTetIndices (
+        doc = """Per tetrahedral element indices into restTetIndices to describe
+        the rest shape of each tetrahedron. This allows for restTetIndices to
+        have length up to 4*len(restShapePoints) to allow for disjoint per-element rest shape description, or a more compact array when all tetrahedra share
+        conincident points to describe the rest shape of the PhysicsDeformable tetmesh."""
+    )
+}
+
+class "PhysicsSurfaceDeformableRestShapeAPI"
+(
+    customData = {
+        string className = "SurfaceDeformableRestShapeAPI"
+    }
+
+    doc = """Defines the rest shape for a UsdGeomMesh."""
+    inherits = </APISchemaBase>
+)
+{
+    # Planar shape of faces
+    point3f[] physics:restShapePoints (
+        doc = """Describes per triangle planar shape in (local) space for a
+                 SurfaceDeformable. While panel based cloth systems may only
+                 require UV coordinates and not require a third component,
+                 doing so makes it convenient to for an application to
+                 support non-planar shells with a rest shape described in 3D.
+                 One can still use this array for per-face UVs with a little
+                 wasted space."""
+    )
+
+    int3[] physics:restFaceIndices (
+        doc = """Per triangle element indices into restShapePoints to describe
+                 the rest shape of each triangle face. This allows for
+                 restFaceIndices to have length up to 4*len(restShapePoints) to
+                 allow for a disjoint per-element rest shape description, or a
+                 more compact array when all tetrahedra share conincident points
+                 to describe the rest shape of the PhysicsDeformable tetmesh."""
+    )
+
+    # For dihedral bending, it is assumed that rest shape is flat with a value
+    # of zero degrees unless specified by edgeVPairs and edgeVertPairs.
+    int2[] physics:edgeVertPairs (
+        doc = """Pairs of vertex indices used to identify specific edges in
+                 a triangle mesh to set using edgeBendAngles."""
+    )
+
+    float[] physics:edgeBendAngles (
+        doc = """Per-edge rest angles in degrees. Length of edgeBendAngles
+                 should match length of edgeVertPairs.
+                 Range: [-180.0, 180.0)"""
+    )
+}
+
+class "PhysicsCurveDeformableRestShapeAPI"
+(
+    customData = {
+        string className = "CurveDeformableRestShapeAPI"
+    }
+
+    doc = """Defines the rest shape for a UsdGeomCurves."""
+    inherits = </APISchemaBase>
+)
+{
+    point3f[] physics:restPoints (
+        doc = """Describes the rest shape in (local) space for a UsdGeomCurves."""
+    )
+
+    int[] physics:restCurveVertexIndices (
+        doc = """If the shape is a UsdGeomBasisCurvesNetwork, restCurveVertexIndices
+        specifies a flat list of the index into the restPoints attribute of each
+        vertex of each curve. This allows restCurveVertexIndices to describe a
+        disjoint per-curve rest shape that differs from any coincident points
+        described by curveVertexIndices. If the deformable is a UsdGeomBasisCurves,
+        then restCurveVertexIndices is not applicable."""
+    )
+
+    normal3f[] physics:restNormals (
+        doc = """Describes the orientation of the rest curves.
+        Like normals, restNormals is not a generic primvar but the number of elements
+        in this attribute will be determined by its 'interpolation'. See
+        \\ref SetRestNormalsInterpolation(). For example, varying interpolation can
+        be used to specify a normal per curve segment, as described by
+        \\ref UsdGeomBasisCurves_PrimvarInterpolation."""
+    )
+}
+
+class PhysicsVtxVtxAttachment "PhysicsVtxVtxAttachment"
+(
+    customData = {
+        string className = "VtxVtxAttach"
+    }
+    doc = """Describes a fixed binding attachment between vertices of two
+             suitable geometries. The length of
+             vtxIndices1 should always equal that of vtxIndices2. To express
+             multiple connections to the same vertex, use multiple instances
+             of PhysicsVtxVtxAttachment."""
+    inherits = </Imageable>
+)
+{
+    rel physics:vtxSrc1 (
+        customData = {
+            string apiName = "vtxSrc0"
+        }
+        displayName = "Vertex Source0"
+        doc = """Relationship to a single UsdGeomPointBased the vertices
+                 belongs to. This should always point to a deformable body."""
+    )
+
+    rel physics:vtxSrc2 (
+        customData = {
+            string apiName = "vtxSrc1"
+        }
+        displayName = "Vertex Source2"
+        doc = """Relationship to a single UsdGeomPointBased the vertices
+                 belongs to. This should always point to a deformable body's
+                 geometry."""
+    )
+
+    int[] physics:vtxIndices0(
+        displayName = "Vertex Indices0"
+        doc = """Array of vertex indices from vtxSrc0. """
+    )
+
+    int[] physics:vtxIndices1(
+        displayName = "Vertex Indices1"
+        doc = """Array of vertex indices from vtxSrc1."""
+    )
+
+    float physics:stiffness = 0.0 (
+        customData = {
+            string apiName = "stiffness"
+        }
+        displayName = "Stiffness"
+        doc = """Distance proportional factor for the attachment.
+            "inf" implies a hard constraint when the simulator can support it.
+            Range: [0, inf)
+            Units: mass/second/second."""
+    )
+
+    float physics:damping = 0.0 (
+        customData = {
+            string apiName = "damping"
+        }
+        displayName = "Damping"
+        doc = """Proportional factor of the force acting against the direction
+                 of relative motion.
+            Range: [0, inf)
+            Units: mass/second"""
+    )
+}
+
+class PhysicsVtxTriAttachment "PhysicsVtxTriAttachment"
+(
+    customData = {
+        string className = "VTriAttach"
+    }
+    doc = """Describes a fixed binding attachment between a vertices and triangle
+    faces of two suitable geometries."""
+
+    inherits = </Imageable>
+)
+{
+    rel physics:vtxSrc (
+        customData = {
+            string apiName = "vtxSrc"
+        }
+        displayName = "Vertices Source"
+        doc = """Relationship to a single UsdGeomPointBased the vertices
+                 belong to. This should always point to a deformable body's
+                 geometry."""
+    )
+
+    rel physics:triSrc (
+        customData = {
+            string apiName = "triSrc"
+        }
+        displayName = "Triangles Source"
+        doc = """Relationship to a single UsdGeomMesh the triangle faces
+                 belong to."""
+    )
+
+    int[] physics:vtxIndices(
+        displayName = "Vertex Indices"
+        doc = """Array of vertex indices from vtxSrc"""
+    )
+
+    int[] physics:triIndices(
+        displayName = "Triangle Indices"
+        doc = """Array of face indices from triSrc. There should be exactly one
+        face index for each vertex index in vtxIndices."""
+    )
+
+    vector3f[] physics:faceCoords(
+        displayName = "Face Coordinates"
+        doc = """Face relative coordinates of the form U,V portion of
+                 barycentric UVW coordinates and a normal offset from the
+                 triangle. There should be exactly one set of face coordinates
+                 corresponding to each vertex index and face index."""
+    )
+
+    float physics:stiffness = 0.0 (
+        customData = {
+            string apiName = "stiffness"
+        }
+        displayName = "Stiffness"
+        doc = """Distance proportional factor for the attachment.
+            "inf" implies a hard constraint when the simulator can support it.
+            Range: [0, inf)
+            Units: mass/second/second."""
+    )
+
+    float physics:damping = 0.0 (
+        customData = {
+            string apiName = "damping"
+        }
+        displayName = "Damping"
+        doc = """Proportional factor of the force acting against the direction
+                 of relative motion.
+            Range: [0, inf)
+            Units: mass/second"""
+    )
+}
+
+class PhysicsVtxTetAttachment "PhysicsVtxTetAttachment"
+(
+    customData = {
+        string className = "VTetAttach"
+    }
+    doc = """Describes a fixed binding attachment between a vertices and tetrahedra
+    of two suitable geometries."""
+    inherits = </Imageable>
+)
+{
+    rel physics:vtxSrc (
+        customData = {
+            string apiName = "vtxSrc"
+        }
+        displayName = "Vertices Source"
+        doc = """Relationship to a single UsdGeomPointBased the vertices
+                 belongs to. This should always point to a deformable body."""
+    )
+
+    rel physics:tetSrc (
+        customData = {
+            string apiName = "tetSrc"
+        }
+        displayName = "Triangles Source"
+        doc = """Relationship to a single TetMesh which the tetrahedra belong to."""
+    )
+
+    int[] physics:vtxIndices(
+        displayName = "Vertex Indices"
+        doc = """Array of vertex indices from vtxSrc"""
+    )
+
+    int[] physics:tetIndices(
+        displayName = "Tetrahedra Indices"
+        doc = """Array of tetrahedra indices from tetSrc. There should be exactly one
+        tet index for each vertex index in vtxIndices."""
+    )
+
+    vector3f[] physics:baryCoords(
+        displayName = "Barycenrtic Coordinates"
+        doc = """Barycentric coordinates of the form U,V,W of the point wrt.
+                 the points of the tetrahedra. There should be exactly one
+                 set of face coordinates corresponding to each vertex index and tet index."""
+    )
+
+    float physics:stiffness = 0.0 (
+        customData = {
+            string apiName = "stiffness"
+        }
+        displayName = "Stiffness"
+        doc = """Distance proportional factor for the attachment.
+            "inf" implies a hard constraint when the simulator can support it.
+            Range: [0, inf)
+            Units: mass/second/second."""
+    )
+
+    float physics:damping = 0.0 (
+        customData = {
+            string apiName = "damping"
+        }
+        displayName = "Damping"
+        doc = """Proportional factor of the force acting against the direction
+                 of relative motion.
+            Range: [0, inf)
+            Units: mass/second"""
+    )
+}
+
+class PhysicsVtxCurveAttachment "PhysicsVtxCurveAttachment"
+(
+    customData = {
+        string className = "VCurveAttach"
+    }
+    doc = """Describes a fixed binding attachment between vertices and curves
+    of two suitable geometries. The vertices must always be from a deformable
+    body. The curves can be from either a deformable body or a kinematic one.
+    """
+
+    inherits = </Imageable>
+)
+{
+    rel physics:vtxSrc (
+        customData = {
+            string apiName = "vtxSrc"
+        }
+        displayName = "Vertices Source"
+        doc = """Relationship to a single UsdGeomPointBased the vertices
+                 belongs to. This should always point to a deformable body."""
+    )
+
+    rel physics:curveSrc (
+        customData = {
+            string apiName = "curveSrc"
+        }
+        displayName = "Curves Source"
+        doc = """Relationship to a single UsdGeomCurves the curves belong to."""
+    )
+
+    int[] physics:vtxIndices(
+        displayName = "Vertex Indices"
+        doc = """Array of vertex indices from vtxSrc"""
+    )
+
+    int2[] physics:curveSegmentIndices(
+        displayName = "Curve Segment Indices"
+        doc = """Array of (curve index, segment index) pairs from curveSrc.
+         There should be exactly one pair for each vertex index in vtxIndices.
+         The curve index specifies the index of the curve from curveSrc, and the
+         segment index identifies the segment within the curve."""
+    )
+
+    float[] physics:curveSegmentCoords(
+        displayName = "Curve Segment Coordinates"
+        doc = """U coordinate specifying the interpolated position within the
+                 curve segment. There should be exactly one coordinate for each
+                 curve segment in curveSegmentIndices."""
+    )
+
+    float physics:stiffness = 0.0 (
+        customData = {
+            string apiName = "stiffness"
+        }
+        displayName = "Stiffness"
+        doc = """Distance proportional factor for the attachment.
+            "inf" implies a hard constraint when the simulator can support it.
+            Range: [0, inf)
+            Units: mass/second/second."""
+    )
+
+    float physics:damping = 0.0 (
+        customData = {
+            string apiName = "damping"
+        }
+        displayName = "Damping"
+        doc = """Proportional factor of the force acting against the direction
+                 of relative motion.
+            Range: [0, inf)
+            Units: mass/second"""
+    )
+}
+
 
 class PhysicsJoint "PhysicsJoint"
 (
     customData = {
         string className = "Joint"
     }
-    doc = """A joint constrains the movement of rigid bodies. Joint can be 
+    doc = """A joint constrains the movement of rigid bodies. Joint can be
     created between two rigid bodies or between one rigid body and world.
-    By default joint primitive defines a D6 joint where all degrees of 
+    By default joint primitive defines a D6 joint where all degrees of
     freedom are free. Three linear and three angular degrees of freedom.
     Note that default behavior is to disable collision between jointed bodies.
     """
 
-    inherits = </Imageable> 
+    inherits = </Imageable>
 )
 {
     rel physics:body0 (
@@ -558,7 +1122,7 @@ class PhysicsJoint "PhysicsJoint"
         }
         displayName = "Break Force"
         doc = """Joint break force. If set, joint is to break when this force
-        limit is reached. (Used for linear DOFs.) 
+        limit is reached. (Used for linear DOFs.)
         Units: mass * distance / second / second"""
     )
 
@@ -568,7 +1132,7 @@ class PhysicsJoint "PhysicsJoint"
         }
         displayName = "Break Torque"
         doc = """Joint break torque. If set, joint is to break when this torque
-        limit is reached. (Used for angular DOFs.) 
+        limit is reached. (Used for angular DOFs.)
         Units: mass * distance * distance / second / second"""
     )
 
@@ -592,14 +1156,14 @@ class PhysicsRevoluteJoint "PhysicsRevoluteJoint"
         allowedTokens = ["X", "Y", "Z"]
         displayName = "Axis"
         doc = """Joint axis."""
-    )  
+    )
 
     float physics:lowerLimit = -inf (
         customData = {
             string apiName = "lowerLimit"
         }
         displayName = "Lower Limit"
-        doc = """Lower limit. Units: degrees. -inf means not limited in 
+        doc = """Lower limit. Units: degrees. -inf means not limited in
         negative direction."""
     )
 
@@ -608,7 +1172,7 @@ class PhysicsRevoluteJoint "PhysicsRevoluteJoint"
             string apiName = "upperLimit"
         }
         displayName = "Upper Limit"
-        doc = """Upper limit. Units: degrees. inf means not limited in 
+        doc = """Upper limit. Units: degrees. inf means not limited in
         positive direction."""
     )
 }
@@ -618,7 +1182,7 @@ class PhysicsPrismaticJoint "PhysicsPrismaticJoint"
     customData = {
         string className = "PrismaticJoint"
     }
-    doc = """Predefined prismatic joint type (translation along prismatic 
+    doc = """Predefined prismatic joint type (translation along prismatic
     joint axis is permitted.)"""
 
     inherits = </PhysicsJoint>
@@ -631,14 +1195,14 @@ class PhysicsPrismaticJoint "PhysicsPrismaticJoint"
         displayName = "Axis"
         allowedTokens = ["X", "Y", "Z"]
         doc = """Joint axis."""
-    )  
+    )
 
     float physics:lowerLimit = -inf (
         customData = {
             string apiName = "lowerLimit"
         }
         displayName = "Lower Limit"
-        doc = """Lower limit. Units: distance. -inf means not limited in 
+        doc = """Lower limit. Units: distance. -inf means not limited in
         negative direction."""
     )
 
@@ -647,7 +1211,7 @@ class PhysicsPrismaticJoint "PhysicsPrismaticJoint"
             string apiName = "upperLimit"
         }
         displayName = "Upper Limit"
-        doc = """Upper limit. Units: distance. inf means not limited in 
+        doc = """Upper limit. Units: distance. inf means not limited in
         positive direction."""
     )
 }
@@ -657,9 +1221,9 @@ class PhysicsSphericalJoint "PhysicsSphericalJoint"
     customData = {
         string className = "SphericalJoint"
     }
-    doc = """Predefined spherical joint type (Removes linear degrees of 
+    doc = """Predefined spherical joint type (Removes linear degrees of
     freedom, cone limit may restrict the motion in a given range.) It allows
-    two limit values, which when equal create a circular, else an elliptic 
+    two limit values, which when equal create a circular, else an elliptic
     cone limit around the limit axis."""
 
     inherits = </PhysicsJoint>
@@ -672,15 +1236,15 @@ class PhysicsSphericalJoint "PhysicsSphericalJoint"
         allowedTokens = ["X", "Y", "Z"]
         displayName = "Axis"
         doc = """Cone limit axis."""
-    )  
+    )
 
     float physics:coneAngle0Limit = -1.0 (
         customData = {
             string apiName = "coneAngle0Limit"
         }
         displayName = "Cone Angle0 Limit"
-        doc = """Cone limit from the primary joint axis in the local0 frame 
-        toward the next axis. (Next axis of X is Y, and of Z is X.) A 
+        doc = """Cone limit from the primary joint axis in the local0 frame
+        toward the next axis. (Next axis of X is Y, and of Z is X.) A
         negative value means not limited. Units: degrees."""
     )
 
@@ -689,8 +1253,8 @@ class PhysicsSphericalJoint "PhysicsSphericalJoint"
             string apiName = "coneAngle1Limit"
         }
         displayName = "Cone Angle1 Limit"
-        doc = """Cone limit from the primary joint axis in the local0 frame 
-        toward the second to next axis. A negative value means not limited. 
+        doc = """Cone limit from the primary joint axis in the local0 frame
+        toward the second to next axis. A negative value means not limited.
         Units: degrees."""
     )
 }
@@ -712,7 +1276,7 @@ class PhysicsDistanceJoint "PhysicsDistanceJoint"
             string apiName = "minDistance"
         }
         displayName = "Minimum Distance"
-        doc = """Minimum distance. If attribute is negative, the joint is not 
+        doc = """Minimum distance. If attribute is negative, the joint is not
         limited. Units: distance."""
     )
 
@@ -721,7 +1285,7 @@ class PhysicsDistanceJoint "PhysicsDistanceJoint"
             string apiName = "maxDistance"
         }
         displayName = "Maximum Distance"
-        doc = """Maximum distance. If attribute is negative, the joint is not 
+        doc = """Maximum distance. If attribute is negative, the joint is not
         limited. Units: distance."""
     )
 }
@@ -731,7 +1295,7 @@ class PhysicsFixedJoint "PhysicsFixedJoint"
     customData = {
         string className = "FixedJoint"
     }
-    doc = """Predefined fixed joint type (All degrees of freedom are 
+    doc = """Predefined fixed joint type (All degrees of freedom are
     removed.)"""
 
     inherits = </PhysicsJoint>
@@ -747,11 +1311,11 @@ class "PhysicsLimitAPI"
         token propertyNamespacePrefix = "limit"
     }
     doc = """The PhysicsLimitAPI can be applied to a PhysicsJoint and will
-    restrict the movement along an axis. PhysicsLimitAPI is a multipleApply 
-    schema: The PhysicsJoint can be restricted along "transX", "transY", 
-    "transZ", "rotX", "rotY", "rotZ", "distance". Setting these as a 
+    restrict the movement along an axis. PhysicsLimitAPI is a multipleApply
+    schema: The PhysicsJoint can be restricted along "transX", "transY",
+    "transZ", "rotX", "rotY", "rotZ", "distance". Setting these as a
     multipleApply schema TfToken name will define the degree of freedom the
-    PhysicsLimitAPI is applied to. Note that if the low limit is higher than 
+    PhysicsLimitAPI is applied to. Note that if the low limit is higher than
     the high limit, motion along this axis is considered locked."""
 
     inherits = </APISchemaBase>
@@ -772,7 +1336,7 @@ class "PhysicsLimitAPI"
             string apiName = "high"
         }
         displayName = "High Limit"
-        doc = """Upper limit. Units: degrees or distance depending on trans or 
+        doc = """Upper limit. Units: degrees or distance depending on trans or
         rot axis applied to. inf means not limited in positive direction."""
     )
 }
@@ -785,13 +1349,13 @@ class "PhysicsDriveAPI"
         token propertyNamespacePrefix = "drive"
     }
     doc = """The PhysicsDriveAPI when applied to any joint primitive will drive
-    the joint towards a given target. The PhysicsDriveAPI is a multipleApply 
-    schema: drive can be set per axis "transX", "transY", "transZ", "rotX", 
-    "rotY", "rotZ" or its "linear" for prismatic joint or "angular" for revolute 
-    joints. Setting these as a multipleApply schema TfToken name will 
-    define the degree of freedom the DriveAPI is applied to. Each drive is an 
-    implicit force-limited damped spring: 
-    Force or acceleration = stiffness * (targetPosition - position) 
+    the joint towards a given target. The PhysicsDriveAPI is a multipleApply
+    schema: drive can be set per axis "transX", "transY", "transZ", "rotX",
+    "rotY", "rotZ" or its "linear" for prismatic joint or "angular" for revolute
+    joints. Setting these as a multipleApply schema TfToken name will
+    define the degree of freedom the DriveAPI is applied to. Each drive is an
+    implicit force-limited damped spring:
+    Force or acceleration = stiffness * (targetPosition - position)
     + damping * (targetVelocity - velocity)"""
 
     inherits = </APISchemaBase>
@@ -803,7 +1367,7 @@ class "PhysicsDriveAPI"
         }
         allowedTokens = ["force", "acceleration"]
         displayName = "Type"
-        doc = """Drive spring is for the acceleration at the joint (rather 
+        doc = """Drive spring is for the acceleration at the joint (rather
         than the force)."""
     )
 
@@ -812,7 +1376,7 @@ class "PhysicsDriveAPI"
             string apiName = "maxForce"
         }
         displayName = "Max Force"
-        doc = """Maximum force that can be applied to drive. Units: 
+        doc = """Maximum force that can be applied to drive. Units:
                 if linear drive: mass*DIST_UNITS/second/second
                 if angular drive: mass*DIST_UNITS*DIST_UNITS/second/second
                 inf means not limited. Must be non-negative.
@@ -824,7 +1388,7 @@ class "PhysicsDriveAPI"
             string apiName = "targetPosition"
         }
         displayName = "Target Position"
-        doc = """Target value for position. Units: 
+        doc = """Target value for position. Units:
         if linear drive: distance
         if angular drive: degrees."""
     )
@@ -834,7 +1398,7 @@ class "PhysicsDriveAPI"
             string apiName = "targetVelocity"
         }
         displayName = "Target Velocity"
-        doc = """Target value for velocity. Units: 
+        doc = """Target value for velocity. Units:
         if linear drive: distance/second
         if angular drive: degrees/second."""
     )
@@ -843,7 +1407,7 @@ class "PhysicsDriveAPI"
         customData = {
             string apiName = "damping"
         }
-        doc = """Damping of the drive. Units: 
+        doc = """Damping of the drive. Units:
 		if linear drive: mass/second
 		If angular drive: mass*DIST_UNITS*DIST_UNITS/second/second/degrees."""
     )
@@ -863,12 +1427,12 @@ class "PhysicsArticulationRootAPI"
     customData = {
         string className = "ArticulationRootAPI"
     }
-    doc = """PhysicsArticulationRootAPI can be applied to a scene graph node, 
-    and marks the subtree rooted here for inclusion in one or more reduced 
+    doc = """PhysicsArticulationRootAPI can be applied to a scene graph node,
+    and marks the subtree rooted here for inclusion in one or more reduced
     coordinate articulations. For floating articulations, this should be on
-    the root body. For fixed articulations (robotics jargon for e.g. a robot 
-    arm for welding that is bolted to the floor), this API can be on a direct 
-    or indirect parent of the root joint which is connected to the world, or 
+    the root body. For fixed articulations (robotics jargon for e.g. a robot
+    arm for welding that is bolted to the floor), this API can be on a direct
+    or indirect parent of the root joint which is connected to the world, or
     on the joint itself.."""
 
     inherits = </APISchemaBase>

@@ -52,8 +52,8 @@ class SdfAssetPath;
 
 /// \class UsdPhysicsMaterialAPI
 ///
-/// Adds simulation material properties to a Material. All collisions 
-/// that have a relationship to this material will have their collision response 
+/// Adds simulation material properties to a Material. All collisions
+/// that have a relationship to this material will have their collision response
 /// defined through this material.
 ///
 class UsdPhysicsMaterialAPI : public UsdAPISchemaBase
@@ -210,33 +210,11 @@ public:
 
 public:
     // --------------------------------------------------------------------- //
-    // RESTITUTION 
-    // --------------------------------------------------------------------- //
-    /// Restitution coefficient. Unitless.
-    ///
-    /// | ||
-    /// | -- | -- |
-    /// | Declaration | `float physics:restitution = 0` |
-    /// | C++ Type | float |
-    /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Float |
-    USDPHYSICS_API
-    UsdAttribute GetRestitutionAttr() const;
-
-    /// See GetRestitutionAttr(), and also 
-    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
-    /// If specified, author \p defaultValue as the attribute's default,
-    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
-    /// the default for \p writeSparsely is \c false.
-    USDPHYSICS_API
-    UsdAttribute CreateRestitutionAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
-
-public:
-    // --------------------------------------------------------------------- //
     // DENSITY 
     // --------------------------------------------------------------------- //
     /// If non-zero, defines the density of the material. This can be
     /// used for body mass computation, see PhysicsMassAPI.
-    /// Note that if the density is 0.0 it is ignored. 
+    /// Note that if the density is 0.0 it is ignored.
     /// Units: mass/distance/distance/distance.
     ///
     /// | ||

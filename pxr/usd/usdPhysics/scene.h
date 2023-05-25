@@ -153,7 +153,7 @@ public:
     // GRAVITYDIRECTION 
     // --------------------------------------------------------------------- //
     /// Gravity direction vector in simulation world space. Will be
-    /// normalized before use. A zero vector is a request to use the negative 
+    /// normalized before use. A zero vector is a request to use the negative
     /// upAxis. Unitless.
     ///
     /// | ||
@@ -176,9 +176,9 @@ public:
     // --------------------------------------------------------------------- //
     // GRAVITYMAGNITUDE 
     // --------------------------------------------------------------------- //
-    /// Gravity acceleration magnitude in simulation world space. 
-    /// A negative value is a request to use a value equivalent to earth 
-    /// gravity regardless of the metersPerUnit scaling used by this scene. 
+    /// Gravity acceleration magnitude in simulation world space.
+    /// A negative value is a request to use a value equivalent to earth
+    /// gravity regardless of the metersPerUnit scaling used by this scene.
     /// Units: distance/second/second.
     ///
     /// | ||

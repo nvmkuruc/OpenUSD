@@ -37,10 +37,13 @@ TF_WRAP_MODULE
 {
 	TF_WRAP(UsdPhysicsTokens);
 
+	TF_WRAP(UsdPhysicsBodyAPI);
 	TF_WRAP(UsdPhysicsRigidBodyAPI);
+	TF_WRAP(UsdPhysicsDeformableBodyAPI);
 	TF_WRAP(UsdPhysicsCollisionAPI);
 	TF_WRAP(UsdPhysicsMeshCollisionAPI);
 	TF_WRAP(UsdPhysicsMaterialAPI);
+	TF_WRAP(UsdPhysicsRigidMaterialAPI);
 	TF_WRAP(UsdPhysicsScene);	
 
 	TF_WRAP(Metrics);
@@ -59,6 +62,19 @@ TF_WRAP_MODULE
 	TF_WRAP(UsdPhysicsLimitAPI);
 	TF_WRAP(UsdPhysicsDriveAPI);
 
+	// Deformable
+	TF_WRAP(UsdPhysicsCurveDeformableRestShapeAPI);
+	TF_WRAP(UsdPhysicsCurvesDeformableMaterialAPI);
+	TF_WRAP(UsdPhysicsDeformableMaterialAPI);	
+	TF_WRAP(UsdPhysicsDeformableRestShapeAPI);
+	TF_WRAP(UsdPhysicsSurfaceDeformableMaterialAPI);
+	TF_WRAP(UsdPhysicsSurfaceDeformableRestShapeAPI);
+
+	// Attach
+	TF_WRAP(UsdPhysicsVCurveAttach);
+	TF_WRAP(UsdPhysicsVTetAttach);
+	TF_WRAP(UsdPhysicsVTriAttach);
+	TF_WRAP(UsdPhysicsVtxVtxAttach);
 
 	// collision group
 	TF_WRAP(UsdPhysicsCollisionGroup);

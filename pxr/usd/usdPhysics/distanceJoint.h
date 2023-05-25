@@ -153,7 +153,7 @@ public:
     // --------------------------------------------------------------------- //
     // MINDISTANCE 
     // --------------------------------------------------------------------- //
-    /// Minimum distance. If attribute is negative, the joint is not 
+    /// Minimum distance. If attribute is negative, the joint is not
     /// limited. Units: distance.
     ///
     /// | ||
@@ -176,7 +176,7 @@ public:
     // --------------------------------------------------------------------- //
     // MAXDISTANCE 
     // --------------------------------------------------------------------- //
-    /// Maximum distance. If attribute is negative, the joint is not 
+    /// Maximum distance. If attribute is negative, the joint is not
     /// limited. Units: distance.
     ///
     /// | ||

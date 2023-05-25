@@ -52,7 +52,7 @@ class SdfAssetPath;
 
 /// \class UsdPhysicsPrismaticJoint
 ///
-/// Predefined prismatic joint type (translation along prismatic 
+/// Predefined prismatic joint type (translation along prismatic
 /// joint axis is permitted.)
 ///
 /// For any described attribute \em Fallback \em Value or \em Allowed \em Values below
@@ -182,7 +182,7 @@ public:
     // --------------------------------------------------------------------- //
     // LOWERLIMIT 
     // --------------------------------------------------------------------- //
-    /// Lower limit. Units: distance. -inf means not limited in 
+    /// Lower limit. Units: distance. -inf means not limited in
     /// negative direction.
     ///
     /// | ||
@@ -205,7 +205,7 @@ public:
     // --------------------------------------------------------------------- //
     // UPPERLIMIT 
     // --------------------------------------------------------------------- //
-    /// Upper limit. Units: distance. inf means not limited in 
+    /// Upper limit. Units: distance. inf means not limited in
     /// positive direction.
     ///
     /// | ||

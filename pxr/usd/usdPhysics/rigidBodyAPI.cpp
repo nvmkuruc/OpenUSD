@@ -109,57 +109,6 @@ UsdPhysicsRigidBodyAPI::_GetTfType() const
 }
 
 UsdAttribute
-UsdPhysicsRigidBodyAPI::GetRigidBodyEnabledAttr() const
-{
-    return GetPrim().GetAttribute(UsdPhysicsTokens->physicsRigidBodyEnabled);
-}
-
-UsdAttribute
-UsdPhysicsRigidBodyAPI::CreateRigidBodyEnabledAttr(VtValue const &defaultValue, bool writeSparsely) const
-{
-    return UsdSchemaBase::_CreateAttr(UsdPhysicsTokens->physicsRigidBodyEnabled,
-                       SdfValueTypeNames->Bool,
-                       /* custom = */ false,
-                       SdfVariabilityVarying,
-                       defaultValue,
-                       writeSparsely);
-}
-
-UsdAttribute
-UsdPhysicsRigidBodyAPI::GetKinematicEnabledAttr() const
-{
-    return GetPrim().GetAttribute(UsdPhysicsTokens->physicsKinematicEnabled);
-}
-
-UsdAttribute
-UsdPhysicsRigidBodyAPI::CreateKinematicEnabledAttr(VtValue const &defaultValue, bool writeSparsely) const
-{
-    return UsdSchemaBase::_CreateAttr(UsdPhysicsTokens->physicsKinematicEnabled,
-                       SdfValueTypeNames->Bool,
-                       /* custom = */ false,
-                       SdfVariabilityVarying,
-                       defaultValue,
-                       writeSparsely);
-}
-
-UsdAttribute
-UsdPhysicsRigidBodyAPI::GetStartsAsleepAttr() const
-{
-    return GetPrim().GetAttribute(UsdPhysicsTokens->physicsStartsAsleep);
-}
-
-UsdAttribute
-UsdPhysicsRigidBodyAPI::CreateStartsAsleepAttr(VtValue const &defaultValue, bool writeSparsely) const
-{
-    return UsdSchemaBase::_CreateAttr(UsdPhysicsTokens->physicsStartsAsleep,
-                       SdfValueTypeNames->Bool,
-                       /* custom = */ false,
-                       SdfVariabilityUniform,
-                       defaultValue,
-                       writeSparsely);
-}
-
-UsdAttribute
 UsdPhysicsRigidBodyAPI::GetVelocityAttr() const
 {
     return GetPrim().GetAttribute(UsdPhysicsTokens->physicsVelocity);
@@ -193,19 +142,6 @@ UsdPhysicsRigidBodyAPI::CreateAngularVelocityAttr(VtValue const &defaultValue, b
                        writeSparsely);
 }
 
-UsdRelationship
-UsdPhysicsRigidBodyAPI::GetSimulationOwnerRel() const
-{
-    return GetPrim().GetRelationship(UsdPhysicsTokens->physicsSimulationOwner);
-}
-
-UsdRelationship
-UsdPhysicsRigidBodyAPI::CreateSimulationOwnerRel() const
-{
-    return GetPrim().CreateRelationship(UsdPhysicsTokens->physicsSimulationOwner,
-                       /* custom = */ false);
-}
-
 namespace {
 static inline TfTokenVector
 _ConcatenateAttributeNames(const TfTokenVector& left,const TfTokenVector& right)
@@ -223,9 +159,6 @@ const TfTokenVector&
 UsdPhysicsRigidBodyAPI::GetSchemaAttributeNames(bool includeInherited)
 {
     static TfTokenVector localNames = {
-        UsdPhysicsTokens->physicsRigidBodyEnabled,
-        UsdPhysicsTokens->physicsKinematicEnabled,
-        UsdPhysicsTokens->physicsStartsAsleep,
         UsdPhysicsTokens->physicsVelocity,
         UsdPhysicsTokens->physicsAngularVelocity,
     };

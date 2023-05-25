@@ -52,9 +52,9 @@ class SdfAssetPath;
 
 /// \class UsdPhysicsJoint
 ///
-/// A joint constrains the movement of rigid bodies. Joint can be 
+/// A joint constrains the movement of rigid bodies. Joint can be
 /// created between two rigid bodies or between one rigid body and world.
-/// By default joint primitive defines a D6 joint where all degrees of 
+/// By default joint primitive defines a D6 joint where all degrees of
 /// freedom are free. Three linear and three angular degrees of freedom.
 /// Note that default behavior is to disable collision between jointed bodies.
 /// 
@@ -313,7 +313,7 @@ public:
     // BREAKFORCE 
     // --------------------------------------------------------------------- //
     /// Joint break force. If set, joint is to break when this force
-    /// limit is reached. (Used for linear DOFs.) 
+    /// limit is reached. (Used for linear DOFs.)
     /// Units: mass * distance / second / second
     ///
     /// | ||
@@ -337,7 +337,7 @@ public:
     // BREAKTORQUE 
     // --------------------------------------------------------------------- //
     /// Joint break torque. If set, joint is to break when this torque
-    /// limit is reached. (Used for angular DOFs.) 
+    /// limit is reached. (Used for angular DOFs.)
     /// Units: mass * distance * distance / second / second
     ///
     /// | ||

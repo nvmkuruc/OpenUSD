@@ -55,8 +55,8 @@ class SdfAssetPath;
 /// API to describe fine-grained filtering. If a collision between
 /// two objects occurs, this pair might be filtered if the pair is defined
 /// through this API. This API can be applied either to a body or collision
-/// or even articulation. The "filteredPairs" defines what objects it should 
-/// not collide against. Note that FilteredPairsAPI filtering has precedence 
+/// or even articulation. The "filteredPairs" defines what objects it should
+/// not collide against. Note that FilteredPairsAPI filtering has precedence
 /// over CollisionGroup filtering.
 ///
 class UsdPhysicsFilteredPairsAPI : public UsdAPISchemaBase

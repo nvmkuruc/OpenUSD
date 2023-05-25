@@ -53,13 +53,13 @@ class SdfAssetPath;
 /// \class UsdPhysicsDriveAPI
 ///
 /// The PhysicsDriveAPI when applied to any joint primitive will drive
-/// the joint towards a given target. The PhysicsDriveAPI is a multipleApply 
-/// schema: drive can be set per axis "transX", "transY", "transZ", "rotX", 
-/// "rotY", "rotZ" or its "linear" for prismatic joint or "angular" for revolute 
-/// joints. Setting these as a multipleApply schema TfToken name will 
-/// define the degree of freedom the DriveAPI is applied to. Each drive is an 
-/// implicit force-limited damped spring: 
-/// Force or acceleration = stiffness * (targetPosition - position) 
+/// the joint towards a given target. The PhysicsDriveAPI is a multipleApply
+/// schema: drive can be set per axis "transX", "transY", "transZ", "rotX",
+/// "rotY", "rotZ" or its "linear" for prismatic joint or "angular" for revolute
+/// joints. Setting these as a multipleApply schema TfToken name will
+/// define the degree of freedom the DriveAPI is applied to. Each drive is an
+/// implicit force-limited damped spring:
+/// Force or acceleration = stiffness * (targetPosition - position)
 /// + damping * (targetVelocity - velocity)
 ///
 /// For any described attribute \em Fallback \em Value or \em Allowed \em Values below
@@ -233,7 +233,7 @@ public:
     // --------------------------------------------------------------------- //
     // TYPE 
     // --------------------------------------------------------------------- //
-    /// Drive spring is for the acceleration at the joint (rather 
+    /// Drive spring is for the acceleration at the joint (rather
     /// than the force).
     ///
     /// | ||
@@ -258,7 +258,7 @@ public:
     // --------------------------------------------------------------------- //
     // MAXFORCE 
     // --------------------------------------------------------------------- //
-    /// Maximum force that can be applied to drive. Units: 
+    /// Maximum force that can be applied to drive. Units:
     /// if linear drive: mass*DIST_UNITS/second/second
     /// if angular drive: mass*DIST_UNITS*DIST_UNITS/second/second
     /// inf means not limited. Must be non-negative.
@@ -284,7 +284,7 @@ public:
     // --------------------------------------------------------------------- //
     // TARGETPOSITION 
     // --------------------------------------------------------------------- //
-    /// Target value for position. Units: 
+    /// Target value for position. Units:
     /// if linear drive: distance
     /// if angular drive: degrees.
     ///
@@ -308,7 +308,7 @@ public:
     // --------------------------------------------------------------------- //
     // TARGETVELOCITY 
     // --------------------------------------------------------------------- //
-    /// Target value for velocity. Units: 
+    /// Target value for velocity. Units:
     /// if linear drive: distance/second
     /// if angular drive: degrees/second.
     ///
@@ -332,7 +332,7 @@ public:
     // --------------------------------------------------------------------- //
     // DAMPING 
     // --------------------------------------------------------------------- //
-    /// Damping of the drive. Units: 
+    /// Damping of the drive. Units:
     /// if linear drive: mass/second
     /// If angular drive: mass*DIST_UNITS*DIST_UNITS/second/second/degrees.
     ///

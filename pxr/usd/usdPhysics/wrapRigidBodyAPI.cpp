@@ -51,27 +51,6 @@ WRAP_CUSTOM;
 
         
 static UsdAttribute
-_CreateRigidBodyEnabledAttr(UsdPhysicsRigidBodyAPI &self,
-                                      object defaultVal, bool writeSparsely) {
-    return self.CreateRigidBodyEnabledAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Bool), writeSparsely);
-}
-        
-static UsdAttribute
-_CreateKinematicEnabledAttr(UsdPhysicsRigidBodyAPI &self,
-                                      object defaultVal, bool writeSparsely) {
-    return self.CreateKinematicEnabledAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Bool), writeSparsely);
-}
-        
-static UsdAttribute
-_CreateStartsAsleepAttr(UsdPhysicsRigidBodyAPI &self,
-                                      object defaultVal, bool writeSparsely) {
-    return self.CreateStartsAsleepAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Bool), writeSparsely);
-}
-        
-static UsdAttribute
 _CreateVelocityAttr(UsdPhysicsRigidBodyAPI &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreateVelocityAttr(
@@ -148,27 +127,6 @@ void wrapUsdPhysicsRigidBodyAPI()
         .def(!self)
 
         
-        .def("GetRigidBodyEnabledAttr",
-             &This::GetRigidBodyEnabledAttr)
-        .def("CreateRigidBodyEnabledAttr",
-             &_CreateRigidBodyEnabledAttr,
-             (arg("defaultValue")=object(),
-              arg("writeSparsely")=false))
-        
-        .def("GetKinematicEnabledAttr",
-             &This::GetKinematicEnabledAttr)
-        .def("CreateKinematicEnabledAttr",
-             &_CreateKinematicEnabledAttr,
-             (arg("defaultValue")=object(),
-              arg("writeSparsely")=false))
-        
-        .def("GetStartsAsleepAttr",
-             &This::GetStartsAsleepAttr)
-        .def("CreateStartsAsleepAttr",
-             &_CreateStartsAsleepAttr,
-             (arg("defaultValue")=object(),
-              arg("writeSparsely")=false))
-        
         .def("GetVelocityAttr",
              &This::GetVelocityAttr)
         .def("CreateVelocityAttr",
@@ -183,11 +141,6 @@ void wrapUsdPhysicsRigidBodyAPI()
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
 
-        
-        .def("GetSimulationOwnerRel",
-             &This::GetSimulationOwnerRel)
-        .def("CreateSimulationOwnerRel",
-             &This::CreateSimulationOwnerRel)
         .def("__repr__", ::_Repr)
     ;
 
