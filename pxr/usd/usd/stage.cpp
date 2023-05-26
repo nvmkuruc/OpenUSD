@@ -2177,21 +2177,6 @@ UsdStage::LoadAndUnload(const SdfPathSet &loadSet,
 
     _loadRules.LoadAndUnload(finalLoadSet, finalUnloadSet, policy);
 
-<<<<<<< HEAD
-    // Go through the finalLoadSet, and include all unloaded ancestors in the
-    // final load set
-    for (SdfPath const &p: finalLoadSet) {
-        SdfPath path = p.GetParentPath();
-        // Filter out the empty and absolute root paths before traversing
-        if (path.IsEmpty()) continue;
-        while (!path.IsAbsoluteRootPath()) {
-            UsdPrim prim = GetPrimAtPath(path);
-            if (prim && prim.HasAuthoredPayloads() && prim.IsActive() &&
-                !prim.IsLoaded()) {
-                // The path should always sort before 'p' so this shouldn't
-                // invalidate any iterators to 'finalLoadSet'
-                finalLoadSet.insert(path);
-=======
     // Now the rules are established, but we need to identify the paths on the
     // stage where we need to recompose.  In the case of loading (the
     // finalLoadSet) we cannot just recompose those paths and their descendants.
@@ -2214,7 +2199,6 @@ UsdStage::LoadAndUnload(const SdfPathSet &loadSet,
                     finalLoadSet.insert(curPath);
                 }
                 break;
->>>>>>> v23.05
             }
             path = path.GetParentPath();
         }

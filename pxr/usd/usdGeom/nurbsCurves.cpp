@@ -171,7 +171,6 @@ UsdGeomNurbsCurves::CreatePointWeightsAttr(VtValue const &defaultValue, bool wri
                        writeSparsely);
 }
 
-<<<<<<< HEAD
 UsdAttribute
 UsdGeomNurbsCurves::GetFormAttr() const
 {
@@ -189,8 +188,6 @@ UsdGeomNurbsCurves::CreateFormAttr(VtValue const &defaultValue, bool writeSparse
                        writeSparsely);
 }
 
-=======
->>>>>>> v23.05
 namespace {
 static inline TfTokenVector
 _ConcatenateAttributeNames(const TfTokenVector& left,const TfTokenVector& right)
@@ -212,10 +209,7 @@ UsdGeomNurbsCurves::GetSchemaAttributeNames(bool includeInherited)
         UsdGeomTokens->knots,
         UsdGeomTokens->ranges,
         UsdGeomTokens->pointWeights,
-<<<<<<< HEAD
         UsdGeomTokens->form,
-=======
->>>>>>> v23.05
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(

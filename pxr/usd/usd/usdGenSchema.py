@@ -1251,15 +1251,9 @@ def GatherTokens(classes, libName, libTokens,
         #- library tokens
 
         # Add tokens from relationships to the token set
-<<<<<<< HEAD
-        for rel in list(cls.rels.values()):
-            cls.tokens.add(rel.name)
-            _AddToken(tokenDict, rel.name, rel.rawName, cls.cppClassName, True)
-=======
         for rel in cls.rels.values():
             _AddToken(tokenDict, cls.tokens, rel.name, 
                       rel.generatedSchemaPropName, cls.cppClassName, True)
->>>>>>> v23.05
             
         # Add schema tokens to token set
         schemaTokens = cls.customData.get("schemaTokens", {})

@@ -1008,19 +1008,10 @@ class _AssertObjectsChanged(object):
     def callback(self, notice, sender):
         assert sender == self.stage
         self.resyncedPaths.update(notice.GetResyncedPaths())
-<<<<<<< HEAD
-    
-    def __exit__(self, *args):
-        del self.listener
-        assert self.resyncedPaths == self.expectedResyncedPaths
-
-
-=======
 
     def __exit__(self, *args):
         del self.listener
         assert self.resyncedPaths == self.expectedResyncedPaths
                 
->>>>>>> v23.05
 if __name__ == "__main__":
     unittest.main()

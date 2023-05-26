@@ -271,11 +271,7 @@ public:
     // --------------------------------------------------------------------- //
     /// Optionally provides "w" components for each control point,
     /// thus must be the same length as the points attribute.  If authored,
-<<<<<<< HEAD
-    /// the patch will be rational.  If unauthored, the patch will be
-=======
     /// the curve will be rational.  If unauthored, the curve will be
->>>>>>> v23.05
     /// polynomial, i.e. weight for all points is 1.0.
     /// \note Some DCC's pre-weight the \em points, but in this schema, 
     /// \em points are not pre-weighted.
@@ -297,7 +293,6 @@ public:
     UsdAttribute CreatePointWeightsAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
-<<<<<<< HEAD
     // --------------------------------------------------------------------- //
     // FORM 
     // --------------------------------------------------------------------- //
@@ -325,8 +320,6 @@ public:
     UsdAttribute CreateFormAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
-=======
->>>>>>> v23.05
     // ===================================================================== //
     // Feel free to add custom code below this line, it will be preserved by 
     // the code generator. 

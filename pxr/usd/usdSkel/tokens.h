@@ -166,12 +166,10 @@ struct UsdSkelTokensType {
     /// 
     /// UsdSkelInbetweenShape - The weight location at which the inbetween shape applies.
     const TfToken weight;
-<<<<<<< HEAD
     /// \brief "WeightedBlend"
     /// 
     /// Possible value for UsdSkelBindingAPI::GetSkelSkinningMethodAttr()
     const TfToken weightedBlend;
-=======
     /// \brief "BlendShape"
     /// 
     /// Schema identifer and family for UsdSkelBlendShape
@@ -196,7 +194,6 @@ struct UsdSkelTokensType {
     /// 
     /// Schema identifer and family for UsdSkelRoot
     const TfToken SkelRoot;
->>>>>>> v23.05
     /// A vector of all of the tokens listed above.
     const std::vector<TfToken> allTokens;
 };

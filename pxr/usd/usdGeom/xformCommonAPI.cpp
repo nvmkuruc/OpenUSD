@@ -42,12 +42,6 @@ TF_REGISTRY_FUNCTION(TfType)
     
 }
 
-<<<<<<< HEAD
-TF_DEFINE_PRIVATE_TOKENS(
-    _schemaTokens,
-    (XformCommonAPI)
-);
-
 // #nv begin #xformcommonapi-doubles
 TF_DEFINE_ENV_SETTING(USDGEOM_XFORMCOMMONAPI_ALLOW_DOUBLES, 0,
     "Allow double-encoded xform attributes");
@@ -58,8 +52,6 @@ static bool _IsSupportedXformAttrDoubles() {
 
 // nv end
 
-=======
->>>>>>> v23.05
 /* virtual */
 UsdGeomXformCommonAPI::~UsdGeomXformCommonAPI()
 {

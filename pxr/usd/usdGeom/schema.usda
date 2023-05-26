@@ -1697,11 +1697,10 @@ class NurbsCurves "NurbsCurves" (
     double[] pointWeights (
         doc = """Optionally provides "w" components for each control point,
         thus must be the same length as the points attribute.  If authored,
-<<<<<<< HEAD
-        the patch will be rational.  If unauthored, the patch will be
+        the curve will be rational.  If unauthored, the curve will be
         polynomial, i.e. weight for all points is 1.0.
         \\note Some DCC's pre-weight the \\em points, but in this schema, 
-        \\em points are not pre-weighted.""")
+        \\em points are not pre-weighted."""
 
     uniform token form = "open" (
         allowedTokens = ["open", "closed", "periodic"]
@@ -1709,12 +1708,6 @@ class NurbsCurves "NurbsCurves" (
         an open, geometrically closed, or geometrically closed and C2 continuous
         curve.
         \\sa \\ref UsdGeom_NurbsCurve_Form "NurbsCurve Form" """
-=======
-        the curve will be rational.  If unauthored, the curve will be
-        polynomial, i.e. weight for all points is 1.0.
-        \\note Some DCC's pre-weight the \\em points, but in this schema, 
-        \\em points are not pre-weighted."""
->>>>>>> v23.05
     )
 }
 

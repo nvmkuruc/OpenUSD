@@ -188,11 +188,8 @@ pxr_library(hd
         dataSourceTypeDefs.h
         driver.h
         materialNetworkInterface.h
-<<<<<<< HEAD
         nvhashmap.h
-=======
         vectorSchemaTypeDefs.h
->>>>>>> v23.05
         version.h
 
     PRIVATE_CLASSES

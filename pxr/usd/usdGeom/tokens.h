@@ -420,11 +420,7 @@ struct UsdGeomTokensType {
     const TfToken normals;
     /// \brief "open"
     /// 
-<<<<<<< HEAD
     /// Possible value for UsdGeomNurbsCurves::GetFormAttr(), Default value for UsdGeomNurbsCurves::GetFormAttr(), Possible value for UsdGeomNurbsPatch::GetUFormAttr(), Default value for UsdGeomNurbsPatch::GetUFormAttr(), Possible value for UsdGeomNurbsPatch::GetVFormAttr(), Default value for UsdGeomNurbsPatch::GetVFormAttr()
-=======
-    /// Fallback value for UsdGeomNurbsPatch::GetUFormAttr(), Fallback value for UsdGeomNurbsPatch::GetVFormAttr()
->>>>>>> v23.05
     const TfToken open;
     /// \brief "order"
     /// 
@@ -452,11 +448,7 @@ struct UsdGeomTokensType {
     const TfToken partition;
     /// \brief "periodic"
     /// 
-<<<<<<< HEAD
     /// Possible value for UsdGeomNurbsCurves::GetFormAttr(), Possible value for UsdGeomBasisCurves::GetWrapAttr(), Possible value for UsdGeomNurbsPatch::GetUFormAttr(), Possible value for UsdGeomNurbsPatch::GetVFormAttr()
-=======
-    /// Possible value for UsdGeomNurbsPatch::GetUFormAttr(), Possible value for UsdGeomNurbsPatch::GetVFormAttr(), Possible value for UsdGeomBasisCurves::GetWrapAttr()
->>>>>>> v23.05
     const TfToken periodic;
     /// \brief "perspective"
     /// 
@@ -476,11 +468,7 @@ struct UsdGeomTokensType {
     const TfToken points;
     /// \brief "pointWeights"
     /// 
-<<<<<<< HEAD
-    /// UsdGeomNurbsCurves, UsdGeomNurbsPatch
-=======
     /// UsdGeomNurbsPatch, UsdGeomNurbsCurves
->>>>>>> v23.05
     const TfToken pointWeights;
     /// \brief "positions"
     /// 
