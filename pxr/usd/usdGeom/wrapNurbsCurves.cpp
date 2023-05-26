@@ -76,6 +76,7 @@ _CreatePointWeightsAttr(UsdGeomNurbsCurves &self,
     return self.CreatePointWeightsAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->DoubleArray), writeSparsely);
 }
+<<<<<<< HEAD
         
 static UsdAttribute
 _CreateFormAttr(UsdGeomNurbsCurves &self,
@@ -83,6 +84,8 @@ _CreateFormAttr(UsdGeomNurbsCurves &self,
     return self.CreateFormAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Token), writeSparsely);
 }
+=======
+>>>>>>> v23.05
 
 static std::string
 _Repr(const UsdGeomNurbsCurves &self)
@@ -153,6 +156,7 @@ void wrapUsdGeomNurbsCurves()
              &_CreatePointWeightsAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
+<<<<<<< HEAD
         
         .def("GetFormAttr",
              &This::GetFormAttr)
@@ -160,6 +164,8 @@ void wrapUsdGeomNurbsCurves()
              &_CreateFormAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
+=======
+>>>>>>> v23.05
 
         .def("__repr__", ::_Repr)
     ;
@@ -191,4 +197,4 @@ namespace {
 WRAP_CUSTOM {
 }
 
-} // anonymous namespace
+}

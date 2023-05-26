@@ -151,5 +151,9 @@ setuptools.setup(
         "Environment :: Console",
         "Topic :: Multimedia :: Graphics",
     ],
+<<<<<<< HEAD
     python_requires='>=3.6',
+=======
+    python_requires='>=3.6, <3.11',
+>>>>>>> v23.05
 )

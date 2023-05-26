@@ -42,8 +42,10 @@ pxr_library(usdImaging
         dataSourcePrim
         dataSourcePrimvars
         dataSourceRelationship
+        dataSourceRenderPrims
         dataSourceStage
         dataSourceStageGlobals
+        dataSourceUsdPrimInfo
         dataSourceVolume
         debugCodes
         delegate
@@ -97,8 +99,15 @@ pxr_library(usdImaging
         portalLightAdapter
         primAdapter
         primvarDescCache
+        usdPrimInfoSchema
+        usdRenderProductSchema
+        usdRenderSettingsSchema
+        usdRenderVarSchema
         rectLightAdapter
+        renderProductAdapter
         renderSettingsAdapter
+        renderSettingsFlatteningSceneIndex
+        renderVarAdapter
         representedByAncestorPrimAdapter
         rerootingSceneIndex
         sampleFilterAdapter
@@ -112,7 +121,6 @@ pxr_library(usdImaging
         niInstanceAggregationSceneIndex
         niPrototypePruningSceneIndex
         niPrototypeSceneIndex
-        sceneIndexPrimView
         piPrototypeSceneIndex
 
     PUBLIC_HEADERS

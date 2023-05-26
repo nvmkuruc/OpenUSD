@@ -24,7 +24,6 @@
 #include "pxr/usd/usdGeom/xformCommonAPI.h"
 #include "pxr/usd/usd/schemaRegistry.h"
 #include "pxr/usd/usd/typed.h"
-#include "pxr/usd/usd/tokens.h"
 
 #include "pxr/usd/sdf/types.h"
 #include "pxr/usd/sdf/assetPath.h"
@@ -43,6 +42,7 @@ TF_REGISTRY_FUNCTION(TfType)
     
 }
 
+<<<<<<< HEAD
 TF_DEFINE_PRIVATE_TOKENS(
     _schemaTokens,
     (XformCommonAPI)
@@ -58,6 +58,8 @@ static bool _IsSupportedXformAttrDoubles() {
 
 // nv end
 
+=======
+>>>>>>> v23.05
 /* virtual */
 UsdGeomXformCommonAPI::~UsdGeomXformCommonAPI()
 {

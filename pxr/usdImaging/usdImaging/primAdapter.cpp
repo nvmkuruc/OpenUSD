@@ -782,6 +782,13 @@ UsdImagingPrimAdapter::_GetMaterialRenderContexts() const
         GetMaterialRenderContexts();
 }
 
+TfTokenVector
+UsdImagingPrimAdapter::_GetRenderSettingsNamespaces() const
+{
+    return _delegate->GetRenderIndex().GetRenderDelegate()->
+        GetRenderSettingsNamespaces();
+}
+
 bool 
 UsdImagingPrimAdapter::_GetSceneMaterialsEnabled() const
 {

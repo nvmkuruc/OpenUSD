@@ -201,6 +201,7 @@ PXR_NAMESPACE_OPEN_SCOPE
     (fragmentShader)                            \
     (geometryShader)                            \
     (imageToWorldMatrix)                        \
+    (imageToHorizontallyNormalizedFilmback)     \
     (indicatorColor)                            \
     (lightingBlendAmount)                       \
     (overrideColor)                             \
@@ -410,7 +411,11 @@ TfToken HdAovTokensMakeShader(TfToken const& shader);
 
 #define HD_RENDER_SETTINGS_PRIM_TOKENS                \
     (active)                                          \
-    (params)
+    (namespacedSettings)                              \
+    (renderProducts)                                  \
+    (includedPurposes)                                \
+    (materialBindingPurposes)                         \
+    (renderingColorSpace)
 
 #define HD_RESOURCE_TYPE_TOKENS                       \
     (texture)                                         \

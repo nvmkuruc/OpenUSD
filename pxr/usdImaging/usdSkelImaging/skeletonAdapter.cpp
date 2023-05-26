@@ -428,14 +428,19 @@ UsdSkelImagingSkeletonAdapter::ProcessPropertyChange(
     const TfToken& propertyName)
 {
     if (_IsCallbackForSkeleton(prim)) {
-        if (propertyName == UsdGeomTokens->visibility ||
-            propertyName == UsdGeomTokens->purpose)
+        if (propertyName == UsdGeomTokens->visibility) {
             return HdChangeTracker::DirtyVisibility;
-        else if (propertyName == UsdGeomTokens->extent)
+        }
+        if (propertyName == UsdGeomTokens->purpose) {
+            return HdChangeTracker::DirtyRenderTag;
+        }
+        if (propertyName == UsdGeomTokens->extent) {
             return HdChangeTracker::DirtyExtent;
-        else if (UsdGeomXformable::IsTransformationAffectedByAttrNamed(
-                propertyName))
+        }
+        if (UsdGeomXformable::IsTransformationAffectedByAttrNamed(
+                propertyName)) {
             return HdChangeTracker::DirtyTransform;
+        }
 
         //+NV_CHANGE_FRZHANG
         if ((propertyName == UsdSkelTokens->restTransforms || propertyName == UsdSkelTokens->skelAnimationSource) && _UseNVGPUSkinningComputations())

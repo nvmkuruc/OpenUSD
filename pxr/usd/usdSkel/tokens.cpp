@@ -52,7 +52,16 @@ UsdSkelTokensType::UsdSkelTokensType() :
     skelSkinningMethod("skel:skinningMethod", TfToken::Immortal),
     translations("translations", TfToken::Immortal),
     weight("weight", TfToken::Immortal),
+<<<<<<< HEAD
     weightedBlend("WeightedBlend", TfToken::Immortal),
+=======
+    BlendShape("BlendShape", TfToken::Immortal),
+    PackedJointAnimation("PackedJointAnimation", TfToken::Immortal),
+    SkelAnimation("SkelAnimation", TfToken::Immortal),
+    SkelBindingAPI("SkelBindingAPI", TfToken::Immortal),
+    Skeleton("Skeleton", TfToken::Immortal),
+    SkelRoot("SkelRoot", TfToken::Immortal),
+>>>>>>> v23.05
     allTokens({
         bindTransforms,
         blendShapes,
@@ -80,7 +89,16 @@ UsdSkelTokensType::UsdSkelTokensType() :
         skelSkinningMethod,
         translations,
         weight,
+<<<<<<< HEAD
         weightedBlend
+=======
+        BlendShape,
+        PackedJointAnimation,
+        SkelAnimation,
+        SkelBindingAPI,
+        Skeleton,
+        SkelRoot
+>>>>>>> v23.05
     })
 {
 }
