@@ -2200,7 +2200,7 @@ UsdStage::LoadAndUnload(const SdfPathSet &loadSet,
                 }
                 break;
             }
-            path = path.GetParentPath();
+            curPath = parentPath;
         }
     }
 
