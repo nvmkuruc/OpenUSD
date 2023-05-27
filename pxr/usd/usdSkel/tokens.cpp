@@ -86,7 +86,7 @@ UsdSkelTokensType::UsdSkelTokensType() :
         skelSkinningMethod,
         translations,
         weight,
-        weightedBlend
+        weightedBlend,
         BlendShape,
         PackedJointAnimation,
         SkelAnimation,

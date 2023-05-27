@@ -40,6 +40,7 @@
 
 // #nv begin #new-mdl-schema
 #include "pxr/usd/usdShade/shader.h"
+#include "pxr/usd/ar/resolver.h"
 #include "pxr/base/tf/envSetting.h"
 // nv end
 
