@@ -131,7 +131,10 @@ UsdImagingRenderProductAdapter::TrackVariability(
     UsdPrim const& prim,
     SdfPath const& cachePath,
     HdDirtyBits* timeVaryingBits,
-    UsdImagingInstancerContext const* instancerContext) const
+    UsdImagingInstancerContext const* instancerContext,
+    // #nv begin #fast-updates
+    bool checkVariability) const
+    // nv end
 {
 }
 
