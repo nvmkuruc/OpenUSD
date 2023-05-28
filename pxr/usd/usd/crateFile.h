@@ -281,8 +281,8 @@ public:
     struct Version;
     
 private:
-    // A move-only helper struct to represent a range of data in a ArchFile*, with
-    // optional "ownership" of that ArchFile* (i.e. responsibility to fclose upon
+    // A move-only helper struct to represent a range of data in a FILE*, with
+    // optional "ownership" of that FILE* (i.e. responsibility to fclose upon
     // destruction).
     struct _FileRange {
         _FileRange() = default;
@@ -1076,7 +1076,7 @@ private:
     // by pread()ing from a file obtained from an ArAsset, then _assetSrc is
     // non-null and _preadSrc observes (but does not own/fclose) the result of
     // _assetSrc->GetFileUnsafe().  If a Save operation is completed (via
-    // StartPacking) in this state, then _preadSrc will become an owning ArchFile*,
+    // StartPacking) in this state, then _preadSrc will become an owning FILE*,
     // and _assetSrc will be nullptr.  Otherwise if _assetSrc is non-null and
     // both _mmapSrc and _preadSrc are null, we read data from the _assetSrc via
     // ArAsset::Read().  If all three are null then this structure was not
