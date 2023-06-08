@@ -553,6 +553,16 @@ UsdImagingMaterialAdapter::GetMaterialResource(UsdPrim const &prim,
     if (!_GetSceneMaterialsEnabled()) {
         return VtValue();
     }
+    
+    // #nv begin #guard-expired-material-prim
+    // https://nvidia-omniverse.atlassian.net/browse/OM-93326
+    if (!prim)
+    {
+        TF_RUNTIME_ERROR("Expected valid material prim at <%s>; ignoring",
+                         cachePath.GetText());
+        return VtValue();
+    }
+    // nv end
 
     UsdShadeMaterial material(prim);
     if (!material) {
