@@ -808,7 +808,7 @@ class PhysicsVtxVtxAttachment "PhysicsVtxVtxAttachment"
         doc = """Array of vertex indices from vtxSrc1."""
     )
 
-    float physics:stiffness = 0.0 (
+    float physics:stiffness = inf (
         customData = {
             string apiName = "stiffness"
         }
@@ -887,7 +887,7 @@ class PhysicsVtxTriAttachment "PhysicsVtxTriAttachment"
                  corresponding to each vertex index and face index."""
     )
 
-    float physics:stiffness = 0.0 (
+    float physics:stiffness = inf (
         customData = {
             string apiName = "stiffness"
         }
@@ -963,7 +963,7 @@ class PhysicsVtxTetAttachment "PhysicsVtxTetAttachment"
                  set of face coordinates corresponding to each vertex index and tet index."""
     )
 
-    float physics:stiffness = 0.0 (
+    float physics:stiffness = inf (
         customData = {
             string apiName = "stiffness"
         }
@@ -1042,7 +1042,7 @@ class PhysicsVtxCurveAttachment "PhysicsVtxCurveAttachment"
                  curve segment in curveSegmentIndices."""
     )
 
-    float physics:stiffness = 0.0 (
+    float physics:stiffness = inf (
         customData = {
             string apiName = "stiffness"
         }
@@ -1115,7 +1115,7 @@ class PhysicsVtxXformAttachment "PhysicsVtxXformAttachment"
         doc = """Spatial offsets of the attachment locations in the coordinate frame described by xformSrc."""
     )
 
-    float physics:stiffness = 0.0 (
+    float physics:stiffness = inf (
         customData = {
             string apiName = "stiffness"
         }
