@@ -772,6 +772,14 @@ class PhysicsVtxVtxAttachment "PhysicsVtxVtxAttachment"
     inherits = </Imageable>
 )
 {
+    bool physics:attachmentEnabled = true (
+        customData = {
+            string apiName = "attachmentEnabled"
+        }
+        displayName = "Attachment Enabled"
+        doc = """Determines if this PhysicsVtxVtxAttachment is enabled."""
+    )
+
     rel physics:vtxSrc1 (
         customData = {
             string apiName = "vtxSrc0"
@@ -834,6 +842,14 @@ class PhysicsVtxTriAttachment "PhysicsVtxTriAttachment"
     inherits = </Imageable>
 )
 {
+    bool physics:attachmentEnabled = true (
+        customData = {
+            string apiName = "attachmentEnabled"
+        }
+        displayName = "Attachment Enabled"
+        doc = """Determines if this PhysicsVtxTriAttachment is enabled."""
+    )
+
     rel physics:vtxSrc (
         customData = {
             string apiName = "vtxSrc"
@@ -904,6 +920,14 @@ class PhysicsVtxTetAttachment "PhysicsVtxTetAttachment"
     inherits = </Imageable>
 )
 {
+    bool physics:attachmentEnabled = true (
+        customData = {
+            string apiName = "attachmentEnabled"
+        }
+        displayName = "Attachment Enabled"
+        doc = """Determines if this PhysicsVtxTetAttachment is enabled."""
+    )
+
     rel physics:vtxSrc (
         customData = {
             string apiName = "vtxSrc"
@@ -973,6 +997,14 @@ class PhysicsVtxCurveAttachment "PhysicsVtxCurveAttachment"
     inherits = </Imageable>
 )
 {
+    bool physics:attachmentEnabled = true (
+        customData = {
+            string apiName = "attachmentEnabled"
+        }
+        displayName = "Attachment Enabled"
+        doc = """Determines if this PhysicsVtxCurveAttachment is enabled."""
+    )
+
     rel physics:vtxSrc (
         customData = {
             string apiName = "vtxSrc"
@@ -1048,6 +1080,14 @@ class PhysicsVtxXformAttachment "PhysicsVtxXformAttachment"
     inherits = </Imageable>
 )
 {
+    bool physics:attachmentEnabled = true (
+        customData = {
+            string apiName = "attachmentEnabled"
+        }
+        displayName = "Attachment Enabled"
+        doc = """Determines if this PhysicsVtxXformAttachment is enabled."""
+    )
+
     rel physics:vtxSrc (
         customData = {
             string apiName = "vtxSrc"
@@ -1111,6 +1151,14 @@ class PhysicsElementCollisionFilter "PhysicsElementCollisionFilter"
     inherits = </Imageable>
 )
 {
+    bool physics:filterEnabled = true (
+        customData = {
+            string apiName = "filterEnabled"
+        }
+        displayName = "Filter Enabled"
+        doc = """Determines if this PhysicsElementCollisionFilter is enabled."""
+    )
+
     rel physics:src0 (
         customData = {
             string apiName = "src0"
