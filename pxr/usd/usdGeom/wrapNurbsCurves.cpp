@@ -76,13 +76,6 @@ _CreatePointWeightsAttr(UsdGeomNurbsCurves &self,
     return self.CreatePointWeightsAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->DoubleArray), writeSparsely);
 }
-        
-static UsdAttribute
-_CreateFormAttr(UsdGeomNurbsCurves &self,
-                                      object defaultVal, bool writeSparsely) {
-    return self.CreateFormAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Token), writeSparsely);
-}
 
 static std::string
 _Repr(const UsdGeomNurbsCurves &self)
@@ -151,13 +144,6 @@ void wrapUsdGeomNurbsCurves()
              &This::GetPointWeightsAttr)
         .def("CreatePointWeightsAttr",
              &_CreatePointWeightsAttr,
-             (arg("defaultValue")=object(),
-              arg("writeSparsely")=false))
-        
-        .def("GetFormAttr",
-             &This::GetFormAttr)
-        .def("CreateFormAttr",
-             &_CreateFormAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
 

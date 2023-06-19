@@ -53,14 +53,14 @@ class SdfAssetPath;
 /// \class UsdGeomNurbsCurves
 ///
 /// This schema is analagous to NURBS Curves in packages like Maya
-/// and Houdini, often used for interchange of rigging and modeling curves.  
-/// Unlike Maya, this curve spec supports batching of multiple curves into a 
-/// single prim, widths, and normals in the schema.  Additionally, we require 
+/// and Houdini, often used for interchange of rigging and modeling curves.
+/// Unlike Maya, this curve spec supports batching of multiple curves into a
+/// single prim, widths, and normals in the schema.  Additionally, we require
 /// 'numSegments + 2 * degree + 1' knots (2 more than maya does).  This is to
-/// be more consistent with RenderMan's NURBS patch specification.  
+/// be more consistent with RenderMan's NURBS patch specification.
 /// 
 /// To express a periodic curve:
-/// - knot[0] = knot[1] - (knots[-2] - knots[-3]; 
+/// - knot[0] = knot[1] - (knots[-2] - knots[-3];
 /// - knot[-1] = knot[-2] + (knot[2] - knots[1]);
 /// 
 /// To express a nonperiodic curve:
@@ -73,26 +73,6 @@ class SdfAssetPath;
 /// \em order and \em range, when representing a batched NurbsCurve should be
 /// authored one value per curve.  \em knots should be the concatentation of
 /// all batched curves.
-/// 
-/// \anchor UsdGeom_NurbsCurve_Form
-/// <b> NurbsCurve Form </b>
-/// 
-/// <b>Form</b> is provided as an aid to interchange between modeling and
-/// animation applications so that they can robustly identify the intent with
-/// which the surface was modelled, and take measures (if they are able) to
-/// preserve the continuity/concidence constraints as the surface may be rigged
-/// or deformed.  
-/// \li An \em open-form NurbsCurve has no continuity constraints.
-/// \li A \em closed-form NurbsCurve expects the first and last control points
-/// to overlap
-/// \li A \em periodic-form NurbsCurve expects the first and last
-/// \em order - 1 control points to overlap.
-/// 
-///
-/// For any described attribute \em Fallback \em Value or \em Allowed \em Values below
-/// that are text/tokens, the actual token is published and defined in \ref UsdGeomTokens.
-/// So to set an attribute to the value "rightHanded", use UsdGeomTokens->rightHanded
-/// as the value.
 ///
 class UsdGeomNurbsCurves : public UsdGeomCurves
 {
@@ -218,7 +198,7 @@ public:
     // KNOTS 
     // --------------------------------------------------------------------- //
     /// Knot vector providing curve parameterization.
-    /// The length of the slice of the array for the ith curve 
+    /// The length of the slice of the array for the ith curve
     /// must be ( curveVertexCount[i] + order[i] ), and its
     /// entries must take on monotonically increasing values.
     ///
@@ -243,9 +223,9 @@ public:
     // RANGES 
     // --------------------------------------------------------------------- //
     /// Provides the minimum and maximum parametric values (as defined
-    /// by knots) over which the curve is actually defined.  The minimum must 
-    /// be less than the maximum, and greater than or equal to the value of the 
-    /// knots['i'th curve slice][order[i]-1]. The maxium must be less 
+    /// by knots) over which the curve is actually defined.  The minimum must
+    /// be less than the maximum, and greater than or equal to the value of the
+    /// knots['i'th curve slice][order[i]-1]. The maxium must be less
     /// than or equal to the last element's value in knots['i'th curve slice].
     /// Range maps to (vmin, vmax) in the RenderMan spec.
     ///
@@ -271,9 +251,9 @@ public:
     // --------------------------------------------------------------------- //
     /// Optionally provides "w" components for each control point,
     /// thus must be the same length as the points attribute.  If authored,
-    /// the patch will be rational.  If unauthored, the patch will be
+    /// the curve will be rational.  If unauthored, the curve will be
     /// polynomial, i.e. weight for all points is 1.0.
-    /// \note Some DCC's pre-weight the \em points, but in this schema, 
+    /// \note Some DCC's pre-weight the \em points, but in this schema,
     /// \em points are not pre-weighted.
     ///
     /// | ||
@@ -291,33 +271,6 @@ public:
     /// the default for \p writeSparsely is \c false.
     USDGEOM_API
     UsdAttribute CreatePointWeightsAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
-
-public:
-    // --------------------------------------------------------------------- //
-    // FORM 
-    // --------------------------------------------------------------------- //
-    /// Interpret the control grid and knot vectors as representing
-    /// an open, geometrically closed, or geometrically closed and C2 continuous
-    /// curve.
-    /// \sa \ref UsdGeom_NurbsCurve_Form "NurbsCurve Form" 
-    ///
-    /// | ||
-    /// | -- | -- |
-    /// | Declaration | `uniform token form = "open"` |
-    /// | C++ Type | TfToken |
-    /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Token |
-    /// | \ref SdfVariability "Variability" | SdfVariabilityUniform |
-    /// | \ref UsdGeomTokens "Allowed Values" | open, closed, periodic |
-    USDGEOM_API
-    UsdAttribute GetFormAttr() const;
-
-    /// See GetFormAttr(), and also 
-    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
-    /// If specified, author \p defaultValue as the attribute's default,
-    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
-    /// the default for \p writeSparsely is \c false.
-    USDGEOM_API
-    UsdAttribute CreateFormAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
     // ===================================================================== //

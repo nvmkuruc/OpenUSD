@@ -104,6 +104,23 @@ UsdPhysicsVtxVtxAttach::_GetTfType() const
 }
 
 UsdAttribute
+UsdPhysicsVtxVtxAttach::GetAttachmentEnabledAttr() const
+{
+    return GetPrim().GetAttribute(UsdPhysicsTokens->physicsAttachmentEnabled);
+}
+
+UsdAttribute
+UsdPhysicsVtxVtxAttach::CreateAttachmentEnabledAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdPhysicsTokens->physicsAttachmentEnabled,
+                       SdfValueTypeNames->Bool,
+                       /* custom = */ false,
+                       SdfVariabilityVarying,
+                       defaultValue,
+                       writeSparsely);
+}
+
+UsdAttribute
 UsdPhysicsVtxVtxAttach::GetPhysicsVtxIndices0Attr() const
 {
     return GetPrim().GetAttribute(UsdPhysicsTokens->physicsVtxIndices0);
@@ -214,6 +231,7 @@ const TfTokenVector&
 UsdPhysicsVtxVtxAttach::GetSchemaAttributeNames(bool includeInherited)
 {
     static TfTokenVector localNames = {
+        UsdPhysicsTokens->physicsAttachmentEnabled,
         UsdPhysicsTokens->physicsVtxIndices0,
         UsdPhysicsTokens->physicsVtxIndices1,
         UsdPhysicsTokens->physicsStiffness,

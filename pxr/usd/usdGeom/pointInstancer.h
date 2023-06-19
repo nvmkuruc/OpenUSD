@@ -87,7 +87,7 @@ class SdfAssetPath;
 /// smaller number are actually alive.  To encode this situation efficiently,
 /// the simulator may re-use indices in the instance arrays, when a particle
 /// dies, its index will be taken over by a new particle that may be birthed in
-/// a much different location.  This presents challenges both for 
+/// a much different location.  This presents challenges both for
 /// identity-tracking, and for motion-blur.
 /// 
 /// We facilitate identity tracking by providing an optional, animatable
@@ -108,26 +108,35 @@ class SdfAssetPath;
 /// 
 /// Each instance's transformation is a combination of the SRT affine transform
 /// described by its scale, orientation, and position, applied \em after
-/// (i.e. less locally) than the transformation computed at the root of the
-/// prototype it is instancing.  In other words, to put an instance of a 
-/// PointInstancer into the space of the PointInstancer's parent prim:
+/// (i.e. less locally than) the local to parent transformation computed at
+/// the root of the prototype it is instancing.
 /// 
-/// 1. Apply (most locally) the authored transformation for 
+/// If your processing of prototype geometry naturally takes into account the
+/// transform of the prototype root, then this term can be omitted from the
+/// computation of each instance transform, and this can be controlled when
+/// computing instance transformation matrices using the
+/// UsdGeomPointInstancer::PrototypeXformInclusion enumeration.
+/// 
+/// To understand the computation of the instance transform, in order to put
+/// an instance of a PointInstancer into the space of the PointInstancer's
+/// parent prim we do the following:
+/// 
+/// 1. Apply (most locally) the authored local to parent transformation for
 /// <em>prototypes[protoIndices[i]]</em>
 /// 2. If *scales* is authored, next apply the scaling matrix from *scales[i]*
-/// 3. If *orientations* is authored: **if *angularVelocities* is authored**, 
-/// first multiply *orientations[i]* by the unit quaternion derived by scaling 
-/// *angularVelocities[i]* by the \ref UsdGeom_PITimeScaling "time differential" 
-/// from the left-bracketing timeSample for *orientation* to the requested 
-/// evaluation time *t*, storing the result in *R*, **else** assign *R* 
-/// directly from *orientations[i]*.  Apply the rotation matrix derived 
+/// 3. If *orientations* is authored: **if *angularVelocities* is authored**,
+/// first multiply *orientations[i]* by the unit quaternion derived by scaling
+/// *angularVelocities[i]* by the \ref UsdGeom_PITimeScaling "time differential"
+/// from the left-bracketing timeSample for *orientation* to the requested
+/// evaluation time *t*, storing the result in *R*, **else** assign *R*
+/// directly from *orientations[i]*.  Apply the rotation matrix derived
 /// from *R*.
-/// 4. Apply the translation derived from *positions[i]*. If *velocities* is 
-/// authored, apply the translation deriving from *velocities[i]* scaled by 
-/// the time differential from the left-bracketing timeSample for *positions* 
+/// 4. Apply the translation derived from *positions[i]*. If *velocities* is
+/// authored, apply the translation deriving from *velocities[i]* scaled by
+/// the time differential from the left-bracketing timeSample for *positions*
 /// to the requested evaluation time *t*.
-/// 5. Least locally, apply the transformation authored on the PointInstancer 
-/// prim itself (or the UsdGeomImageable::ComputeLocalToWorldTransform() of the 
+/// 5. Least locally, apply the transformation authored on the PointInstancer
+/// prim itself (or the UsdGeomImageable::ComputeLocalToWorldTransform() of the
 /// PointInstancer to put the instance directly into world space)
 /// 
 /// If neither *velocities* nor *angularVelocities* are authored, we fallback to
@@ -155,9 +164,9 @@ class SdfAssetPath;
 /// 
 /// \ref UsdGeomPrimvar "Primvars" authored on a PointInstancer prim should
 /// always be applied to each instance with \em constant interpolation at
-/// the root of the instance.  When you are authoring primvars on a 
-/// PointInstancer, think about it as if you were authoring them on a 
-/// point-cloud (e.g. a UsdGeomPoints gprim).  The same 
+/// the root of the instance.  When you are authoring primvars on a
+/// PointInstancer, think about it as if you were authoring them on a
+/// point-cloud (e.g. a UsdGeomPoints gprim).  The same
 /// <A HREF="http://renderman.pixar.com/resources/current/rps/appnote.22.html#classSpecifiers">interpolation rules for points</A> apply here, substituting
 /// "instance" for "point".
 /// 
@@ -175,11 +184,11 @@ class SdfAssetPath;
 /// \section UsdGeomPointInstancer_masking Masking Instances: "Deactivating" and Invising
 /// 
 /// Often a PointInstancer is created "upstream" in a graphics pipeline, and
-/// the needs of "downstream" clients necessitate eliminating some of the 
-/// instances from further consideration.  Accomplishing this pruning by 
+/// the needs of "downstream" clients necessitate eliminating some of the
+/// instances from further consideration.  Accomplishing this pruning by
 /// re-authoring all of the per-instance attributes is not very attractive,
 /// since it may mean destructively editing a large quantity of data.  We
-/// therefore provide means of "masking" instances by ID, such that the 
+/// therefore provide means of "masking" instances by ID, such that the
 /// instance data is unmolested, but per-instance transform and primvar data
 /// can be retrieved with the no-longer-desired instances eliminated from the
 /// (smaller) arrays.  PointInstancer allows two independent means of masking
@@ -194,7 +203,7 @@ class SdfAssetPath;
 /// \subsection UsdGeomPointInstancer_inactiveIds InactiveIds: List-edited, Unvarying Masking
 /// 
 /// The first masking feature encodes a list of IDs in a list-editable metadatum
-/// called \em inactiveIds, which, although it does not have any similar 
+/// called \em inactiveIds, which, although it does not have any similar
 /// impact to stage population as \ref UsdPrim::SetActive() "prim activation",
 /// it shares with that feature that its application is uniform over all time.
 /// Because it is list-editable, we can \em sparsely add and remove instances
@@ -205,7 +214,7 @@ class SdfAssetPath;
 /// upstream, in a manner that is robust to many kinds of future changes to
 /// the upstream data.
 /// 
-/// See ActivateId(), ActivateIds(), DeactivateId(), DeactivateIds(), 
+/// See ActivateId(), ActivateIds(), DeactivateId(), DeactivateIds(),
 /// ActivateAllIds()
 /// 
 /// \subsection UsdGeomPointInstancer_invisibleIds invisibleIds: Animatable Masking
@@ -238,7 +247,7 @@ class SdfAssetPath;
 /// 
 /// There \em is a pattern one can deploy for organizing the prototypes
 /// such that they will automatically be skipped by basic UsdPrim::GetChildren()
-/// or UsdPrimRange traversals.  Usd prims each have a 
+/// or UsdPrimRange traversals.  Usd prims each have a
 /// \ref Usd_PrimSpecifiers "specifier" of "def", "over", or "class".  The
 /// default traversals skip over prims that are "pure overs" or classes.  So
 /// to protect prototypes from all generic traversals and processing, place
@@ -247,8 +256,8 @@ class SdfAssetPath;
 /// 01 def PointInstancer "Crowd_Mid"
 /// 02 {
 /// 03     rel prototypes = [ </Crowd_Mid/Prototypes/MaleThin_Business>, </Crowd_Mid/Prototypes/MaleThin_Casual> ]
-/// 04     
-/// 05     over "Prototypes" 
+/// 04
+/// 05     over "Prototypes"
 /// 06     {
 /// 07          def "MaleThin_Business" (
 /// 08              references = [@MaleGroupA/usd/MaleGroupA.usd@</MaleGroupA>]
@@ -258,7 +267,7 @@ class SdfAssetPath;
 /// 12              }
 /// 13          )
 /// 14          { ... }
-/// 15          
+/// 15
 /// 16          def "MaleThin_Casual"
 /// 17          ...
 /// 18     }
@@ -364,9 +373,9 @@ public:
     // --------------------------------------------------------------------- //
     // PROTOINDICES 
     // --------------------------------------------------------------------- //
-    /// <b>Required property</b>. Per-instance index into 
-    /// \em prototypes relationship that identifies what geometry should be 
-    /// drawn for each instance.  <b>Topology attribute</b> - can be animated, 
+    /// <b>Required property</b>. Per-instance index into
+    /// \em prototypes relationship that identifies what geometry should be
+    /// drawn for each instance.  <b>Topology attribute</b> - can be animated,
     /// but at a potential performance impact for streaming.
     ///
     /// | ||
@@ -416,7 +425,7 @@ public:
     // --------------------------------------------------------------------- //
     // POSITIONS 
     // --------------------------------------------------------------------- //
-    /// <b>Required property</b>. Per-instance position.  See also 
+    /// <b>Required property</b>. Per-instance position.  See also
     /// \ref UsdGeomPointInstancer_transform .
     ///
     /// | ||
@@ -439,7 +448,7 @@ public:
     // --------------------------------------------------------------------- //
     // ORIENTATIONS 
     // --------------------------------------------------------------------- //
-    /// If authored, per-instance orientation of each instance about its 
+    /// If authored, per-instance orientation of each instance about its
     /// prototype's origin, represented as a unit length quaternion, which
     /// allows us to encode it with sufficient precision in a compact GfQuath.
     /// 
@@ -448,7 +457,7 @@ public:
     /// rotation matrices will ensure that quaternions are unit length, though
     /// it will not make any attempt to select the "better (for interpolation
     /// with respect to neighboring samples)" of the two possible quaternions
-    /// that encode the rotation. 
+    /// that encode the rotation.
     /// 
     /// See also \ref UsdGeomPointInstancer_transform .
     ///
@@ -472,7 +481,7 @@ public:
     // --------------------------------------------------------------------- //
     // SCALES 
     // --------------------------------------------------------------------- //
-    /// If authored, per-instance scale to be applied to 
+    /// If authored, per-instance scale to be applied to
     /// each instance, before any rotation is applied.
     /// 
     /// See also \ref UsdGeomPointInstancer_transform .
@@ -497,7 +506,7 @@ public:
     // --------------------------------------------------------------------- //
     // VELOCITIES 
     // --------------------------------------------------------------------- //
-    /// If provided, per-instance 'velocities' will be used to 
+    /// If provided, per-instance 'velocities' will be used to
     /// compute positions between samples for the 'positions' attribute,
     /// rather than interpolating between neighboring 'positions' samples.
     /// Velocities should be considered mandatory if both \em protoIndices
@@ -506,7 +515,7 @@ public:
     /// position units per UsdTimeCode, divide by
     /// UsdStage::GetTimeCodesPerSecond().
     /// 
-    /// See also \ref UsdGeomPointInstancer_transform, 
+    /// See also \ref UsdGeomPointInstancer_transform,
     /// \ref UsdGeom_VelocityInterpolation .
     ///
     /// | ||
@@ -608,11 +617,11 @@ public:
     // --------------------------------------------------------------------- //
     // PROTOTYPES 
     // --------------------------------------------------------------------- //
-    /// <b>Required property</b>. Orders and targets the prototype root 
+    /// <b>Required property</b>. Orders and targets the prototype root
     /// prims, which can be located anywhere in the scenegraph that is convenient,
-    /// although we promote organizing prototypes as children of the 
+    /// although we promote organizing prototypes as children of the
     /// PointInstancer.  The position of a prototype in this relationship defines
-    /// the value an instance would specify in the \em protoIndices attribute to 
+    /// the value an instance would specify in the \em protoIndices attribute to
     /// instance that prototype. Since relationships are uniform, this property
     /// cannot be animated.
     ///

@@ -50,6 +50,13 @@ WRAP_CUSTOM;
 
         
 static UsdAttribute
+_CreateAttachmentEnabledAttr(UsdPhysicsVTetAttach &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateAttachmentEnabledAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Bool), writeSparsely);
+}
+        
+static UsdAttribute
 _CreatePhysicsVtxIndicesAttr(UsdPhysicsVTetAttach &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreatePhysicsVtxIndicesAttr(
@@ -125,6 +132,13 @@ void wrapUsdPhysicsVTetAttach()
 
         .def(!self)
 
+        
+        .def("GetAttachmentEnabledAttr",
+             &This::GetAttachmentEnabledAttr)
+        .def("CreateAttachmentEnabledAttr",
+             &_CreateAttachmentEnabledAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
         
         .def("GetPhysicsVtxIndicesAttr",
              &This::GetPhysicsVtxIndicesAttr)

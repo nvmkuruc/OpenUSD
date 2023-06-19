@@ -80,11 +80,11 @@ struct UsdGeomTokensType {
     const TfToken axis;
     /// \brief "basis"
     /// 
-    /// UsdGeomBasisCurves
+    /// UsdGeomBasisCurves, UsdGeomBasisCurvesNetwork
     const TfToken basis;
     /// \brief "bezier"
     /// 
-    /// Possible value for UsdGeomBasisCurves::GetBasisAttr(), Default value for UsdGeomBasisCurves::GetBasisAttr()
+    /// Possible value for UsdGeomBasisCurves::GetBasisAttr(), Default value for UsdGeomBasisCurves::GetBasisAttr(), Possible value for UsdGeomBasisCurvesNetwork::GetBasisAttr(), Default value for UsdGeomBasisCurvesNetwork::GetBasisAttr()
     const TfToken bezier;
     /// \brief "bilinear"
     /// 
@@ -104,7 +104,7 @@ struct UsdGeomTokensType {
     const TfToken box;
     /// \brief "bspline"
     /// 
-    /// Possible value for UsdGeomBasisCurves::GetBasisAttr()
+    /// Possible value for UsdGeomBasisCurves::GetBasisAttr(), Possible value for UsdGeomBasisCurvesNetwork::GetBasisAttr()
     const TfToken bspline;
     /// \brief "cards"
     /// 
@@ -116,7 +116,7 @@ struct UsdGeomTokensType {
     const TfToken catmullClark;
     /// \brief "catmullRom"
     /// 
-    /// Possible value for UsdGeomBasisCurves::GetBasisAttr()
+    /// Possible value for UsdGeomBasisCurves::GetBasisAttr(), Possible value for UsdGeomBasisCurvesNetwork::GetBasisAttr()
     const TfToken catmullRom;
     /// \brief "clippingPlanes"
     /// 
@@ -128,7 +128,7 @@ struct UsdGeomTokensType {
     const TfToken clippingRange;
     /// \brief "closed"
     /// 
-    /// Possible value for UsdGeomNurbsCurves::GetFormAttr(), Possible value for UsdGeomNurbsPatch::GetUFormAttr(), Possible value for UsdGeomNurbsPatch::GetVFormAttr()
+    /// Possible value for UsdGeomNurbsPatch::GetUFormAttr(), Possible value for UsdGeomNurbsPatch::GetVFormAttr()
     const TfToken closed;
     /// \brief "constant"
     /// 
@@ -172,12 +172,16 @@ struct UsdGeomTokensType {
     const TfToken cross;
     /// \brief "cubic"
     /// 
-    /// Possible value for UsdGeomBasisCurves::GetTypeAttr(), Default value for UsdGeomBasisCurves::GetTypeAttr()
+    /// Possible value for UsdGeomBasisCurves::GetTypeAttr(), Default value for UsdGeomBasisCurves::GetTypeAttr(), Possible value for UsdGeomBasisCurvesNetwork::GetTypeAttr(), Default value for UsdGeomBasisCurvesNetwork::GetTypeAttr()
     const TfToken cubic;
     /// \brief "curveVertexCounts"
     /// 
     /// UsdGeomCurves
     const TfToken curveVertexCounts;
+    /// \brief "curveVertexIndices"
+    /// 
+    /// UsdGeomBasisCurvesNetwork
+    const TfToken curveVertexIndices;
     /// \brief "default"
     /// 
     /// Possible value for UsdGeomModelAPI::GetModelDrawModeAttr(), Possible value for UsdGeomImageable::GetPurposeAttr(), Default value for UsdGeomImageable::GetPurposeAttr()
@@ -196,7 +200,7 @@ struct UsdGeomTokensType {
     const TfToken edgeOnly;
     /// \brief "elementSize"
     /// 
-    /// UsdGeomPrimvar - The number of values in the value array that must be aggregated for each element on the  primitive.
+    /// UsdGeomPrimvar - The number of values in the value array that must be aggregated for each element on the primitive.
     const TfToken elementSize;
     /// \brief "elementType"
     /// 
@@ -212,7 +216,7 @@ struct UsdGeomTokensType {
     const TfToken extent;
     /// \brief "extentsHint"
     /// 
-    /// Name of the attribute used to author extents hints at the root of leaf models. Extents hints are stored by purpose as a vector of GfVec3f values. They are ordered based on the order of purpose tokens returned by  UsdGeomImageable::GetOrderedPurposeTokens.
+    /// Name of the attribute used to author extents hints at the root of leaf models. Extents hints are stored by purpose as a vector of GfVec3f values. They are ordered based on the order of purpose tokens returned by UsdGeomImageable::GetOrderedPurposeTokens.
     const TfToken extentsHint;
     /// \brief "face"
     /// 
@@ -220,7 +224,7 @@ struct UsdGeomTokensType {
     const TfToken face;
     /// \brief "faceVarying"
     /// 
-    /// Possible value for UsdGeomPrimvar::SetInterpolation. For polygons and subdivision surfaces, four values are interpolated over each face of the mesh. Bilinear interpolation  is used for interpolation between the four values.
+    /// Possible value for UsdGeomPrimvar::SetInterpolation. For polygons and subdivision surfaces, four values are interpolated over each face of the mesh. Bilinear interpolation is used for interpolation between the four values.
     const TfToken faceVarying;
     /// \brief "faceVaryingLinearInterpolation"
     /// 
@@ -246,10 +250,6 @@ struct UsdGeomTokensType {
     /// 
     /// UsdGeomCamera
     const TfToken focusDistance;
-    /// \brief "form"
-    /// 
-    /// UsdGeomNurbsCurves
-    const TfToken form;
     /// \brief "fromTexture"
     /// 
     /// Possible value for UsdGeomModelAPI::GetModelCardGeometryAttr()
@@ -336,7 +336,7 @@ struct UsdGeomTokensType {
     const TfToken length;
     /// \brief "linear"
     /// 
-    /// Possible value for UsdGeomBasisCurves::GetTypeAttr()
+    /// Possible value for UsdGeomBasisCurves::GetTypeAttr(), Possible value for UsdGeomBasisCurvesNetwork::GetTypeAttr()
     const TfToken linear;
     /// \brief "loop"
     /// 
@@ -408,11 +408,11 @@ struct UsdGeomTokensType {
     const TfToken none;
     /// \brief "nonOverlapping"
     /// 
-    /// A type of family of GeomSubsets. It implies that  the elements in the various subsets belonging to the family are  mutually exclusive, i.e., an element that appears in one  subset may not belong to any other subset in the family.
+    /// A type of family of GeomSubsets. It implies that the elements in the various subsets belonging to the family are mutually exclusive, i.e., an element that appears in one subset may not belong to any other subset in the family.
     const TfToken nonOverlapping;
     /// \brief "nonperiodic"
     /// 
-    /// Possible value for UsdGeomBasisCurves::GetWrapAttr(), Default value for UsdGeomBasisCurves::GetWrapAttr()
+    /// Possible value for UsdGeomBasisCurves::GetWrapAttr(), Default value for UsdGeomBasisCurves::GetWrapAttr(), Possible value for UsdGeomBasisCurvesNetwork::GetWrapAttr(), Default value for UsdGeomBasisCurvesNetwork::GetWrapAttr()
     const TfToken nonperiodic;
     /// \brief "normals"
     /// 
@@ -420,7 +420,7 @@ struct UsdGeomTokensType {
     const TfToken normals;
     /// \brief "open"
     /// 
-    /// Possible value for UsdGeomNurbsCurves::GetFormAttr(), Default value for UsdGeomNurbsCurves::GetFormAttr(), Possible value for UsdGeomNurbsPatch::GetUFormAttr(), Default value for UsdGeomNurbsPatch::GetUFormAttr(), Possible value for UsdGeomNurbsPatch::GetVFormAttr(), Default value for UsdGeomNurbsPatch::GetVFormAttr()
+    /// Possible value for UsdGeomNurbsPatch::GetUFormAttr(), Default value for UsdGeomNurbsPatch::GetUFormAttr(), Possible value for UsdGeomNurbsPatch::GetVFormAttr(), Default value for UsdGeomNurbsPatch::GetVFormAttr()
     const TfToken open;
     /// \brief "order"
     /// 
@@ -444,11 +444,11 @@ struct UsdGeomTokensType {
     const TfToken orthographic;
     /// \brief "partition"
     /// 
-    /// A type of family of GeomSubsets. It implies  that every element appears exacly once in only one of the  subsets in the family.
+    /// A type of family of GeomSubsets. It implies that every element appears exacly once in only one of the subsets in the family.
     const TfToken partition;
     /// \brief "periodic"
     /// 
-    /// Possible value for UsdGeomNurbsCurves::GetFormAttr(), Possible value for UsdGeomBasisCurves::GetWrapAttr(), Possible value for UsdGeomNurbsPatch::GetUFormAttr(), Possible value for UsdGeomNurbsPatch::GetVFormAttr()
+    /// Possible value for UsdGeomBasisCurves::GetWrapAttr(), Possible value for UsdGeomNurbsPatch::GetUFormAttr(), Possible value for UsdGeomNurbsPatch::GetVFormAttr(), Possible value for UsdGeomBasisCurvesNetwork::GetWrapAttr()
     const TfToken periodic;
     /// \brief "perspective"
     /// 
@@ -456,7 +456,7 @@ struct UsdGeomTokensType {
     const TfToken perspective;
     /// \brief "pinned"
     /// 
-    /// Possible value for UsdGeomBasisCurves::GetWrapAttr()
+    /// Possible value for UsdGeomBasisCurves::GetWrapAttr(), Possible value for UsdGeomBasisCurvesNetwork::GetWrapAttr()
     const TfToken pinned;
     /// \brief "pivot"
     /// 
@@ -566,10 +566,18 @@ struct UsdGeomTokensType {
     /// 
     /// UsdGeomMesh
     const TfToken subdivisionScheme;
+    /// \brief "surfaceFaceVertexIndices"
+    /// 
+    /// UsdGeomTetMesh
+    const TfToken surfaceFaceVertexIndices;
     /// \brief "tangents"
     /// 
     /// UsdGeomHermiteCurves
     const TfToken tangents;
+    /// \brief "tetVertexIndices"
+    /// 
+    /// UsdGeomTetMesh
+    const TfToken tetVertexIndices;
     /// \brief "triangleSubdivisionRule"
     /// 
     /// UsdGeomMesh
@@ -600,7 +608,7 @@ struct UsdGeomTokensType {
     const TfToken trimCurveVertexCounts;
     /// \brief "type"
     /// 
-    /// UsdGeomBasisCurves
+    /// UsdGeomBasisCurves, UsdGeomBasisCurvesNetwork
     const TfToken type;
     /// \brief "uForm"
     /// 
@@ -612,7 +620,7 @@ struct UsdGeomTokensType {
     const TfToken uKnots;
     /// \brief "unauthoredValuesIndex"
     /// 
-    /// UsdGeomPrimvar - The index that represents  unauthored values in the indices array of an indexed primvar.
+    /// UsdGeomPrimvar - The index that represents unauthored values in the indices array of an indexed primvar.
     const TfToken unauthoredValuesIndex;
     /// \brief "uniform"
     /// 
@@ -620,7 +628,7 @@ struct UsdGeomTokensType {
     const TfToken uniform;
     /// \brief "unrestricted"
     /// 
-    /// A type of family of GeomSubsets. It implies that there are no restrictions w.r.t. the membership of elements in  the subsets. There could be overlapping members in subsets  belonging to the family and the union of all subsets in the  family may not contain all the elements.
+    /// A type of family of GeomSubsets. It implies that there are no restrictions w.r.t. the membership of elements in the subsets. There could be overlapping members in subsets belonging to the family and the union of all subsets in the family may not contain all the elements.
     const TfToken unrestricted;
     /// \brief "uOrder"
     /// 
@@ -640,7 +648,7 @@ struct UsdGeomTokensType {
     const TfToken uVertexCount;
     /// \brief "varying"
     /// 
-    /// Possible value for UsdGeomPrimvar::SetInterpolation. Four values are interpolated over each uv patch segment of the  surface. Bilinear interpolation is used for interpolation  between the four values.
+    /// Possible value for UsdGeomPrimvar::SetInterpolation. Four values are interpolated over each uv patch segment of the surface. Bilinear interpolation is used for interpolation between the four values.
     const TfToken varying;
     /// \brief "velocities"
     /// 
@@ -648,7 +656,7 @@ struct UsdGeomTokensType {
     const TfToken velocities;
     /// \brief "vertex"
     /// 
-    /// Possible value for UsdGeomPrimvar::SetInterpolation. Values are interpolated between each vertex in the surface primitive. The basis function of the surface is used for  interpolation between vertices.
+    /// Possible value for UsdGeomPrimvar::SetInterpolation. Values are interpolated between each vertex in the surface primitive. The basis function of the surface is used for interpolation between vertices.
     const TfToken vertex;
     /// \brief "verticalAperture"
     /// 
@@ -696,7 +704,7 @@ struct UsdGeomTokensType {
     const TfToken widths;
     /// \brief "wrap"
     /// 
-    /// UsdGeomBasisCurves
+    /// UsdGeomBasisCurves, UsdGeomBasisCurvesNetwork
     const TfToken wrap;
     /// \brief "X"
     /// 

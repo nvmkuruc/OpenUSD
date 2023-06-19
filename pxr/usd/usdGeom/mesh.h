@@ -56,7 +56,7 @@ class SdfAssetPath;
 ///
 /// Encodes a mesh with optional subdivision properties and features.
 /// 
-/// As a point-based primitive, meshes are defined in terms of points that 
+/// As a point-based primitive, meshes are defined in terms of points that
 /// are connected into edges and faces. Many references to meshes use the
 /// term 'vertex' in place of or interchangeably with 'points', while some
 /// use 'vertex' to refer to the 'face-vertices' that define a face.  To
@@ -252,7 +252,7 @@ public:
     // --------------------------------------------------------------------- //
     // FACEVERTEXCOUNTS 
     // --------------------------------------------------------------------- //
-    /// Provides the number of vertices in each face of the mesh, 
+    /// Provides the number of vertices in each face of the mesh,
     /// which is also the number of consecutive indices in _faceVertexIndices_
     /// that define the face.  The length of this attribute is the number of
     /// faces in the mesh.  If this attribute has more than

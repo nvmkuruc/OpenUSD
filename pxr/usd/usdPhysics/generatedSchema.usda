@@ -74,9 +74,16 @@ class "PhysicsRigidBodyAPI" (
 
 class "PhysicsDeformableBodyAPI" (
     apiSchemas = ["PhysicsBodyAPI"]
-    doc = "Applied to a UsdGeomGPrim that is to be driven by a deformable body simulation.  The material properties of such a body are to be governed by the applied materials."
+    doc = "Applied to either a UsdGeomTetMesh, UsdGeomMesh, UsdGeomBasisCurves/UsdGeomBasisCurveNetwork (a simulation state GPrim with corresponding rest shape API), or to a Scope/XForm - in which case the Scope/XForm needs to be an immediate parent to the simulation state GPrim.  The material properties of such a body are to be governed by the applied materials."
 )
 {
+    float physics:mass = 0 (
+        displayName = "Mass"
+        doc = """If non-zero, directly specifies the mass of the deformable object
+        and overrides the mass properties derived from material density.
+        Note if mass is 0.0 it is ignored. Units: mass.
+        """
+    )
 }
 
 class "PhysicsMassAPI" (
@@ -356,7 +363,7 @@ class "PhysicsDeformableRestShapeAPI" (
 }
 
 class "PhysicsSurfaceDeformableRestShapeAPI" (
-    doc = "Defines the rest shape for a UsdGeomMesh."
+    doc = "Defines the rest shape for a UsdGeomMesh. The UsdGeomMesh needs to contain only triangular faces."
 )
 {
     float[] physics:edgeBendAngles (
@@ -388,7 +395,7 @@ class "PhysicsSurfaceDeformableRestShapeAPI" (
 }
 
 class "PhysicsCurveDeformableRestShapeAPI" (
-    doc = "Defines the rest shape for a UsdGeomCurves."
+    doc = "Defines the rest shape for a UsdGeomBasisCurves or a UsdGeomBasisCurvesNetwork. The curve primitive needs to be composed of linear segments."
 )
 {
     int[] physics:restCurveVertexIndices (
@@ -408,18 +415,22 @@ class "PhysicsCurveDeformableRestShapeAPI" (
         \\ref UsdGeomBasisCurves_PrimvarInterpolation."""
     )
     point3f[] physics:restPoints (
-        doc = "Describes the rest shape in (local) space for a UsdGeomCurves."
+        doc = "Describes the rest shape in (local) space for a UsdGeomBasisCurves or a UsdGeomBasisCurvesNetwork."
     )
 }
 
 class PhysicsVtxVtxAttachment "PhysicsVtxVtxAttachment" (
     doc = """Describes a fixed binding attachment between vertices of two
-             suitable geometries. The length of
+             suitable deformable body simulation meshes. The length of
              vtxIndices1 should always equal that of vtxIndices2. To express
              multiple connections to the same vertex, use multiple instances
              of PhysicsVtxVtxAttachment."""
 )
 {
+    bool physics:attachmentEnabled = 1 (
+        displayName = "Attachment Enabled"
+        doc = "Determines if this PhysicsVtxVtxAttachment is enabled."
+    )
     float physics:damping = 0 (
         displayName = "Damping"
         doc = """Proportional factor of the force acting against the direction
@@ -427,7 +438,7 @@ class PhysicsVtxVtxAttachment "PhysicsVtxVtxAttachment" (
             Range: [0, inf)
             Units: mass/second"""
     )
-    float physics:stiffness = 0 (
+    float physics:stiffness = inf (
         displayName = "Stiffness"
         doc = '''Distance proportional factor for the attachment.
             "inf" implies a hard constraint when the simulator can support it.
@@ -445,13 +456,12 @@ class PhysicsVtxVtxAttachment "PhysicsVtxVtxAttachment" (
     rel physics:vtxSrc1 (
         displayName = "Vertex Source0"
         doc = """Relationship to a single UsdGeomPointBased the vertices
-                 belongs to. This should always point to a deformable body."""
+                 belongs to. This should always point to a deformable body's simulation mesh."""
     )
     rel physics:vtxSrc2 (
         displayName = "Vertex Source2"
         doc = """Relationship to a single UsdGeomPointBased the vertices
-                 belongs to. This should always point to a deformable body's
-                 geometry."""
+                 belongs to. This should always point to a deformable body's simulation mesh."""
     )
     rel proxyPrim (
         doc = '''The proxyPrim relationship allows us to link a
@@ -496,10 +506,14 @@ class PhysicsVtxVtxAttachment "PhysicsVtxVtxAttachment" (
 }
 
 class PhysicsVtxTriAttachment "PhysicsVtxTriAttachment" (
-    doc = """Describes a fixed binding attachment between a vertices and triangle
-    faces of two suitable geometries."""
+    doc = """Describes a fixed binding attachment between vertices and triangle
+    faces of two suitable deformable body simulation meshes."""
 )
 {
+    bool physics:attachmentEnabled = 1 (
+        displayName = "Attachment Enabled"
+        doc = "Determines if this PhysicsVtxTriAttachment is enabled."
+    )
     float physics:damping = 0 (
         displayName = "Damping"
         doc = """Proportional factor of the force acting against the direction
@@ -514,7 +528,7 @@ class PhysicsVtxTriAttachment "PhysicsVtxTriAttachment" (
                  triangle. There should be exactly one set of face coordinates
                  corresponding to each vertex index and face index."""
     )
-    float physics:stiffness = 0 (
+    float physics:stiffness = inf (
         displayName = "Stiffness"
         doc = '''Distance proportional factor for the attachment.
             "inf" implies a hard constraint when the simulator can support it.
@@ -528,8 +542,8 @@ class PhysicsVtxTriAttachment "PhysicsVtxTriAttachment" (
     )
     rel physics:triSrc (
         displayName = "Triangles Source"
-        doc = """Relationship to a single UsdGeomMesh the triangle faces
-                 belong to."""
+        doc = """Relationship to a single UsdGeomMesh or UsdGeomTetMesh surface the triangle faces
+                 belong to. This should always point to a deformable body's simulation mesh"""
     )
     int[] physics:vtxIndices (
         displayName = "Vertex Indices"
@@ -538,8 +552,7 @@ class PhysicsVtxTriAttachment "PhysicsVtxTriAttachment" (
     rel physics:vtxSrc (
         displayName = "Vertices Source"
         doc = """Relationship to a single UsdGeomPointBased the vertices
-                 belong to. This should always point to a deformable body's
-                 geometry."""
+                 belong to. This should always point to a deformable body's simulation mesh."""
     )
     rel proxyPrim (
         doc = '''The proxyPrim relationship allows us to link a
@@ -584,10 +597,14 @@ class PhysicsVtxTriAttachment "PhysicsVtxTriAttachment" (
 }
 
 class PhysicsVtxTetAttachment "PhysicsVtxTetAttachment" (
-    doc = """Describes a fixed binding attachment between a vertices and tetrahedra
-    of two suitable geometries."""
+    doc = """Describes a fixed binding attachment between vertices and tetrahedra
+    of two suitable deformable body simulation meshes."""
 )
 {
+    bool physics:attachmentEnabled = 1 (
+        displayName = "Attachment Enabled"
+        doc = "Determines if this PhysicsVtxTetAttachment is enabled."
+    )
     vector3f[] physics:baryCoords (
         displayName = "Barycenrtic Coordinates"
         doc = """Barycentric coordinates of the form U,V,W of the point wrt.
@@ -601,7 +618,7 @@ class PhysicsVtxTetAttachment "PhysicsVtxTetAttachment" (
             Range: [0, inf)
             Units: mass/second"""
     )
-    float physics:stiffness = 0 (
+    float physics:stiffness = inf (
         displayName = "Stiffness"
         doc = '''Distance proportional factor for the attachment.
             "inf" implies a hard constraint when the simulator can support it.
@@ -615,7 +632,7 @@ class PhysicsVtxTetAttachment "PhysicsVtxTetAttachment" (
     )
     rel physics:tetSrc (
         displayName = "Triangles Source"
-        doc = "Relationship to a single TetMesh which the tetrahedra belong to."
+        doc = "Relationship to a single TetMesh which the tetrahedra belong to. This should always point to a deformable body's simulation mesh."
     )
     int[] physics:vtxIndices (
         displayName = "Vertex Indices"
@@ -624,7 +641,7 @@ class PhysicsVtxTetAttachment "PhysicsVtxTetAttachment" (
     rel physics:vtxSrc (
         displayName = "Vertices Source"
         doc = """Relationship to a single UsdGeomPointBased the vertices
-                 belongs to. This should always point to a deformable body."""
+                 belongs to. This should always point to a deformable body's simulation mesh."""
     )
     rel proxyPrim (
         doc = '''The proxyPrim relationship allows us to link a
@@ -670,11 +687,13 @@ class PhysicsVtxTetAttachment "PhysicsVtxTetAttachment" (
 
 class PhysicsVtxCurveAttachment "PhysicsVtxCurveAttachment" (
     doc = """Describes a fixed binding attachment between vertices and curves
-    of two suitable geometries. The vertices must always be from a deformable
-    body. The curves can be from either a deformable body or a kinematic one.
-    """
+    of two suitable deformable body simulation meshes."""
 )
 {
+    bool physics:attachmentEnabled = 1 (
+        displayName = "Attachment Enabled"
+        doc = "Determines if this PhysicsVtxCurveAttachment is enabled."
+    )
     float[] physics:curveSegmentCoords (
         displayName = "Curve Segment Coordinates"
         doc = """U coordinate specifying the interpolated position within the
@@ -690,7 +709,7 @@ class PhysicsVtxCurveAttachment "PhysicsVtxCurveAttachment" (
     )
     rel physics:curveSrc (
         displayName = "Curves Source"
-        doc = "Relationship to a single UsdGeomCurves the curves belong to."
+        doc = "Relationship to a single UsdGeomBasisCurves or UsdGeomBasisCurvesNetwork the curves belong to. This should always point to a deformable body's simulation mesh."
     )
     float physics:damping = 0 (
         displayName = "Damping"
@@ -699,7 +718,7 @@ class PhysicsVtxCurveAttachment "PhysicsVtxCurveAttachment" (
             Range: [0, inf)
             Units: mass/second"""
     )
-    float physics:stiffness = 0 (
+    float physics:stiffness = inf (
         displayName = "Stiffness"
         doc = '''Distance proportional factor for the attachment.
             "inf" implies a hard constraint when the simulator can support it.
@@ -713,7 +732,175 @@ class PhysicsVtxCurveAttachment "PhysicsVtxCurveAttachment" (
     rel physics:vtxSrc (
         displayName = "Vertices Source"
         doc = """Relationship to a single UsdGeomPointBased the vertices
-                 belongs to. This should always point to a deformable body."""
+                 belongs to. This should always point to a deformable body's simulation mesh."""
+    )
+    rel proxyPrim (
+        doc = '''The proxyPrim relationship allows us to link a
+        prim whose purpose is "render" to its (single target)
+        purpose="proxy" prim.  This is entirely optional, but can be
+        useful in several scenarios:
+        
+        - In a pipeline that does pruning (for complexity management)
+        by deactivating prims composed from asset references, when we
+        deactivate a purpose="render" prim, we will be able to discover
+        and additionally deactivate its associated purpose="proxy" prim,
+        so that preview renders reflect the pruning accurately.
+        
+        - DCC importers may be able to make more aggressive optimizations
+        for interactive processing and display if they can discover the proxy
+        for a given render prim.
+        
+        - With a little more work, a Hydra-based application will be able
+        to map a picked proxy prim back to its render geometry for selection.
+
+        \\note It is only valid to author the proxyPrim relationship on
+        prims whose purpose is "render".'''
+    )
+    uniform token purpose = "default" (
+        allowedTokens = ["default", "render", "proxy", "guide"]
+        doc = """Purpose is a classification of geometry into categories that 
+        can each be independently included or excluded from traversals of prims 
+        on a stage, such as rendering or bounding-box computation traversals.
+
+        See for more detail about how 
+        purpose is computed and used."""
+    )
+    token visibility = "inherited" (
+        allowedTokens = ["inherited", "invisible"]
+        doc = '''Visibility is meant to be the simplest form of "pruning" 
+        visibility that is supported by most DCC apps.  Visibility is 
+        animatable, allowing a sub-tree of geometry to be present for some 
+        segment of a shot, and absent from others; unlike the action of 
+        deactivating geometry prims, invisible geometry is still 
+        available for inspection, for positioning, for defining volumes, etc.'''
+    )
+}
+
+class PhysicsVtxXformAttachment "PhysicsVtxXformAttachment" (
+    doc = """Describes a fixed binding attachment between vertices and an xformable
+    coordinate frame. The vertices must always be from a deformable
+    body's simulation mesh. If the xformable is a rigid body or a prim of
+    the subtree of a rigid body the attachment is treated by the solver as
+    a two way constraint."""
+)
+{
+    bool physics:attachmentEnabled = 1 (
+        displayName = "Attachment Enabled"
+        doc = "Determines if this PhysicsVtxXformAttachment is enabled."
+    )
+    float physics:damping = 0 (
+        displayName = "Damping"
+        doc = """Proportional factor of the force acting against the direction
+                 of relative motion.
+            Range: [0, inf)
+            Units: mass/second"""
+    )
+    point3f[] physics:localPositions (
+        displayName = "Local Positions"
+        doc = "Spatial offsets of the attachment locations in the coordinate frame described by xformSrc."
+    )
+    float physics:stiffness = inf (
+        displayName = "Stiffness"
+        doc = '''Distance proportional factor for the attachment.
+            "inf" implies a hard constraint when the simulator can support it.
+            Range: [0, inf)
+            Units: mass/second/second.'''
+    )
+    int[] physics:vtxIndices (
+        displayName = "Vertex Indices"
+        doc = "Array of vertex indices from vtxSrc"
+    )
+    rel physics:vtxSrc (
+        displayName = "Vertices Source"
+        doc = """Relationship to a single UsdGeomPointBased the vertices
+                 belongs to. This should always point to a deformable body's simulation mesh."""
+    )
+    rel physics:xformSrc (
+        displayName = "Xformable Source"
+        doc = "Relationship to a single UsdGeomXformable."
+    )
+    rel proxyPrim (
+        doc = '''The proxyPrim relationship allows us to link a
+        prim whose purpose is "render" to its (single target)
+        purpose="proxy" prim.  This is entirely optional, but can be
+        useful in several scenarios:
+        
+        - In a pipeline that does pruning (for complexity management)
+        by deactivating prims composed from asset references, when we
+        deactivate a purpose="render" prim, we will be able to discover
+        and additionally deactivate its associated purpose="proxy" prim,
+        so that preview renders reflect the pruning accurately.
+        
+        - DCC importers may be able to make more aggressive optimizations
+        for interactive processing and display if they can discover the proxy
+        for a given render prim.
+        
+        - With a little more work, a Hydra-based application will be able
+        to map a picked proxy prim back to its render geometry for selection.
+
+        \\note It is only valid to author the proxyPrim relationship on
+        prims whose purpose is "render".'''
+    )
+    uniform token purpose = "default" (
+        allowedTokens = ["default", "render", "proxy", "guide"]
+        doc = """Purpose is a classification of geometry into categories that 
+        can each be independently included or excluded from traversals of prims 
+        on a stage, such as rendering or bounding-box computation traversals.
+
+        See for more detail about how 
+        purpose is computed and used."""
+    )
+    token visibility = "inherited" (
+        allowedTokens = ["inherited", "invisible"]
+        doc = '''Visibility is meant to be the simplest form of "pruning" 
+        visibility that is supported by most DCC apps.  Visibility is 
+        animatable, allowing a sub-tree of geometry to be present for some 
+        segment of a shot, and absent from others; unlike the action of 
+        deactivating geometry prims, invisible geometry is still 
+        available for inspection, for positioning, for defining volumes, etc.'''
+    )
+}
+
+class PhysicsElementCollisionFilter "PhysicsElementCollisionFilter" (
+    doc = """Describes a collision filter based on vertices, segments or edges and faces
+    for two suitable GPrims which are the source of the elements. At least one source primitive needs to be a deformable body's simulation mesh, and one can be either a rigid body or collider.
+    """
+)
+{
+    int[] physics:elemIndices0 (
+        displayName = "Element Indices 0"
+        doc = 'Array of element indices of type elemType0 from src0. Type "seg" implies that each entry consists of two indices - (curve index, segment index) or (vertex index, vertex index) for triangle edges. Type "all" implies an empty list.'
+    )
+    int[] physics:elemIndices1 (
+        displayName = "Element Indices 1"
+        doc = 'Array of element indices of type elemType1 from src1. Type "seg" implies that each entry consists of two indices - (curve index, segment index) or (vertex index, vertex index) for triangle edges. Type "all" implies an empty list.'
+    )
+    uniform token physics:elemType0 = "vtx" (
+        allowedTokens = ["vtx", "seg", "tri", "all"]
+        displayName = "Element Type 0"
+        doc = 'Defines the element type in elemIndices0. Type "vtx" refers to deformable body vertices. Type "seg" refers to deformable curve segments or deformable triangle edges, each described by two indices. Type "tri" refers to deformable triangular faces (surface triangles in the case of volumetric deformable bodies). Type "all" refers to the whole geometry of src0, in which case elemIndices0 is assumed to be empty.'
+    )
+    uniform token physics:elemType1 = "vtx" (
+        allowedTokens = ["vtx", "seg", "tri", "all"]
+        displayName = "Element Type 1"
+        doc = 'Defines the element type in elemIndices1. Type "vtx" refers to deformable body vertices. Type "seg" refers to either deformable curve segments or deformable triangle edges. Type "tri" refers to deformable triangular faces (surface triangles in the case of volumetric deformable bodies). Type "all" refers to the whole geometry of src1.'
+    )
+    bool physics:filterEnabled = 1 (
+        displayName = "Filter Enabled"
+        doc = "Determines if this PhysicsElementCollisionFilter is enabled."
+    )
+    uniform token physics:filterType = "group" (
+        allowedTokens = ["pairwise", "group"]
+        displayName = "Filter Type"
+        doc = 'Describes how elements in elemIndices0 and elemIndices1 are combined to define element pairs that are filtered. The type "pairwise" indicates that each Nth entry in elemIndices0 pairs up with the Nth entry in elemIndices1. The type "group" indicates that each entry in elemIndices0 pairs up with every entry in elemIndices1.'
+    )
+    rel physics:src0 (
+        displayName = "Source 0"
+        doc = "Relationship to a single deformable body's simulation mesh which is the source of the elements described by elemType0 and elemIndices0 or a rigid body/collider."
+    )
+    rel physics:src1 (
+        displayName = "Source 1"
+        doc = "Relationship to a single deformable body's simulation mesh which is the source of the elements described by elemType1 and elemIndices1 or a rigid body/collider."
     )
     rel proxyPrim (
         doc = '''The proxyPrim relationship allows us to link a

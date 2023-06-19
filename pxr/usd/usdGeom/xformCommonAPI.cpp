@@ -29,10 +29,6 @@
 #include "pxr/usd/sdf/types.h"
 #include "pxr/usd/sdf/assetPath.h"
 
-// #nv begin #xformcommonapi-doubles
-#include "pxr/base/tf/envSetting.h"
-// nv end
-
 PXR_NAMESPACE_OPEN_SCOPE
 
 // Register the schema with the TfType system.
@@ -47,16 +43,6 @@ TF_DEFINE_PRIVATE_TOKENS(
     _schemaTokens,
     (XformCommonAPI)
 );
-
-// #nv begin #xformcommonapi-doubles
-TF_DEFINE_ENV_SETTING(USDGEOM_XFORMCOMMONAPI_ALLOW_DOUBLES, 0,
-    "Allow double-encoded xform attributes");
-static bool _IsSupportedXformAttrDoubles() {
-    static bool _v = TfGetEnvSetting(USDGEOM_XFORMCOMMONAPI_ALLOW_DOUBLES) == 1;
-    return _v;
-}
-
-// nv end
 
 /* virtual */
 UsdGeomXformCommonAPI::~UsdGeomXformCommonAPI()

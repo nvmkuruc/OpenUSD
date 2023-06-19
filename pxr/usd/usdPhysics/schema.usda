@@ -213,12 +213,21 @@ class "PhysicsDeformableBodyAPI"
         string className = "DeformableBodyAPI"
     }
 
-    doc = """Applied to a UsdGeomGPrim that is to be driven by a deformable body simulation.  The material properties of such a body are to be governed by the applied materials."""
+    doc = """Applied to either a UsdGeomTetMesh, UsdGeomMesh, UsdGeomBasisCurves/UsdGeomBasisCurveNetwork (a simulation state GPrim with corresponding rest shape API), or to a Scope/XForm - in which case the Scope/XForm needs to be an immediate parent to the simulation state GPrim.  The material properties of such a body are to be governed by the applied materials."""
     inherits = </APISchemaBase>
 	prepend apiSchemas = ["PhysicsBodyAPI"]
 )
 {
-	# empty
+	float physics:mass = 0.0 (
+        customData = {
+            string apiName = "mass"
+        }
+        displayName = "Mass"
+        doc = """If non-zero, directly specifies the mass of the deformable object
+        and overrides the mass properties derived from material density.
+        Note if mass is 0.0 it is ignored. Units: mass.
+        """
+    )
 }
 
 class "PhysicsMassAPI"
@@ -679,7 +688,7 @@ class "PhysicsSurfaceDeformableRestShapeAPI"
         string className = "SurfaceDeformableRestShapeAPI"
     }
 
-    doc = """Defines the rest shape for a UsdGeomMesh."""
+    doc = """Defines the rest shape for a UsdGeomMesh. The UsdGeomMesh needs to contain only triangular faces."""
     inherits = </APISchemaBase>
 )
 {
@@ -723,12 +732,12 @@ class "PhysicsCurveDeformableRestShapeAPI"
         string className = "CurveDeformableRestShapeAPI"
     }
 
-    doc = """Defines the rest shape for a UsdGeomCurves."""
+    doc = """Defines the rest shape for a UsdGeomBasisCurves or a UsdGeomBasisCurvesNetwork. The curve primitive needs to be composed of linear segments."""
     inherits = </APISchemaBase>
 )
 {
     point3f[] physics:restPoints (
-        doc = """Describes the rest shape in (local) space for a UsdGeomCurves."""
+        doc = """Describes the rest shape in (local) space for a UsdGeomBasisCurves or a UsdGeomBasisCurvesNetwork."""
     )
 
     int[] physics:restCurveVertexIndices (
@@ -756,20 +765,28 @@ class PhysicsVtxVtxAttachment "PhysicsVtxVtxAttachment"
         string className = "VtxVtxAttach"
     }
     doc = """Describes a fixed binding attachment between vertices of two
-             suitable geometries. The length of
+             suitable deformable body simulation meshes. The length of
              vtxIndices1 should always equal that of vtxIndices2. To express
              multiple connections to the same vertex, use multiple instances
              of PhysicsVtxVtxAttachment."""
     inherits = </Imageable>
 )
 {
+    bool physics:attachmentEnabled = true (
+        customData = {
+            string apiName = "attachmentEnabled"
+        }
+        displayName = "Attachment Enabled"
+        doc = """Determines if this PhysicsVtxVtxAttachment is enabled."""
+    )
+
     rel physics:vtxSrc1 (
         customData = {
             string apiName = "vtxSrc0"
         }
         displayName = "Vertex Source0"
         doc = """Relationship to a single UsdGeomPointBased the vertices
-                 belongs to. This should always point to a deformable body."""
+                 belongs to. This should always point to a deformable body's simulation mesh."""
     )
 
     rel physics:vtxSrc2 (
@@ -778,8 +795,7 @@ class PhysicsVtxVtxAttachment "PhysicsVtxVtxAttachment"
         }
         displayName = "Vertex Source2"
         doc = """Relationship to a single UsdGeomPointBased the vertices
-                 belongs to. This should always point to a deformable body's
-                 geometry."""
+                 belongs to. This should always point to a deformable body's simulation mesh."""
     )
 
     int[] physics:vtxIndices0(
@@ -792,7 +808,7 @@ class PhysicsVtxVtxAttachment "PhysicsVtxVtxAttachment"
         doc = """Array of vertex indices from vtxSrc1."""
     )
 
-    float physics:stiffness = 0.0 (
+    float physics:stiffness = inf (
         customData = {
             string apiName = "stiffness"
         }
@@ -820,20 +836,27 @@ class PhysicsVtxTriAttachment "PhysicsVtxTriAttachment"
     customData = {
         string className = "VTriAttach"
     }
-    doc = """Describes a fixed binding attachment between a vertices and triangle
-    faces of two suitable geometries."""
+    doc = """Describes a fixed binding attachment between vertices and triangle
+    faces of two suitable deformable body simulation meshes."""
 
     inherits = </Imageable>
 )
 {
+    bool physics:attachmentEnabled = true (
+        customData = {
+            string apiName = "attachmentEnabled"
+        }
+        displayName = "Attachment Enabled"
+        doc = """Determines if this PhysicsVtxTriAttachment is enabled."""
+    )
+
     rel physics:vtxSrc (
         customData = {
             string apiName = "vtxSrc"
         }
         displayName = "Vertices Source"
         doc = """Relationship to a single UsdGeomPointBased the vertices
-                 belong to. This should always point to a deformable body's
-                 geometry."""
+                 belong to. This should always point to a deformable body's simulation mesh."""
     )
 
     rel physics:triSrc (
@@ -841,8 +864,8 @@ class PhysicsVtxTriAttachment "PhysicsVtxTriAttachment"
             string apiName = "triSrc"
         }
         displayName = "Triangles Source"
-        doc = """Relationship to a single UsdGeomMesh the triangle faces
-                 belong to."""
+        doc = """Relationship to a single UsdGeomMesh or UsdGeomTetMesh surface the triangle faces
+                 belong to. This should always point to a deformable body's simulation mesh"""
     )
 
     int[] physics:vtxIndices(
@@ -864,7 +887,7 @@ class PhysicsVtxTriAttachment "PhysicsVtxTriAttachment"
                  corresponding to each vertex index and face index."""
     )
 
-    float physics:stiffness = 0.0 (
+    float physics:stiffness = inf (
         customData = {
             string apiName = "stiffness"
         }
@@ -892,18 +915,26 @@ class PhysicsVtxTetAttachment "PhysicsVtxTetAttachment"
     customData = {
         string className = "VTetAttach"
     }
-    doc = """Describes a fixed binding attachment between a vertices and tetrahedra
-    of two suitable geometries."""
+    doc = """Describes a fixed binding attachment between vertices and tetrahedra
+    of two suitable deformable body simulation meshes."""
     inherits = </Imageable>
 )
 {
+    bool physics:attachmentEnabled = true (
+        customData = {
+            string apiName = "attachmentEnabled"
+        }
+        displayName = "Attachment Enabled"
+        doc = """Determines if this PhysicsVtxTetAttachment is enabled."""
+    )
+
     rel physics:vtxSrc (
         customData = {
             string apiName = "vtxSrc"
         }
         displayName = "Vertices Source"
         doc = """Relationship to a single UsdGeomPointBased the vertices
-                 belongs to. This should always point to a deformable body."""
+                 belongs to. This should always point to a deformable body's simulation mesh."""
     )
 
     rel physics:tetSrc (
@@ -911,7 +942,7 @@ class PhysicsVtxTetAttachment "PhysicsVtxTetAttachment"
             string apiName = "tetSrc"
         }
         displayName = "Triangles Source"
-        doc = """Relationship to a single TetMesh which the tetrahedra belong to."""
+        doc = """Relationship to a single TetMesh which the tetrahedra belong to. This should always point to a deformable body's simulation mesh."""
     )
 
     int[] physics:vtxIndices(
@@ -932,7 +963,7 @@ class PhysicsVtxTetAttachment "PhysicsVtxTetAttachment"
                  set of face coordinates corresponding to each vertex index and tet index."""
     )
 
-    float physics:stiffness = 0.0 (
+    float physics:stiffness = inf (
         customData = {
             string apiName = "stiffness"
         }
@@ -961,20 +992,26 @@ class PhysicsVtxCurveAttachment "PhysicsVtxCurveAttachment"
         string className = "VCurveAttach"
     }
     doc = """Describes a fixed binding attachment between vertices and curves
-    of two suitable geometries. The vertices must always be from a deformable
-    body. The curves can be from either a deformable body or a kinematic one.
-    """
+    of two suitable deformable body simulation meshes."""
 
     inherits = </Imageable>
 )
 {
+    bool physics:attachmentEnabled = true (
+        customData = {
+            string apiName = "attachmentEnabled"
+        }
+        displayName = "Attachment Enabled"
+        doc = """Determines if this PhysicsVtxCurveAttachment is enabled."""
+    )
+
     rel physics:vtxSrc (
         customData = {
             string apiName = "vtxSrc"
         }
         displayName = "Vertices Source"
         doc = """Relationship to a single UsdGeomPointBased the vertices
-                 belongs to. This should always point to a deformable body."""
+                 belongs to. This should always point to a deformable body's simulation mesh."""
     )
 
     rel physics:curveSrc (
@@ -982,7 +1019,7 @@ class PhysicsVtxCurveAttachment "PhysicsVtxCurveAttachment"
             string apiName = "curveSrc"
         }
         displayName = "Curves Source"
-        doc = """Relationship to a single UsdGeomCurves the curves belong to."""
+        doc = """Relationship to a single UsdGeomBasisCurves or UsdGeomBasisCurvesNetwork the curves belong to. This should always point to a deformable body's simulation mesh."""
     )
 
     int[] physics:vtxIndices(
@@ -1005,7 +1042,7 @@ class PhysicsVtxCurveAttachment "PhysicsVtxCurveAttachment"
                  curve segment in curveSegmentIndices."""
     )
 
-    float physics:stiffness = 0.0 (
+    float physics:stiffness = inf (
         customData = {
             string apiName = "stiffness"
         }
@@ -1025,6 +1062,154 @@ class PhysicsVtxCurveAttachment "PhysicsVtxCurveAttachment"
                  of relative motion.
             Range: [0, inf)
             Units: mass/second"""
+    )
+}
+
+
+class PhysicsVtxXformAttachment "PhysicsVtxXformAttachment"
+(
+    customData = {
+        string className = "VXformAttach"
+    }
+    doc = """Describes a fixed binding attachment between vertices and an xformable
+    coordinate frame. The vertices must always be from a deformable
+    body's simulation mesh. If the xformable is a rigid body or a prim of
+    the subtree of a rigid body the attachment is treated by the solver as
+    a two way constraint."""
+
+    inherits = </Imageable>
+)
+{
+    bool physics:attachmentEnabled = true (
+        customData = {
+            string apiName = "attachmentEnabled"
+        }
+        displayName = "Attachment Enabled"
+        doc = """Determines if this PhysicsVtxXformAttachment is enabled."""
+    )
+
+    rel physics:vtxSrc (
+        customData = {
+            string apiName = "vtxSrc"
+        }
+        displayName = "Vertices Source"
+        doc = """Relationship to a single UsdGeomPointBased the vertices
+                 belongs to. This should always point to a deformable body's simulation mesh."""
+    )
+
+    rel physics:xformSrc (
+        customData = {
+            string apiName = "xformSrc"
+        }
+        displayName = "Xformable Source"
+        doc = """Relationship to a single UsdGeomXformable."""
+    )
+
+    int[] physics:vtxIndices(
+        displayName = "Vertex Indices"
+        doc = """Array of vertex indices from vtxSrc"""
+    )
+
+    point3f[] physics:localPositions(
+        displayName = "Local Positions"
+        doc = """Spatial offsets of the attachment locations in the coordinate frame described by xformSrc."""
+    )
+
+    float physics:stiffness = inf (
+        customData = {
+            string apiName = "stiffness"
+        }
+        displayName = "Stiffness"
+        doc = """Distance proportional factor for the attachment.
+            "inf" implies a hard constraint when the simulator can support it.
+            Range: [0, inf)
+            Units: mass/second/second."""
+    )
+
+    float physics:damping = 0.0 (
+        customData = {
+            string apiName = "damping"
+        }
+        displayName = "Damping"
+        doc = """Proportional factor of the force acting against the direction
+                 of relative motion.
+            Range: [0, inf)
+            Units: mass/second"""
+    )
+}
+
+
+class PhysicsElementCollisionFilter "PhysicsElementCollisionFilter"
+(
+    customData = {
+        string className = "ElementCollisionFilter"
+    }
+    doc = """Describes a collision filter based on vertices, segments or edges and faces
+    for two suitable GPrims which are the source of the elements. At least one source primitive needs to be a deformable body's simulation mesh, and one can be either a rigid body or collider.
+    """
+
+    inherits = </Imageable>
+)
+{
+    bool physics:filterEnabled = true (
+        customData = {
+            string apiName = "filterEnabled"
+        }
+        displayName = "Filter Enabled"
+        doc = """Determines if this PhysicsElementCollisionFilter is enabled."""
+    )
+
+    rel physics:src0 (
+        customData = {
+            string apiName = "src0"
+        }
+        displayName = "Source 0"
+        doc = """Relationship to a single deformable body's simulation mesh which is the source of the elements described by elemType0 and elemIndices0 or a rigid body/collider."""
+    )
+
+    rel physics:src1 (
+        customData = {
+            string apiName = "src1"
+        }
+        displayName = "Source 1"
+        doc = """Relationship to a single deformable body's simulation mesh which is the source of the elements described by elemType1 and elemIndices1 or a rigid body/collider."""
+    )
+
+    uniform token physics:filterType = "group" (
+        customData = {
+            string apiName = "filterType"
+        }
+        allowedTokens = ["pairwise", "group"]
+        displayName = "Filter Type"
+        doc = """Describes how elements in elemIndices0 and elemIndices1 are combined to define element pairs that are filtered. The type "pairwise" indicates that each Nth entry in elemIndices0 pairs up with the Nth entry in elemIndices1. The type "group" indicates that each entry in elemIndices0 pairs up with every entry in elemIndices1."""
+    )
+
+    uniform token physics:elemType0 = "vtx" (
+        customData = {
+            string apiName = "elemType0"
+        }
+        allowedTokens = ["vtx", "seg", "tri", "all"]
+        displayName = "Element Type 0"
+        doc = """Defines the element type in elemIndices0. Type "vtx" refers to deformable body vertices. Type "seg" refers to deformable curve segments or deformable triangle edges, each described by two indices. Type "tri" refers to deformable triangular faces (surface triangles in the case of volumetric deformable bodies). Type "all" refers to the whole geometry of src0, in which case elemIndices0 is assumed to be empty."""
+    )
+
+    uniform token physics:elemType1 = "vtx" (
+        customData = {
+            string apiName = "elemType1"
+        }
+        allowedTokens = ["vtx", "seg", "tri", "all"]
+        displayName = "Element Type 1"
+        doc = """Defines the element type in elemIndices1. Type "vtx" refers to deformable body vertices. Type "seg" refers to either deformable curve segments or deformable triangle edges. Type "tri" refers to deformable triangular faces (surface triangles in the case of volumetric deformable bodies). Type "all" refers to the whole geometry of src1."""
+    )
+
+    int[] physics:elemIndices0(
+        displayName = "Element Indices 0"
+        doc = """Array of element indices of type elemType0 from src0. Type "seg" implies that each entry consists of two indices - (curve index, segment index) or (vertex index, vertex index) for triangle edges. Type "all" implies an empty list."""
+    )
+
+    int[] physics:elemIndices1(
+        displayName = "Element Indices 1"
+        doc = """Array of element indices of type elemType1 from src1. Type "seg" implies that each entry consists of two indices - (curve index, segment index) or (vertex index, vertex index) for triangle edges. Type "all" implies an empty list."""
     )
 }
 
