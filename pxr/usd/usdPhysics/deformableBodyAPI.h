@@ -31,7 +31,6 @@
 #include "pxr/usd/usd/apiSchemaBase.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
-#include "pxr/usd/usdPhysics/tokens.h"
 
 #include "pxr/base/vt/value.h"
 
@@ -52,7 +51,7 @@ class SdfAssetPath;
 
 /// \class UsdPhysicsDeformableBodyAPI
 ///
-/// Applied to either a UsdGeomTetMesh, UsdGeomMesh, UsdGeomBasisCurves/UsdGeomBasisCurveNetwork (a simulation state GPrim with corresponding rest shape API), or to a Scope/XForm - in which case the Scope/XForm needs to be an immediate parent to the simulation state GPrim.  The material properties of such a body are to be governed by the applied materials.
+/// Applied to a UsdGeomGPrim that is to be driven by a deformable body simulation.  The material properties of such a body are to be governed by the applied materials.
 ///
 class UsdPhysicsDeformableBodyAPI : public UsdAPISchemaBase
 {
@@ -161,31 +160,6 @@ private:
     // override SchemaBase virtuals.
     USDPHYSICS_API
     const TfType &_GetTfType() const override;
-
-public:
-    // --------------------------------------------------------------------- //
-    // MASS 
-    // --------------------------------------------------------------------- //
-    /// If non-zero, directly specifies the mass of the deformable object
-    /// and overrides the mass properties derived from material density.
-    /// Note if mass is 0.0 it is ignored. Units: mass.
-    /// 
-    ///
-    /// | ||
-    /// | -- | -- |
-    /// | Declaration | `float physics:mass = 0` |
-    /// | C++ Type | float |
-    /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Float |
-    USDPHYSICS_API
-    UsdAttribute GetMassAttr() const;
-
-    /// See GetMassAttr(), and also 
-    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
-    /// If specified, author \p defaultValue as the attribute's default,
-    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
-    /// the default for \p writeSparsely is \c false.
-    USDPHYSICS_API
-    UsdAttribute CreateMassAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
     // ===================================================================== //

@@ -195,7 +195,7 @@ public:
     // WIDTH 
     // --------------------------------------------------------------------- //
     /// The width of the plane, which aligns to the x-axis when \em axis is
-    /// 'Z' or 'Y', or to the z-axis when \em axis is 'X'.  If you author \em width
+    /// 'Z' or 'Y', or to the z-axis when \em axis is 'X'.  If you author \em width 
     /// you must also author \em extent.
     /// 
     /// \sa UsdGeomGprim::GetExtentAttr()
@@ -221,7 +221,7 @@ public:
     // LENGTH 
     // --------------------------------------------------------------------- //
     /// The length of the plane, which aligns to the y-axis when \em axis is
-    /// 'Z' or 'X', or to the z-axis when \em axis is 'Y'.  If you author \em length
+    /// 'Z' or 'X', or to the z-axis when \em axis is 'Y'.  If you author \em length 
     /// you must also author \em extent.
     /// 
     /// \sa UsdGeomGprim::GetExtentAttr()
@@ -247,7 +247,7 @@ public:
     // AXIS 
     // --------------------------------------------------------------------- //
     /// The axis along which the surface of the plane is aligned. When set
-    /// to 'Z' the plane is in the xy-plane; when \em axis is 'X' the plane is in
+    /// to 'Z' the plane is in the xy-plane; when \em axis is 'X' the plane is in 
     /// the yz-plane, and when \em axis is 'Y' the plane is in the xz-plane.
     /// 
     /// \sa UsdGeomGprim::GetAxisAttr().

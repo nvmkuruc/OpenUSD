@@ -93,7 +93,6 @@ void wrapUsdGeomTokens()
     _AddToken(cls, "cross", UsdGeomTokens->cross);
     _AddToken(cls, "cubic", UsdGeomTokens->cubic);
     _AddToken(cls, "curveVertexCounts", UsdGeomTokens->curveVertexCounts);
-    _AddToken(cls, "curveVertexIndices", UsdGeomTokens->curveVertexIndices);
     _AddToken(cls, "default_", UsdGeomTokens->default_);
     _AddToken(cls, "doubleSided", UsdGeomTokens->doubleSided);
     _AddToken(cls, "edgeAndCorner", UsdGeomTokens->edgeAndCorner);
@@ -111,6 +110,7 @@ void wrapUsdGeomTokens()
     _AddToken(cls, "familyName", UsdGeomTokens->familyName);
     _AddToken(cls, "focalLength", UsdGeomTokens->focalLength);
     _AddToken(cls, "focusDistance", UsdGeomTokens->focusDistance);
+    _AddToken(cls, "form", UsdGeomTokens->form);
     _AddToken(cls, "fromTexture", UsdGeomTokens->fromTexture);
     _AddToken(cls, "fStop", UsdGeomTokens->fStop);
     _AddToken(cls, "guide", UsdGeomTokens->guide);
@@ -190,9 +190,7 @@ void wrapUsdGeomTokens()
     _AddToken(cls, "smooth", UsdGeomTokens->smooth);
     _AddToken(cls, "stereoRole", UsdGeomTokens->stereoRole);
     _AddToken(cls, "subdivisionScheme", UsdGeomTokens->subdivisionScheme);
-    _AddToken(cls, "surfaceFaceVertexIndices", UsdGeomTokens->surfaceFaceVertexIndices);
     _AddToken(cls, "tangents", UsdGeomTokens->tangents);
-    _AddToken(cls, "tetVertexIndices", UsdGeomTokens->tetVertexIndices);
     _AddToken(cls, "triangleSubdivisionRule", UsdGeomTokens->triangleSubdivisionRule);
     _AddToken(cls, "trimCurveCounts", UsdGeomTokens->trimCurveCounts);
     _AddToken(cls, "trimCurveKnots", UsdGeomTokens->trimCurveKnots);

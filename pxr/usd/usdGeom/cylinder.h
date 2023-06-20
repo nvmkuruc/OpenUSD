@@ -52,7 +52,7 @@ class SdfAssetPath;
 
 /// \class UsdGeomCylinder
 ///
-/// Defines a primitive cylinder with closed ends, centered at the
+/// Defines a primitive cylinder with closed ends, centered at the 
 /// origin, whose spine is along the specified \em axis.
 /// 
 /// The fallback values for Cube, Sphere, Cone, and Cylinder are set so that

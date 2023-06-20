@@ -184,7 +184,7 @@ public:
     /// 
     /// Without changing any other data in the scene, _blurScale_ allows artists to
     /// "dial in" the amount of blur on a per-object basis.  A _blurScale_
-    /// value of zero removes all blur, a value of 0.5 reduces blur by half,
+    /// value of zero removes all blur, a value of 0.5 reduces blur by half, 
     /// and a value of 2.0 doubles the blur.  The legal range for _blurScale_
     /// is [0, inf), although very high values may result in extremely expensive
     /// renders, and may exceed the capabilities of some renderers.
@@ -221,12 +221,12 @@ public:
     /// VelocityScale is an **inherited** float attribute that
     /// velocity-based schemas (e.g. PointBased, PointInstancer) can consume
     /// to compute interpolated positions and orientations by applying
-    /// velocity and angularVelocity, which is required for interpolating
-    /// between samples when topology is varying over time.  Although these
-    /// quantities are generally physically computed by a simulator, sometimes
-    /// we require more or less motion-blur to achieve the desired look.
-    /// VelocityScale allows artists to dial-in, as a post-sim correction,
-    /// a scale factor to be applied to the velocity prior to computing
+    /// velocity and angularVelocity, which is required for interpolating 
+    /// between samples when topology is varying over time.  Although these 
+    /// quantities are generally physically computed by a simulator, sometimes 
+    /// we require more or less motion-blur to achieve the desired look.  
+    /// VelocityScale allows artists to dial-in, as a post-sim correction, 
+    /// a scale factor to be applied to the velocity prior to computing 
     /// interpolated positions from it.
     ///
     /// | ||

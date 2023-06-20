@@ -104,23 +104,6 @@ UsdPhysicsVCurveAttach::_GetTfType() const
 }
 
 UsdAttribute
-UsdPhysicsVCurveAttach::GetAttachmentEnabledAttr() const
-{
-    return GetPrim().GetAttribute(UsdPhysicsTokens->physicsAttachmentEnabled);
-}
-
-UsdAttribute
-UsdPhysicsVCurveAttach::CreateAttachmentEnabledAttr(VtValue const &defaultValue, bool writeSparsely) const
-{
-    return UsdSchemaBase::_CreateAttr(UsdPhysicsTokens->physicsAttachmentEnabled,
-                       SdfValueTypeNames->Bool,
-                       /* custom = */ false,
-                       SdfVariabilityVarying,
-                       defaultValue,
-                       writeSparsely);
-}
-
-UsdAttribute
 UsdPhysicsVCurveAttach::GetPhysicsVtxIndicesAttr() const
 {
     return GetPrim().GetAttribute(UsdPhysicsTokens->physicsVtxIndices);
@@ -248,7 +231,6 @@ const TfTokenVector&
 UsdPhysicsVCurveAttach::GetSchemaAttributeNames(bool includeInherited)
 {
     static TfTokenVector localNames = {
-        UsdPhysicsTokens->physicsAttachmentEnabled,
         UsdPhysicsTokens->physicsVtxIndices,
         UsdPhysicsTokens->physicsCurveSegmentIndices,
         UsdPhysicsTokens->physicsCurveSegmentCoords,

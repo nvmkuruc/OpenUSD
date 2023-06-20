@@ -52,8 +52,8 @@ class SdfAssetPath;
 
 /// \class UsdPhysicsVTetAttach
 ///
-/// Describes a fixed binding attachment between vertices and tetrahedra
-/// of two suitable deformable body simulation meshes.
+/// Describes a fixed binding attachment between a vertices and tetrahedra
+/// of two suitable geometries.
 ///
 class UsdPhysicsVTetAttach : public UsdGeomImageable
 {
@@ -151,28 +151,6 @@ private:
 
 public:
     // --------------------------------------------------------------------- //
-    // ATTACHMENTENABLED 
-    // --------------------------------------------------------------------- //
-    /// Determines if this PhysicsVtxTetAttachment is enabled.
-    ///
-    /// | ||
-    /// | -- | -- |
-    /// | Declaration | `bool physics:attachmentEnabled = 1` |
-    /// | C++ Type | bool |
-    /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Bool |
-    USDPHYSICS_API
-    UsdAttribute GetAttachmentEnabledAttr() const;
-
-    /// See GetAttachmentEnabledAttr(), and also 
-    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
-    /// If specified, author \p defaultValue as the attribute's default,
-    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
-    /// the default for \p writeSparsely is \c false.
-    USDPHYSICS_API
-    UsdAttribute CreateAttachmentEnabledAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
-
-public:
-    // --------------------------------------------------------------------- //
     // PHYSICSVTXINDICES 
     // --------------------------------------------------------------------- //
     /// Array of vertex indices from vtxSrc
@@ -251,7 +229,7 @@ public:
     ///
     /// | ||
     /// | -- | -- |
-    /// | Declaration | `float physics:stiffness = inf` |
+    /// | Declaration | `float physics:stiffness = 0` |
     /// | C++ Type | float |
     /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Float |
     USDPHYSICS_API
@@ -295,7 +273,7 @@ public:
     // VTXSRC 
     // --------------------------------------------------------------------- //
     /// Relationship to a single UsdGeomPointBased the vertices
-    /// belongs to. This should always point to a deformable body's simulation mesh.
+    /// belongs to. This should always point to a deformable body.
     ///
     USDPHYSICS_API
     UsdRelationship GetVtxSrcRel() const;
@@ -309,7 +287,7 @@ public:
     // --------------------------------------------------------------------- //
     // TETSRC 
     // --------------------------------------------------------------------- //
-    /// Relationship to a single TetMesh which the tetrahedra belong to. This should always point to a deformable body's simulation mesh.
+    /// Relationship to a single TetMesh which the tetrahedra belong to.
     ///
     USDPHYSICS_API
     UsdRelationship GetTetSrcRel() const;

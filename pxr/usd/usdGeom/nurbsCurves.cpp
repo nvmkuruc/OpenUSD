@@ -171,6 +171,23 @@ UsdGeomNurbsCurves::CreatePointWeightsAttr(VtValue const &defaultValue, bool wri
                        writeSparsely);
 }
 
+UsdAttribute
+UsdGeomNurbsCurves::GetFormAttr() const
+{
+    return GetPrim().GetAttribute(UsdGeomTokens->form);
+}
+
+UsdAttribute
+UsdGeomNurbsCurves::CreateFormAttr(VtValue const &defaultValue, bool writeSparsely) const
+{
+    return UsdSchemaBase::_CreateAttr(UsdGeomTokens->form,
+                       SdfValueTypeNames->Token,
+                       /* custom = */ false,
+                       SdfVariabilityUniform,
+                       defaultValue,
+                       writeSparsely);
+}
+
 namespace {
 static inline TfTokenVector
 _ConcatenateAttributeNames(const TfTokenVector& left,const TfTokenVector& right)
@@ -192,6 +209,7 @@ UsdGeomNurbsCurves::GetSchemaAttributeNames(bool includeInherited)
         UsdGeomTokens->knots,
         UsdGeomTokens->ranges,
         UsdGeomTokens->pointWeights,
+        UsdGeomTokens->form,
     };
     static TfTokenVector allNames =
         _ConcatenateAttributeNames(

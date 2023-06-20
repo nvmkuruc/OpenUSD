@@ -63,7 +63,7 @@ class SdfAssetPath;
 /// a few methods available for retrieving primvars, making it potentially
 /// confusing knowing which one to use.  Here are some guidelines:
 /// 
-/// \li If you are populating a GUI with the primvars already available for
+/// \li If you are populating a GUI with the primvars already available for 
 /// authoring values on a prim, use GetPrimvars().
 /// \li If you want all of the "useful" (e.g. to a renderer) primvars
 /// available at a prim, including those inherited from ancestor prims, use
@@ -72,7 +72,7 @@ class SdfAssetPath;
 /// \li To find a particular primvar defined directly on a prim, which may
 /// or may not provide a value, use GetPrimvar().
 /// \li To find a particular primvar defined on a prim or inherited from
-/// ancestors, which may or may not provide a value, use
+/// ancestors, which may or may not provide a value, use 
 /// FindPrimvarWithInheritance().
 /// \li To *efficiently* query for primvars using the overloads of
 /// FindPrimvarWithInheritance() and FindPrimvarsWithInheritance(), one

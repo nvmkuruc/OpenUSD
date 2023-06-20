@@ -53,7 +53,7 @@ class SdfAssetPath;
 /// \class UsdPhysicsVtxVtxAttach
 ///
 /// Describes a fixed binding attachment between vertices of two
-/// suitable deformable body simulation meshes. The length of
+/// suitable geometries. The length of
 /// vtxIndices1 should always equal that of vtxIndices2. To express
 /// multiple connections to the same vertex, use multiple instances
 /// of PhysicsVtxVtxAttachment.
@@ -154,28 +154,6 @@ private:
 
 public:
     // --------------------------------------------------------------------- //
-    // ATTACHMENTENABLED 
-    // --------------------------------------------------------------------- //
-    /// Determines if this PhysicsVtxVtxAttachment is enabled.
-    ///
-    /// | ||
-    /// | -- | -- |
-    /// | Declaration | `bool physics:attachmentEnabled = 1` |
-    /// | C++ Type | bool |
-    /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Bool |
-    USDPHYSICS_API
-    UsdAttribute GetAttachmentEnabledAttr() const;
-
-    /// See GetAttachmentEnabledAttr(), and also 
-    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
-    /// If specified, author \p defaultValue as the attribute's default,
-    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
-    /// the default for \p writeSparsely is \c false.
-    USDPHYSICS_API
-    UsdAttribute CreateAttachmentEnabledAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
-
-public:
-    // --------------------------------------------------------------------- //
     // PHYSICSVTXINDICES0 
     // --------------------------------------------------------------------- //
     /// Array of vertex indices from vtxSrc0. 
@@ -229,7 +207,7 @@ public:
     ///
     /// | ||
     /// | -- | -- |
-    /// | Declaration | `float physics:stiffness = inf` |
+    /// | Declaration | `float physics:stiffness = 0` |
     /// | C++ Type | float |
     /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Float |
     USDPHYSICS_API
@@ -273,7 +251,7 @@ public:
     // VTXSRC0 
     // --------------------------------------------------------------------- //
     /// Relationship to a single UsdGeomPointBased the vertices
-    /// belongs to. This should always point to a deformable body's simulation mesh.
+    /// belongs to. This should always point to a deformable body.
     ///
     USDPHYSICS_API
     UsdRelationship GetVtxSrc0Rel() const;
@@ -288,7 +266,8 @@ public:
     // VTXSRC1 
     // --------------------------------------------------------------------- //
     /// Relationship to a single UsdGeomPointBased the vertices
-    /// belongs to. This should always point to a deformable body's simulation mesh.
+    /// belongs to. This should always point to a deformable body's
+    /// geometry.
     ///
     USDPHYSICS_API
     UsdRelationship GetVtxSrc1Rel() const;
