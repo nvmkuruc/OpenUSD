@@ -65,6 +65,7 @@ void wrapUsdPhysicsTokens()
     boost::python::class_<UsdPhysicsTokensType, boost::noncopyable>
         cls("Tokens", boost::python::no_init);
     _AddToken(cls, "acceleration", UsdPhysicsTokens->acceleration);
+    _AddToken(cls, "all", UsdPhysicsTokens->all);
     _AddToken(cls, "angular", UsdPhysicsTokens->angular);
     _AddToken(cls, "boundingCube", UsdPhysicsTokens->boundingCube);
     _AddToken(cls, "boundingSphere", UsdPhysicsTokens->boundingSphere);
@@ -80,6 +81,7 @@ void wrapUsdPhysicsTokens()
     _AddToken(cls, "drive_MultipleApplyTemplate_PhysicsTargetVelocity", UsdPhysicsTokens->drive_MultipleApplyTemplate_PhysicsTargetVelocity);
     _AddToken(cls, "drive_MultipleApplyTemplate_PhysicsType", UsdPhysicsTokens->drive_MultipleApplyTemplate_PhysicsType);
     _AddToken(cls, "force", UsdPhysicsTokens->force);
+    _AddToken(cls, "group", UsdPhysicsTokens->group);
     _AddToken(cls, "kilogramsPerUnit", UsdPhysicsTokens->kilogramsPerUnit);
     _AddToken(cls, "limit", UsdPhysicsTokens->limit);
     _AddToken(cls, "limit_MultipleApplyTemplate_PhysicsHigh", UsdPhysicsTokens->limit_MultipleApplyTemplate_PhysicsHigh);
@@ -87,8 +89,10 @@ void wrapUsdPhysicsTokens()
     _AddToken(cls, "linear", UsdPhysicsTokens->linear);
     _AddToken(cls, "meshSimplification", UsdPhysicsTokens->meshSimplification);
     _AddToken(cls, "none", UsdPhysicsTokens->none);
+    _AddToken(cls, "pairwise", UsdPhysicsTokens->pairwise);
     _AddToken(cls, "physicsAngularVelocity", UsdPhysicsTokens->physicsAngularVelocity);
     _AddToken(cls, "physicsApproximation", UsdPhysicsTokens->physicsApproximation);
+    _AddToken(cls, "physicsAttachmentEnabled", UsdPhysicsTokens->physicsAttachmentEnabled);
     _AddToken(cls, "physicsAxis", UsdPhysicsTokens->physicsAxis);
     _AddToken(cls, "physicsBaryCoords", UsdPhysicsTokens->physicsBaryCoords);
     _AddToken(cls, "physicsBody0", UsdPhysicsTokens->physicsBody0);
@@ -113,10 +117,16 @@ void wrapUsdPhysicsTokens()
     _AddToken(cls, "physicsDynamicFriction", UsdPhysicsTokens->physicsDynamicFriction);
     _AddToken(cls, "physicsEdgeBendAngles", UsdPhysicsTokens->physicsEdgeBendAngles);
     _AddToken(cls, "physicsEdgeVertPairs", UsdPhysicsTokens->physicsEdgeVertPairs);
+    _AddToken(cls, "physicsElemIndices0", UsdPhysicsTokens->physicsElemIndices0);
+    _AddToken(cls, "physicsElemIndices1", UsdPhysicsTokens->physicsElemIndices1);
+    _AddToken(cls, "physicsElemType0", UsdPhysicsTokens->physicsElemType0);
+    _AddToken(cls, "physicsElemType1", UsdPhysicsTokens->physicsElemType1);
     _AddToken(cls, "physicsExcludeFromArticulation", UsdPhysicsTokens->physicsExcludeFromArticulation);
     _AddToken(cls, "physicsFaceCoords", UsdPhysicsTokens->physicsFaceCoords);
     _AddToken(cls, "physicsFilteredGroups", UsdPhysicsTokens->physicsFilteredGroups);
     _AddToken(cls, "physicsFilteredPairs", UsdPhysicsTokens->physicsFilteredPairs);
+    _AddToken(cls, "physicsFilterEnabled", UsdPhysicsTokens->physicsFilterEnabled);
+    _AddToken(cls, "physicsFilterType", UsdPhysicsTokens->physicsFilterType);
     _AddToken(cls, "physicsGravityDirection", UsdPhysicsTokens->physicsGravityDirection);
     _AddToken(cls, "physicsGravityMagnitude", UsdPhysicsTokens->physicsGravityMagnitude);
     _AddToken(cls, "physicsInvertFilteredGroups", UsdPhysicsTokens->physicsInvertFilteredGroups);
@@ -124,6 +134,7 @@ void wrapUsdPhysicsTokens()
     _AddToken(cls, "physicsKinematicEnabled", UsdPhysicsTokens->physicsKinematicEnabled);
     _AddToken(cls, "physicsLocalPos0", UsdPhysicsTokens->physicsLocalPos0);
     _AddToken(cls, "physicsLocalPos1", UsdPhysicsTokens->physicsLocalPos1);
+    _AddToken(cls, "physicsLocalPositions", UsdPhysicsTokens->physicsLocalPositions);
     _AddToken(cls, "physicsLocalRot0", UsdPhysicsTokens->physicsLocalRot0);
     _AddToken(cls, "physicsLocalRot1", UsdPhysicsTokens->physicsLocalRot1);
     _AddToken(cls, "physicsLowerLimit", UsdPhysicsTokens->physicsLowerLimit);
@@ -141,6 +152,8 @@ void wrapUsdPhysicsTokens()
     _AddToken(cls, "physicsRestShapePoints", UsdPhysicsTokens->physicsRestShapePoints);
     _AddToken(cls, "physicsRestTetIndices", UsdPhysicsTokens->physicsRestTetIndices);
     _AddToken(cls, "physicsSimulationOwner", UsdPhysicsTokens->physicsSimulationOwner);
+    _AddToken(cls, "physicsSrc0", UsdPhysicsTokens->physicsSrc0);
+    _AddToken(cls, "physicsSrc1", UsdPhysicsTokens->physicsSrc1);
     _AddToken(cls, "physicsStartsAsleep", UsdPhysicsTokens->physicsStartsAsleep);
     _AddToken(cls, "physicsStaticFriction", UsdPhysicsTokens->physicsStaticFriction);
     _AddToken(cls, "physicsStiffness", UsdPhysicsTokens->physicsStiffness);
@@ -160,13 +173,17 @@ void wrapUsdPhysicsTokens()
     _AddToken(cls, "physicsVtxSrc", UsdPhysicsTokens->physicsVtxSrc);
     _AddToken(cls, "physicsVtxSrc1", UsdPhysicsTokens->physicsVtxSrc1);
     _AddToken(cls, "physicsVtxSrc2", UsdPhysicsTokens->physicsVtxSrc2);
+    _AddToken(cls, "physicsXformSrc", UsdPhysicsTokens->physicsXformSrc);
     _AddToken(cls, "physicsYoungsModulus", UsdPhysicsTokens->physicsYoungsModulus);
     _AddToken(cls, "rotX", UsdPhysicsTokens->rotX);
     _AddToken(cls, "rotY", UsdPhysicsTokens->rotY);
     _AddToken(cls, "rotZ", UsdPhysicsTokens->rotZ);
+    _AddToken(cls, "seg", UsdPhysicsTokens->seg);
     _AddToken(cls, "transX", UsdPhysicsTokens->transX);
     _AddToken(cls, "transY", UsdPhysicsTokens->transY);
     _AddToken(cls, "transZ", UsdPhysicsTokens->transZ);
+    _AddToken(cls, "tri", UsdPhysicsTokens->tri);
+    _AddToken(cls, "vtx", UsdPhysicsTokens->vtx);
     _AddToken(cls, "x", UsdPhysicsTokens->x);
     _AddToken(cls, "y", UsdPhysicsTokens->y);
     _AddToken(cls, "z", UsdPhysicsTokens->z);

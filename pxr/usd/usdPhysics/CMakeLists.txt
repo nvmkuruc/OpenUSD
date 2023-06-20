@@ -25,6 +25,7 @@ pxr_library(usdPhysics
         collisionGroup
         distanceJoint
         driveAPI
+        elementCollisionFilter
         filteredPairsAPI
         fixedJoint
         joint
@@ -49,6 +50,7 @@ pxr_library(usdPhysics
         vTetAttach
         vTriAttach
         vtxVtxAttach
+        vXformAttach
         scene
         sphericalJoint
         tokens        
@@ -67,6 +69,7 @@ pxr_library(usdPhysics
         wrapCollisionGroup.cpp
         wrapDistanceJoint.cpp
         wrapDriveAPI.cpp
+        wrapElementCollisionFilter.cpp
         wrapFilteredPairsAPI.cpp
         wrapFixedJoint.cpp
         wrapJoint.cpp
@@ -91,6 +94,7 @@ pxr_library(usdPhysics
         wrapVTetAttach.cpp
         wrapVTriAttach.cpp
         wrapVtxVtxAttach.cpp
+        wrapVXformAttach.cpp
         wrapScene.cpp
         wrapSphericalJoint.cpp
         wrapTokens.cpp

@@ -55,7 +55,7 @@ class SdfAssetPath;
 /// Encodes a rational or polynomial non-uniform B-spline
 /// surface, with optional trim curves.
 /// 
-/// The encoding mostly follows that of RiNuPatch and RiTrimCurve: 
+/// The encoding mostly follows that of RiNuPatch and RiTrimCurve:
 /// https://renderman.pixar.com/resources/current/RenderMan/geometricPrimitives.html#rinupatch , with some minor renaming and coalescing for clarity.
 /// 
 /// The layout of control vertices in the \em points attribute inherited
@@ -77,7 +77,7 @@ class SdfAssetPath;
 /// animation applications so that they can robustly identify the intent with
 /// which the surface was modelled, and take measures (if they are able) to
 /// preserve the continuity/concidence constraints as the surface may be rigged
-/// or deformed.  
+/// or deformed.
 /// \li An \em open-form NurbsPatch has no continuity constraints.
 /// \li A \em closed-form NurbsPatch expects the first and last control points
 /// to overlap
@@ -91,7 +91,7 @@ class SdfAssetPath;
 /// they easily support "trim curves", which allow smooth shapes to be
 /// carved out of the surface.
 /// 
-/// However, the topology of the patch is always rectangular, and joining two 
+/// However, the topology of the patch is always rectangular, and joining two
 /// nurbs patches together (especially when they have differing numbers of
 /// spans) is difficult to do smoothly.  Also, nurbs are not supported by
 /// the Ptex texturing technology (http://ptex.us).
@@ -454,7 +454,7 @@ public:
     /// thus must be the same length as the points attribute.  If authored,
     /// the patch will be rational.  If unauthored, the patch will be
     /// polynomial, i.e. weight for all points is 1.0.
-    /// \note Some DCC's pre-weight the \em points, but in this schema, 
+    /// \note Some DCC's pre-weight the \em points, but in this schema,
     /// \em points are not pre-weighted.
     ///
     /// | ||
@@ -480,7 +480,7 @@ public:
     /// Each element specifies how many curves are present in each
     /// "loop" of the trimCurve, and the length of the array determines how
     /// many loops the trimCurve contains.  The sum of all elements is the
-    /// total nuber of curves in the trim, to which we will refer as 
+    /// total nuber of curves in the trim, to which we will refer as
     /// \em nCurves in describing the other trim attributes.
     ///
     /// | ||
@@ -573,7 +573,7 @@ public:
     // --------------------------------------------------------------------- //
     // TRIMCURVERANGES 
     // --------------------------------------------------------------------- //
-    /// Flat list of minimum and maximum parametric values 
+    /// Flat list of minimum and maximum parametric values
     /// (as defined by \em knots) for each of the \em nCurves curves.
     ///
     /// | ||

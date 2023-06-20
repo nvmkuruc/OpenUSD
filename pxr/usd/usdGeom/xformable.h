@@ -33,7 +33,7 @@
 #include "pxr/usd/usd/stage.h"
 #include "pxr/usd/usdGeom/tokens.h"
 
-#include "pxr/usd/usdGeom/xformOp.h" 
+#include "pxr/usd/usdGeom/xformOp.h"
 #include <vector> 
 
 #include "pxr/base/vt/value.h"
@@ -58,7 +58,7 @@ class SdfAssetPath;
 /// Base class for all transformable prims, which allows arbitrary
 /// sequences of component affine transformations to be encoded.
 /// 
-/// \note 
+/// \note
 /// You may find it useful to review \ref UsdGeom_LinAlgBasics while reading
 /// this class description.
 /// 
@@ -76,23 +76,23 @@ class SdfAssetPath;
 /// Euler Angle sets: XYZ, XZY, YXZ, YZX, ZXY, ZYX.  See
 /// \ref usdGeom_rotationPackingOrder "note on rotation packing order"
 /// \li orient    - 4D (quaternion)
-/// \li transform - 4x4D 
+/// \li transform - 4x4D
 /// 
 /// <b>Creating a Component Transformation</b>
 /// 
 /// To add components to a UsdGeomXformable prim, simply call AddXformOp()
 /// with the desired op type, as enumerated in \ref UsdGeomXformOp::Type,
 /// and the desired precision, which is one of \ref UsdGeomXformOp::Precision.
-/// Optionally, you can also provide an "op suffix" for the operator that 
-/// disambiguates it from other components of the same type on the same prim.  
-/// Application-specific transform schemas can use the suffixes to fill a role 
-/// similar to that played by AbcGeom::XformOp's "Hint" enums for their own 
+/// Optionally, you can also provide an "op suffix" for the operator that
+/// disambiguates it from other components of the same type on the same prim.
+/// Application-specific transform schemas can use the suffixes to fill a role
+/// similar to that played by AbcGeom::XformOp's "Hint" enums for their own
 /// round-tripping logic.
 /// 
-/// We also provide specific "Add" API for each type, for clarity and 
+/// We also provide specific "Add" API for each type, for clarity and
 /// conciseness, e.g. AddTranslateOp(), AddRotateXYZOp() etc.
 /// 
-/// AddXformOp() will return a UsdGeomXformOp object, which is a schema on a 
+/// AddXformOp() will return a UsdGeomXformOp object, which is a schema on a
 /// newly created UsdAttribute that provides convenience API for authoring
 /// and computing the component transformations.  The UsdGeomXformOp can then
 /// be used to author any number of timesamples and default for the op.
@@ -114,13 +114,13 @@ class SdfAssetPath;
 /// <b>Data Encoding and Op Ordering</b>
 /// 
 /// Because there is no "fixed schema" of operations, all of the attributes
-/// that encode transform operations are dynamic, and are scoped in 
+/// that encode transform operations are dynamic, and are scoped in
 /// the namespace "xformOp". The second component of an attribute's name provides
-/// the \em type of operation, as listed above.  An "xformOp" attribute can 
-/// have additional namespace components derived from the \em opSuffix argument 
-/// to the AddXformOp() suite of methods, which provides a preferred way of 
+/// the \em type of operation, as listed above.  An "xformOp" attribute can
+/// have additional namespace components derived from the \em opSuffix argument
+/// to the AddXformOp() suite of methods, which provides a preferred way of
 /// naming the ops such that we can have multiple "translate" ops with unique
-/// attribute names. For example, in the attribute named 
+/// attribute names. For example, in the attribute named
 /// "xformOp:translate:maya:pivot", "translate" is the type of operation and
 /// "maya:pivot" is the suffix.
 /// 
@@ -150,11 +150,11 @@ class SdfAssetPath;
 /// opposite to what you might expect, given the matrix algebra described in
 /// \ref UsdGeom_LinAlgBasics.  This also dictates order of op creation,
 /// since each call to AddXformOp() adds a new op to the end of the
-/// \b xformOpOrder array, as a new "most-local" operation.  See 
+/// \b xformOpOrder array, as a new "most-local" operation.  See
 /// \ref usdGeom_xformableExamples "Example 2 below" for C++ code that could
 /// have produced this USD.
 /// 
-/// If it were important for the prim's rotations to be independently 
+/// If it were important for the prim's rotations to be independently
 /// overridable, we could equivalently (at some performance cost) encode
 /// the transformation also like so:
 /// \code
@@ -170,7 +170,7 @@ class SdfAssetPath;
 /// rotations appear in the **xformOpOrder** in the opposite order, with Z,
 /// followed, by Y, followed by X.
 /// 
-/// Were we to add a Maya-style scalePivot to the above example, it might 
+/// Were we to add a Maya-style scalePivot to the above example, it might
 /// look like the following:
 /// \code
 /// float3 xformOp:rotateXYZ = (30, 60, 90)
@@ -185,7 +185,7 @@ class SdfAssetPath;
 /// We have been claiming that the ordered list of ops serves as a set
 /// of instructions to a transform stack, but you may have noticed in the last
 /// example that there is a missing operation - the pivot for the scale op
-/// needs to be applied in its inverse-form as a final (most local) op!  In the 
+/// needs to be applied in its inverse-form as a final (most local) op!  In the
 /// AbcGeom::Xform schema, we would have encoded an actual "final" translation
 /// op whose value was authored by the exporter as the negation of the pivot's
 /// value.  However, doing so would be brittle in USD, given that each op can
@@ -197,29 +197,29 @@ class SdfAssetPath;
 /// in addition to ordering the ops, may also contain one of two special
 /// tokens that address the paired op and "stack resetting" behavior.
 /// 
-/// The "paired op" behavior is encoded as an "!invert!" prefix in 
-/// \b xformOpOrder, as the result of an AddXformOp(isInverseOp=True) call.  
+/// The "paired op" behavior is encoded as an "!invert!" prefix in
+/// \b xformOpOrder, as the result of an AddXformOp(isInverseOp=True) call.
 /// The \b xformOpOrder for the last example would look like:
 /// \code
 /// uniform token[] xformOpOrder = [ "xformOp:translate", "xformOp:rotateXYZ", "xformOp:translate:scalePivot", "xformOp:scale", "!invert!xformOp:translate:scalePivot" ]
 /// \endcode
 /// 
 /// When asked for its value via UsdGeomXformOp::GetOpTransform(), an
-/// "inverted" Op (i.e. the "inverted" half of a set of paired Ops) will fetch 
-/// the value of its paired attribute and return its negation.  This works for 
-/// all op types - an error will be issued if a "transform" type op is singular 
-/// and cannot be inverted. When getting the authored value of an inverted op 
+/// "inverted" Op (i.e. the "inverted" half of a set of paired Ops) will fetch
+/// the value of its paired attribute and return its negation.  This works for
+/// all op types - an error will be issued if a "transform" type op is singular
+/// and cannot be inverted. When getting the authored value of an inverted op
 /// via UsdGeomXformOp::Get(), the raw, uninverted value of the associated
 /// attribute is returned.
 /// 
 /// For the sake of robustness, <b>setting a value on an inverted op is disallowed.</b>
-/// Attempting to set a value on an inverted op will result in a coding error 
-/// and no value being set. 
+/// Attempting to set a value on an inverted op will result in a coding error
+/// and no value being set.
 /// 
 /// <b>Resetting the Transform Stack</b>
 /// 
 /// The other special op/token that can appear in \em xformOpOrder is
-/// \em "!resetXformStack!", which, appearing as the first element of 
+/// \em "!resetXformStack!", which, appearing as the first element of
 /// \em xformOpOrder, indicates this prim should not inherit the transformation
 /// of its namespace parent.  See SetResetXformStack()
 /// 

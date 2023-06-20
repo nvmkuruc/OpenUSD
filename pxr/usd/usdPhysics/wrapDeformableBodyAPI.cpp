@@ -49,6 +49,13 @@ namespace {
 // fwd decl.
 WRAP_CUSTOM;
 
+        
+static UsdAttribute
+_CreateMassAttr(UsdPhysicsDeformableBodyAPI &self,
+                                      object defaultVal, bool writeSparsely) {
+    return self.CreateMassAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float), writeSparsely);
+}
 
 static std::string
 _Repr(const UsdPhysicsDeformableBodyAPI &self)
@@ -112,6 +119,13 @@ void wrapUsdPhysicsDeformableBodyAPI()
 
         .def(!self)
 
+        
+        .def("GetMassAttr",
+             &This::GetMassAttr)
+        .def("CreateMassAttr",
+             &_CreateMassAttr,
+             (arg("defaultValue")=object(),
+              arg("writeSparsely")=false))
 
         .def("__repr__", ::_Repr)
     ;

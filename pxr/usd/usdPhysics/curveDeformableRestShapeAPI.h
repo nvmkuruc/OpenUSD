@@ -52,7 +52,7 @@ class SdfAssetPath;
 
 /// \class UsdPhysicsCurveDeformableRestShapeAPI
 ///
-/// Defines the rest shape for a UsdGeomCurves.
+/// Defines the rest shape for a UsdGeomBasisCurves or a UsdGeomBasisCurvesNetwork. The curve primitive needs to be composed of linear segments.
 ///
 class UsdPhysicsCurveDeformableRestShapeAPI : public UsdAPISchemaBase
 {
@@ -166,7 +166,7 @@ public:
     // --------------------------------------------------------------------- //
     // PHYSICSRESTPOINTS 
     // --------------------------------------------------------------------- //
-    /// Describes the rest shape in (local) space for a UsdGeomCurves.
+    /// Describes the rest shape in (local) space for a UsdGeomBasisCurves or a UsdGeomBasisCurvesNetwork.
     ///
     /// | ||
     /// | -- | -- |

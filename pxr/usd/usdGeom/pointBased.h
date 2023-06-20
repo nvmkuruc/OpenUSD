@@ -151,7 +151,7 @@ public:
     // --------------------------------------------------------------------- //
     // VELOCITIES 
     // --------------------------------------------------------------------- //
-    /// If provided, 'velocities' should be used by renderers to 
+    /// If provided, 'velocities' should be used by renderers to
     /// 
     /// compute positions between samples for the 'points' attribute, rather
     /// than interpolating between neighboring 'points' samples.  This is the
@@ -211,8 +211,8 @@ public:
     // --------------------------------------------------------------------- //
     // NORMALS 
     // --------------------------------------------------------------------- //
-    /// Provide an object-space orientation for individual points, 
-    /// which, depending on subclass, may define a surface, curve, or free 
+    /// Provide an object-space orientation for individual points,
+    /// which, depending on subclass, may define a surface, curve, or free
     /// points.  Note that 'normals' should not be authored on any Mesh that
     /// is subdivided, since the subdivision algorithm will define its own
     /// normals. 'normals' is not a generic primvar, but the number of elements

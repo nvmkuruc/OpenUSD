@@ -56,24 +56,24 @@ class SdfAssetPath;
 
 /// \class UsdGeomSubset
 ///
-/// Encodes a subset of a piece of geometry (i.e. a UsdGeomImageable) 
-/// as a set of indices. Currently only supports encoding of face-subsets, but 
-/// could be extended in the future to support subsets representing edges, 
+/// Encodes a subset of a piece of geometry (i.e. a UsdGeomImageable)
+/// as a set of indices. Currently only supports encoding of face-subsets, but
+/// could be extended in the future to support subsets representing edges,
 /// segments, points etc.
 /// 
-/// To apply to a geometric prim, a GeomSubset prim must be the prim's direct 
-/// child in namespace, and possess a concrete defining specifier (i.e. def). 
-/// This restriction makes it easy and efficient to discover subsets of a prim. 
-/// We might want to relax this restriction if it's common to have multiple 
-/// <b>families</b> of subsets on a gprim and if it's useful to be able to 
-/// organize subsets belonging to a </b>family</b> under a common scope. See 
+/// To apply to a geometric prim, a GeomSubset prim must be the prim's direct
+/// child in namespace, and possess a concrete defining specifier (i.e. def).
+/// This restriction makes it easy and efficient to discover subsets of a prim.
+/// We might want to relax this restriction if it's common to have multiple
+/// <b>families</b> of subsets on a gprim and if it's useful to be able to
+/// organize subsets belonging to a </b>family</b> under a common scope. See
 /// 'familyName' attribute for more info on defining a family of subsets.
 /// 
 /// Note that a GeomSubset isn't an imageable (i.e. doesn't derive from
-/// UsdGeomImageable). So, you can't author <b>visibility</b> for it or 
+/// UsdGeomImageable). So, you can't author <b>visibility</b> for it or
 /// override its <b>purpose</b>.
 /// 
-/// Materials are bound to GeomSubsets just as they are for regular 
+/// Materials are bound to GeomSubsets just as they are for regular
 /// geometry using API available in UsdShade (UsdShadeMaterial::Bind).
 /// 
 ///
@@ -180,7 +180,7 @@ public:
     // --------------------------------------------------------------------- //
     // ELEMENTTYPE 
     // --------------------------------------------------------------------- //
-    /// The type of element that the indices target. Currently only 
+    /// The type of element that the indices target. Currently only
     /// allows "face" and defaults to it.
     ///
     /// | ||
@@ -205,7 +205,7 @@ public:
     // --------------------------------------------------------------------- //
     // INDICES 
     // --------------------------------------------------------------------- //
-    /// The set of indices included in this subset. The indices need not 
+    /// The set of indices included in this subset. The indices need not
     /// be sorted, but the same index should not appear more than once.
     ///
     /// | ||
@@ -228,27 +228,27 @@ public:
     // --------------------------------------------------------------------- //
     // FAMILYNAME 
     // --------------------------------------------------------------------- //
-    /// The name of the family of subsets that this subset belongs to. 
-    /// This is optional and is primarily useful when there are multiple 
-    /// families of subsets under a geometric prim. In some cases, this could 
-    /// also be used for achieving proper roundtripping of subset data between 
+    /// The name of the family of subsets that this subset belongs to.
+    /// This is optional and is primarily useful when there are multiple
+    /// families of subsets under a geometric prim. In some cases, this could
+    /// also be used for achieving proper roundtripping of subset data between
     /// DCC apps.
-    /// When multiple subsets belonging to a prim have the same familyName, they 
-    /// are said to belong to the family. A <i>familyType</i> value can be 
-    /// encoded on the owner of a family of subsets as a token using the static 
-    /// method UsdGeomSubset::SetFamilyType(). "familyType" can have one of the 
+    /// When multiple subsets belonging to a prim have the same familyName, they
+    /// are said to belong to the family. A <i>familyType</i> value can be
+    /// encoded on the owner of a family of subsets as a token using the static
+    /// method UsdGeomSubset::SetFamilyType(). "familyType" can have one of the
     /// following values:
-    /// <ul><li><b>UsdGeomTokens->partition</b>: implies that every element of 
+    /// <ul><li><b>UsdGeomTokens->partition</b>: implies that every element of
     /// the whole geometry appears exactly once in only one of the subsets
     /// belonging to the family.</li>
-    /// <li><b>UsdGeomTokens->nonOverlapping</b>: an element that appears in one 
+    /// <li><b>UsdGeomTokens->nonOverlapping</b>: an element that appears in one
     /// subset may not appear in any other subset belonging to the family.</li>
     /// <li><b>UsdGeomTokens->unrestricted</b>: implies that there are no
-    /// restrictions w.r.t. the membership of elements in the subsets. They 
-    /// could be overlapping and the union of all subsets in the family may 
+    /// restrictions w.r.t. the membership of elements in the subsets. They
+    /// could be overlapping and the union of all subsets in the family may
     /// not represent the whole.</li>
     /// </ul>
-    /// \note The validity of subset data is not enforced by the authoring 
+    /// \note The validity of subset data is not enforced by the authoring
     /// APIs, however they can be checked using UsdGeomSubset::ValidateFamily().
     /// 
     ///

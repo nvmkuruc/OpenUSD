@@ -4,8 +4,8 @@
 )
 
 class "Imageable" (
-    doc = """Base class for all prims that may require rendering or 
-    visualization of some sort. The primary attributes of Imageable 
+    doc = """Base class for all prims that may require rendering or
+    visualization of some sort. The primary attributes of Imageable
     are visibility and purpose, which each provide instructions for
     what geometry should be included for processing by rendering and other
     computations.
@@ -21,17 +21,17 @@ class "Imageable" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -40,20 +40,20 @@ class "Imageable" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
 }
@@ -62,13 +62,13 @@ class "VisibilityAPI" (
     doc = '''
     UsdGeomVisibilityAPI introduces properties that can be used to author
     visibility opinions.
-   
+
     \\note
     Currently, this schema only introduces the attributes that are used to
     control purpose visibility. Later, this schema will define _all_
     visibility-related properties and UsdGeomImageable will no longer define
     those properties.
-   
+
     The purpose visibility attributes added by this schema,
     _guideVisibility_, _proxyVisibility_, and _renderVisibility_ can each be
     used to control visibility for geometry of the corresponding purpose
@@ -169,14 +169,14 @@ class "PrimvarsAPI" (
     doc = """UsdGeomPrimvarsAPI encodes geometric \"primitive variables\",
     as UsdGeomPrimvar, which interpolate across a primitive's topology,
     can override shader inputs, and inherit down namespace.
-    
+
     Which Method to Use to Retrieve Primvars
-     
+
      While creating primvars is unambiguous (CreatePrimvar()), there are quite
      a few methods available for retrieving primvars, making it potentially
      confusing knowing which one to use.  Here are some guidelines:
-     
-     - If you are populating a GUI with the primvars already available for 
+
+     - If you are populating a GUI with the primvars already available for
      authoring values on a prim, use GetPrimvars().
      - If you want all of the \"useful\" (e.g. to a renderer) primvars
      available at a prim, including those inherited from ancestor prims, use
@@ -185,7 +185,7 @@ class "PrimvarsAPI" (
      - To find a particular primvar defined directly on a prim, which may
      or may not provide a value, use GetPrimvar().
      - To find a particular primvar defined on a prim or inherited from
-     ancestors, which may or may not provide a value, use 
+     ancestors, which may or may not provide a value, use
      FindPrimvarWithInheritance().
      - To *efficiently* query for primvars using the overloads of
      FindPrimvarWithInheritance() and FindPrimvarsWithInheritance(), one
@@ -199,12 +199,12 @@ class "Xformable" (
     doc = """Base class for all transformable prims, which allows arbitrary
     sequences of component affine transformations to be encoded.
 
-    \\note 
+    \\note
     You may find it useful to review while reading
     this class description.
-    
+
     <b>Supported Component Transformation Operations</b>
-    
+
     UsdGeomXformable currently supports arbitrary sequences of the following
     operations, each of which can be encoded in an attribute of the proper
     shape in any supported precision:
@@ -217,54 +217,54 @@ class "Xformable" (
                         Euler Angle sets: XYZ, XZY, YXZ, YZX, ZXY, ZYX.  See
                         \"note on rotation packing order\"
     - orient    - 4D (quaternion)
-    - transform - 4x4D 
-    
+    - transform - 4x4D
+
     <b>Creating a Component Transformation</b>
-    
+
     To add components to a UsdGeomXformable prim, simply call AddXformOp()
     with the desired op type, as enumerated in \\ref UsdGeomXformOp::Type,
     and the desired precision, which is one of \\ref UsdGeomXformOp::Precision.
-    Optionally, you can also provide an \"op suffix\" for the operator that 
-    disambiguates it from other components of the same type on the same prim.  
-    Application-specific transform schemas can use the suffixes to fill a role 
-    similar to that played by AbcGeom::XformOp's \"Hint\" enums for their own 
+    Optionally, you can also provide an \"op suffix\" for the operator that
+    disambiguates it from other components of the same type on the same prim.
+    Application-specific transform schemas can use the suffixes to fill a role
+    similar to that played by AbcGeom::XformOp's \"Hint\" enums for their own
     round-tripping logic.
-    
-    We also provide specific \"Add\" API for each type, for clarity and 
+
+    We also provide specific \"Add\" API for each type, for clarity and
     conciseness, e.g. AddTranslateOp(), AddRotateXYZOp() etc.
-    
-    AddXformOp() will return a UsdGeomXformOp object, which is a schema on a 
+
+    AddXformOp() will return a UsdGeomXformOp object, which is a schema on a
     newly created UsdAttribute that provides convenience API for authoring
     and computing the component transformations.  The UsdGeomXformOp can then
     be used to author any number of timesamples and default for the op.
-    
+
     Each successive call to AddXformOp() adds an operator that will be applied
     \"more locally\" than the preceding operator, just as if we were pushing
     transforms onto a transformation stack - which is precisely what should
     happen when the operators are consumed by a reader.
-    
+
     \\note
     If you can, please try to use the UsdGeomXformCommonAPI, which wraps
     the UsdGeomXformable with an interface in which Op creation is taken
     care of for you, and there is a much higher chance that the data you
     author will be importable without flattening into other DCC's, as it
     conforms to a fixed set of Scale-Rotate-Translate Ops.
-    
+
     \\sa \"Using the Authoring API\"
-    
+
     <b>Data Encoding and Op Ordering</b>
-    
+
     Because there is no \"fixed schema\" of operations, all of the attributes
-    that encode transform operations are dynamic, and are scoped in 
+    that encode transform operations are dynamic, and are scoped in
     the namespace \"xformOp\". The second component of an attribute's name provides
-    the type of operation, as listed above.  An \"xformOp\" attribute can 
-    have additional namespace components derived from the opSuffix argument 
-    to the AddXformOp() suite of methods, which provides a preferred way of 
+    the type of operation, as listed above.  An \"xformOp\" attribute can
+    have additional namespace components derived from the opSuffix argument
+    to the AddXformOp() suite of methods, which provides a preferred way of
     naming the ops such that we can have multiple \"translate\" ops with unique
-    attribute names. For example, in the attribute named 
+    attribute names. For example, in the attribute named
     \"xformOp:translate:maya:pivot\", \"translate\" is the type of operation and
     \"maya:pivot\" is the suffix.
-    
+
     The following ordered list of attribute declarations in usda
     define a basic Scale-Rotate-Translate with XYZ Euler angles, wherein the
     translation is double-precision, and the remainder of the ops are single,
@@ -291,11 +291,11 @@ class "Xformable" (
     opposite to what you might expect, given the matrix algebra described in
      This also dictates order of op creation,
     since each call to AddXformOp() adds a new op to the end of the
-    \\b xformOpOrder array, as a new \"most-local\" operation.  See 
+    \\b xformOpOrder array, as a new \"most-local\" operation.  See
     \"Example 2 below\" for C++ code that could
     have produced this USD.
-    
-    If it were important for the prim's rotations to be independently 
+
+    If it were important for the prim's rotations to be independently
     overridable, we could equivalently (at some performance cost) encode
     the transformation also like so:
     \\code
@@ -306,12 +306,12 @@ class "Xformable" (
     double3 xformOp:translate = (0, 100, 0)
     uniform token[] xformOpOrder = [ \"xformOp:translate\", \"xformOp:rotateZ\", \"xformOp:rotateY\", \"xformOp:rotateX\", \"xformOp:scale\" ]
     \\endcode
-    
+
     Again, note that although we are encoding an XYZ rotation, the three
     rotations appear in the **xformOpOrder** in the opposite order, with Z,
     followed, by Y, followed by X.
 
-    Were we to add a Maya-style scalePivot to the above example, it might 
+    Were we to add a Maya-style scalePivot to the above example, it might
     look like the following:
     \\code
     float3 xformOp:rotateXYZ = (30, 60, 90)
@@ -326,68 +326,68 @@ class "Xformable" (
     We have been claiming that the ordered list of ops serves as a set
     of instructions to a transform stack, but you may have noticed in the last
     example that there is a missing operation - the pivot for the scale op
-    needs to be applied in its inverse-form as a final (most local) op!  In the 
+    needs to be applied in its inverse-form as a final (most local) op!  In the
     AbcGeom::Xform schema, we would have encoded an actual \"final\" translation
     op whose value was authored by the exporter as the negation of the pivot's
     value.  However, doing so would be brittle in USD, given that each op can
     be independently overridden, and the constraint that one attribute must be
     maintained as the negation of the other in order for successful
     re-importation of the schema cannot be expressed in USD.
-    
+
     Our solution leverages the **xformOpOrder** member of the schema, which,
     in addition to ordering the ops, may also contain one of two special
     tokens that address the paired op and \"stack resetting\" behavior.
 
-    The \"paired op\" behavior is encoded as an \"!invert!\" prefix in 
-    \\b xformOpOrder, as the result of an AddXformOp(isInverseOp=True) call.  
+    The \"paired op\" behavior is encoded as an \"!invert!\" prefix in
+    \\b xformOpOrder, as the result of an AddXformOp(isInverseOp=True) call.
     The \\b xformOpOrder for the last example would look like:
     \\code
     uniform token[] xformOpOrder = [ \"xformOp:translate\", \"xformOp:rotateXYZ\", \"xformOp:translate:scalePivot\", \"xformOp:scale\", \"!invert!xformOp:translate:scalePivot\" ]
     \\endcode
-    
+
     When asked for its value via UsdGeomXformOp::GetOpTransform(), an
-    \"inverted\" Op (i.e. the \"inverted\" half of a set of paired Ops) will fetch 
-    the value of its paired attribute and return its negation.  This works for 
-    all op types - an error will be issued if a \"transform\" type op is singular 
-    and cannot be inverted. When getting the authored value of an inverted op 
+    \"inverted\" Op (i.e. the \"inverted\" half of a set of paired Ops) will fetch
+    the value of its paired attribute and return its negation.  This works for
+    all op types - an error will be issued if a \"transform\" type op is singular
+    and cannot be inverted. When getting the authored value of an inverted op
     via UsdGeomXformOp::Get(), the raw, uninverted value of the associated
     attribute is returned.
 
     For the sake of robustness, <b>setting a value on an inverted op is disallowed.</b>
-    Attempting to set a value on an inverted op will result in a coding error 
-    and no value being set. 
-    
+    Attempting to set a value on an inverted op will result in a coding error
+    and no value being set.
+
     <b>Resetting the Transform Stack</b>
 
     The other special op/token that can appear in xformOpOrder is
-    \"!resetXformStack!\", which, appearing as the first element of 
+    \"!resetXformStack!\", which, appearing as the first element of
     xformOpOrder, indicates this prim should not inherit the transformation
     of its namespace parent.  See SetResetXformStack()
 
     <b>Expected Behavior for \"Missing\" Ops</b>
-    
+
     If an importer expects Scale-Rotate-Translate operations, but a prim
     has only translate and rotate ops authored, the importer should assume
     an identity scale.  This allows us to optimize the data a bit, if only
     a few components of a very rich schema (like Maya's) are authored in the
     app.
-    
+
     \\anchor usdGeom_xformableExamples
     <b>Using the C++ API</b>
-    
+
     #1. Creating a simple transform matrix encoding
     \\snippet examples.cpp CreateMatrixWithDefault
-    
+
     #2. Creating the simple SRT from the example above
     \\snippet examples.cpp CreateExampleSRT
-    
+
     #3. Creating a parameterized SRT with pivot using UsdGeomXformCommonAPI
     \\snippet examples.cpp CreateSRTWithDefaults
-    
+
     #4. Creating a rotate-only pivot transform with animated
     rotation and translation
     \\snippet examples.cpp CreateAnimatedTransform
-    
+
 """
 )
 {
@@ -396,17 +396,17 @@ class "Xformable" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -415,20 +415,20 @@ class "Xformable" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
     uniform token[] xformOpOrder (
@@ -436,7 +436,7 @@ class "Xformable" (
         order in which they should be pushed onto a transform stack while
         visiting a UsdStage's prims in a graph traversal that will effect
         the desired positioning for this prim and its descendant prims.
-        
+
         You should rarely, if ever, need to manipulate this attribute directly.
         It is managed by the AddXformOp(), SetResetXformStack(), and
         SetXformOpOrder(), and consulted by GetOrderedXformOps() and
@@ -456,17 +456,17 @@ class Scope "Scope" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -475,20 +475,20 @@ class Scope "Scope" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
 }
@@ -502,17 +502,17 @@ class Xform "Xform" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -521,20 +521,20 @@ class Xform "Xform" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
     uniform token[] xformOpOrder (
@@ -542,7 +542,7 @@ class Xform "Xform" (
         order in which they should be pushed onto a transform stack while
         visiting a UsdStage's prims in a graph traversal that will effect
         the desired positioning for this prim and its descendant prims.
-        
+
         You should rarely, if ever, need to manipulate this attribute directly.
         It is managed by the AddXformOp(), SetResetXformStack(), and
         SetXformOpOrder(), and consulted by GetOrderedXformOps() and
@@ -553,7 +553,7 @@ class Xform "Xform" (
 class "Boundable" (
     doc = """Boundable introduces the ability for a prim to persistently
     cache a rectilinear, local-space, extent.
-    
+
     Why Extent and not Bounds ?
     Boundable introduces the notion of \"extent\", which is a cached computation
     of a prim's local-space 3D range for its resolved attributes <b>at the
@@ -563,7 +563,7 @@ class "Boundable" (
     one can author a single attribute in a stronger layer that can invalidate
     many authored caches - or with which a re-published, referenced asset can
     do the same.
-    
+
     Therefore, we limit to precomputing (generally) leaf-prim extent, which
     avoids the need to read in large point arrays to compute bounds, and
     provides UsdGeomBBoxCache the means to efficiently compute and
@@ -572,8 +572,8 @@ class "Boundable" (
     well if you have sufficient locks on your pipeline to guarantee that once
     authored, the geometry and transforms upon which they are based will
     remain unchanged, or if accuracy of the bounds is not an ironclad
-    requisite. 
-    
+    requisite.
+
     When intermediate bounds are authored on Boundable parents, the child prims
     will be pruned from BBox computation; the authored extent is expected to
     incorporate all child bounds."""
@@ -583,16 +583,16 @@ class "Boundable" (
         doc = """Extent is a three dimensional range measuring the geometric
         extent of the authored gprim in its own local space (i.e. its own
         transform not applied), without accounting for any shader-induced
-        displacement. If __any__ extent value has been authored for a given 
-        Boundable, then it should be authored at every timeSample at which 
-        geometry-affecting properties are authored, to ensure correct 
-        evaluation via ComputeExtent(). If __no__ extent value has been 
-        authored, then ComputeExtent() will call the Boundable's registered 
-        ComputeExtentFunction(), which may be expensive, which is why we 
+        displacement. If __any__ extent value has been authored for a given
+        Boundable, then it should be authored at every timeSample at which
+        geometry-affecting properties are authored, to ensure correct
+        evaluation via ComputeExtent(). If __no__ extent value has been
+        authored, then ComputeExtent() will call the Boundable's registered
+        ComputeExtentFunction(), which may be expensive, which is why we
         strongly encourage proper authoring of extent.
         \\sa ComputeExtent()
         \\sa \\ref UsdGeom_Boundable_Extent.
-        
+
         An authored extent on a prim which has children is expected to include
         the extent of all children, as they will be pruned from BBox computation
         during traversal."""
@@ -602,17 +602,17 @@ class "Boundable" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -621,20 +621,20 @@ class "Boundable" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
     uniform token[] xformOpOrder (
@@ -642,7 +642,7 @@ class "Boundable" (
         order in which they should be pushed onto a transform stack while
         visiting a UsdStage's prims in a graph traversal that will effect
         the desired positioning for this prim and its descendant prims.
-        
+
         You should rarely, if ever, need to manipulate this attribute directly.
         It is managed by the AddXformOp(), SetResetXformStack(), and
         SetXformOpOrder(), and consulted by GetOrderedXformOps() and
@@ -651,8 +651,8 @@ class "Boundable" (
 }
 
 class "Gprim" (
-    doc = '''Base class for all geometric primitives.  
-    
+    doc = '''Base class for all geometric primitives.
+
     Gprim encodes basic graphical properties such as doubleSided and
     orientation, and provides primvars for "display color" and "display
     opacity" that travel with geometry to be used as shader overrides.  '''
@@ -663,14 +663,14 @@ class "Gprim" (
         surfaces as if they were effectively laminae with outward-facing
         normals on both sides, some renderers derive significant optimizations
         by considering these surfaces to have only a single outward side,
-        typically determined by control-point winding order and/or 
+        typically determined by control-point winding order and/or
         orientation.  By doing so they can perform \"backface culling\" to
         avoid drawing the many polygons of most closed surfaces that face away
         from the viewer.
-        
+
         However, it is often advantageous to model thin objects such as paper
         and cloth as single, open surfaces that must be viewable from both
-        sides, always.  Setting a gprim's doubleSided attribute to 
+        sides, always.  Setting a gprim's doubleSided attribute to
         \\c true instructs all renderers to disable optimizations such as
         backface culling for the gprim, and attempt (not all renderers are able
         to do so, but the USD reference GL renderer always will) to provide
@@ -681,23 +681,23 @@ class "Gprim" (
         doc = """Extent is a three dimensional range measuring the geometric
         extent of the authored gprim in its own local space (i.e. its own
         transform not applied), without accounting for any shader-induced
-        displacement. If __any__ extent value has been authored for a given 
-        Boundable, then it should be authored at every timeSample at which 
-        geometry-affecting properties are authored, to ensure correct 
-        evaluation via ComputeExtent(). If __no__ extent value has been 
-        authored, then ComputeExtent() will call the Boundable's registered 
-        ComputeExtentFunction(), which may be expensive, which is why we 
+        displacement. If __any__ extent value has been authored for a given
+        Boundable, then it should be authored at every timeSample at which
+        geometry-affecting properties are authored, to ensure correct
+        evaluation via ComputeExtent(). If __no__ extent value has been
+        authored, then ComputeExtent() will call the Boundable's registered
+        ComputeExtentFunction(), which may be expensive, which is why we
         strongly encourage proper authoring of extent.
         \\sa ComputeExtent()
         \\sa \\ref UsdGeom_Boundable_Extent.
-        
+
         An authored extent on a prim which has children is expected to include
         the extent of all children, as they will be pruned from BBox computation
         during traversal."""
     )
     uniform token orientation = "rightHanded" (
         allowedTokens = ["rightHanded", "leftHanded"]
-        doc = """Orientation specifies whether the gprim's surface normal 
+        doc = """Orientation specifies whether the gprim's surface normal
         should be computed using the right hand rule, or the left hand rule.
         Please see for a deeper explanation and
         generalization of orientation to composed scenes with transformation
@@ -721,17 +721,17 @@ class "Gprim" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -740,20 +740,20 @@ class "Gprim" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
     uniform token[] xformOpOrder (
@@ -761,7 +761,7 @@ class "Gprim" (
         order in which they should be pushed onto a transform stack while
         visiting a UsdStage's prims in a graph traversal that will effect
         the desired positioning for this prim and its descendant prims.
-        
+
         You should rarely, if ever, need to manipulate this attribute directly.
         It is managed by the AddXformOp(), SetResetXformStack(), and
         SetXformOpOrder(), and consulted by GetOrderedXformOps() and
@@ -771,7 +771,7 @@ class "Gprim" (
 
 class Cube "Cube" (
     doc = """Defines a primitive rectilinear cube centered at the origin.
-    
+
     The fallback values for Cube, Sphere, Cone, and Cylinder are set so that
     they all pack into the same volume/bounds."""
 )
@@ -781,14 +781,14 @@ class Cube "Cube" (
         surfaces as if they were effectively laminae with outward-facing
         normals on both sides, some renderers derive significant optimizations
         by considering these surfaces to have only a single outward side,
-        typically determined by control-point winding order and/or 
+        typically determined by control-point winding order and/or
         orientation.  By doing so they can perform \"backface culling\" to
         avoid drawing the many polygons of most closed surfaces that face away
         from the viewer.
-        
+
         However, it is often advantageous to model thin objects such as paper
         and cloth as single, open surfaces that must be viewable from both
-        sides, always.  Setting a gprim's doubleSided attribute to 
+        sides, always.  Setting a gprim's doubleSided attribute to
         \\c true instructs all renderers to disable optimizations such as
         backface culling for the gprim, and attempt (not all renderers are able
         to do so, but the USD reference GL renderer always will) to provide
@@ -801,7 +801,7 @@ class Cube "Cube" (
     )
     uniform token orientation = "rightHanded" (
         allowedTokens = ["rightHanded", "leftHanded"]
-        doc = """Orientation specifies whether the gprim's surface normal 
+        doc = """Orientation specifies whether the gprim's surface normal
         should be computed using the right hand rule, or the left hand rule.
         Please see for a deeper explanation and
         generalization of orientation to composed scenes with transformation
@@ -825,17 +825,17 @@ class Cube "Cube" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -844,26 +844,26 @@ class Cube "Cube" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     double size = 2 (
         doc = """Indicates the length of each edge of the cube.  If you
         author size you must also author extent.
-        
+
         \\sa GetExtentAttr()"""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
     uniform token[] xformOpOrder (
@@ -871,7 +871,7 @@ class Cube "Cube" (
         order in which they should be pushed onto a transform stack while
         visiting a UsdStage's prims in a graph traversal that will effect
         the desired positioning for this prim and its descendant prims.
-        
+
         You should rarely, if ever, need to manipulate this attribute directly.
         It is managed by the AddXformOp(), SetResetXformStack(), and
         SetXformOpOrder(), and consulted by GetOrderedXformOps() and
@@ -881,7 +881,7 @@ class Cube "Cube" (
 
 class Sphere "Sphere" (
     doc = """Defines a primitive sphere centered at the origin.
-    
+
     The fallback values for Cube, Sphere, Cone, and Cylinder are set so that
     they all pack into the same volume/bounds."""
 )
@@ -891,14 +891,14 @@ class Sphere "Sphere" (
         surfaces as if they were effectively laminae with outward-facing
         normals on both sides, some renderers derive significant optimizations
         by considering these surfaces to have only a single outward side,
-        typically determined by control-point winding order and/or 
+        typically determined by control-point winding order and/or
         orientation.  By doing so they can perform \"backface culling\" to
         avoid drawing the many polygons of most closed surfaces that face away
         from the viewer.
-        
+
         However, it is often advantageous to model thin objects such as paper
         and cloth as single, open surfaces that must be viewable from both
-        sides, always.  Setting a gprim's doubleSided attribute to 
+        sides, always.  Setting a gprim's doubleSided attribute to
         \\c true instructs all renderers to disable optimizations such as
         backface culling for the gprim, and attempt (not all renderers are able
         to do so, but the USD reference GL renderer always will) to provide
@@ -911,7 +911,7 @@ class Sphere "Sphere" (
     )
     uniform token orientation = "rightHanded" (
         allowedTokens = ["rightHanded", "leftHanded"]
-        doc = """Orientation specifies whether the gprim's surface normal 
+        doc = """Orientation specifies whether the gprim's surface normal
         should be computed using the right hand rule, or the left hand rule.
         Please see for a deeper explanation and
         generalization of orientation to composed scenes with transformation
@@ -935,17 +935,17 @@ class Sphere "Sphere" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -954,26 +954,26 @@ class Sphere "Sphere" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     double radius = 1 (
         doc = """Indicates the sphere's radius.  If you
         author radius you must also author extent.
-        
+
         \\sa GetExtentAttr()"""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
     uniform token[] xformOpOrder (
@@ -981,7 +981,7 @@ class Sphere "Sphere" (
         order in which they should be pushed onto a transform stack while
         visiting a UsdStage's prims in a graph traversal that will effect
         the desired positioning for this prim and its descendant prims.
-        
+
         You should rarely, if ever, need to manipulate this attribute directly.
         It is managed by the AddXformOp(), SetResetXformStack(), and
         SetXformOpOrder(), and consulted by GetOrderedXformOps() and
@@ -990,9 +990,9 @@ class Sphere "Sphere" (
 }
 
 class Cylinder "Cylinder" (
-    doc = """Defines a primitive cylinder with closed ends, centered at the 
+    doc = """Defines a primitive cylinder with closed ends, centered at the
     origin, whose spine is along the specified axis.
-    
+
     The fallback values for Cube, Sphere, Cone, and Cylinder are set so that
     they all pack into the same volume/bounds."""
 )
@@ -1006,14 +1006,14 @@ class Cylinder "Cylinder" (
         surfaces as if they were effectively laminae with outward-facing
         normals on both sides, some renderers derive significant optimizations
         by considering these surfaces to have only a single outward side,
-        typically determined by control-point winding order and/or 
+        typically determined by control-point winding order and/or
         orientation.  By doing so they can perform \"backface culling\" to
         avoid drawing the many polygons of most closed surfaces that face away
         from the viewer.
-        
+
         However, it is often advantageous to model thin objects such as paper
         and cloth as single, open surfaces that must be viewable from both
-        sides, always.  Setting a gprim's doubleSided attribute to 
+        sides, always.  Setting a gprim's doubleSided attribute to
         \\c true instructs all renderers to disable optimizations such as
         backface culling for the gprim, and attempt (not all renderers are able
         to do so, but the USD reference GL renderer always will) to provide
@@ -1027,12 +1027,12 @@ class Cylinder "Cylinder" (
     double height = 2 (
         doc = """The size of the cylinder's spine along the specified
         axis.  If you author height you must also author extent.
-        
+
         \\sa GetExtentAttr()"""
     )
     uniform token orientation = "rightHanded" (
         allowedTokens = ["rightHanded", "leftHanded"]
-        doc = """Orientation specifies whether the gprim's surface normal 
+        doc = """Orientation specifies whether the gprim's surface normal
         should be computed using the right hand rule, or the left hand rule.
         Please see for a deeper explanation and
         generalization of orientation to composed scenes with transformation
@@ -1056,17 +1056,17 @@ class Cylinder "Cylinder" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -1075,26 +1075,26 @@ class Cylinder "Cylinder" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     double radius = 1 (
         doc = """The radius of the cylinder. If you author radius
         you must also author extent.
-        
+
         \\sa GetExtentAttr()"""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
     uniform token[] xformOpOrder (
@@ -1102,7 +1102,7 @@ class Cylinder "Cylinder" (
         order in which they should be pushed onto a transform stack while
         visiting a UsdStage's prims in a graph traversal that will effect
         the desired positioning for this prim and its descendant prims.
-        
+
         You should rarely, if ever, need to manipulate this attribute directly.
         It is managed by the AddXformOp(), SetResetXformStack(), and
         SetXformOpOrder(), and consulted by GetOrderedXformOps() and
@@ -1125,14 +1125,14 @@ class Capsule "Capsule" (
         surfaces as if they were effectively laminae with outward-facing
         normals on both sides, some renderers derive significant optimizations
         by considering these surfaces to have only a single outward side,
-        typically determined by control-point winding order and/or 
+        typically determined by control-point winding order and/or
         orientation.  By doing so they can perform \"backface culling\" to
         avoid drawing the many polygons of most closed surfaces that face away
         from the viewer.
-        
+
         However, it is often advantageous to model thin objects such as paper
         and cloth as single, open surfaces that must be viewable from both
-        sides, always.  Setting a gprim's doubleSided attribute to 
+        sides, always.  Setting a gprim's doubleSided attribute to
         \\c true instructs all renderers to disable optimizations such as
         backface culling for the gprim, and attempt (not all renderers are able
         to do so, but the USD reference GL renderer always will) to provide
@@ -1152,7 +1152,7 @@ class Capsule "Capsule" (
     )
     uniform token orientation = "rightHanded" (
         allowedTokens = ["rightHanded", "leftHanded"]
-        doc = """Orientation specifies whether the gprim's surface normal 
+        doc = """Orientation specifies whether the gprim's surface normal
         should be computed using the right hand rule, or the left hand rule.
         Please see for a deeper explanation and
         generalization of orientation to composed scenes with transformation
@@ -1176,17 +1176,17 @@ class Capsule "Capsule" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -1195,26 +1195,26 @@ class Capsule "Capsule" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     double radius = 0.5 (
         doc = """The radius of the capsule.  If you
         author radius you must also author extent.
-        
+
         \\sa GetExtentAttr()"""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
     uniform token[] xformOpOrder (
@@ -1222,7 +1222,7 @@ class Capsule "Capsule" (
         order in which they should be pushed onto a transform stack while
         visiting a UsdStage's prims in a graph traversal that will effect
         the desired positioning for this prim and its descendant prims.
-        
+
         You should rarely, if ever, need to manipulate this attribute directly.
         It is managed by the AddXformOp(), SetResetXformStack(), and
         SetXformOpOrder(), and consulted by GetOrderedXformOps() and
@@ -1234,7 +1234,7 @@ class Cone "Cone" (
     doc = """Defines a primitive cone, centered at the origin, whose spine
     is along the specified axis, with the apex of the cone pointing
     in the direction of the positive axis.
-    
+
     The fallback values for Cube, Sphere, Cone, and Cylinder are set so that
     they all pack into the same volume/bounds."""
 )
@@ -1248,14 +1248,14 @@ class Cone "Cone" (
         surfaces as if they were effectively laminae with outward-facing
         normals on both sides, some renderers derive significant optimizations
         by considering these surfaces to have only a single outward side,
-        typically determined by control-point winding order and/or 
+        typically determined by control-point winding order and/or
         orientation.  By doing so they can perform \"backface culling\" to
         avoid drawing the many polygons of most closed surfaces that face away
         from the viewer.
-        
+
         However, it is often advantageous to model thin objects such as paper
         and cloth as single, open surfaces that must be viewable from both
-        sides, always.  Setting a gprim's doubleSided attribute to 
+        sides, always.  Setting a gprim's doubleSided attribute to
         \\c true instructs all renderers to disable optimizations such as
         backface culling for the gprim, and attempt (not all renderers are able
         to do so, but the USD reference GL renderer always will) to provide
@@ -1269,12 +1269,12 @@ class Cone "Cone" (
     double height = 2 (
         doc = """The size of the cone's spine along the specified
         axis.  If you author height you must also author extent.
-        
+
         \\sa GetExtentAttr()"""
     )
     uniform token orientation = "rightHanded" (
         allowedTokens = ["rightHanded", "leftHanded"]
-        doc = """Orientation specifies whether the gprim's surface normal 
+        doc = """Orientation specifies whether the gprim's surface normal
         should be computed using the right hand rule, or the left hand rule.
         Please see for a deeper explanation and
         generalization of orientation to composed scenes with transformation
@@ -1298,17 +1298,17 @@ class Cone "Cone" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -1317,26 +1317,26 @@ class Cone "Cone" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     double radius = 1 (
         doc = """The radius of the cone.  If you
         author radius you must also author extent.
-        
+
         \\sa GetExtentAttr()"""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
     uniform token[] xformOpOrder (
@@ -1344,7 +1344,7 @@ class Cone "Cone" (
         order in which they should be pushed onto a transform stack while
         visiting a UsdStage's prims in a graph traversal that will effect
         the desired positioning for this prim and its descendant prims.
-        
+
         You should rarely, if ever, need to manipulate this attribute directly.
         It is managed by the AddXformOp(), SetResetXformStack(), and
         SetXformOpOrder(), and consulted by GetOrderedXformOps() and
@@ -1370,7 +1370,7 @@ class Plane "Plane" (
     uniform token axis = "Z" (
         allowedTokens = ["X", "Y", "Z"]
         doc = """The axis along which the surface of the plane is aligned. When set
-        to 'Z' the plane is in the xy-plane; when axis is 'X' the plane is in 
+        to 'Z' the plane is in the xy-plane; when axis is 'X' the plane is in
         the yz-plane, and when axis is 'Y' the plane is in the xz-plane.
 
         \\sa UsdGeomGprim::GetAxisAttr()."""
@@ -1387,14 +1387,14 @@ class Plane "Plane" (
     )
     double length = 2 (
         doc = """The length of the plane, which aligns to the y-axis when axis is
-        'Z' or 'X', or to the z-axis when axis is 'Y'.  If you author length 
+        'Z' or 'X', or to the z-axis when axis is 'Y'.  If you author length
         you must also author extent.
 
         \\sa UsdGeomGprim::GetExtentAttr()"""
     )
     uniform token orientation = "rightHanded" (
         allowedTokens = ["rightHanded", "leftHanded"]
-        doc = """Orientation specifies whether the gprim's surface normal 
+        doc = """Orientation specifies whether the gprim's surface normal
         should be computed using the right hand rule, or the left hand rule.
         Please see for a deeper explanation and
         generalization of orientation to composed scenes with transformation
@@ -1418,17 +1418,17 @@ class Plane "Plane" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -1437,25 +1437,25 @@ class Plane "Plane" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
     double width = 2 (
         doc = """The width of the plane, which aligns to the x-axis when axis is
-        'Z' or 'Y', or to the z-axis when axis is 'X'.  If you author width 
+        'Z' or 'Y', or to the z-axis when axis is 'X'.  If you author width
         you must also author extent.
 
         \\sa UsdGeomGprim::GetExtentAttr()"""
@@ -1465,7 +1465,7 @@ class Plane "Plane" (
         order in which they should be pushed onto a transform stack while
         visiting a UsdStage's prims in a graph traversal that will effect
         the desired positioning for this prim and its descendant prims.
-        
+
         You should rarely, if ever, need to manipulate this attribute directly.
         It is managed by the AddXformOp(), SetResetXformStack(), and
         SetXformOpOrder(), and consulted by GetOrderedXformOps() and
@@ -1491,14 +1491,14 @@ class "PointBased" (
         surfaces as if they were effectively laminae with outward-facing
         normals on both sides, some renderers derive significant optimizations
         by considering these surfaces to have only a single outward side,
-        typically determined by control-point winding order and/or 
+        typically determined by control-point winding order and/or
         orientation.  By doing so they can perform \"backface culling\" to
         avoid drawing the many polygons of most closed surfaces that face away
         from the viewer.
-        
+
         However, it is often advantageous to model thin objects such as paper
         and cloth as single, open surfaces that must be viewable from both
-        sides, always.  Setting a gprim's doubleSided attribute to 
+        sides, always.  Setting a gprim's doubleSided attribute to
         \\c true instructs all renderers to disable optimizations such as
         backface culling for the gprim, and attempt (not all renderers are able
         to do so, but the USD reference GL renderer always will) to provide
@@ -1509,23 +1509,23 @@ class "PointBased" (
         doc = """Extent is a three dimensional range measuring the geometric
         extent of the authored gprim in its own local space (i.e. its own
         transform not applied), without accounting for any shader-induced
-        displacement. If __any__ extent value has been authored for a given 
-        Boundable, then it should be authored at every timeSample at which 
-        geometry-affecting properties are authored, to ensure correct 
-        evaluation via ComputeExtent(). If __no__ extent value has been 
-        authored, then ComputeExtent() will call the Boundable's registered 
-        ComputeExtentFunction(), which may be expensive, which is why we 
+        displacement. If __any__ extent value has been authored for a given
+        Boundable, then it should be authored at every timeSample at which
+        geometry-affecting properties are authored, to ensure correct
+        evaluation via ComputeExtent(). If __no__ extent value has been
+        authored, then ComputeExtent() will call the Boundable's registered
+        ComputeExtentFunction(), which may be expensive, which is why we
         strongly encourage proper authoring of extent.
         \\sa ComputeExtent()
         \\sa \\ref UsdGeom_Boundable_Extent.
-        
+
         An authored extent on a prim which has children is expected to include
         the extent of all children, as they will be pruned from BBox computation
         during traversal."""
     )
     normal3f[] normals (
-        doc = """Provide an object-space orientation for individual points, 
-        which, depending on subclass, may define a surface, curve, or free 
+        doc = """Provide an object-space orientation for individual points,
+        which, depending on subclass, may define a surface, curve, or free
         points.  Note that 'normals' should not be authored on any Mesh that
         is subdivided, since the subdivision algorithm will define its own
         normals. 'normals' is not a generic primvar, but the number of elements
@@ -1535,7 +1535,7 @@ class "PointBased" (
     )
     uniform token orientation = "rightHanded" (
         allowedTokens = ["rightHanded", "leftHanded"]
-        doc = """Orientation specifies whether the gprim's surface normal 
+        doc = """Orientation specifies whether the gprim's surface normal
         should be computed using the right hand rule, or the left hand rule.
         Please see for a deeper explanation and
         generalization of orientation to composed scenes with transformation
@@ -1563,17 +1563,17 @@ class "PointBased" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -1582,15 +1582,15 @@ class "PointBased" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     vector3f[] velocities (
-        doc = """If provided, 'velocities' should be used by renderers to 
+        doc = """If provided, 'velocities' should be used by renderers to
 
         compute positions between samples for the 'points' attribute, rather
         than interpolating between neighboring 'points' samples.  This is the
@@ -1600,16 +1600,16 @@ class "PointBased" (
         'points' sample.  Velocity is measured in position units per second,
         as per most simulation software. To convert to position units per
         UsdTimeCode, divide by UsdStage::GetTimeCodesPerSecond().
-        
+
         See also ."""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
     uniform token[] xformOpOrder (
@@ -1617,7 +1617,7 @@ class "PointBased" (
         order in which they should be pushed onto a transform stack while
         visiting a UsdStage's prims in a graph traversal that will effect
         the desired positioning for this prim and its descendant prims.
-        
+
         You should rarely, if ever, need to manipulate this attribute directly.
         It is managed by the AddXformOp(), SetResetXformStack(), and
         SetXformOpOrder(), and consulted by GetOrderedXformOps() and
@@ -1628,7 +1628,7 @@ class "PointBased" (
 class Mesh "Mesh" (
     doc = """Encodes a mesh with optional subdivision properties and features.
 
-    As a point-based primitive, meshes are defined in terms of points that 
+    As a point-based primitive, meshes are defined in terms of points that
     are connected into edges and faces. Many references to meshes use the
     term 'vertex' in place of or interchangeably with 'points', while some
     use 'vertex' to refer to the 'face-vertices' that define a face.  To
@@ -1746,14 +1746,14 @@ class Mesh "Mesh" (
         surfaces as if they were effectively laminae with outward-facing
         normals on both sides, some renderers derive significant optimizations
         by considering these surfaces to have only a single outward side,
-        typically determined by control-point winding order and/or 
+        typically determined by control-point winding order and/or
         orientation.  By doing so they can perform \"backface culling\" to
         avoid drawing the many polygons of most closed surfaces that face away
         from the viewer.
-        
+
         However, it is often advantageous to model thin objects such as paper
         and cloth as single, open surfaces that must be viewable from both
-        sides, always.  Setting a gprim's doubleSided attribute to 
+        sides, always.  Setting a gprim's doubleSided attribute to
         \\c true instructs all renderers to disable optimizations such as
         backface culling for the gprim, and attempt (not all renderers are able
         to do so, but the USD reference GL renderer always will) to provide
@@ -1764,16 +1764,16 @@ class Mesh "Mesh" (
         doc = """Extent is a three dimensional range measuring the geometric
         extent of the authored gprim in its own local space (i.e. its own
         transform not applied), without accounting for any shader-induced
-        displacement. If __any__ extent value has been authored for a given 
-        Boundable, then it should be authored at every timeSample at which 
-        geometry-affecting properties are authored, to ensure correct 
-        evaluation via ComputeExtent(). If __no__ extent value has been 
-        authored, then ComputeExtent() will call the Boundable's registered 
-        ComputeExtentFunction(), which may be expensive, which is why we 
+        displacement. If __any__ extent value has been authored for a given
+        Boundable, then it should be authored at every timeSample at which
+        geometry-affecting properties are authored, to ensure correct
+        evaluation via ComputeExtent(). If __no__ extent value has been
+        authored, then ComputeExtent() will call the Boundable's registered
+        ComputeExtentFunction(), which may be expensive, which is why we
         strongly encourage proper authoring of extent.
         \\sa ComputeExtent()
         \\sa \\ref UsdGeom_Boundable_Extent.
-        
+
         An authored extent on a prim which has children is expected to include
         the extent of all children, as they will be pruned from BBox computation
         during traversal."""
@@ -1804,7 +1804,7 @@ class Mesh "Mesh" (
         https://graphics.pixar.com/opensubdiv/docs/subdivision_surfaces.html#face-varying-interpolation-rules'''
     )
     int[] faceVertexCounts (
-        doc = """Provides the number of vertices in each face of the mesh, 
+        doc = """Provides the number of vertices in each face of the mesh,
         which is also the number of consecutive indices in _faceVertexIndices_
         that define the face.  The length of this attribute is the number of
         faces in the mesh.  If this attribute has more than
@@ -1838,8 +1838,8 @@ class Mesh "Mesh" (
         https://graphics.pixar.com/opensubdiv/docs/subdivision_surfaces.html#boundary-interpolation-rules'''
     )
     normal3f[] normals (
-        doc = """Provide an object-space orientation for individual points, 
-        which, depending on subclass, may define a surface, curve, or free 
+        doc = """Provide an object-space orientation for individual points,
+        which, depending on subclass, may define a surface, curve, or free
         points.  Note that 'normals' should not be authored on any Mesh that
         is subdivided, since the subdivision algorithm will define its own
         normals. 'normals' is not a generic primvar, but the number of elements
@@ -1849,7 +1849,7 @@ class Mesh "Mesh" (
     )
     uniform token orientation = "rightHanded" (
         allowedTokens = ["rightHanded", "leftHanded"]
-        doc = """Orientation specifies whether the gprim's surface normal 
+        doc = """Orientation specifies whether the gprim's surface normal
         should be computed using the right hand rule, or the left hand rule.
         Please see for a deeper explanation and
         generalization of orientation to composed scenes with transformation
@@ -1877,17 +1877,17 @@ class Mesh "Mesh" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -1896,11 +1896,11 @@ class Mesh "Mesh" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     uniform token subdivisionScheme = "catmullClark" (
@@ -1934,7 +1934,7 @@ class Mesh "Mesh" (
         See https://graphics.pixar.com/opensubdiv/docs/subdivision_surfaces.html#triangle-subdivision-rule'''
     )
     vector3f[] velocities (
-        doc = """If provided, 'velocities' should be used by renderers to 
+        doc = """If provided, 'velocities' should be used by renderers to
 
         compute positions between samples for the 'points' attribute, rather
         than interpolating between neighboring 'points' samples.  This is the
@@ -1944,16 +1944,16 @@ class Mesh "Mesh" (
         'points' sample.  Velocity is measured in position units per second,
         as per most simulation software. To convert to position units per
         UsdTimeCode, divide by UsdStage::GetTimeCodesPerSecond().
-        
+
         See also ."""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
     uniform token[] xformOpOrder (
@@ -1961,7 +1961,171 @@ class Mesh "Mesh" (
         order in which they should be pushed onto a transform stack while
         visiting a UsdStage's prims in a graph traversal that will effect
         the desired positioning for this prim and its descendant prims.
-        
+
+        You should rarely, if ever, need to manipulate this attribute directly.
+        It is managed by the AddXformOp(), SetResetXformStack(), and
+        SetXformOpOrder(), and consulted by GetOrderedXformOps() and
+        GetLocalTransformation()."""
+    )
+}
+
+class TetMesh "TetMesh" (
+    doc = "Encodes a tetrahedral mesh."
+)
+{
+    vector3f[] accelerations (
+        doc = """If provided, 'accelerations' should be used with
+        velocities to compute positions between samples for the 'points'
+        attribute rather than interpolating between neighboring 'points'
+        samples. Acceleration is measured in position units per second-squared.
+        To convert to position units per squared UsdTimeCode, divide by the
+        square of UsdStage::GetTimeCodesPerSecond()."""
+    )
+    uniform bool doubleSided = 0 (
+        doc = """Although some renderers treat all parametric or polygonal
+        surfaces as if they were effectively laminae with outward-facing
+        normals on both sides, some renderers derive significant optimizations
+        by considering these surfaces to have only a single outward side,
+        typically determined by control-point winding order and/or
+        orientation.  By doing so they can perform \"backface culling\" to
+        avoid drawing the many polygons of most closed surfaces that face away
+        from the viewer.
+
+        However, it is often advantageous to model thin objects such as paper
+        and cloth as single, open surfaces that must be viewable from both
+        sides, always.  Setting a gprim's doubleSided attribute to
+        \\c true instructs all renderers to disable optimizations such as
+        backface culling for the gprim, and attempt (not all renderers are able
+        to do so, but the USD reference GL renderer always will) to provide
+        forward-facing normals on each side of the surface for lighting
+        calculations."""
+    )
+    float3[] extent (
+        doc = """Extent is a three dimensional range measuring the geometric
+        extent of the authored gprim in its own local space (i.e. its own
+        transform not applied), without accounting for any shader-induced
+        displacement. If __any__ extent value has been authored for a given
+        Boundable, then it should be authored at every timeSample at which
+        geometry-affecting properties are authored, to ensure correct
+        evaluation via ComputeExtent(). If __no__ extent value has been
+        authored, then ComputeExtent() will call the Boundable's registered
+        ComputeExtentFunction(), which may be expensive, which is why we
+        strongly encourage proper authoring of extent.
+        \\sa ComputeExtent()
+        \\sa \\ref UsdGeom_Boundable_Extent.
+
+        An authored extent on a prim which has children is expected to include
+        the extent of all children, as they will be pruned from BBox computation
+        during traversal."""
+    )
+    normal3f[] normals (
+        doc = """Provide an object-space orientation for individual points,
+        which, depending on subclass, may define a surface, curve, or free
+        points.  Note that 'normals' should not be authored on any Mesh that
+        is subdivided, since the subdivision algorithm will define its own
+        normals. 'normals' is not a generic primvar, but the number of elements
+        in this attribute will be determined by its 'interpolation'.  See
+        . If 'normals' and 'primvars:normals'
+        are both specified, the latter has precedence."""
+    )
+    uniform token orientation = "rightHanded" (
+        allowedTokens = ["rightHanded", "leftHanded"]
+        doc = """Orientation specifies whether the gprim's surface normal
+        should be computed using the right hand rule, or the left hand rule.
+        Please see for a deeper explanation and
+        generalization of orientation to composed scenes with transformation
+        hierarchies."""
+    )
+    point3f[] points (
+        doc = """The primary geometry attribute for all PointBased
+        primitives, describes points in (local) space."""
+    )
+    color3f[] primvars:displayColor (
+        doc = '''It is useful to have an "official" colorSet that can be used
+        as a display or modeling color, even in the absence of any specified
+        shader for a gprim.  DisplayColor serves this role; because it is a
+        UsdGeomPrimvar, it can also be used as a gprim override for any shader
+        that consumes a displayColor parameter.'''
+    )
+    float[] primvars:displayOpacity (
+        doc = """Companion to displayColor that specifies opacity, broken
+        out as an independent attribute rather than an rgba color, both so that
+        each can be independently overridden, and because shaders rarely consume
+        rgba parameters."""
+    )
+    rel proxyPrim (
+        doc = '''The proxyPrim relationship allows us to link a
+        prim whose purpose is "render" to its (single target)
+        purpose="proxy" prim.  This is entirely optional, but can be
+        useful in several scenarios:
+
+        - In a pipeline that does pruning (for complexity management)
+        by deactivating prims composed from asset references, when we
+        deactivate a purpose="render" prim, we will be able to discover
+        and additionally deactivate its associated purpose="proxy" prim,
+        so that preview renders reflect the pruning accurately.
+
+        - DCC importers may be able to make more aggressive optimizations
+        for interactive processing and display if they can discover the proxy
+        for a given render prim.
+
+        - With a little more work, a Hydra-based application will be able
+        to map a picked proxy prim back to its render geometry for selection.
+
+        \\note It is only valid to author the proxyPrim relationship on
+        prims whose purpose is "render".'''
+    )
+    uniform token purpose = "default" (
+        allowedTokens = ["default", "render", "proxy", "guide"]
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
+        on a stage, such as rendering or bounding-box computation traversals.
+
+        See for more detail about how
+        purpose is computed and used."""
+    )
+    int3[] surfaceFaceVertexIndices (
+        doc = """If provided 'surfaceFaceVertexIndices', defines the triangle
+        surface faces indices wrt. Points of the tetmesh surface."""
+    )
+    int4[] tetVertexIndices (
+        doc = """Flat list of the index (into the _points_ attribute) of each
+        vertex of each tetrahedron in the mesh. Each int4 corresponds to the
+        indices of a single tetrahedron. We assume the faces of a given
+        tetrahedron are [013],[021],[032],[123] which provide a CCW ordering
+        such that the faces normals point away from the center of the
+        tetrahedron. If this attribute has more than one timeSample, the mesh is
+        considered to be topologically varying."""
+    )
+    vector3f[] velocities (
+        doc = """If provided, 'velocities' should be used by renderers to
+
+        compute positions between samples for the 'points' attribute, rather
+        than interpolating between neighboring 'points' samples.  This is the
+        only reasonable means of computing motion blur for topologically
+        varying PointBased primitives.  It follows that the length of each
+        'velocities' sample must match the length of the corresponding
+        'points' sample.  Velocity is measured in position units per second,
+        as per most simulation software. To convert to position units per
+        UsdTimeCode, divide by UsdStage::GetTimeCodesPerSecond().
+
+        See also ."""
+    )
+    token visibility = "inherited" (
+        allowedTokens = ["inherited", "invisible"]
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
+        available for inspection, for positioning, for defining volumes, etc.'''
+    )
+    uniform token[] xformOpOrder (
+        doc = """Encodes the sequence of transformation operations in the
+        order in which they should be pushed onto a transform stack while
+        visiting a UsdStage's prims in a graph traversal that will effect
+        the desired positioning for this prim and its descendant prims.
+
         You should rarely, if ever, need to manipulate this attribute directly.
         It is managed by the AddXformOp(), SetResetXformStack(), and
         SetXformOpOrder(), and consulted by GetOrderedXformOps() and
@@ -1970,60 +2134,60 @@ class Mesh "Mesh" (
 }
 
 class GeomSubset "GeomSubset" (
-    doc = """Encodes a subset of a piece of geometry (i.e. a UsdGeomImageable) 
-    as a set of indices. Currently only supports encoding of face-subsets, but 
-    could be extended in the future to support subsets representing edges, 
+    doc = """Encodes a subset of a piece of geometry (i.e. a UsdGeomImageable)
+    as a set of indices. Currently only supports encoding of face-subsets, but
+    could be extended in the future to support subsets representing edges,
     segments, points etc.
 
-    To apply to a geometric prim, a GeomSubset prim must be the prim's direct 
-    child in namespace, and possess a concrete defining specifier (i.e. def). 
-    This restriction makes it easy and efficient to discover subsets of a prim. 
-    We might want to relax this restriction if it's common to have multiple 
-    <b>families</b> of subsets on a gprim and if it's useful to be able to 
-    organize subsets belonging to a </b>family</b> under a common scope. See 
+    To apply to a geometric prim, a GeomSubset prim must be the prim's direct
+    child in namespace, and possess a concrete defining specifier (i.e. def).
+    This restriction makes it easy and efficient to discover subsets of a prim.
+    We might want to relax this restriction if it's common to have multiple
+    <b>families</b> of subsets on a gprim and if it's useful to be able to
+    organize subsets belonging to a </b>family</b> under a common scope. See
     'familyName' attribute for more info on defining a family of subsets.
 
     Note that a GeomSubset isn't an imageable (i.e. doesn't derive from
-    UsdGeomImageable). So, you can't author <b>visibility</b> for it or 
+    UsdGeomImageable). So, you can't author <b>visibility</b> for it or
     override its <b>purpose</b>.
 
-    Materials are bound to GeomSubsets just as they are for regular 
+    Materials are bound to GeomSubsets just as they are for regular
     geometry using API available in UsdShade (UsdShadeMaterial::Bind).
 """
 )
 {
     uniform token elementType = "face" (
         allowedTokens = ["face"]
-        doc = '''The type of element that the indices target. Currently only 
+        doc = '''The type of element that the indices target. Currently only
         allows "face" and defaults to it.'''
     )
     uniform token familyName = "" (
-        doc = '''The name of the family of subsets that this subset belongs to. 
-        This is optional and is primarily useful when there are multiple 
-        families of subsets under a geometric prim. In some cases, this could 
-        also be used for achieving proper roundtripping of subset data between 
+        doc = '''The name of the family of subsets that this subset belongs to.
+        This is optional and is primarily useful when there are multiple
+        families of subsets under a geometric prim. In some cases, this could
+        also be used for achieving proper roundtripping of subset data between
         DCC apps.
-        When multiple subsets belonging to a prim have the same familyName, they 
-        are said to belong to the family. A <i>familyType</i> value can be 
-        encoded on the owner of a family of subsets as a token using the static 
-        method UsdGeomSubset::SetFamilyType(). "familyType" can have one of the 
+        When multiple subsets belonging to a prim have the same familyName, they
+        are said to belong to the family. A <i>familyType</i> value can be
+        encoded on the owner of a family of subsets as a token using the static
+        method UsdGeomSubset::SetFamilyType(). "familyType" can have one of the
         following values:
-        <ul><li><b>UsdGeomTokens->partition</b>: implies that every element of 
+        <ul><li><b>UsdGeomTokens->partition</b>: implies that every element of
         the whole geometry appears exactly once in only one of the subsets
         belonging to the family.</li>
-        <li><b>UsdGeomTokens->nonOverlapping</b>: an element that appears in one 
+        <li><b>UsdGeomTokens->nonOverlapping</b>: an element that appears in one
         subset may not appear in any other subset belonging to the family.</li>
         <li><b>UsdGeomTokens->unrestricted</b>: implies that there are no
-        restrictions w.r.t. the membership of elements in the subsets. They 
-        could be overlapping and the union of all subsets in the family may 
+        restrictions w.r.t. the membership of elements in the subsets. They
+        could be overlapping and the union of all subsets in the family may
         not represent the whole.</li>
         </ul>
-        \\note The validity of subset data is not enforced by the authoring 
+        \\note The validity of subset data is not enforced by the authoring
         APIs, however they can be checked using UsdGeomSubset::ValidateFamily().
         '''
     )
     int[] indices = [] (
-        doc = """The set of indices included in this subset. The indices need not 
+        doc = """The set of indices included in this subset. The indices need not
         be sorted, but the same index should not appear more than once."""
     )
 }
@@ -2031,16 +2195,16 @@ class GeomSubset "GeomSubset" (
 class NurbsPatch "NurbsPatch" (
     doc = """Encodes a rational or polynomial non-uniform B-spline
     surface, with optional trim curves.
-    
-    The encoding mostly follows that of RiNuPatch and RiTrimCurve: 
+
+    The encoding mostly follows that of RiNuPatch and RiTrimCurve:
     https://renderman.pixar.com/resources/current/RenderMan/geometricPrimitives.html#rinupatch , with some minor renaming and coalescing for clarity.
-    
+
     The layout of control vertices in the points attribute inherited
     from UsdGeomPointBased is row-major with U considered rows, and V columns.
-    
+
     \\anchor UsdGeom_NurbsPatch_Form
     <b>NurbsPatch Form</b>
-    
+
     The authored points, orders, knots, weights, and ranges are all that is
     required to render the nurbs patch.  However, the only way to model closed
     surfaces with nurbs is to ensure that the first and last control points
@@ -2049,30 +2213,30 @@ class NurbsPatch "NurbsPatch" (
     points must be (correspondingly) coincident with the first order - 1
     control points, and also the spacing of the last corresponding knots
     must be the same as the first corresponding knots.
-    
+
     <b>Form</b> is provided as an aid to interchange between modeling and
     animation applications so that they can robustly identify the intent with
     which the surface was modelled, and take measures (if they are able) to
     preserve the continuity/concidence constraints as the surface may be rigged
-    or deformed.  
+    or deformed.
     - An open-form NurbsPatch has no continuity constraints.
     - A closed-form NurbsPatch expects the first and last control points
     to overlap
     - A periodic-form NurbsPatch expects the first and last
     order - 1 control points to overlap.
-    
+
     <b>Nurbs vs Subdivision Surfaces</b>
-    
+
     Nurbs are an important modeling primitive in CAD/CAM tools and early
     computer graphics DCC's.  Because they have a natural UV parameterization
     they easily support \"trim curves\", which allow smooth shapes to be
     carved out of the surface.
-    
-    However, the topology of the patch is always rectangular, and joining two 
+
+    However, the topology of the patch is always rectangular, and joining two
     nurbs patches together (especially when they have differing numbers of
     spans) is difficult to do smoothly.  Also, nurbs are not supported by
     the Ptex texturing technology (http://ptex.us).
-    
+
     Neither of these limitations are shared by subdivision surfaces; therefore,
     although they do not subscribe to trim-curve-based shaping, subdivs are
     often considered a more flexible modeling primitive.
@@ -2092,14 +2256,14 @@ class NurbsPatch "NurbsPatch" (
         surfaces as if they were effectively laminae with outward-facing
         normals on both sides, some renderers derive significant optimizations
         by considering these surfaces to have only a single outward side,
-        typically determined by control-point winding order and/or 
+        typically determined by control-point winding order and/or
         orientation.  By doing so they can perform \"backface culling\" to
         avoid drawing the many polygons of most closed surfaces that face away
         from the viewer.
-        
+
         However, it is often advantageous to model thin objects such as paper
         and cloth as single, open surfaces that must be viewable from both
-        sides, always.  Setting a gprim's doubleSided attribute to 
+        sides, always.  Setting a gprim's doubleSided attribute to
         \\c true instructs all renderers to disable optimizations such as
         backface culling for the gprim, and attempt (not all renderers are able
         to do so, but the USD reference GL renderer always will) to provide
@@ -2110,23 +2274,23 @@ class NurbsPatch "NurbsPatch" (
         doc = """Extent is a three dimensional range measuring the geometric
         extent of the authored gprim in its own local space (i.e. its own
         transform not applied), without accounting for any shader-induced
-        displacement. If __any__ extent value has been authored for a given 
-        Boundable, then it should be authored at every timeSample at which 
-        geometry-affecting properties are authored, to ensure correct 
-        evaluation via ComputeExtent(). If __no__ extent value has been 
-        authored, then ComputeExtent() will call the Boundable's registered 
-        ComputeExtentFunction(), which may be expensive, which is why we 
+        displacement. If __any__ extent value has been authored for a given
+        Boundable, then it should be authored at every timeSample at which
+        geometry-affecting properties are authored, to ensure correct
+        evaluation via ComputeExtent(). If __no__ extent value has been
+        authored, then ComputeExtent() will call the Boundable's registered
+        ComputeExtentFunction(), which may be expensive, which is why we
         strongly encourage proper authoring of extent.
         \\sa ComputeExtent()
         \\sa \\ref UsdGeom_Boundable_Extent.
-        
+
         An authored extent on a prim which has children is expected to include
         the extent of all children, as they will be pruned from BBox computation
         during traversal."""
     )
     normal3f[] normals (
-        doc = """Provide an object-space orientation for individual points, 
-        which, depending on subclass, may define a surface, curve, or free 
+        doc = """Provide an object-space orientation for individual points,
+        which, depending on subclass, may define a surface, curve, or free
         points.  Note that 'normals' should not be authored on any Mesh that
         is subdivided, since the subdivision algorithm will define its own
         normals. 'normals' is not a generic primvar, but the number of elements
@@ -2136,7 +2300,7 @@ class NurbsPatch "NurbsPatch" (
     )
     uniform token orientation = "rightHanded" (
         allowedTokens = ["rightHanded", "leftHanded"]
-        doc = """Orientation specifies whether the gprim's surface normal 
+        doc = """Orientation specifies whether the gprim's surface normal
         should be computed using the right hand rule, or the left hand rule.
         Please see for a deeper explanation and
         generalization of orientation to composed scenes with transformation
@@ -2151,7 +2315,7 @@ class NurbsPatch "NurbsPatch" (
         thus must be the same length as the points attribute.  If authored,
         the patch will be rational.  If unauthored, the patch will be
         polynomial, i.e. weight for all points is 1.0.
-        \\note Some DCC's pre-weight the points, but in this schema, 
+        \\note Some DCC's pre-weight the points, but in this schema,
         points are not pre-weighted."""
     )
     color3f[] primvars:displayColor (
@@ -2172,17 +2336,17 @@ class NurbsPatch "NurbsPatch" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -2191,18 +2355,18 @@ class NurbsPatch "NurbsPatch" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     int[] trimCurve:counts (
         doc = '''Each element specifies how many curves are present in each
         "loop" of the trimCurve, and the length of the array determines how
         many loops the trimCurve contains.  The sum of all elements is the
-        total nuber of curves in the trim, to which we will refer as 
+        total nuber of curves in the trim, to which we will refer as
         nCurves in describing the other trim attributes.'''
     )
     double[] trimCurve:knots (
@@ -2220,7 +2384,7 @@ class NurbsPatch "NurbsPatch" (
         um over all elements of vertexCounts."""
     )
     double2[] trimCurve:ranges (
-        doc = """Flat list of minimum and maximum parametric values 
+        doc = """Flat list of minimum and maximum parametric values
         (as defined by knots) for each of the nCurves curves."""
     )
     int[] trimCurve:vertexCounts (
@@ -2255,7 +2419,7 @@ class NurbsPatch "NurbsPatch" (
         large as uOrder."""
     )
     vector3f[] velocities (
-        doc = """If provided, 'velocities' should be used by renderers to 
+        doc = """If provided, 'velocities' should be used by renderers to
 
         compute positions between samples for the 'points' attribute, rather
         than interpolating between neighboring 'points' samples.  This is the
@@ -2265,7 +2429,7 @@ class NurbsPatch "NurbsPatch" (
         'points' sample.  Velocity is measured in position units per second,
         as per most simulation software. To convert to position units per
         UsdTimeCode, divide by UsdStage::GetTimeCodesPerSecond().
-        
+
         See also ."""
     )
     uniform token vForm = "open" (
@@ -2277,11 +2441,11 @@ class NurbsPatch "NurbsPatch" (
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
     double[] vKnots (
@@ -2309,7 +2473,7 @@ class NurbsPatch "NurbsPatch" (
         order in which they should be pushed onto a transform stack while
         visiting a UsdStage's prims in a graph traversal that will effect
         the desired positioning for this prim and its descendant prims.
-        
+
         You should rarely, if ever, need to manipulate this attribute directly.
         It is managed by the AddXformOp(), SetResetXformStack(), and
         SetXformOpOrder(), and consulted by GetOrderedXformOps() and
@@ -2358,14 +2522,14 @@ class "Curves" (
         surfaces as if they were effectively laminae with outward-facing
         normals on both sides, some renderers derive significant optimizations
         by considering these surfaces to have only a single outward side,
-        typically determined by control-point winding order and/or 
+        typically determined by control-point winding order and/or
         orientation.  By doing so they can perform \"backface culling\" to
         avoid drawing the many polygons of most closed surfaces that face away
         from the viewer.
-        
+
         However, it is often advantageous to model thin objects such as paper
         and cloth as single, open surfaces that must be viewable from both
-        sides, always.  Setting a gprim's doubleSided attribute to 
+        sides, always.  Setting a gprim's doubleSided attribute to
         \\c true instructs all renderers to disable optimizations such as
         backface culling for the gprim, and attempt (not all renderers are able
         to do so, but the USD reference GL renderer always will) to provide
@@ -2376,23 +2540,23 @@ class "Curves" (
         doc = """Extent is a three dimensional range measuring the geometric
         extent of the authored gprim in its own local space (i.e. its own
         transform not applied), without accounting for any shader-induced
-        displacement. If __any__ extent value has been authored for a given 
-        Boundable, then it should be authored at every timeSample at which 
-        geometry-affecting properties are authored, to ensure correct 
-        evaluation via ComputeExtent(). If __no__ extent value has been 
-        authored, then ComputeExtent() will call the Boundable's registered 
-        ComputeExtentFunction(), which may be expensive, which is why we 
+        displacement. If __any__ extent value has been authored for a given
+        Boundable, then it should be authored at every timeSample at which
+        geometry-affecting properties are authored, to ensure correct
+        evaluation via ComputeExtent(). If __no__ extent value has been
+        authored, then ComputeExtent() will call the Boundable's registered
+        ComputeExtentFunction(), which may be expensive, which is why we
         strongly encourage proper authoring of extent.
         \\sa ComputeExtent()
         \\sa \\ref UsdGeom_Boundable_Extent.
-        
+
         An authored extent on a prim which has children is expected to include
         the extent of all children, as they will be pruned from BBox computation
         during traversal."""
     )
     normal3f[] normals (
-        doc = """Provide an object-space orientation for individual points, 
-        which, depending on subclass, may define a surface, curve, or free 
+        doc = """Provide an object-space orientation for individual points,
+        which, depending on subclass, may define a surface, curve, or free
         points.  Note that 'normals' should not be authored on any Mesh that
         is subdivided, since the subdivision algorithm will define its own
         normals. 'normals' is not a generic primvar, but the number of elements
@@ -2402,7 +2566,7 @@ class "Curves" (
     )
     uniform token orientation = "rightHanded" (
         allowedTokens = ["rightHanded", "leftHanded"]
-        doc = """Orientation specifies whether the gprim's surface normal 
+        doc = """Orientation specifies whether the gprim's surface normal
         should be computed using the right hand rule, or the left hand rule.
         Please see for a deeper explanation and
         generalization of orientation to composed scenes with transformation
@@ -2430,17 +2594,17 @@ class "Curves" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -2449,15 +2613,15 @@ class "Curves" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     vector3f[] velocities (
-        doc = """If provided, 'velocities' should be used by renderers to 
+        doc = """If provided, 'velocities' should be used by renderers to
 
         compute positions between samples for the 'points' attribute, rather
         than interpolating between neighboring 'points' samples.  This is the
@@ -2467,16 +2631,16 @@ class "Curves" (
         'points' sample.  Velocity is measured in position units per second,
         as per most simulation software. To convert to position units per
         UsdTimeCode, divide by UsdStage::GetTimeCodesPerSecond().
-        
+
         See also ."""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
     float[] widths (
@@ -2493,7 +2657,7 @@ class "Curves" (
         order in which they should be pushed onto a transform stack while
         visiting a UsdStage's prims in a graph traversal that will effect
         the desired positioning for this prim and its descendant prims.
-        
+
         You should rarely, if ever, need to manipulate this attribute directly.
         It is managed by the AddXformOp(), SetResetXformStack(), and
         SetXformOpOrder(), and consulted by GetOrderedXformOps() and
@@ -2509,7 +2673,7 @@ class BasisCurves "BasisCurves" (
     A 'matrix' and 'vstep' associated with the basis are used to
     interpolate the vertices of a cubic BasisCurves. (The basis attribute
     is unused for linear BasisCurves.)
-    
+
     A single prim may have many curves whose count is determined implicitly by
     the length of the curveVertexCounts vector.  Each individual curve is
     composed of one or more segments. Each segment is defined by four vertices
@@ -2517,20 +2681,20 @@ class BasisCurves "BasisCurves" (
     for more information on how to map curve vertex counts to segment counts.
 
     Segment Indexing
-    Interpolating a curve requires knowing how to decompose it into its 
+    Interpolating a curve requires knowing how to decompose it into its
     individual segments.
 
     The segments of a cubic curve are determined by the vertex count,
     the wrap (periodicity), and the vstep of the basis. For linear
     curves, the basis token is ignored and only the vertex count and
     wrap are needed.
-    
+
     cubic basis   | vstep
     ------------- | ------
     bezier        | 3
     catmullRom    | 1
     bspline       | 1
-    
+
     The first segment of a cubic (nonperiodic) curve is always defined by its
     first four points. The vstep is the increment used to determine what
     vertex indices define the next segment.  For a two segment (nonperiodic)
@@ -2547,21 +2711,21 @@ class BasisCurves "BasisCurves" (
     repeated to close the curve. For cubic curves, the number of vertices
     repeated is '4 - vstep'. For linear curves, only one vertex is repeated
     to close the loop.
-    
+
     Pinned curves are a special case of nonperiodic curves that only affects
     the behavior of cubic Bspline and Catmull-Rom curves. To evaluate or render
-    pinned curves, a client must effectively add 'phantom points' at the 
+    pinned curves, a client must effectively add 'phantom points' at the
     beginning and end of every curve in a batch.  These phantom points
     are injected to ensure that the interpolated curve begins at P[0] and
     ends at P[n-1].
-    
+
     For a curve with initial point P[0] and last point P[n-1], the phantom
     points are defined as.
     P[-1]  = 2 * P[0] - P[1]
     P[n] = 2 * P[n-1] - P[n-2]
 
     Pinned cubic curves will (usually) have to be unpacked into the standard
-    nonperiodic representation before rendering. This unpacking can add some 
+    nonperiodic representation before rendering. This unpacking can add some
     additional overhead. However, using pinned curves reduces the amount of
     data recorded in a scene and (more importantly) better records the
     authors' intent for interchange.
@@ -2571,7 +2735,7 @@ class BasisCurves "BasisCurves" (
 
     Linear curve segments are defined by two vertices.
     A two segment linear curve's first segment would be defined by
-    interpolating vertices [0, 1]. The second segment would be defined by 
+    interpolating vertices [0, 1]. The second segment would be defined by
     vertices [1, 2]. (Again, for a batched curve, indices are relative to
     the initial vertex index.)
 
@@ -2587,47 +2751,47 @@ class BasisCurves "BasisCurves" (
     cubic   | pinned (catmullRom/bspline) | (curveVertexCounts[i] - 2) >= 0
 
     Cubic Vertex Interpolation
- 
+
     \\image html USDCurveBasisMatrix.png width=750
-        
+
     Linear Vertex Interpolation
- 
+
     Linear interpolation is always used on curves of type linear.
-    't' with domain [0, 1], the curve is defined by the equation 
+    't' with domain [0, 1], the curve is defined by the equation
     P0 * (1-t) + P1 * t. t at 0 describes the first point and t at 1 describes
     the end point.
 
     Primvar Interpolation
-        
-    For cubic curves, primvar data can be either interpolated cubically between 
+
+    For cubic curves, primvar data can be either interpolated cubically between
     vertices or linearly across segments.  The corresponding token
     for cubic interpolation is 'vertex' and for linear interpolation is
     'varying'.  Per vertex data should be the same size as the number
-    of vertices in your curve.  Segment varying data is dependent on the 
+    of vertices in your curve.  Segment varying data is dependent on the
     wrap (periodicity) and number of segments in your curve.  For linear curves,
-    varying and vertex data would be interpolated the same way.  By convention 
-    varying is the preferred interpolation because of the association of 
+    varying and vertex data would be interpolated the same way.  By convention
+    varying is the preferred interpolation because of the association of
     varying with linear interpolation.
-    
-    \\image html USDCurvePrimvars.png 
 
-    To convert an entry in the curveVertexCounts vector into a segment count 
+    \\image html USDCurvePrimvars.png
+
+    To convert an entry in the curveVertexCounts vector into a segment count
     for an individual curve, apply these rules.  Sum up all the results in
     order to compute how many total segments all curves have.
 
     The following tables describe the expected segment count for the 'i'th
     curve in a curve batch as well as the entire batch. Python syntax
-    like '[:]' (to describe all members of an array) and 'len(...)' 
+    like '[:]' (to describe all members of an array) and 'len(...)'
     (to describe the length of an array) are used.
 
-    type    | wrap                        | curve segment count                    | batch segment count                                                       
+    type    | wrap                        | curve segment count                    | batch segment count
     ------- | --------------------------- | -------------------------------------- | --------------------------
     linear  | nonperiodic                 | curveVertexCounts[i] - 1               | sum(curveVertexCounts[:]) - len(curveVertexCounts)
     linear  | periodic                    | curveVertexCounts[i]                   | sum(curveVertexCounts[:])
     cubic   | nonperiodic                 | (curveVertexCounts[i] - 4) / vstep + 1 | sum(curveVertexCounts[:] - 4) / vstep + len(curveVertexCounts)
     cubic   | periodic                    | curveVertexCounts[i] / vstep           | sum(curveVertexCounts[:]) / vstep
     cubic   | pinned (catmullRom/bspline) | (curveVertexCounts[i] - 2) + 1         | sum(curveVertexCounts[:] - 2) + len(curveVertexCounts)
- 
+
     The following table descrives the expected size of varying
     (linearly interpolated) data, derived from the segment counts computed
     above.
@@ -2640,7 +2804,7 @@ class BasisCurves "BasisCurves" (
     Both curve types additionally define 'constant' interpolation for the
     entire prim and 'uniform' interpolation as per curve data.
 
- 
+
     \\note Take care when providing support for linearly interpolated data for
     cubic curves. Its shape doesn't provide a one to one mapping with either
     the number of curves (like 'uniform') or the number of vertices (like
@@ -2649,7 +2813,7 @@ class BasisCurves "BasisCurves" (
     use different interpolation methods, 'varying' and 'vertex' are both
     specified per point. It's common to assume that curves follow a similar
     pattern and build in structures and language for per primitive, per
-    element, and per point data only to come upon these arrays that don't 
+    element, and per point data only to come upon these arrays that don't
     quite fit into either of those categories. It is
     also common to conflate 'varying' with being per segment data and use the
     segmentCount rules table instead of its neighboring varying data table
@@ -2672,8 +2836,8 @@ class BasisCurves "BasisCurves" (
     periodic      | linear  | N/A     | [3 7]             | [3 7]              | [3 7]
 
     Tubes and Ribbons
-    
-    The strictest definition of a curve as an infinitely thin wire is not 
+
+    The strictest definition of a curve as an infinitely thin wire is not
     particularly useful for describing production scenes. The additional
     widths and normals attributes can be used to describe cylindrical
     tubes and or flat oriented ribbons.
@@ -2684,9 +2848,9 @@ class BasisCurves "BasisCurves" (
 
     While not technically UsdGeomPrimvars, widths and normals
     also have interpolation metadata. It's common for authored widths to have
-    constant, varying, or vertex interpolation 
+    constant, varying, or vertex interpolation
     (see UsdGeomCurves::GetWidthsInterpolation()).  It's common for
-    authored normals to have varying interpolation 
+    authored normals to have varying interpolation
     (see UsdGeomPointBased::GetNormalsInterpolation()).
 
     \\image html USDCurveHydra.png
@@ -2699,7 +2863,7 @@ class BasisCurves "BasisCurves" (
     better match offline renderers like RenderMan.) The yellow and violet
     cubic curves represent cubic vertex width interpolation for which there is
     no equivalent for linear curves.
-    
+
     \\note How did this prim type get its name?  This prim is a portmanteau of
     two different statements in the original RenderMan specification:
     'Basis' and 'Curves'.
@@ -2716,7 +2880,7 @@ class BasisCurves "BasisCurves" (
     )
     uniform token basis = "bezier" (
         allowedTokens = ["bezier", "bspline", "catmullRom"]
-        doc = """The basis specifies the vstep and matrix used for cubic 
+        doc = """The basis specifies the vstep and matrix used for cubic
         interpolation.  \\note The 'hermite' and 'power' tokens have been
         removed. We've provided UsdGeomHermiteCurves
         as an alternative for the 'hermite' basis."""
@@ -2732,14 +2896,14 @@ class BasisCurves "BasisCurves" (
         surfaces as if they were effectively laminae with outward-facing
         normals on both sides, some renderers derive significant optimizations
         by considering these surfaces to have only a single outward side,
-        typically determined by control-point winding order and/or 
+        typically determined by control-point winding order and/or
         orientation.  By doing so they can perform \"backface culling\" to
         avoid drawing the many polygons of most closed surfaces that face away
         from the viewer.
-        
+
         However, it is often advantageous to model thin objects such as paper
         and cloth as single, open surfaces that must be viewable from both
-        sides, always.  Setting a gprim's doubleSided attribute to 
+        sides, always.  Setting a gprim's doubleSided attribute to
         \\c true instructs all renderers to disable optimizations such as
         backface culling for the gprim, and attempt (not all renderers are able
         to do so, but the USD reference GL renderer always will) to provide
@@ -2750,23 +2914,23 @@ class BasisCurves "BasisCurves" (
         doc = """Extent is a three dimensional range measuring the geometric
         extent of the authored gprim in its own local space (i.e. its own
         transform not applied), without accounting for any shader-induced
-        displacement. If __any__ extent value has been authored for a given 
-        Boundable, then it should be authored at every timeSample at which 
-        geometry-affecting properties are authored, to ensure correct 
-        evaluation via ComputeExtent(). If __no__ extent value has been 
-        authored, then ComputeExtent() will call the Boundable's registered 
-        ComputeExtentFunction(), which may be expensive, which is why we 
+        displacement. If __any__ extent value has been authored for a given
+        Boundable, then it should be authored at every timeSample at which
+        geometry-affecting properties are authored, to ensure correct
+        evaluation via ComputeExtent(). If __no__ extent value has been
+        authored, then ComputeExtent() will call the Boundable's registered
+        ComputeExtentFunction(), which may be expensive, which is why we
         strongly encourage proper authoring of extent.
         \\sa ComputeExtent()
         \\sa \\ref UsdGeom_Boundable_Extent.
-        
+
         An authored extent on a prim which has children is expected to include
         the extent of all children, as they will be pruned from BBox computation
         during traversal."""
     )
     normal3f[] normals (
-        doc = """Provide an object-space orientation for individual points, 
-        which, depending on subclass, may define a surface, curve, or free 
+        doc = """Provide an object-space orientation for individual points,
+        which, depending on subclass, may define a surface, curve, or free
         points.  Note that 'normals' should not be authored on any Mesh that
         is subdivided, since the subdivision algorithm will define its own
         normals. 'normals' is not a generic primvar, but the number of elements
@@ -2776,7 +2940,7 @@ class BasisCurves "BasisCurves" (
     )
     uniform token orientation = "rightHanded" (
         allowedTokens = ["rightHanded", "leftHanded"]
-        doc = """Orientation specifies whether the gprim's surface normal 
+        doc = """Orientation specifies whether the gprim's surface normal
         should be computed using the right hand rule, or the left hand rule.
         Please see for a deeper explanation and
         generalization of orientation to composed scenes with transformation
@@ -2804,17 +2968,17 @@ class BasisCurves "BasisCurves" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -2823,20 +2987,20 @@ class BasisCurves "BasisCurves" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     uniform token type = "cubic" (
         allowedTokens = ["linear", "cubic"]
-        doc = """Linear curves interpolate linearly between two vertices.  
+        doc = """Linear curves interpolate linearly between two vertices.
         Cubic curves use a basis matrix with four vertices to interpolate a segment."""
     )
     vector3f[] velocities (
-        doc = """If provided, 'velocities' should be used by renderers to 
+        doc = """If provided, 'velocities' should be used by renderers to
 
         compute positions between samples for the 'points' attribute, rather
         than interpolating between neighboring 'points' samples.  This is the
@@ -2846,16 +3010,16 @@ class BasisCurves "BasisCurves" (
         'points' sample.  Velocity is measured in position units per second,
         as per most simulation software. To convert to position units per
         UsdTimeCode, divide by UsdStage::GetTimeCodesPerSecond().
-        
+
         See also ."""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
     float[] widths (
@@ -2869,7 +3033,7 @@ class BasisCurves "BasisCurves" (
     )
     uniform token wrap = "nonperiodic" (
         allowedTokens = ["nonperiodic", "periodic", "pinned"]
-        doc = """If wrap is set to periodic, the curve when rendered will 
+        doc = """If wrap is set to periodic, the curve when rendered will
         repeat the initial vertices (dependent on the vstep) to close the
         curve. If wrap is set to 'pinned', phantom points may be created
         to ensure that the curve interpolation starts at P[0] and ends at P[n-1].
@@ -2880,7 +3044,7 @@ class BasisCurves "BasisCurves" (
         order in which they should be pushed onto a transform stack while
         visiting a UsdStage's prims in a graph traversal that will effect
         the desired positioning for this prim and its descendant prims.
-        
+
         You should rarely, if ever, need to manipulate this attribute directly.
         It is managed by the AddXformOp(), SetResetXformStack(), and
         SetXformOpOrder(), and consulted by GetOrderedXformOps() and
@@ -2890,23 +3054,23 @@ class BasisCurves "BasisCurves" (
 
 class NurbsCurves "NurbsCurves" (
     doc = """This schema is analagous to NURBS Curves in packages like Maya
-    and Houdini, often used for interchange of rigging and modeling curves.  
-    Unlike Maya, this curve spec supports batching of multiple curves into a 
-    single prim, widths, and normals in the schema.  Additionally, we require 
+    and Houdini, often used for interchange of rigging and modeling curves.
+    Unlike Maya, this curve spec supports batching of multiple curves into a
+    single prim, widths, and normals in the schema.  Additionally, we require
     'numSegments + 2 * degree + 1' knots (2 more than maya does).  This is to
-    be more consistent with RenderMan's NURBS patch specification.  
-    
+    be more consistent with RenderMan's NURBS patch specification.
+
     To express a periodic curve:
-    - knot[0] = knot[1] - (knots[-2] - knots[-3]; 
+    - knot[0] = knot[1] - (knots[-2] - knots[-3];
     - knot[-1] = knot[-2] + (knot[2] - knots[1]);
-    
+
     To express a nonperiodic curve:
     - knot[0] = knot[1];
     - knot[-1] = knot[-2];
-    
+
     In spite of these slight differences in the spec, curves generated in Maya
     should be preserved when roundtripping.
-    
+
     order and range, when representing a batched NurbsCurve should be
     authored one value per curve.  knots should be the concatentation of
     all batched curves.
@@ -2946,14 +3110,14 @@ class NurbsCurves "NurbsCurves" (
         surfaces as if they were effectively laminae with outward-facing
         normals on both sides, some renderers derive significant optimizations
         by considering these surfaces to have only a single outward side,
-        typically determined by control-point winding order and/or 
+        typically determined by control-point winding order and/or
         orientation.  By doing so they can perform \"backface culling\" to
         avoid drawing the many polygons of most closed surfaces that face away
         from the viewer.
-        
+
         However, it is often advantageous to model thin objects such as paper
         and cloth as single, open surfaces that must be viewable from both
-        sides, always.  Setting a gprim's doubleSided attribute to 
+        sides, always.  Setting a gprim's doubleSided attribute to
         \\c true instructs all renderers to disable optimizations such as
         backface culling for the gprim, and attempt (not all renderers are able
         to do so, but the USD reference GL renderer always will) to provide
@@ -2964,16 +3128,16 @@ class NurbsCurves "NurbsCurves" (
         doc = """Extent is a three dimensional range measuring the geometric
         extent of the authored gprim in its own local space (i.e. its own
         transform not applied), without accounting for any shader-induced
-        displacement. If __any__ extent value has been authored for a given 
-        Boundable, then it should be authored at every timeSample at which 
-        geometry-affecting properties are authored, to ensure correct 
-        evaluation via ComputeExtent(). If __no__ extent value has been 
-        authored, then ComputeExtent() will call the Boundable's registered 
-        ComputeExtentFunction(), which may be expensive, which is why we 
+        displacement. If __any__ extent value has been authored for a given
+        Boundable, then it should be authored at every timeSample at which
+        geometry-affecting properties are authored, to ensure correct
+        evaluation via ComputeExtent(). If __no__ extent value has been
+        authored, then ComputeExtent() will call the Boundable's registered
+        ComputeExtentFunction(), which may be expensive, which is why we
         strongly encourage proper authoring of extent.
         \\sa ComputeExtent()
         \\sa \\ref UsdGeom_Boundable_Extent.
-        
+
         An authored extent on a prim which has children is expected to include
         the extent of all children, as they will be pruned from BBox computation
         during traversal."""
@@ -2987,13 +3151,13 @@ class NurbsCurves "NurbsCurves" (
     )
     double[] knots (
         doc = """Knot vector providing curve parameterization.
-        The length of the slice of the array for the ith curve 
+        The length of the slice of the array for the ith curve
         must be ( curveVertexCount[i] + order[i] ), and its
         entries must take on monotonically increasing values."""
     )
     normal3f[] normals (
-        doc = """Provide an object-space orientation for individual points, 
-        which, depending on subclass, may define a surface, curve, or free 
+        doc = """Provide an object-space orientation for individual points,
+        which, depending on subclass, may define a surface, curve, or free
         points.  Note that 'normals' should not be authored on any Mesh that
         is subdivided, since the subdivision algorithm will define its own
         normals. 'normals' is not a generic primvar, but the number of elements
@@ -3009,7 +3173,7 @@ class NurbsCurves "NurbsCurves" (
     )
     uniform token orientation = "rightHanded" (
         allowedTokens = ["rightHanded", "leftHanded"]
-        doc = """Orientation specifies whether the gprim's surface normal 
+        doc = """Orientation specifies whether the gprim's surface normal
         should be computed using the right hand rule, or the left hand rule.
         Please see for a deeper explanation and
         generalization of orientation to composed scenes with transformation
@@ -3024,7 +3188,7 @@ class NurbsCurves "NurbsCurves" (
         thus must be the same length as the points attribute.  If authored,
         the patch will be rational.  If unauthored, the patch will be
         polynomial, i.e. weight for all points is 1.0.
-        \\note Some DCC's pre-weight the points, but in this schema, 
+        \\note Some DCC's pre-weight the points, but in this schema,
         points are not pre-weighted."""
     )
     color3f[] primvars:displayColor (
@@ -3045,17 +3209,17 @@ class NurbsCurves "NurbsCurves" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -3064,23 +3228,23 @@ class NurbsCurves "NurbsCurves" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     double2[] ranges (
         doc = """Provides the minimum and maximum parametric values (as defined
-        by knots) over which the curve is actually defined.  The minimum must 
-        be less than the maximum, and greater than or equal to the value of the 
-        knots['i'th curve slice][order[i]-1]. The maxium must be less 
+        by knots) over which the curve is actually defined.  The minimum must
+        be less than the maximum, and greater than or equal to the value of the
+        knots['i'th curve slice][order[i]-1]. The maxium must be less
         than or equal to the last element's value in knots['i'th curve slice].
 \tRange maps to (vmin, vmax) in the RenderMan spec."""
     )
     vector3f[] velocities (
-        doc = """If provided, 'velocities' should be used by renderers to 
+        doc = """If provided, 'velocities' should be used by renderers to
 
         compute positions between samples for the 'points' attribute, rather
         than interpolating between neighboring 'points' samples.  This is the
@@ -3090,16 +3254,16 @@ class NurbsCurves "NurbsCurves" (
         'points' sample.  Velocity is measured in position units per second,
         as per most simulation software. To convert to position units per
         UsdTimeCode, divide by UsdStage::GetTimeCodesPerSecond().
-        
+
         See also ."""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
     float[] widths (
@@ -3116,7 +3280,7 @@ class NurbsCurves "NurbsCurves" (
         order in which they should be pushed onto a transform stack while
         visiting a UsdStage's prims in a graph traversal that will effect
         the desired positioning for this prim and its descendant prims.
-        
+
         You should rarely, if ever, need to manipulate this attribute directly.
         It is managed by the AddXformOp(), SetResetXformStack(), and
         SetXformOpOrder(), and consulted by GetOrderedXformOps() and
@@ -3125,11 +3289,11 @@ class NurbsCurves "NurbsCurves" (
 }
 
 class Points "Points" (
-    doc = """Points are analogous to the <A HREF=\"https://renderman.pixar.com/resources/current/RenderMan/appnote.18.html\">RiPoints spec</A>.  
-    
+    doc = """Points are analogous to the <A HREF=\"https://renderman.pixar.com/resources/current/RenderMan/appnote.18.html\">RiPoints spec</A>.
+
     Points can be an efficient means of storing and rendering particle
     effects comprised of thousands or millions of small particles.  Points
-    generally receive a single shading sample each, which should take 
+    generally receive a single shading sample each, which should take
     normals into account, if present.
 
     While not technically UsdGeomPrimvars, the widths and normals also
@@ -3150,14 +3314,14 @@ class Points "Points" (
         surfaces as if they were effectively laminae with outward-facing
         normals on both sides, some renderers derive significant optimizations
         by considering these surfaces to have only a single outward side,
-        typically determined by control-point winding order and/or 
+        typically determined by control-point winding order and/or
         orientation.  By doing so they can perform \"backface culling\" to
         avoid drawing the many polygons of most closed surfaces that face away
         from the viewer.
-        
+
         However, it is often advantageous to model thin objects such as paper
         and cloth as single, open surfaces that must be viewable from both
-        sides, always.  Setting a gprim's doubleSided attribute to 
+        sides, always.  Setting a gprim's doubleSided attribute to
         \\c true instructs all renderers to disable optimizations such as
         backface culling for the gprim, and attempt (not all renderers are able
         to do so, but the USD reference GL renderer always will) to provide
@@ -3168,16 +3332,16 @@ class Points "Points" (
         doc = """Extent is a three dimensional range measuring the geometric
         extent of the authored gprim in its own local space (i.e. its own
         transform not applied), without accounting for any shader-induced
-        displacement. If __any__ extent value has been authored for a given 
-        Boundable, then it should be authored at every timeSample at which 
-        geometry-affecting properties are authored, to ensure correct 
-        evaluation via ComputeExtent(). If __no__ extent value has been 
-        authored, then ComputeExtent() will call the Boundable's registered 
-        ComputeExtentFunction(), which may be expensive, which is why we 
+        displacement. If __any__ extent value has been authored for a given
+        Boundable, then it should be authored at every timeSample at which
+        geometry-affecting properties are authored, to ensure correct
+        evaluation via ComputeExtent(). If __no__ extent value has been
+        authored, then ComputeExtent() will call the Boundable's registered
+        ComputeExtentFunction(), which may be expensive, which is why we
         strongly encourage proper authoring of extent.
         \\sa ComputeExtent()
         \\sa \\ref UsdGeom_Boundable_Extent.
-        
+
         An authored extent on a prim which has children is expected to include
         the extent of all children, as they will be pruned from BBox computation
         during traversal."""
@@ -3187,12 +3351,12 @@ class Points "Points" (
                  length as the points array, specifying (at each timesample if
                  point identities are changing) the id of each point. The
                  type is signed intentionally, so that clients can encode some
-                 binary state on Id'd points without adding a separate 
+                 binary state on Id'd points without adding a separate
                  primvar."""
     )
     normal3f[] normals (
-        doc = """Provide an object-space orientation for individual points, 
-        which, depending on subclass, may define a surface, curve, or free 
+        doc = """Provide an object-space orientation for individual points,
+        which, depending on subclass, may define a surface, curve, or free
         points.  Note that 'normals' should not be authored on any Mesh that
         is subdivided, since the subdivision algorithm will define its own
         normals. 'normals' is not a generic primvar, but the number of elements
@@ -3202,7 +3366,7 @@ class Points "Points" (
     )
     uniform token orientation = "rightHanded" (
         allowedTokens = ["rightHanded", "leftHanded"]
-        doc = """Orientation specifies whether the gprim's surface normal 
+        doc = """Orientation specifies whether the gprim's surface normal
         should be computed using the right hand rule, or the left hand rule.
         Please see for a deeper explanation and
         generalization of orientation to composed scenes with transformation
@@ -3230,17 +3394,17 @@ class Points "Points" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -3249,15 +3413,15 @@ class Points "Points" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     vector3f[] velocities (
-        doc = """If provided, 'velocities' should be used by renderers to 
+        doc = """If provided, 'velocities' should be used by renderers to
 
         compute positions between samples for the 'points' attribute, rather
         than interpolating between neighboring 'points' samples.  This is the
@@ -3267,20 +3431,20 @@ class Points "Points" (
         'points' sample.  Velocity is measured in position units per second,
         as per most simulation software. To convert to position units per
         UsdTimeCode, divide by UsdStage::GetTimeCodesPerSecond().
-        
+
         See also ."""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
     float[] widths (
-        doc = """Widths are defined as the diameter of the points, in 
+        doc = """Widths are defined as the diameter of the points, in
                  object space.  'widths' is not a generic Primvar, but
                  the number of elements in this attribute will be determined by
                  its 'interpolation'.  See .  If
@@ -3292,7 +3456,7 @@ class Points "Points" (
         order in which they should be pushed onto a transform stack while
         visiting a UsdStage's prims in a graph traversal that will effect
         the desired positioning for this prim and its descendant prims.
-        
+
         You should rarely, if ever, need to manipulate this attribute directly.
         It is managed by the AddXformOp(), SetResetXformStack(), and
         SetXformOpOrder(), and consulted by GetOrderedXformOps() and
@@ -3304,7 +3468,7 @@ class PointInstancer "PointInstancer" (
     doc = """Encodes vectorized instancing of multiple, potentially
     animated, prototypes (object/instance masters), which can be arbitrary
     prims/subtrees on a UsdStage.
-    
+
     PointInstancer is a \"multi instancer\", as it allows multiple prototypes
     to be scattered among its \"points\".  We use a UsdRelationship
     prototypes to identify and order all of the possible prototypes, by
@@ -3313,7 +3477,7 @@ class PointInstancer "PointInstancer" (
     it is these integers we use to identify the prototype of each instance,
     compactly, and allowing prototypes to be swapped out without needing to
     reauthor all of the per-instance data.
-    
+
     The PointInstancer schema is designed to scale to billions of instances,
     which motivates the choice to split the per-instance transformation into
     position, (quaternion) orientation, and scales, rather than a
@@ -3321,14 +3485,14 @@ class PointInstancer "PointInstancer" (
     all elements are authored (32 bytes vs 64 for a single-precision 4x4
     matrix), we can also be selective about which attributes need to animate
     over time, for substantial data reduction in many cases.
-    
+
     Note that PointInstancer is not a Gprim, since it is not a graphical
     primitive by any stretch of the imagination. It is, however,
     Boundable, since we will sometimes want to treat the entire PointInstancer
     similarly to a procedural, from the perspective of inclusion or framing.
 
     Varying Instance Identity over Time
-    
+
     PointInstancers originating from simulations often have the characteristic
     that points/instances are \"born\", move around for some time period, and then
     die (or leave the area of interest). In such cases, billions of instances
@@ -3336,15 +3500,15 @@ class PointInstancer "PointInstancer" (
     smaller number are actually alive.  To encode this situation efficiently,
     the simulator may re-use indices in the instance arrays, when a particle
     dies, its index will be taken over by a new particle that may be birthed in
-    a much different location.  This presents challenges both for 
+    a much different location.  This presents challenges both for
     identity-tracking, and for motion-blur.
-    
+
     We facilitate identity tracking by providing an optional, animatable
     ids attribute, that specifies the 64 bit integer ID of the particle
     at each index, at each point in time.  If the simulator keeps monotonically
     increasing a particle-count each time a new particle is birthed, it will
     serve perfectly as particle ids.
-    
+
     We facilitate motion blur for varying-topology particle streams by
     optionally allowing per-instance velocities and angularVelocities
     to be authored.  If instance transforms are requested at a time between
@@ -3354,29 +3518,29 @@ class PointInstancer "PointInstancer" (
     will interpolate.
 
     Computing an Instance Transform
-    
+
     Each instance's transformation is a combination of the SRT affine transform
     described by its scale, orientation, and position, applied after
     (i.e. less locally) than the transformation computed at the root of the
-    prototype it is instancing.  In other words, to put an instance of a 
+    prototype it is instancing.  In other words, to put an instance of a
     PointInstancer into the space of the PointInstancer's parent prim:
-    
-    1. Apply (most locally) the authored transformation for 
+
+    1. Apply (most locally) the authored transformation for
     <em>prototypes[protoIndices[i]]</em>
     2. If *scales* is authored, next apply the scaling matrix from *scales[i]*
-    3. If *orientations* is authored: **if *angularVelocities* is authored**, 
-    first multiply *orientations[i]* by the unit quaternion derived by scaling 
-    *angularVelocities[i]* by the \"time differential\" 
-    from the left-bracketing timeSample for *orientation* to the requested 
-    evaluation time *t*, storing the result in *R*, **else** assign *R* 
-    directly from *orientations[i]*.  Apply the rotation matrix derived 
+    3. If *orientations* is authored: **if *angularVelocities* is authored**,
+    first multiply *orientations[i]* by the unit quaternion derived by scaling
+    *angularVelocities[i]* by the \"time differential\"
+    from the left-bracketing timeSample for *orientation* to the requested
+    evaluation time *t*, storing the result in *R*, **else** assign *R*
+    directly from *orientations[i]*.  Apply the rotation matrix derived
     from *R*.
-    4. Apply the translation derived from *positions[i]*. If *velocities* is 
-    authored, apply the translation deriving from *velocities[i]* scaled by 
-    the time differential from the left-bracketing timeSample for *positions* 
+    4. Apply the translation derived from *positions[i]*. If *velocities* is
+    authored, apply the translation deriving from *velocities[i]* scaled by
+    the time differential from the left-bracketing timeSample for *positions*
     to the requested evaluation time *t*.
-    5. Least locally, apply the transformation authored on the PointInstancer 
-    prim itself (or the UsdGeomImageable::ComputeLocalToWorldTransform() of the 
+    5. Least locally, apply the transformation authored on the PointInstancer
+    prim itself (or the UsdGeomImageable::ComputeLocalToWorldTransform() of the
     PointInstancer to put the instance directly into world space)
 
     If neither *velocities* nor *angularVelocities* are authored, we fallback to
@@ -3386,12 +3550,12 @@ class PointInstancer "PointInstancer" (
 
     \\anchor UsdGeom_PITimeScaling
     <b>Scaling Velocities for Interpolation</b>
-    
+
     When computing time-differentials by which to apply velocity or
     angularVelocity to positions or orientations, we must scale by
     ( 1.0 / UsdStage::GetTimeCodesPerSecond() ), because velocities are recorded
     in units/second, while we are interpolating in UsdTimeCode ordinates.
-    
+
     We provide both high and low-level API's for dealing with the
     transformation as a matrix, both will compute the instance matrices using
     multiple threads; the low-level API allows the client to cache unvarying
@@ -3399,17 +3563,17 @@ class PointInstancer "PointInstancer" (
     time.
 
     See also .
-    
+
     Primvars on PointInstancer
-    
+
     \"Primvars\" authored on a PointInstancer prim should
     always be applied to each instance with constant interpolation at
-    the root of the instance.  When you are authoring primvars on a 
-    PointInstancer, think about it as if you were authoring them on a 
-    point-cloud (e.g. a UsdGeomPoints gprim).  The same 
+    the root of the instance.  When you are authoring primvars on a
+    PointInstancer, think about it as if you were authoring them on a
+    point-cloud (e.g. a UsdGeomPoints gprim).  The same
     <A HREF=\"http://renderman.pixar.com/resources/current/rps/appnote.22.html#classSpecifiers\">interpolation rules for points</A> apply here, substituting
     \"instance\" for \"point\".
-    
+
     In other words, the (constant) value extracted for each instance
     from the authored primvar value depends on the authored interpolation
     and elementSize of the primvar, as follows:
@@ -3420,22 +3584,22 @@ class PointInstancer "PointInstancer" (
     instance zero, the second elementSize elements should be assigned to
     instance one, and so forth.
 
-    
+
     Masking Instances: \"Deactivating\" and Invising
 
     Often a PointInstancer is created \"upstream\" in a graphics pipeline, and
-    the needs of \"downstream\" clients necessitate eliminating some of the 
-    instances from further consideration.  Accomplishing this pruning by 
+    the needs of \"downstream\" clients necessitate eliminating some of the
+    instances from further consideration.  Accomplishing this pruning by
     re-authoring all of the per-instance attributes is not very attractive,
     since it may mean destructively editing a large quantity of data.  We
-    therefore provide means of \"masking\" instances by ID, such that the 
+    therefore provide means of \"masking\" instances by ID, such that the
     instance data is unmolested, but per-instance transform and primvar data
     can be retrieved with the no-longer-desired instances eliminated from the
     (smaller) arrays.  PointInstancer allows two independent means of masking
     instances by ID, each with different features that meet the needs of
     various clients in a pipeline.  Both pruning features' lists of ID's are
     combined to produce the mask returned by ComputeMaskAtTime().
-    
+
     \\note If a PointInstancer has no authored ids attribute, the masking
     features will still be available, with the integers specifying element
     position in the protoIndices array rather than ID.
@@ -3443,18 +3607,18 @@ class PointInstancer "PointInstancer" (
     \\subsection UsdGeomPointInstancer_inactiveIds InactiveIds: List-edited, Unvarying Masking
 
     The first masking feature encodes a list of IDs in a list-editable metadatum
-    called inactiveIds, which, although it does not have any similar 
+    called inactiveIds, which, although it does not have any similar
     impact to stage population as \"prim activation\",
     it shares with that feature that its application is uniform over all time.
     Because it is list-editable, we can sparsely add and remove instances
     from it in many layers.
-    
+
     This sparse application pattern makes inactiveIds a good choice when
     further downstream clients may need to reverse masking decisions made
     upstream, in a manner that is robust to many kinds of future changes to
     the upstream data.
-    
-    See ActivateId(), ActivateIds(), DeactivateId(), DeactivateIds(), 
+
+    See ActivateId(), ActivateIds(), DeactivateId(), DeactivateIds(),
     ActivateAllIds()
 
     \\subsection UsdGeomPointInstancer_invisibleIds invisibleIds: Animatable Masking
@@ -3463,7 +3627,7 @@ class PointInstancer "PointInstancer" (
     Int64Array-valued UsdAttribute called invisibleIds , since it shares
     with \"Imageable visibility\"
     the ability to animate object visibility.
-    
+
     Unlike inactiveIds, overriding a set of opinions for invisibleIds
     is not at all straightforward, because one will, in general need to
     reauthor (in the overriding layer) **all** timeSamples for the attribute
@@ -3471,11 +3635,11 @@ class PointInstancer "PointInstancer" (
     sparsely.  But it can be a very useful tool for situations like encoding
     pre-computed camera-frustum culling of geometry when either or both of
     the instances or the camera is animated.
-    
+
     See VisId(), VisIds(), InvisId(), InvisIds(), VisAllIds()
-     
+
     Processing and Not Processing Prototypes
-    
+
     Any prim in the scenegraph can be targeted as a prototype by the
     prototypes relationship.  We do not, however, provide a specific
     mechanism for identifying prototypes as geometry that should not be drawn
@@ -3484,10 +3648,10 @@ class PointInstancer "PointInstancer" (
     prim that consumes them, and pruning \"raw\" processing and drawing
     traversals when they encounter a PointInstancer prim; this is what the
     UsdGeomBBoxCache and UsdImaging engines do.
-    
+
     There is a pattern one can deploy for organizing the prototypes
     such that they will automatically be skipped by basic UsdPrim::GetChildren()
-    or UsdPrimRange traversals.  Usd prims each have a 
+    or UsdPrimRange traversals.  Usd prims each have a
     \"specifier\" of \"def\", \"over\", or \"class\".  The
     default traversals skip over prims that are \"pure overs\" or classes.  So
     to protect prototypes from all generic traversals and processing, place
@@ -3496,8 +3660,8 @@ class PointInstancer "PointInstancer" (
     01 def PointInstancer \"Crowd_Mid\"
     02 {
     03     rel prototypes = [ </Crowd_Mid/Prototypes/MaleThin_Business>, </Crowd_Mid/Prototypes/MaleThin_Casual> ]
-    04     
-    05     over \"Prototypes\" 
+    04
+    05     over \"Prototypes\"
     06     {
     07          def \"MaleThin_Business\" (
     08              references = [@MaleGroupA/usd/MaleGroupA.usd@</MaleGroupA>]
@@ -3507,7 +3671,7 @@ class PointInstancer "PointInstancer" (
     12              }
     13          )
     14          { ... }
-    15          
+    15
     16          def \"MaleThin_Casual\"
     17          ...
     18     }
@@ -3531,23 +3695,23 @@ class PointInstancer "PointInstancer" (
       Angular velocity is measured in <b>degrees</b> per second. To convert
       to degrees per UsdTimeCode, divide by
       UsdStage::GetTimeCodesPerSecond().
-      
+
       See also ."""
     )
     float3[] extent (
         doc = """Extent is a three dimensional range measuring the geometric
         extent of the authored gprim in its own local space (i.e. its own
         transform not applied), without accounting for any shader-induced
-        displacement. If __any__ extent value has been authored for a given 
-        Boundable, then it should be authored at every timeSample at which 
-        geometry-affecting properties are authored, to ensure correct 
-        evaluation via ComputeExtent(). If __no__ extent value has been 
-        authored, then ComputeExtent() will call the Boundable's registered 
-        ComputeExtentFunction(), which may be expensive, which is why we 
+        displacement. If __any__ extent value has been authored for a given
+        Boundable, then it should be authored at every timeSample at which
+        geometry-affecting properties are authored, to ensure correct
+        evaluation via ComputeExtent(). If __no__ extent value has been
+        authored, then ComputeExtent() will call the Boundable's registered
+        ComputeExtentFunction(), which may be expensive, which is why we
         strongly encourage proper authoring of extent.
         \\sa ComputeExtent()
         \\sa \\ref UsdGeom_Boundable_Extent.
-        
+
         An authored extent on a prim which has children is expected to include
         the extent of all children, as they will be pruned from BBox computation
         during traversal."""
@@ -3565,35 +3729,35 @@ class PointInstancer "PointInstancer" (
       See ."""
     )
     quath[] orientations (
-        doc = """If authored, per-instance orientation of each instance about its 
+        doc = """If authored, per-instance orientation of each instance about its
       prototype's origin, represented as a unit length quaternion, which
       allows us to encode it with sufficient precision in a compact GfQuath.
-      
+
       It is client's responsibility to ensure that authored quaternions are
       unit length; the convenience API below for authoring orientations from
       rotation matrices will ensure that quaternions are unit length, though
       it will not make any attempt to select the \"better (for interpolation
       with respect to neighboring samples)\" of the two possible quaternions
-      that encode the rotation. 
-      
+      that encode the rotation.
+
       See also ."""
     )
     point3f[] positions (
-        doc = """<b>Required property</b>. Per-instance position.  See also 
+        doc = """<b>Required property</b>. Per-instance position.  See also
       ."""
     )
     int[] protoIndices (
-        doc = """<b>Required property</b>. Per-instance index into 
-      prototypes relationship that identifies what geometry should be 
-      drawn for each instance.  <b>Topology attribute</b> - can be animated, 
+        doc = """<b>Required property</b>. Per-instance index into
+      prototypes relationship that identifies what geometry should be
+      drawn for each instance.  <b>Topology attribute</b> - can be animated,
       but at a potential performance impact for streaming."""
     )
     rel prototypes (
-        doc = """<b>Required property</b>. Orders and targets the prototype root 
+        doc = """<b>Required property</b>. Orders and targets the prototype root
       prims, which can be located anywhere in the scenegraph that is convenient,
-      although we promote organizing prototypes as children of the 
+      although we promote organizing prototypes as children of the
       PointInstancer.  The position of a prototype in this relationship defines
-      the value an instance would specify in the protoIndices attribute to 
+      the value an instance would specify in the protoIndices attribute to
       instance that prototype. Since relationships are uniform, this property
       cannot be animated."""
     )
@@ -3602,17 +3766,17 @@ class PointInstancer "PointInstancer" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -3621,21 +3785,21 @@ class PointInstancer "PointInstancer" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     float3[] scales (
-        doc = """If authored, per-instance scale to be applied to 
+        doc = """If authored, per-instance scale to be applied to
       each instance, before any rotation is applied.
-      
+
       See also ."""
     )
     vector3f[] velocities (
-        doc = """If provided, per-instance 'velocities' will be used to 
+        doc = """If provided, per-instance 'velocities' will be used to
        compute positions between samples for the 'positions' attribute,
        rather than interpolating between neighboring 'positions' samples.
        Velocities should be considered mandatory if both protoIndices
@@ -3644,16 +3808,16 @@ class PointInstancer "PointInstancer" (
        position units per UsdTimeCode, divide by
        UsdStage::GetTimeCodesPerSecond().
 
-       See also 
+       See also \\ref UsdGeomPointInstancer_transform,
        ."""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
     uniform token[] xformOpOrder (
@@ -3661,7 +3825,7 @@ class PointInstancer "PointInstancer" (
         order in which they should be pushed onto a transform stack while
         visiting a UsdStage's prims in a graph traversal that will effect
         the desired positioning for this prim and its descendant prims.
-        
+
         You should rarely, if ever, need to manipulate this attribute directly.
         It is managed by the AddXformOp(), SetResetXformStack(), and
         SetXformOpOrder(), and consulted by GetOrderedXformOps() and
@@ -3671,12 +3835,12 @@ class PointInstancer "PointInstancer" (
 
 class Camera "Camera" (
     doc = """Transformable camera.
-    
+
     Describes optical properties of a camera via a common set of attributes
     that provide control over the camera's frustum as well as its depth of
     field. For stereo, the left and right camera are individual prims tagged
     through the \"stereoRole attribute\".
-    
+
     There is a corresponding class GfCamera, which can hold the state of a
     camera (at a particular time). and
     convert between a USD camera prim and
@@ -3689,11 +3853,11 @@ class Camera "Camera" (
     \\endcode
     \\note
     <b>Cameras in USD are always \"Y up\", regardless of the stage's orientation
-    (i.e. UsdGeomGetStageUpAxis()).</b>  This means that the inverse of 
-    'camXform' (the VIEW half of the <A HREF=\"http://www.glprogramming.com/red/chapter03.html#name2\">MODELVIEW transform in OpenGL parlance</A>) 
-    will transform the world such that the camera is at the origin, looking 
+    (i.e. UsdGeomGetStageUpAxis()).</b>  This means that the inverse of
+    'camXform' (the VIEW half of the <A HREF=\"http://www.glprogramming.com/red/chapter03.html#name2\">MODELVIEW transform in OpenGL parlance</A>)
+    will transform the world such that the camera is at the origin, looking
     down the -Z axis, with +Y as the up axis, and +X pointing to the right.
-    This describes a __right handed coordinate system__. 
+    This describes a __right handed coordinate system__.
 
     Units of Measure for Camera Properties
 
@@ -3715,7 +3879,7 @@ class Camera "Camera" (
     However, it follows that if even one property is authored in the correct
     scene units, then they all must be.
 
-    
+
     \\sa \\ref UsdGeom_LinAlgBasics
      """
 )
@@ -3727,7 +3891,7 @@ class Camera "Camera" (
                  are the coordinates in the camera's space."""
     )
     float2 clippingRange = (1, 1000000) (
-        doc = """Near and far clipping distances in scene units; see 
+        doc = """Near and far clipping distances in scene units; see
                  ."""
     )
     float exposure = 0 (
@@ -3737,19 +3901,19 @@ class Camera "Camera" (
                  -1.0 will halve them."""
     )
     float focalLength = 50 (
-        doc = """Perspective focal length in tenths of a scene unit; see 
+        doc = """Perspective focal length in tenths of a scene unit; see
                  ."""
     )
     float focusDistance = 0 (
-        doc = """Distance from the camera to the focus plane in scene units; see 
+        doc = """Distance from the camera to the focus plane in scene units; see
                  ."""
     )
     float fStop = 0 (
         doc = "Lens aperture. Defaults to 0.0, which turns off focusing."
     )
     float horizontalAperture = 20.955 (
-        doc = """Horizontal aperture in tenths of a scene unit; see 
-                 . Default is the equivalent of 
+        doc = """Horizontal aperture in tenths of a scene unit; see
+                 . Default is the equivalent of
                  the standard 35mm spherical projector aperture."""
     )
     float horizontalApertureOffset = 0 (
@@ -3764,17 +3928,17 @@ class Camera "Camera" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -3783,11 +3947,11 @@ class Camera "Camera" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     double shutter:close = 0 (
@@ -3807,8 +3971,8 @@ class Camera "Camera" (
                  or right camera of a stereo setup."""
     )
     float verticalAperture = 15.2908 (
-        doc = """Vertical aperture in tenths of a scene unit; see 
-                 . Default is the equivalent of 
+        doc = """Vertical aperture in tenths of a scene unit; see
+                 . Default is the equivalent of
                  the standard 35mm spherical projector aperture."""
     )
     float verticalApertureOffset = 0 (
@@ -3817,11 +3981,11 @@ class Camera "Camera" (
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
     uniform token[] xformOpOrder (
@@ -3829,7 +3993,7 @@ class Camera "Camera" (
         order in which they should be pushed onto a transform stack while
         visiting a UsdStage's prims in a graph traversal that will effect
         the desired positioning for this prim and its descendant prims.
-        
+
         You should rarely, if ever, need to manipulate this attribute directly.
         It is managed by the AddXformOp(), SetResetXformStack(), and
         SetXformOpOrder(), and consulted by GetOrderedXformOps() and
@@ -3842,7 +4006,7 @@ class "GeomModelAPI" (
     geometry specific concepts such as cached extents for the entire model,
     constraint targets, and geometry-inspired extensions to the payload
     lofting process.
-   
+
     As described in GetExtentsHint() below, it is useful to cache extents
     at the model level.  UsdGeomModelAPI provides schema for computing and
     storing these cached extents, which can be consumed by UsdGeomBBoxCache to
@@ -3978,12 +4142,12 @@ class "MotionAPI" (
     may affect computations involving:
     - computed motion for motion blur
     - sampling for motion blur
-    
+
     The "motion:blurScale" attribute allows
     artists to scale the __amount__ of motion blur to be rendered for parts
     of the scene without changing the recorded animation.  See
     for use and implementation details.
-    
+
     '''
 )
 {
@@ -3993,18 +4157,18 @@ class "MotionAPI" (
         _shutter:open_ and _shutter:close_ properties) should be scaled for
         __all objects__ at and beneath the prim in namespace on which the
         _motion:blurScale_ value is specified.
-        
+
         Without changing any other data in the scene, _blurScale_ allows artists to
         \"dial in\" the amount of blur on a per-object basis.  A _blurScale_
-        value of zero removes all blur, a value of 0.5 reduces blur by half, 
+        value of zero removes all blur, a value of 0.5 reduces blur by half,
         and a value of 2.0 doubles the blur.  The legal range for _blurScale_
         is [0, inf), although very high values may result in extremely expensive
         renders, and may exceed the capabilities of some renderers.
-        
+
         Although renderers are free to implement this feature however they see
         fit, see for our guidance on implementing
         the feature universally and efficiently.
-        
+
         \\sa ComputeMotionBlurScale()
         """
     )
@@ -4012,7 +4176,7 @@ class "MotionAPI" (
         doc = """Determines the number of position or transformation samples
         created when motion is described by attributes contributing non-linear
         terms.
-        
+
         To give an example, imagine an application (such as a
         renderer) consuming 'points' and the USD document also
         contains 'accelerations' for the same prim. Unless the
@@ -4032,50 +4196,50 @@ class "MotionAPI" (
     )
     float motion:velocityScale = 1 (
         doc = """\\deprecated
-        
+
         VelocityScale is an **inherited** float attribute that
         velocity-based schemas (e.g. PointBased, PointInstancer) can consume
         to compute interpolated positions and orientations by applying
-        velocity and angularVelocity, which is required for interpolating 
-        between samples when topology is varying over time.  Although these 
-        quantities are generally physically computed by a simulator, sometimes 
-        we require more or less motion-blur to achieve the desired look.  
-        VelocityScale allows artists to dial-in, as a post-sim correction, 
-        a scale factor to be applied to the velocity prior to computing 
+        velocity and angularVelocity, which is required for interpolating
+        between samples when topology is varying over time.  Although these
+        quantities are generally physically computed by a simulator, sometimes
+        we require more or less motion-blur to achieve the desired look.
+        VelocityScale allows artists to dial-in, as a post-sim correction,
+        a scale factor to be applied to the velocity prior to computing
         interpolated positions from it."""
     )
 }
 
 class "XformCommonAPI" (
     doc = """This class provides API for authoring and retrieving a standard set
-    of component transformations which include a scale, a rotation, a 
-    scale-rotate pivot and a translation. The goal of the API is to enhance 
-    component-wise interchange. It achieves this by limiting the set of allowed 
+    of component transformations which include a scale, a rotation, a
+    scale-rotate pivot and a translation. The goal of the API is to enhance
+    component-wise interchange. It achieves this by limiting the set of allowed
     basic ops and by specifying the order in which they are applied. In addition
-    to the basic set of ops, the 'resetXformStack' bit can also be set to 
-    indicate whether the underlying xformable resets the parent transformation 
-    (i.e. does not inherit it's parent's transformation). 
+    to the basic set of ops, the 'resetXformStack' bit can also be set to
+    indicate whether the underlying xformable resets the parent transformation
+    (i.e. does not inherit it's parent's transformation).
 
     \\sa UsdGeomXformCommonAPI::GetResetXformStack()
     \\sa UsdGeomXformCommonAPI::SetResetXformStack()
 
-    The operator-bool for the class will inform you whether an existing 
+    The operator-bool for the class will inform you whether an existing
     xformable is compatible with this API.
 
-    The scale-rotate pivot is represented by a pair of (translate, 
+    The scale-rotate pivot is represented by a pair of (translate,
     inverse-translate) xformOps around the scale and rotate operations.
     The rotation operation can be any of the six allowed Euler angle sets.
-    \\sa UsdGeomXformOp::Type. 
+    \\sa UsdGeomXformOp::Type.
 
-    The xformOpOrder of an xformable that has all of the supported basic ops 
+    The xformOpOrder of an xformable that has all of the supported basic ops
     is as follows:
     [\"xformOp:translate\", \"xformOp:translate:pivot\", \"xformOp:rotateXYZ\",
     \"xformOp:scale\", \"!invert!xformOp:translate:pivot\"].
 
-    It is worth noting that all of the ops are optional. For example, an 
-    xformable may have only a translate or a rotate. It would still be 
-    considered as compatible with this API. Individual SetTranslate(), 
-    SetRotate(), SetScale() and SetPivot() methods are provided by this API 
+    It is worth noting that all of the ops are optional. For example, an
+    xformable may have only a translate or a rotate. It would still be
+    considered as compatible with this API. Individual SetTranslate(),
+    SetRotate(), SetScale() and SetPivot() methods are provided by this API
     to allow such sparse authoring."""
 )
 {
@@ -4092,9 +4256,9 @@ class HermiteCurves "HermiteCurves" (
     representation (though not from Bezier back to Hermite in general).
 
     Point Interpolation
-    
+
     The initial cubic curve segment is defined by the first two points and
-    first two tangents. Additional segments are defined by additional 
+    first two tangents. Additional segments are defined by additional
     point / tangent pairs.  The number of segments for each non-batched hermite
     curve would be len(curve.points) - 1.  The total number of segments
     for the batched UsdGeomHermiteCurves representation is
@@ -4104,7 +4268,7 @@ class HermiteCurves "HermiteCurves" (
 
     Primvar interpolation is not well specified for this type as it is not
     intended as a rendering representation. We suggest that per point
-    primvars would be linearly interpolated across each segment and should 
+    primvars would be linearly interpolated across each segment and should
     be tagged as 'varying'.
 
     It is not immediately clear how to specify cubic or 'vertex' interpolation
@@ -4133,14 +4297,14 @@ class HermiteCurves "HermiteCurves" (
         surfaces as if they were effectively laminae with outward-facing
         normals on both sides, some renderers derive significant optimizations
         by considering these surfaces to have only a single outward side,
-        typically determined by control-point winding order and/or 
+        typically determined by control-point winding order and/or
         orientation.  By doing so they can perform \"backface culling\" to
         avoid drawing the many polygons of most closed surfaces that face away
         from the viewer.
-        
+
         However, it is often advantageous to model thin objects such as paper
         and cloth as single, open surfaces that must be viewable from both
-        sides, always.  Setting a gprim's doubleSided attribute to 
+        sides, always.  Setting a gprim's doubleSided attribute to
         \\c true instructs all renderers to disable optimizations such as
         backface culling for the gprim, and attempt (not all renderers are able
         to do so, but the USD reference GL renderer always will) to provide
@@ -4151,23 +4315,23 @@ class HermiteCurves "HermiteCurves" (
         doc = """Extent is a three dimensional range measuring the geometric
         extent of the authored gprim in its own local space (i.e. its own
         transform not applied), without accounting for any shader-induced
-        displacement. If __any__ extent value has been authored for a given 
-        Boundable, then it should be authored at every timeSample at which 
-        geometry-affecting properties are authored, to ensure correct 
-        evaluation via ComputeExtent(). If __no__ extent value has been 
-        authored, then ComputeExtent() will call the Boundable's registered 
-        ComputeExtentFunction(), which may be expensive, which is why we 
+        displacement. If __any__ extent value has been authored for a given
+        Boundable, then it should be authored at every timeSample at which
+        geometry-affecting properties are authored, to ensure correct
+        evaluation via ComputeExtent(). If __no__ extent value has been
+        authored, then ComputeExtent() will call the Boundable's registered
+        ComputeExtentFunction(), which may be expensive, which is why we
         strongly encourage proper authoring of extent.
         \\sa ComputeExtent()
         \\sa \\ref UsdGeom_Boundable_Extent.
-        
+
         An authored extent on a prim which has children is expected to include
         the extent of all children, as they will be pruned from BBox computation
         during traversal."""
     )
     normal3f[] normals (
-        doc = """Provide an object-space orientation for individual points, 
-        which, depending on subclass, may define a surface, curve, or free 
+        doc = """Provide an object-space orientation for individual points,
+        which, depending on subclass, may define a surface, curve, or free
         points.  Note that 'normals' should not be authored on any Mesh that
         is subdivided, since the subdivision algorithm will define its own
         normals. 'normals' is not a generic primvar, but the number of elements
@@ -4177,7 +4341,7 @@ class HermiteCurves "HermiteCurves" (
     )
     uniform token orientation = "rightHanded" (
         allowedTokens = ["rightHanded", "leftHanded"]
-        doc = """Orientation specifies whether the gprim's surface normal 
+        doc = """Orientation specifies whether the gprim's surface normal
         should be computed using the right hand rule, or the left hand rule.
         Please see for a deeper explanation and
         generalization of orientation to composed scenes with transformation
@@ -4205,17 +4369,17 @@ class HermiteCurves "HermiteCurves" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -4224,19 +4388,19 @@ class HermiteCurves "HermiteCurves" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     vector3f[] tangents = [] (
-        doc = """Defines the outgoing trajectory tangent for each point. 
+        doc = """Defines the outgoing trajectory tangent for each point.
                  Tangents should be the same size as the points attribute."""
     )
     vector3f[] velocities (
-        doc = """If provided, 'velocities' should be used by renderers to 
+        doc = """If provided, 'velocities' should be used by renderers to
 
         compute positions between samples for the 'points' attribute, rather
         than interpolating between neighboring 'points' samples.  This is the
@@ -4246,16 +4410,16 @@ class HermiteCurves "HermiteCurves" (
         'points' sample.  Velocity is measured in position units per second,
         as per most simulation software. To convert to position units per
         UsdTimeCode, divide by UsdStage::GetTimeCodesPerSecond().
-        
+
         See also ."""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
     float[] widths (
@@ -4272,7 +4436,7 @@ class HermiteCurves "HermiteCurves" (
         order in which they should be pushed onto a transform stack while
         visiting a UsdStage's prims in a graph traversal that will effect
         the desired positioning for this prim and its descendant prims.
-        
+
         You should rarely, if ever, need to manipulate this attribute directly.
         It is managed by the AddXformOp(), SetResetXformStack(), and
         SetXformOpOrder(), and consulted by GetOrderedXformOps() and

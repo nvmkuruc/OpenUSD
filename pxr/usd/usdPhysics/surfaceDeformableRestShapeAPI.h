@@ -52,7 +52,7 @@ class SdfAssetPath;
 
 /// \class UsdPhysicsSurfaceDeformableRestShapeAPI
 ///
-/// Defines the rest shape for a UsdGeomMesh.
+/// Defines the rest shape for a UsdGeomMesh. The UsdGeomMesh needs to contain only triangular faces.
 ///
 class UsdPhysicsSurfaceDeformableRestShapeAPI : public UsdAPISchemaBase
 {

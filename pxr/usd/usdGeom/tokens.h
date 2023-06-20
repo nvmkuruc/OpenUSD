@@ -196,7 +196,7 @@ struct UsdGeomTokensType {
     const TfToken edgeOnly;
     /// \brief "elementSize"
     /// 
-    /// UsdGeomPrimvar - The number of values in the value array that must be aggregated for each element on the  primitive.
+    /// UsdGeomPrimvar - The number of values in the value array that must be aggregated for each element on the primitive.
     const TfToken elementSize;
     /// \brief "elementType"
     /// 
@@ -212,7 +212,7 @@ struct UsdGeomTokensType {
     const TfToken extent;
     /// \brief "extentsHint"
     /// 
-    /// Name of the attribute used to author extents hints at the root of leaf models. Extents hints are stored by purpose as a vector of GfVec3f values. They are ordered based on the order of purpose tokens returned by  UsdGeomImageable::GetOrderedPurposeTokens.
+    /// Name of the attribute used to author extents hints at the root of leaf models. Extents hints are stored by purpose as a vector of GfVec3f values. They are ordered based on the order of purpose tokens returned by UsdGeomImageable::GetOrderedPurposeTokens.
     const TfToken extentsHint;
     /// \brief "face"
     /// 
@@ -220,7 +220,7 @@ struct UsdGeomTokensType {
     const TfToken face;
     /// \brief "faceVarying"
     /// 
-    /// Possible value for UsdGeomPrimvar::SetInterpolation. For polygons and subdivision surfaces, four values are interpolated over each face of the mesh. Bilinear interpolation  is used for interpolation between the four values.
+    /// Possible value for UsdGeomPrimvar::SetInterpolation. For polygons and subdivision surfaces, four values are interpolated over each face of the mesh. Bilinear interpolation is used for interpolation between the four values.
     const TfToken faceVarying;
     /// \brief "faceVaryingLinearInterpolation"
     /// 
@@ -408,7 +408,7 @@ struct UsdGeomTokensType {
     const TfToken none;
     /// \brief "nonOverlapping"
     /// 
-    /// A type of family of GeomSubsets. It implies that  the elements in the various subsets belonging to the family are  mutually exclusive, i.e., an element that appears in one  subset may not belong to any other subset in the family.
+    /// A type of family of GeomSubsets. It implies that the elements in the various subsets belonging to the family are mutually exclusive, i.e., an element that appears in one subset may not belong to any other subset in the family.
     const TfToken nonOverlapping;
     /// \brief "nonperiodic"
     /// 
@@ -444,7 +444,7 @@ struct UsdGeomTokensType {
     const TfToken orthographic;
     /// \brief "partition"
     /// 
-    /// A type of family of GeomSubsets. It implies  that every element appears exacly once in only one of the  subsets in the family.
+    /// A type of family of GeomSubsets. It implies that every element appears exacly once in only one of the subsets in the family.
     const TfToken partition;
     /// \brief "periodic"
     /// 
@@ -566,10 +566,18 @@ struct UsdGeomTokensType {
     /// 
     /// UsdGeomMesh
     const TfToken subdivisionScheme;
+    /// \brief "surfaceFaceVertexIndices"
+    /// 
+    /// UsdGeomTetMesh
+    const TfToken surfaceFaceVertexIndices;
     /// \brief "tangents"
     /// 
     /// UsdGeomHermiteCurves
     const TfToken tangents;
+    /// \brief "tetVertexIndices"
+    /// 
+    /// UsdGeomTetMesh
+    const TfToken tetVertexIndices;
     /// \brief "triangleSubdivisionRule"
     /// 
     /// UsdGeomMesh
@@ -612,7 +620,7 @@ struct UsdGeomTokensType {
     const TfToken uKnots;
     /// \brief "unauthoredValuesIndex"
     /// 
-    /// UsdGeomPrimvar - The index that represents  unauthored values in the indices array of an indexed primvar.
+    /// UsdGeomPrimvar - The index that represents unauthored values in the indices array of an indexed primvar.
     const TfToken unauthoredValuesIndex;
     /// \brief "uniform"
     /// 
@@ -620,7 +628,7 @@ struct UsdGeomTokensType {
     const TfToken uniform;
     /// \brief "unrestricted"
     /// 
-    /// A type of family of GeomSubsets. It implies that there are no restrictions w.r.t. the membership of elements in  the subsets. There could be overlapping members in subsets  belonging to the family and the union of all subsets in the  family may not contain all the elements.
+    /// A type of family of GeomSubsets. It implies that there are no restrictions w.r.t. the membership of elements in the subsets. There could be overlapping members in subsets belonging to the family and the union of all subsets in the family may not contain all the elements.
     const TfToken unrestricted;
     /// \brief "uOrder"
     /// 
@@ -640,7 +648,7 @@ struct UsdGeomTokensType {
     const TfToken uVertexCount;
     /// \brief "varying"
     /// 
-    /// Possible value for UsdGeomPrimvar::SetInterpolation. Four values are interpolated over each uv patch segment of the  surface. Bilinear interpolation is used for interpolation  between the four values.
+    /// Possible value for UsdGeomPrimvar::SetInterpolation. Four values are interpolated over each uv patch segment of the surface. Bilinear interpolation is used for interpolation between the four values.
     const TfToken varying;
     /// \brief "velocities"
     /// 
@@ -648,7 +656,7 @@ struct UsdGeomTokensType {
     const TfToken velocities;
     /// \brief "vertex"
     /// 
-    /// Possible value for UsdGeomPrimvar::SetInterpolation. Values are interpolated between each vertex in the surface primitive. The basis function of the surface is used for  interpolation between vertices.
+    /// Possible value for UsdGeomPrimvar::SetInterpolation. Values are interpolated between each vertex in the surface primitive. The basis function of the surface is used for interpolation between vertices.
     const TfToken vertex;
     /// \brief "verticalAperture"
     /// 

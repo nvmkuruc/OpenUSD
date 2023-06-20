@@ -67,7 +67,7 @@ class SdfAssetPath;
 /// for more information on how to map curve vertex counts to segment counts.
 /// 
 /// \section UsdGeomBasisCurves_Segment Segment Indexing
-/// Interpolating a curve requires knowing how to decompose it into its 
+/// Interpolating a curve requires knowing how to decompose it into its
 /// individual segments.
 /// 
 /// The segments of a cubic curve are determined by the vertex count,
@@ -100,7 +100,7 @@ class SdfAssetPath;
 /// 
 /// Pinned curves are a special case of nonperiodic curves that only affects
 /// the behavior of cubic Bspline and Catmull-Rom curves. To evaluate or render
-/// pinned curves, a client must effectively add 'phantom points' at the 
+/// pinned curves, a client must effectively add 'phantom points' at the
 /// beginning and end of every curve in a batch.  These phantom points
 /// are injected to ensure that the interpolated curve begins at P[0] and
 /// ends at P[n-1].
@@ -111,7 +111,7 @@ class SdfAssetPath;
 /// P[n] = 2 * P[n-1] - P[n-2]
 /// 
 /// Pinned cubic curves will (usually) have to be unpacked into the standard
-/// nonperiodic representation before rendering. This unpacking can add some 
+/// nonperiodic representation before rendering. This unpacking can add some
 /// additional overhead. However, using pinned curves reduces the amount of
 /// data recorded in a scene and (more importantly) better records the
 /// authors' intent for interchange.
@@ -121,7 +121,7 @@ class SdfAssetPath;
 /// 
 /// Linear curve segments are defined by two vertices.
 /// A two segment linear curve's first segment would be defined by
-/// interpolating vertices [0, 1]. The second segment would be defined by 
+/// interpolating vertices [0, 1]. The second segment would be defined by
 /// vertices [1, 2]. (Again, for a batched curve, indices are relative to
 /// the initial vertex index.)
 /// 
@@ -143,34 +143,34 @@ class SdfAssetPath;
 /// \section UsdGeomBasisCurves_Linear Linear Vertex Interpolation
 /// 
 /// Linear interpolation is always used on curves of type linear.
-/// 't' with domain [0, 1], the curve is defined by the equation 
+/// 't' with domain [0, 1], the curve is defined by the equation
 /// P0 * (1-t) + P1 * t. t at 0 describes the first point and t at 1 describes
 /// the end point.
 /// 
 /// \section UsdGeomBasisCurves_PrimvarInterpolation Primvar Interpolation
 /// 
-/// For cubic curves, primvar data can be either interpolated cubically between 
+/// For cubic curves, primvar data can be either interpolated cubically between
 /// vertices or linearly across segments.  The corresponding token
 /// for cubic interpolation is 'vertex' and for linear interpolation is
 /// 'varying'.  Per vertex data should be the same size as the number
-/// of vertices in your curve.  Segment varying data is dependent on the 
+/// of vertices in your curve.  Segment varying data is dependent on the
 /// wrap (periodicity) and number of segments in your curve.  For linear curves,
-/// varying and vertex data would be interpolated the same way.  By convention 
-/// varying is the preferred interpolation because of the association of 
+/// varying and vertex data would be interpolated the same way.  By convention
+/// varying is the preferred interpolation because of the association of
 /// varying with linear interpolation.
 /// 
-/// \image html USDCurvePrimvars.png 
+/// \image html USDCurvePrimvars.png
 /// 
-/// To convert an entry in the curveVertexCounts vector into a segment count 
+/// To convert an entry in the curveVertexCounts vector into a segment count
 /// for an individual curve, apply these rules.  Sum up all the results in
 /// order to compute how many total segments all curves have.
 /// 
 /// The following tables describe the expected segment count for the 'i'th
 /// curve in a curve batch as well as the entire batch. Python syntax
-/// like '[:]' (to describe all members of an array) and 'len(...)' 
+/// like '[:]' (to describe all members of an array) and 'len(...)'
 /// (to describe the length of an array) are used.
 /// 
-/// type    | wrap                        | curve segment count                    | batch segment count                                                       
+/// type    | wrap                        | curve segment count                    | batch segment count
 /// ------- | --------------------------- | -------------------------------------- | --------------------------
 /// linear  | nonperiodic                 | curveVertexCounts[i] - 1               | sum(curveVertexCounts[:]) - len(curveVertexCounts)
 /// linear  | periodic                    | curveVertexCounts[i]                   | sum(curveVertexCounts[:])
@@ -199,7 +199,7 @@ class SdfAssetPath;
 /// use different interpolation methods, 'varying' and 'vertex' are both
 /// specified per point. It's common to assume that curves follow a similar
 /// pattern and build in structures and language for per primitive, per
-/// element, and per point data only to come upon these arrays that don't 
+/// element, and per point data only to come upon these arrays that don't
 /// quite fit into either of those categories. It is
 /// also common to conflate 'varying' with being per segment data and use the
 /// segmentCount rules table instead of its neighboring varying data table
@@ -223,7 +223,7 @@ class SdfAssetPath;
 /// 
 /// \section UsdGeomBasisCurves_TubesAndRibbons Tubes and Ribbons
 /// 
-/// The strictest definition of a curve as an infinitely thin wire is not 
+/// The strictest definition of a curve as an infinitely thin wire is not
 /// particularly useful for describing production scenes. The additional
 /// \em widths and \em normals attributes can be used to describe cylindrical
 /// tubes and or flat oriented ribbons.
@@ -234,9 +234,9 @@ class SdfAssetPath;
 /// 
 /// While not technically UsdGeomPrimvars, widths and normals
 /// also have interpolation metadata. It's common for authored widths to have
-/// constant, varying, or vertex interpolation 
+/// constant, varying, or vertex interpolation
 /// (see UsdGeomCurves::GetWidthsInterpolation()).  It's common for
-/// authored normals to have varying interpolation 
+/// authored normals to have varying interpolation
 /// (see UsdGeomPointBased::GetNormalsInterpolation()).
 /// 
 /// \image html USDCurveHydra.png
@@ -358,7 +358,7 @@ public:
     // --------------------------------------------------------------------- //
     // TYPE 
     // --------------------------------------------------------------------- //
-    /// Linear curves interpolate linearly between two vertices.  
+    /// Linear curves interpolate linearly between two vertices.
     /// Cubic curves use a basis matrix with four vertices to interpolate a segment.
     ///
     /// | ||
@@ -383,7 +383,7 @@ public:
     // --------------------------------------------------------------------- //
     // BASIS 
     // --------------------------------------------------------------------- //
-    /// The basis specifies the vstep and matrix used for cubic 
+    /// The basis specifies the vstep and matrix used for cubic
     /// interpolation.  \note The 'hermite' and 'power' tokens have been
     /// removed. We've provided UsdGeomHermiteCurves
     /// as an alternative for the 'hermite' basis.
@@ -410,7 +410,7 @@ public:
     // --------------------------------------------------------------------- //
     // WRAP 
     // --------------------------------------------------------------------- //
-    /// If wrap is set to periodic, the curve when rendered will 
+    /// If wrap is set to periodic, the curve when rendered will
     /// repeat the initial vertices (dependent on the vstep) to close the
     /// curve. If wrap is set to 'pinned', phantom points may be created
     /// to ensure that the curve interpolation starts at P[0] and ends at P[n-1].
