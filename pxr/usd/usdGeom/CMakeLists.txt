@@ -97,7 +97,7 @@ pxr_library(usdGeom
         wrapScope.cpp
         wrapSphere.cpp
         wrapSubset.cpp
-        warpTetMesh.cpp
+        wrapTetMesh.cpp
         wrapTokens.cpp
         wrapVisibilityAPI.cpp
         wrapXform.cpp
