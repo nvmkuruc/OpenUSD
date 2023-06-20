@@ -1726,7 +1726,7 @@ class NurbsCurves "NurbsCurves" (
         the patch will be rational.  If unauthored, the patch will be
         polynomial, i.e. weight for all points is 1.0.
         \\note Some DCC's pre-weight the \\em points, but in this schema,
-        \\em points are not pre-weighted."""
+        \\em points are not pre-weighted.""")
 
     uniform token form = "open" (
         allowedTokens = ["open", "closed", "periodic"]
