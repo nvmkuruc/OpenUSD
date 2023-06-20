@@ -118,11 +118,24 @@ PXR_NAMESPACE_CLOSE_SCOPE
 #include "pxr/base/gf/rotation.h"
 #include "pxr/base/trace/trace.h"
 
+// #nv begin #xformcommonapi-doubles
+#include "pxr/base/tf/envSetting.h"
+// nv end
+
 #include <map>
 
 using std::vector;
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+// #nv begin #xformcommonapi-doubles
+TF_DEFINE_ENV_SETTING(USDGEOM_XFORMCOMMONAPI_ALLOW_DOUBLES, 0,
+    "Allow double-encoded xform attributes");
+static bool _IsSupportedXformAttrDoubles() {
+    static bool _v = TfGetEnvSetting(USDGEOM_XFORMCOMMONAPI_ALLOW_DOUBLES) == 1;
+    return _v;
+}
+// nv end
 
 TF_REGISTRY_FUNCTION(TfEnum)
 {
