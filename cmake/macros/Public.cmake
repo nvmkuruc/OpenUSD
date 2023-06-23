@@ -1281,6 +1281,7 @@ function(pxr_build_python_documentation)
                 --package pxr --module ${pxrPythonModulesStr} \
                 --inputIndex ${BUILT_XML_DOCS}/index.xml \
                 --pythonPath ${CMAKE_INSTALL_PREFIX}/lib/python \
+                --libPath \"${CMAKE_INSTALL_PREFIX}/lib;${CMAKE_INSTALL_PREFIX}/bin;${CMAKE_INSTALL_PREFIX}/plugin/usd;${CMAKE_INSTALL_PREFIX}/share/usd/examples/plugin\"
                 --output ${INSTALL_PYTHON_PXR_ROOT})
         if (NOT \${convert_doxygen_return_code} EQUAL \"0\")
             message( FATAL_ERROR \"Error generating python docstrings - ${CONVERT_DOXYGEN_TO_PYTHON_DOCS_SCRIPT} return code: \${convert_doxygen_return_code} \")
