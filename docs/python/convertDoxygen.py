@@ -49,6 +49,7 @@ xml_index_file  = GetArgValue(['--inputIndex'])
 output_file   = GetArgValue(['--output', '-o'])
 output_format = GetArgValue(['--format', '-f'], "Docstring")
 python_path = GetArgValue(['--pythonPath'])
+lib_path = GetArgValue(['--libPath'])
 
 SetDebugMode(GetArg(['--debug', '-d']))
 
@@ -61,6 +62,19 @@ if not (xml_file or xml_index_file) or not output_file or GetArg(['--help', '-h'
 #
 if (python_path != None):
     sys.path.append(python_path)
+
+if lib_path != None:
+    lib_paths = lib_path.replace("/", os.sep).split(";")
+    if os.name == "nt":
+        for path in lib_paths:
+            os.add_dll_directory(path)
+    else:
+        ld_lib_paths = os.environ.get("LD_LIBRARY_PATH", "").split(os.pathsep)
+        for path in lib_paths:
+            if path not in ld_lib_paths:
+                ld_lib_paths.append(path)
+        os.environ["LD_LIBRARY_PATH"] = os.pathsep.join(ld_lib_paths)
+
 
 #
 # Try to import the plugin module that creates the desired output

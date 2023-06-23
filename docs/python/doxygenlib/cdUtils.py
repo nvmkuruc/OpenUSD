@@ -134,6 +134,7 @@ Global options:
   --debug or -d   = turn on debugging mode
   --help or -h    = display this program usage statement
   --pythonPath    = optional path to add to python lib paths
+  --libPath       = optional ;-separated paths to allow library loading from
 
 Docstring format:
   Write Python doc strings from Doyxgen C++ comments. Writes
