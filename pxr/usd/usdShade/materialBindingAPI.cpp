@@ -811,6 +811,7 @@ UsdShadeMaterialBindingAPI::ComputeBoundMaterial(
                 const UsdCollectionAPI &collection = 
                     collBinding.GetCollection();
                 // #nv begin #OM-95774
+                // https://github.com/PixarAnimationStudios/OpenUSD/issues/2500
                 if (!collection) {
                     continue;
                 }
