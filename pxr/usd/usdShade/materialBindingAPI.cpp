@@ -811,8 +811,7 @@ UsdShadeMaterialBindingAPI::ComputeBoundMaterial(
                 const UsdCollectionAPI &collection = 
                     collBinding.GetCollection();
                 // #nv begin #OM-95774
-                if (!collection)
-                {
+                if (!collection) {
                     continue;
                 }
                 // #nv end
