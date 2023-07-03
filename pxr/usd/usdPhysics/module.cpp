@@ -44,7 +44,7 @@ TF_WRAP_MODULE
 	TF_WRAP(UsdPhysicsMeshCollisionAPI);
 	TF_WRAP(UsdPhysicsMaterialAPI);
 	TF_WRAP(UsdPhysicsRigidMaterialAPI);
-	TF_WRAP(UsdPhysicsScene);	
+	TF_WRAP(UsdPhysicsScene);
 
 	TF_WRAP(Metrics);
 
@@ -52,7 +52,7 @@ TF_WRAP_MODULE
 	TF_WRAP(UsdPhysicsMassAPI);
 
 	// Joints
-	TF_WRAP(UsdPhysicsArticulationRootAPI);	
+	TF_WRAP(UsdPhysicsArticulationRootAPI);
 	TF_WRAP(UsdPhysicsJoint);
 	TF_WRAP(UsdPhysicsRevoluteJoint);
 	TF_WRAP(UsdPhysicsPrismaticJoint);
@@ -65,7 +65,7 @@ TF_WRAP_MODULE
 	// Deformable
 	TF_WRAP(UsdPhysicsCurveDeformableRestShapeAPI);
 	TF_WRAP(UsdPhysicsCurvesDeformableMaterialAPI);
-	TF_WRAP(UsdPhysicsDeformableMaterialAPI);	
+	TF_WRAP(UsdPhysicsDeformableMaterialAPI);
 	TF_WRAP(UsdPhysicsDeformableRestShapeAPI);
 	TF_WRAP(UsdPhysicsSurfaceDeformableMaterialAPI);
 	TF_WRAP(UsdPhysicsSurfaceDeformableRestShapeAPI);
@@ -75,8 +75,10 @@ TF_WRAP_MODULE
 	TF_WRAP(UsdPhysicsVTetAttach);
 	TF_WRAP(UsdPhysicsVTriAttach);
 	TF_WRAP(UsdPhysicsVtxVtxAttach);
+	TF_WRAP(UsdPhysicsVXformAttach);
+	TF_WRAP(UsdPhysicsElementCollisionFilter);
 
 	// collision group
 	TF_WRAP(UsdPhysicsCollisionGroup);
-	TF_WRAP(UsdPhysicsFilteredPairsAPI);	
+	TF_WRAP(UsdPhysicsFilteredPairsAPI);
 }

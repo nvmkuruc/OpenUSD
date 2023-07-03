@@ -468,17 +468,17 @@ class PhysicsVtxVtxAttachment "PhysicsVtxVtxAttachment" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -487,20 +487,20 @@ class PhysicsVtxVtxAttachment "PhysicsVtxVtxAttachment" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
 }
@@ -559,17 +559,17 @@ class PhysicsVtxTriAttachment "PhysicsVtxTriAttachment" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -578,20 +578,20 @@ class PhysicsVtxTriAttachment "PhysicsVtxTriAttachment" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
 }
@@ -648,17 +648,17 @@ class PhysicsVtxTetAttachment "PhysicsVtxTetAttachment" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -667,20 +667,20 @@ class PhysicsVtxTetAttachment "PhysicsVtxTetAttachment" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
 }
@@ -739,17 +739,17 @@ class PhysicsVtxCurveAttachment "PhysicsVtxCurveAttachment" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -758,20 +758,20 @@ class PhysicsVtxCurveAttachment "PhysicsVtxCurveAttachment" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
 }
@@ -824,17 +824,17 @@ class PhysicsVtxXformAttachment "PhysicsVtxXformAttachment" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -843,20 +843,20 @@ class PhysicsVtxXformAttachment "PhysicsVtxXformAttachment" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
 }
@@ -907,17 +907,17 @@ class PhysicsElementCollisionFilter "PhysicsElementCollisionFilter" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -926,20 +926,20 @@ class PhysicsElementCollisionFilter "PhysicsElementCollisionFilter" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
 }
@@ -1006,17 +1006,17 @@ class PhysicsJoint "PhysicsJoint" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -1025,20 +1025,20 @@ class PhysicsJoint "PhysicsJoint" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
 }
@@ -1116,17 +1116,17 @@ class PhysicsRevoluteJoint "PhysicsRevoluteJoint" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -1135,20 +1135,20 @@ class PhysicsRevoluteJoint "PhysicsRevoluteJoint" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
 }
@@ -1226,17 +1226,17 @@ class PhysicsPrismaticJoint "PhysicsPrismaticJoint" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -1245,20 +1245,20 @@ class PhysicsPrismaticJoint "PhysicsPrismaticJoint" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
 }
@@ -1340,17 +1340,17 @@ class PhysicsSphericalJoint "PhysicsSphericalJoint" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -1359,20 +1359,20 @@ class PhysicsSphericalJoint "PhysicsSphericalJoint" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
 }
@@ -1445,17 +1445,17 @@ class PhysicsDistanceJoint "PhysicsDistanceJoint" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -1464,20 +1464,20 @@ class PhysicsDistanceJoint "PhysicsDistanceJoint" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
 }
@@ -1540,17 +1540,17 @@ class PhysicsFixedJoint "PhysicsFixedJoint" (
         prim whose purpose is "render" to its (single target)
         purpose="proxy" prim.  This is entirely optional, but can be
         useful in several scenarios:
-        
+
         - In a pipeline that does pruning (for complexity management)
         by deactivating prims composed from asset references, when we
         deactivate a purpose="render" prim, we will be able to discover
         and additionally deactivate its associated purpose="proxy" prim,
         so that preview renders reflect the pruning accurately.
-        
+
         - DCC importers may be able to make more aggressive optimizations
         for interactive processing and display if they can discover the proxy
         for a given render prim.
-        
+
         - With a little more work, a Hydra-based application will be able
         to map a picked proxy prim back to its render geometry for selection.
 
@@ -1559,20 +1559,20 @@ class PhysicsFixedJoint "PhysicsFixedJoint" (
     )
     uniform token purpose = "default" (
         allowedTokens = ["default", "render", "proxy", "guide"]
-        doc = """Purpose is a classification of geometry into categories that 
-        can each be independently included or excluded from traversals of prims 
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
         on a stage, such as rendering or bounding-box computation traversals.
 
-        See for more detail about how 
+        See for more detail about how
         purpose is computed and used."""
     )
     token visibility = "inherited" (
         allowedTokens = ["inherited", "invisible"]
-        doc = '''Visibility is meant to be the simplest form of "pruning" 
-        visibility that is supported by most DCC apps.  Visibility is 
-        animatable, allowing a sub-tree of geometry to be present for some 
-        segment of a shot, and absent from others; unlike the action of 
-        deactivating geometry prims, invisible geometry is still 
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
         available for inspection, for positioning, for defining volumes, etc.'''
     )
 }
