@@ -55,17 +55,17 @@ For legacy schema support, we recommend implementations continue to function whe
 Deformable Materials
 -----------------------------
 
-We introduce three new material APIs: PhysicsDeformableMaterialAPI, PhysicsCurveDeformableMaterialAPI and PhysicsSurfaceDeformableMaterialAPI.
+We introduce three new material APIs: PhysicsDeformableMaterialAPI, PhysicsCurvesDeformableMaterialAPI and PhysicsSurfaceDeformableMaterialAPI.
 
 PhysicsDeformableMaterialAPI extends PhysicsMaterialAPI and introduces the important engineering concepts of Young's Modulus and Poisson Ratio as attributes.  Young's modulus has no default value because its units are dependent on the base mass and distance units used, and different defaults would make sense depending on these units.
 
-PhysicsCurveDeformableMaterialAPI extends PhysicsDeformableMaterialAPI with additional properties for deformable curves, including a thickness and three different stiffness parameters along different dimensions.  These allow a curve to use not the homogenous Young's Modulus but rather different stiffnesses in the stretch, bend and twist directions.  These stiffnesses have the same units as Young's Modulus, and default to zero, which means that behavior should be governed by the Young's Modulus and the curve thickness.
+PhysicsCurvesDeformableMaterialAPI extends PhysicsDeformableMaterialAPI with additional properties for deformable curves, including a thickness and three different stiffness parameters along different dimensions.  These allow a curve to use not the homogenous Young's Modulus but rather different stiffnesses in the stretch, bend and twist directions.  These stiffnesses have the same units as Young's Modulus, and default to zero, which means that behavior should be governed by the Young's Modulus and the curve thickness.
 
 PhysicsSurfaceDeformableMaterialAPI extends PhysicsDeformableMaterialAPI with additional properties for thin sheets, including a thickness and two different stiffness parameters along three different dimensions.  These allow a sheet to use not the homogenous Young's Modulus but rather different stiffnesses in the stretch, shear and bend dimensions.  These stiffnesses have the same units as Young's Modulus, and default to zero, which means that behavior should be governed by the Young's Modulus and the sheet thickness.
 
 It is permitted to apply multiple physics material APIs to a single material.  This makes it possible to use the material on e.g. both rigid and deformable objects, or both sheets and curves::
 
-Material rubberMaterial with PhysicsMaterialAPI, PhysicsRigidMaterialAPI, PhysicsDeformableMaterialAPI, PhysicsCurveDeformableMaterialAPI, PhysicsSurfaceDeformableMaterialAPI
+Material rubberMaterial with PhysicsMaterialAPI, PhysicsRigidMaterialAPI, PhysicsDeformableMaterialAPI, PhysicsCurvesDeformableMaterialAPI, PhysicsSurfaceDeformableMaterialAPI
 
 This means that e.g. friction parameters have to be the same for rigid and deformable use cases.  If this is a problem, the workaround is to create e.g. separate rigidRubber and deformableRubber materials.
 
@@ -78,7 +78,7 @@ To create a volume deformable, apply this class to a GeomTetMesh (see upcoming s
 
 To create a surface deformable, apply this class to a GeomMesh.  Simulation properties for the surface deformable will be found in the PhysicsSurfaceDeformableMaterialAPI, PhysicsDeformableMaterialAPI and PhysicsMaterialAPI on the applied material object.
 
-To create an array of curve deformables, apply this class to a GeomBasisCurves or GeomBasisCurveNetwork (proposed).  Simulation properties for the curve deformables will be found in the PhysicsCurveDeformableMaterialAPI, PhysicsDeformableMaterialAPI and PhysicsMaterialAPI on the applied material object.
+To create an array of curve deformables, apply this class to a GeomBasisCurves or GeomBasisCurvesNetwork (proposed).  Simulation properties for the curve deformables will be found in the PhysicsCurvesDeformableMaterialAPI, PhysicsDeformableMaterialAPI and PhysicsMaterialAPI on the applied material object.
 
 For reasons explained in the upcoming Storing Simulation State section, it must also be possible to place the PhysicsDeformableBodyAPI on an immediate parent prim of the target GPrim types mentioned above, such as an Xform or a Scope.  The same section also describes how the rest configuration of a deformable is supplied as a PhysicsDeformableRestShapeAPI on the target GPrim. 
 
@@ -119,9 +119,9 @@ For surface deformables, the simulation mesh is of type GeomMesh as well, but ca
 
 For curve deformables, we again follow a similar pattern::
 
-	Xform or Scope deformable with PhysicsDeformableBodyAPI and material assignment with PhysicsCurveDeformableMaterialAPI
+	Xform or Scope deformable with PhysicsDeformableBodyAPI and material assignment with PhysicsCurvesDeformableMaterialAPI
 		UsdGeomCurves renderGeom
-		UsdGeomBasisCurves or UsdGeomBasisCurvesNetwork (proposed) simGeom with PhysicsCurveDeformableRestShapeAPI
+		UsdGeomBasisCurves or UsdGeomBasisCurvesNetwork (proposed) simGeom with PhysicsCurvesDeformableRestShapeAPI
 
 It is also permissible to have the simulation material assignment on the renderGeom.
 
