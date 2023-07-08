@@ -21,7 +21,13 @@
 # KIND, either express or implied. See the Apache License for the specific
 # language governing permissions and limitations under the Apache License.
 #
-from __future__ import print_function
+# Check whether this script is being run under Python 2 first. Otherwise,
+# any Python 3-only code below will cause the script to fail with an
+# unhelpful error message.
+import sys
+if sys.version_info.major == 2:
+    sys.exit("ERROR: USD does not support Python 2. Use a supported version "
+             "of Python 3 instead.")
 
 import argparse
 import codecs
@@ -41,27 +47,10 @@ import shutil
 import subprocess
 import sys
 import sysconfig
-import tarfile
 import zipfile
-import sysconfig
-import codecs
 
-try:
-    # For Python 3.0 and later
-    from urllib.request import urlopen
-except ImportError:
-    # Fall back to Python 2's urllib2
-    from urllib2 import urlopen
-
-if sys.version_info.major >= 3:
-    from urllib.request import urlopen
-    from shutil import which
-else:
-    from urllib2 import urlopen
-
-    # Doesn't deal with .bat / .cmd like shutil.which, but only option
-    # available with stock python-2
-    from distutils.spawn import find_executable as which
+from urllib.request import urlopen
+from shutil import which
 
 # Helpers for printing output
 verbosity = 1
@@ -103,9 +92,6 @@ def MacOS():
 if MacOS():
     import apple_utils
 
-def Python3():
-    return sys.version_info.major == 3
-
 def GetLocale():
     return sys.stdout.encoding or locale.getdefaultlocale()[1] or "UTF-8"
 
@@ -134,9 +120,7 @@ def GetVisualStudioCompilerAndVersion():
     if not Windows():
         return None
 
-    # nv begin #omni-build
-    msvcCompiler = 'dummy' #which('cl')
-    # nv end
+    msvcCompiler = which('cl')
     if msvcCompiler:
         # VisualStudioVersion environment variable should be set by the
         # Visual Studio Command Prompt.
@@ -169,10 +153,6 @@ def IsVisualStudio2017OrGreater():
     VISUAL_STUDIO_2017_VERSION = (15, 0)
     return IsVisualStudioVersionOrGreater(VISUAL_STUDIO_2017_VERSION)
 
-def IsVisualStudio2015OrGreater():
-    VISUAL_STUDIO_2015_VERSION = (14, 0)
-    return IsVisualStudioVersionOrGreater(VISUAL_STUDIO_2015_VERSION)
-
 def GetPythonInfo(context):
     """Returns a tuple containing the path to the Python executable, shared
     library, and include directory corresponding to the version of Python
@@ -181,11 +161,9 @@ def GetPythonInfo(context):
     This function is used to extract build information from the Python 
     interpreter used to launch this script. This information is used
     in the Boost and USD builds. By taking this approach we can support
-    the use case where multiple Python versions of USD are built on the same
     having USD builds for different Python versions built on the same
     machine. This is very useful, especially when developers have multiple
-    versions installed on their machine, which is quite common now with 
-    Python2 and Python3 co-existing.
+    versions installed on their machine.
     """
 
     # If we were given build python info then just use it.
@@ -198,7 +176,7 @@ def GetPythonInfo(context):
     # First we extract the information that can be uniformly dealt with across
     # the platforms:
     pythonExecPath = sys.executable
-    pythonVersion = sysconfig.get_config_var("py_version_short")  # "2.7"
+    pythonVersion = sysconfig.get_config_var("py_version_short")  # "3.7"
 
     # Lib path is unfortunately special for each platform and there is no
     # config_var for it. But we can deduce it for each platform, and this
@@ -228,10 +206,6 @@ def GetPythonInfo(context):
     # if in a venv, installed_base will be the "original" python,
     # which is where the libs are ("base" will be the venv dir)
     pythonBaseDir = sysconfig.get_config_var("installed_base")
-    if not pythonBaseDir or not os.path.isdir(pythonBaseDir):
-        # for python-2.7
-        pythonBaseDir = sysconfig.get_config_var("base")
-
     if Windows():
         pythonLibPath = os.path.join(pythonBaseDir, "libs",
                                      _GetPythonLibraryFilename(context))
@@ -305,12 +279,8 @@ def CurrentWorkingDirectory(dir):
     directory and resets it to the original directory when closed."""
     curdir = os.getcwd()
     os.chdir(dir)
-    PrintInfo("Changed current working directory to '%s'" % dir)
-    try: 
-        yield
-    finally: 
-        os.chdir(curdir)
-        PrintInfo("Changed current working directory to '%s'" % curdir)
+    try: yield
+    finally: os.chdir(curdir)
 
 def CopyFiles(context, src, dest):
     """Copy files like shutil.copy, but src may be a glob pattern."""
@@ -381,6 +351,14 @@ def RunCMake(context, force, extraArgs = None):
     source code is located in the current working directory."""
     # Create a directory for out-of-source builds in the build directory
     # using the name of the current working directory.
+    if extraArgs is None:
+        extraArgs = []
+    else:
+        # ensure we can freely modify our extraArgs without affecting caller
+        extraArgs = list(extraArgs)
+
+    if context.cmakeBuildArgs:
+        extraArgs.insert(0, context.cmakeBuildArgs)
     srcDir = os.getcwd()
     instDir = (context.usdInstDir if srcDir == context.usdSrcDir
                else context.instDir)
@@ -403,8 +381,6 @@ def RunCMake(context, force, extraArgs = None):
             generator = "Visual Studio 16 2019"
         elif IsVisualStudio2017OrGreater():
             generator = "Visual Studio 15 2017 Win64"
-        else:
-            generator = "Visual Studio 14 2015 Win64"
 
     if generator is not None:
         generator = '-G "{gen}"'.format(gen=generator)
@@ -602,24 +578,14 @@ def DownloadURL(url, context, force, extractDir = None,
         rootDir = None
         members = None
         try:
-            if tarfile.is_tarfile(filename):
-                archive = tarfile.open(filename)
-                if extractDir:
-                    rootDir = extractDir
-                else:
-                    rootDir = archive.getnames()[0].split('/')[0]
-                if dontExtract != None:
-                    members = (m for m in archive.getmembers() 
-                               if not any((fnmatch.fnmatch(m.name, p)
-                                           for p in dontExtract)))
-            elif zipfile.is_zipfile(filename):
+            if zipfile.is_zipfile(filename):
                 archive = zipfile.ZipFile(filename)
                 if extractDir:
                     rootDir = extractDir
                 else:
                     rootDir = archive.namelist()[0].split('/')[0]
                 if dontExtract != None:
-                    members = (m for m in archive.getnames() 
+                    members = (m for m in archive.namelist() 
                                if not any((fnmatch.fnmatch(m, p)
                                            for p in dontExtract)))
             else:
@@ -675,7 +641,7 @@ class Dependency(object):
         AllDependenciesByName.setdefault(name.lower(), self)
 
     def Exists(self, context):
-        return all([os.path.isfile(os.path.join(context.instDir, f))
+        return any([os.path.isfile(os.path.join(context.instDir, f))
                     for f in self.filesToCheck])
 
 class PythonDependency(object):
@@ -712,26 +678,32 @@ ZLIB = Dependency("zlib", InstallZlib, "include/zlib.h")
 ############################################################
 # boost
 
-if MacOS():
-    # This version of boost resolves Python3 compatibilty issues on Big Sur and Monterey and is
-    # compatible with Python 2.7 through Python 3.10
-    BOOST_URL = "https://boostorg.jfrog.io/artifactory/main/release/1.76.0/source/boost_1_76_0.tar.gz"
-    BOOST_VERSION_FILE = "include/boost/version.hpp"
-elif Linux():
-    BOOST_URL = "https://boostorg.jfrog.io/artifactory/main/release/1.76.0/source/boost_1_76_0.tar.gz"
-    BOOST_VERSION_FILE = "include/boost/version.hpp"
-elif Windows():
-    # The default installation of boost on Windows puts headers in a versioned 
-    # subdirectory, which we have to account for here. In theory, specifying 
-    # "layout=system" would make the Windows install match Linux/MacOS, but that 
-    # causes problems for other dependencies that look for boost.
-    #
-    # boost 1.70 is required for Visual Studio 2019. For simplicity, we use
-    # this version for all older Visual Studio versions as well.
-    BOOST_URL = "https://boostorg.jfrog.io/artifactory/main/release/1.76.0/source/boost_1_76_0.tar.gz"
+if Windows():
+    BOOST_VERSION_FILE = "include/boost-1_78/boost/version.hpp"
+else:
     BOOST_VERSION_FILE = "include/boost/version.hpp"
 
 def InstallBoost_Helper(context, force, buildArgs):
+
+    # In general we use boost 1.70.0 to adhere to VFX Reference Platform CY2020.
+    # However, there are some cases where a newer version is required.
+    # - Building with Python 3.10 requires boost 1.76.0 or newer.
+    #   (https://github.com/boostorg/python/commit/cbd2d9)
+    # - Building with Visual Studio 2022 requires boost 1.78.0 or newer.
+    #   (https://github.com/boostorg/build/issues/735)
+    # - Building on MacOS requires boost 1.78.0 or newer to resolve Python 3
+    #   compatibility issues on Big Sur and Monterey.
+    pyInfo = GetPythonInfo(context)
+    pyVer = (int(pyInfo[3].split('.')[0]), int(pyInfo[3].split('.')[1]))
+    if context.buildPython and pyVer >= (3, 10):
+        BOOST_URL = "https://boostorg.jfrog.io/artifactory/main/release/1.78.0/source/boost_1_78_0.zip"
+    elif IsVisualStudio2022OrGreater():
+        BOOST_URL = "https://boostorg.jfrog.io/artifactory/main/release/1.78.0/source/boost_1_78_0.zip"
+    elif MacOS():
+        BOOST_URL = "https://boostorg.jfrog.io/artifactory/main/release/1.78.0/source/boost_1_78_0.zip"
+    else:
+        BOOST_URL = "https://boostorg.jfrog.io/artifactory/main/release/1.70.0/source/boost_1_70_0.zip"
+
     # Documentation files in the boost archive can have exceptionally
     # long paths. This can lead to errors when extracting boost on Windows,
     # since paths are limited to 260 characters by default on that platform.
@@ -746,30 +718,32 @@ def InstallBoost_Helper(context, force, buildArgs):
 
     with CurrentWorkingDirectory(DownloadURL(BOOST_URL, context, force, 
                                              dontExtract=dontExtract)):
-        bootstrap = "bootstrap.bat" if Windows() else "./bootstrap.sh"
+        if Windows():
+            bootstrap = "bootstrap.bat"
+        else:
+            bootstrap = "./bootstrap.sh"
+            # zip doesn't preserve file attributes, so force +x manually.
+            Run('chmod +x ' + bootstrap)
+            Run('chmod +x ./tools/build/src/engine/build.sh')
 
         # For cross-compilation on macOS we need to specify the architecture
         # for both the bootstrap and the b2 phase of building boost.
         bootstrapCmd = '{bootstrap} --prefix="{instDir}"'.format(
             bootstrap=bootstrap, instDir=context.instDir)
 
-        macOSArchitecture = ""
         macOSArch = ""
 
         if MacOS():
             if apple_utils.GetTargetArch(context) == \
                         apple_utils.TARGET_X86:
-                macOSArchitecture = "architecture=x86"
                 macOSArch = "-arch {0}".format(apple_utils.TARGET_X86)
             elif apple_utils.GetTargetArch(context) == \
                         apple_utils.GetTargetArmArch():
-                macOSArchitecture = "architecture=arm"
                 macOSArch = "-arch {0}".format(
                         apple_utils.GetTargetArmArch())
             elif context.targetUniversal:
                 (primaryArch, secondaryArch) = \
                         apple_utils.GetTargetArchPair(context)
-                macOSArchitecture = "architecture=combined"
                 macOSArch="-arch {0} -arch {1}".format(
                         primaryArch, secondaryArch)
 
@@ -803,7 +777,6 @@ def InstallBoost_Helper(context, force, buildArgs):
             'threading=multi', 
             'variant={variant}'.format(variant=boostBuildVariant),
             '--with-atomic',
-            '--with-program_options',
             '--with-regex'
         ]
 
@@ -865,29 +838,23 @@ def InstallBoost_Helper(context, force, buildArgs):
         if Windows():
             # toolset parameter for Visual Studio documented here:
             # https://github.com/boostorg/build/blob/develop/src/tools/msvc.jam
-            if context.cmakeToolset == "v142":
+            if context.cmakeToolset == "v143":
+                b2_settings.append("toolset=msvc-14.3")
+            elif context.cmakeToolset == "v142":
                 b2_settings.append("toolset=msvc-14.2")
             elif context.cmakeToolset == "v141":
                 b2_settings.append("toolset=msvc-14.1")
-            elif context.cmakeToolset == "v140":
-                b2_settings.append("toolset=msvc-14.0")
             elif IsVisualStudio2022OrGreater():
                 b2_settings.append("toolset=msvc-14.3")
             elif IsVisualStudio2019OrGreater():
                 b2_settings.append("toolset=msvc-14.2")
             elif IsVisualStudio2017OrGreater():
                 b2_settings.append("toolset=msvc-14.1")
-            else:
-                b2_settings.append("toolset=msvc-14.0")
 
         if MacOS():
             # Must specify toolset=clang to ensure install_name for boost
             # libraries includes @rpath
             b2_settings.append("toolset=clang")
-
-            # Specify target for macOS cross-compilation.
-            if macOSArchitecture:
-                b2_settings.append(macOSArchitecture)
 
             if macOSArch:
                 b2_settings.append("cxxflags=\"{0}\"".format(macOSArch))
@@ -921,7 +888,27 @@ def InstallBoost(context, force, buildArgs):
             except: pass
         raise
 
-BOOST = Dependency("boost", InstallBoost, BOOST_VERSION_FILE)
+# The default installation of boost on Windows puts headers in a versioned 
+# subdirectory, which we have to account for here. Specifying "layout=system" 
+# would cause the Windows header install to match Linux/MacOS, but the 
+# "layout=system" flag also changes the naming of the boost dlls in a 
+# manner that causes problems for dependent libraries that rely on boost's
+# trick of automatically linking the boost libraries via pragmas in boost's
+# standard include files. Dependencies that use boost's pragma linking
+# facility in general don't have enough configuration switches to also coerce 
+# the naming of the dlls and so it is best to rely on boost's most default
+# settings for maximum compatibility.
+#
+# On behalf of versions of visual studio prior to vs2022, we still support
+# boost 1.70. We don't completely know if boost 1.78 is in play on Windows, 
+# until we have determined whether Python 3 has been selected as a target. 
+# That isn't known at this point in the script, so we simplify the logic by 
+# checking for any of the possible boost header locations that are possible
+# outcomes from running this script.
+BOOST = Dependency("boost", InstallBoost, 
+                   "include/boost/version.hpp",
+                   "include/boost-1_70/boost/version.hpp",
+                   "include/boost-1_78/boost/version.hpp")
 
 ############################################################
 # Intel TBB
@@ -933,10 +920,10 @@ elif MacOS():
     # On MacOS Intel systems we experience various crashes in tests during
     # teardown starting with 2018 Update 2. Until we figure that out, we use
     # 2018 Update 1 on this platform.
-    TBB_URL = "https://github.com/oneapi-src/oneTBB/archive/refs/tags/2019_U6.tar.gz"
-    TBB_INTEL_URL = "https://github.com/oneapi-src/oneTBB/archive/refs/tags/2018_U1.tar.gz"
+    TBB_URL = "https://github.com/oneapi-src/oneTBB/archive/refs/tags/2019_U6.zip"
+    TBB_INTEL_URL = "https://github.com/oneapi-src/oneTBB/archive/refs/tags/2018_U1.zip"
 else:
-    TBB_URL = "https://github.com/oneapi-src/oneTBB/archive/refs/tags/2019_U6.tar.gz"
+    TBB_URL = "https://github.com/oneapi-src/oneTBB/archive/refs/tags/2019_U6.zip"
 
 def InstallTBB(context, force, buildArgs):
     if Windows():
@@ -1013,22 +1000,19 @@ def InstallTBB_MacOS(context, force, buildArgs):
             x86Dir = os.path.dirname(x86Files[0])
             armDir = os.path.dirname(armFiles[0])
 
-            lipoCommandsRelease = apple_utils.CreateUniversalBinaries(
-                                        context, libNames, x86Dir, armDir)
+            apple_utils.CreateUniversalBinaries(context, libNames, x86Dir, armDir)
 
             x86Files = glob.glob(
                 os.getcwd() + "/build/*intel64*_debug/libtbb*.*")
             armFiles = glob.glob(
                 os.getcwd() + "/build/*{0}*_debug/libtbb*.*".format(
                         apple_utils.GetTargetArmArch()))
-            lipoCommandsDebug = None
             if x86Files and armFiles:
                 libNames = [os.path.basename(x) for x in x86Files]
                 x86Dir = os.path.dirname(x86Files[0])
                 armDir = os.path.dirname(armFiles[0])
 
-                lipoCommandsDebug = apple_utils.CreateUniversalBinaries(
-                                        context, libNames, x86Dir, armDir)
+                apple_utils.CreateUniversalBinaries(context, libNames, x86Dir, armDir)
         else:
             CopyFiles(context, "build/*_release/libtbb*.*", "lib")
             try:
@@ -1036,20 +1020,6 @@ def InstallTBB_MacOS(context, force, buildArgs):
             except:
                 PrintWarning(
                     "TBB debug libraries are not available on this platform.")
-
-        # Output paths that are of interest
-        with open(os.path.join(context.usdInstDir, 'tbbBuild.txt'), 'wt') as file:
-            file.write('ARCHIVE:' + TBB_URL.split("/")[-1] + '\n')
-            file.write('BUILDFOLDER:' + os.path.split(os.getcwd())[1] + '\n')
-            file.write('MAKEPRIMARY:' + makeTBBCmdPrimary + '\n')
-
-            if context.targetUniversal:
-                file.write('MAKESECONDARY:' + makeTBBCmdSecondary + '\n')
-                file.write('LIPO_RELEASE:' + ','.join(
-                        lipoCommandsRelease) + '\n')
-                if lipoCommandsDebug:
-                    file.write('LIPO_DEBUG:' + ','.join(
-                        lipoCommandsDebug) + '\n')
 
         CopyDirectory(context, "include/serial", "include/serial")
         CopyDirectory(context, "include/tbb", "include/tbb")
@@ -1087,45 +1057,23 @@ TBB = Dependency("TBB", InstallTBB, "include/tbb/tbb.h")
 ############################################################
 # JPEG
 
-if Windows():
-    JPEG_URL = "https://github.com/libjpeg-turbo/libjpeg-turbo/archive/1.5.1.zip"
-elif MacOS():
-    JPEG_URL = "https://github.com/libjpeg-turbo/libjpeg-turbo/archive/2.0.1.zip"
-else:
-    JPEG_URL = "https://www.ijg.org/files/jpegsrc.v9b.tar.gz"
+JPEG_URL = "https://github.com/libjpeg-turbo/libjpeg-turbo/archive/2.0.1.zip"
 
 def InstallJPEG(context, force, buildArgs):
-    if Windows() or MacOS():
-        InstallJPEG_Turbo(context, force, buildArgs)
-    else:
-        InstallJPEG_Lib(context, force, buildArgs)
-
-def InstallJPEG_Turbo(context, force, buildArgs):
     with CurrentWorkingDirectory(DownloadURL(JPEG_URL, context, force)):
         extraJPEGArgs = buildArgs
-        if MacOS():
+        if not which("nasm"):
             extraJPEGArgs.append("-DWITH_SIMD=FALSE")
 
         RunCMake(context, force, extraJPEGArgs)
         return os.getcwd()
-
-
-def InstallJPEG_Lib(context, force, buildArgs):
-    with CurrentWorkingDirectory(DownloadURL(JPEG_URL, context, force)):
-        Run('./configure --prefix="{instDir}" '
-            '--disable-static --enable-shared '
-            '{buildArgs}'
-            .format(instDir=context.instDir,
-                    buildArgs=" ".join(buildArgs)))
-        Run('make -j{procs} install'
-            .format(procs=context.numJobs))
 
 JPEG = Dependency("JPEG", InstallJPEG, "include/jpeglib.h")
         
 ############################################################
 # TIFF
 
-TIFF_URL = "https://gitlab.com/libtiff/libtiff/-/archive/v4.0.7/libtiff-v4.0.7.tar.gz"
+TIFF_URL = "https://gitlab.com/libtiff/libtiff/-/archive/v4.0.7/libtiff-v4.0.7.zip"
 
 def InstallTIFF(context, force, buildArgs):
     with CurrentWorkingDirectory(DownloadURL(TIFF_URL, context, force)):
@@ -1157,7 +1105,7 @@ TIFF = Dependency("TIFF", InstallTIFF, "include/tiff.h")
 ############################################################
 # PNG
 
-PNG_URL = "https://github.com/glennrp/libpng/archive/refs/tags/v1.6.29.tar.gz"
+PNG_URL = "https://github.com/glennrp/libpng/archive/refs/tags/v1.6.38.zip"
 
 def InstallPNG(context, force, buildArgs):
     with CurrentWorkingDirectory(DownloadURL(PNG_URL, context, force)):
@@ -1523,17 +1471,7 @@ PYOPENGL = PythonDependency("PyOpenGL", GetPyOpenGLInstructions,
 
 def GetPySideInstructions():
     # For licensing reasons, this script cannot install PySide itself.
-    if Windows():
-        # There is no distribution of PySide2 for Windows for Python 2.7.
-        # So use PySide instead. See the following for more details:
-        # https://wiki.qt.io/Qt_for_Python/Considerations#Missing_Windows_.2F_Python_2.7_release
-        return ('PySide is not installed. If you have pip '
-                'installed, run "pip install PySide" '
-                'to install it, then re-run this script.\n'
-                'If PySide is already installed, you may need to '
-                'update your PYTHONPATH to indicate where it is '
-                'located.')
-    elif MacOS():
+    if MacOS():
         # PySide6 is required for Apple Silicon support, so is the default
         # across all macOS hardware platforms.
         return ('PySide6 is not installed. If you have pip '
@@ -1551,7 +1489,7 @@ def GetPySideInstructions():
                 'located.')
 
 PYSIDE = PythonDependency("PySide", GetPySideInstructions,
-                          moduleNames=["PySide", "PySide2", "PySide6"])
+                          moduleNames=["PySide2", "PySide6"])
 
 ############################################################
 # HDF5
@@ -1582,7 +1520,7 @@ if MacOS():
     # ALEMBIC 1.8.3 adds fixes for Apple Silicon cross compilation.
     ALEMBIC_URL = "https://github.com/alembic/alembic/archive/1.8.3.zip"
 else:
-    ALEMBIC_URL = "https://github.com/alembic/alembic/archive/1.7.14.zip"
+    ALEMBIC_URL = "https://github.com/alembic/alembic/archive/1.7.10.zip"
 
 def InstallAlembic(context, force, buildArgs):
     with CurrentWorkingDirectory(DownloadURL(ALEMBIC_URL, context, force)):
@@ -1629,10 +1567,19 @@ MATERIALX_URL = "https://github.com/materialx/MaterialX/archive/v1.38.7.zip"
 
 def InstallMaterialX(context, force, buildArgs):
     with CurrentWorkingDirectory(DownloadURL(MATERIALX_URL, context, force)):
-        cmakeOptions = ['-DMATERIALX_BUILD_SHARED_LIBS=ON']
-
-        cmakeOptions += buildArgs;
-
+        # MaterialX 1.38.7 fails to build on windows using VS2017 because of a
+        # missing header include, following patch fixes the same. This patch
+        # should be removed when underlying issue is resolved.
+        # https://github.com/AcademySoftwareFoundation/MaterialX/issues/1401
+        if IsVisualStudio2017OrGreater() and not IsVisualStudio2019OrGreater():
+            PatchFile("source\\MaterialXGenMsl\\MslShaderGenerator.cpp",
+                    [("#include <MaterialXGenMsl/MslShaderGenerator.h>",
+                     "#include <cctype>\n" + 
+                     "#include <MaterialXGenMsl/MslShaderGenerator.h>")])
+        cmakeOptions = ['-DMATERIALX_BUILD_SHARED_LIBS=ON',
+                        '-DMATERIALX_BUILD_TESTS=OFF'
+        ]
+        cmakeOptions += buildArgs
         RunCMake(context, force, cmakeOptions)
 
 MATERIALX = Dependency("MaterialX", InstallMaterialX, "include/MaterialXCore/Library.h")
@@ -1642,9 +1589,9 @@ MATERIALX = Dependency("MaterialX", InstallMaterialX, "include/MaterialXCore/Lib
 # For MacOS we use version 3.13.3 to include a fix from Intel
 # to build on Apple Silicon.
 if MacOS():
-    EMBREE_URL = "https://github.com/embree/embree/archive/v3.13.3.tar.gz"
+    EMBREE_URL = "https://github.com/embree/embree/archive/v3.13.3.zip"
 else:
-    EMBREE_URL = "https://github.com/embree/embree/archive/v3.2.2.tar.gz"
+    EMBREE_URL = "https://github.com/embree/embree/archive/v3.2.2.zip"
 
 def InstallEmbree(context, force, buildArgs):
     with CurrentWorkingDirectory(DownloadURL(EMBREE_URL, context, force)):
@@ -1658,12 +1605,6 @@ def InstallEmbree(context, force, buildArgs):
             extraArgs += [
                 '-DEMBREE_MAX_ISA=NEON',
                 '-DEMBREE_ISA_NEON=ON']
-        # By default Embree fails to build on Visual Studio 2015 due
-        # to an internal compiler issue that is worked around via the
-        # following flag. For more details see:
-        # https://github.com/embree/embree/issues/157
-        if IsVisualStudio2015OrGreater() and not IsVisualStudio2017OrGreater():
-            extraArgs.append('-DCMAKE_CXX_FLAGS=/d2SSAOptimizer-')
 
         extraArgs += buildArgs
 
@@ -1683,15 +1624,14 @@ def InstallUSD(context, force, buildArgs):
 
         if context.buildPython:
             extraArgs.append('-DPXR_ENABLE_PYTHON_SUPPORT=ON')
-            extraArgs.append('-DPXR_USE_PYTHON_3={}'
-                             .format('ON' if Python3() else 'OFF'))
 
-            # Many people on Windows may not have python with the 
-            # debugging symbol ( python27_d.lib ) installed, this is the common case 
-            # where one downloads the python from official download website. Therefore we 
-            # can still let people decide to build USD with release version of python if 
-            # debugging into python land is not what they want which can be done by setting the 
-            # debugPython
+            # Many people on Windows may not have Python libraries with debug
+            # symbols (denoted by a '_d') installed. This is the common
+            # case when a user installs Python from the official download
+            # website. Therefore we can still let people decide to build USD
+            # with the release version of Python if debugging into Python land
+            # is not what they want which can be done by setting the debugPython
+            # argument.
             if context.buildDebug and context.debugPython:
                 extraArgs.append('-DPXR_USE_DEBUG_PYTHON=ON')
             else:
@@ -1709,16 +1649,12 @@ def InstallUSD(context, force, buildArgs):
             # itself rather than rely on CMake's heuristics.
             pythonInfo = GetPythonInfo(context)
             if pythonInfo:
-                # According to FindPythonLibs.cmake these are the variables
-                # to set to specify which Python installation to use.
-                extraArgs.append('-DPYTHON_EXECUTABLE="{pyExecPath}"'
+                extraArgs.append('-DPython3_EXECUTABLE="{pyExecPath}"'
                                  .format(pyExecPath=pythonInfo[0]))
-                extraArgs.append('-DPYTHON_LIBRARY="{pyLibPath}"'
+                extraArgs.append('-DPython3_LIBRARY="{pyLibPath}"'
                                  .format(pyLibPath=pythonInfo[1]))
-                extraArgs.append('-DPYTHON_INCLUDE_DIR="{pyIncPath}"'
+                extraArgs.append('-DPython3_INCLUDE_DIR="{pyIncPath}"'
                                  .format(pyIncPath=pythonInfo[2]))
-                extraArgs.append('-DPYTHON_VERSION_NODOT={pyVersion}'
-                                 .format(pyVersion=pythonInfo[3].replace('.','')))
         else:
             extraArgs.append('-DPXR_ENABLE_PYTHON_SUPPORT=OFF')
 
@@ -1736,17 +1672,7 @@ def InstallUSD(context, force, buildArgs):
             extraArgs.append('-DPXR_BUILD_DOCUMENTATION=ON')
         else:
             extraArgs.append('-DPXR_BUILD_DOCUMENTATION=OFF')
-
-        if context.buildHtmlDocs:
-            extraArgs.append('-DPXR_BUILD_HTML_DOCUMENTATION=ON')
-        else:
-            extraArgs.append('-DPXR_BUILD_HTML_DOCUMENTATION=OFF')
-
-        if context.buildPythonDocs:
-            extraArgs.append('-DPXR_BUILD_PYTHON_DOCUMENTATION=ON')
-        else:
-            extraArgs.append('-DPXR_BUILD_PYTHON_DOCUMENTATION=OFF')
-
+    
         if context.buildTests:
             extraArgs.append('-DPXR_BUILD_TESTS=ON')
         else:
@@ -1822,8 +1748,8 @@ def InstallUSD(context, force, buildArgs):
 
                 # CMAKE_PREFIX_PATH isn't sufficient for the FindHDF5 module 
                 # to find the HDF5 we've built, so provide an extra hint.
-                #extraArgs.append('-DHDF5_ROOT="{instDir}"'
-                #                 .format(instDir=context.instDir))
+                extraArgs.append('-DHDF5_ROOT="{instDir}"'
+                                 .format(instDir=context.instDir))
             else:
                 extraArgs.append('-DPXR_ENABLE_HDF5_SUPPORT=OFF')
         else:
@@ -1841,6 +1767,11 @@ def InstallUSD(context, force, buildArgs):
             extraArgs.append('-DPXR_ENABLE_MATERIALX_SUPPORT=ON')
         else:
             extraArgs.append('-DPXR_ENABLE_MATERIALX_SUPPORT=OFF')
+
+        if context.buildPythonDocs:
+            extraArgs.append('-DPXR_BUILD_PYTHON_DOCUMENTATION=ON')
+        else:
+            extraArgs.append('-DPXR_BUILD_PYTHON_DOCUMENTATION=OFF')
 
         if Windows():
             # Increase the precompiled header buffer limit.
@@ -1962,8 +1893,13 @@ if MacOS():
 group.add_argument("--build-args", type=str, nargs="*", default=[],
                    help=("Custom arguments to pass to build system when "
                          "building libraries (see docs above)"))
+group.add_argument("--cmake-build-args", type=str,
+                   help=("Custom arguments to pass to all builds that use "
+                         "cmake; a single string, similar to the args passed "
+                         "for a single dependency in --build-args"))
 group.add_argument("--build-python-info", type=str, nargs=4, default=[],
-                   metavar=('PYTHON_EXECUTABLE', 'PYTHON_INCLUDE_DIR', 'PYTHON_LIBRARY', 'PYTHON_VERSION'),
+                   metavar=('PYTHON_EXECUTABLE', 'PYTHON_INCLUDE_DIR', 
+                            'PYTHON_LIBRARY', 'PYTHON_VERSION'),
                    help=("Specify a custom python to use during build"))
 group.add_argument("--force", type=str, action="append", dest="force_build",
                    default=[],
@@ -2030,9 +1966,9 @@ subgroup.add_argument("--no-tools", dest="build_tools", action="store_false",
                       help="Do not build USD tools")
 subgroup = group.add_mutually_exclusive_group()
 subgroup.add_argument("--docs", dest="build_docs", action="store_true",
-                      default=False, help="Build overview and C++ documentation")
+                      default=False, help="Build documentation")
 subgroup.add_argument("--no-docs", dest="build_docs", action="store_false",
-                      help="Do not build overview and C++ documentation (default)")
+                      help="Do not build documentation (default)")
 subgroup = group.add_mutually_exclusive_group()
 subgroup.add_argument("--python-docs", dest="build_python_docs", action="store_true",
                       default=False, help="Build Python docs")
@@ -2056,11 +1992,14 @@ subgroup.add_argument("--prefer-speed-over-safety", dest="safety_first",
                       "malformed input files")
 
 subgroup = group.add_mutually_exclusive_group()
-subgroup.add_argument("--debug-python", dest="debug_python", action="store_true",
-                      help="Define Boost Python Debug if your Python library comes with Debugging symbols.")
-
-subgroup.add_argument("--no-debug-python", dest="debug_python", action="store_false",
-                      help="Don't define Boost Python Debug if your Python library comes with Debugging symbols.")
+subgroup.add_argument("--debug-python", dest="debug_python", 
+                      action="store_true", help=
+                      "Define Boost Python Debug if your Python library "
+                      "comes with Debugging symbols.")
+subgroup.add_argument("--no-debug-python", dest="debug_python",
+                      action="store_false", help=
+                      "Don't define Boost Python Debug if your Python "
+                      "library comes with Debugging symbols.")
 
 (NO_IMAGING, IMAGING, USD_IMAGING) = (0, 1, 2)
 
@@ -2149,13 +2088,13 @@ subgroup.add_argument("--no-draco", dest="build_draco", action="store_false",
 group.add_argument("--draco-location", type=str,
                    help="Directory where Draco is installed.")
 
-group = parser.add_argument_group(title="MaterialX Plugin Options")
+group = parser.add_argument_group(title="MaterialX Options")
 subgroup = group.add_mutually_exclusive_group()
 subgroup.add_argument("--materialx", dest="build_materialx", action="store_true", 
-                      default=False,
-                      help="Build MaterialX plugin for USD")
+                      default=True,
+                      help="Enable MaterialX support (default)")
 subgroup.add_argument("--no-materialx", dest="build_materialx", action="store_false",
-                      help="Do not build MaterialX plugin for USD (default)")
+                      help="Disable MaterialX support")
 
 args = parser.parse_args()
 
@@ -2197,6 +2136,7 @@ class InstallContext:
         # CMake generator and toolset
         self.cmakeGenerator = args.generator
         self.cmakeToolset = args.toolset
+        self.cmakeBuildArgs = args.cmake_build_args
 
         # Number of jobs
         self.numJobs = args.jobs
@@ -2255,15 +2195,11 @@ class InstallContext:
 
         # Optional components
         self.buildTests = args.build_tests
+        self.buildDocs = args.build_docs
         self.buildPython = args.build_python
         self.buildExamples = args.build_examples
         self.buildTutorials = args.build_tutorials
         self.buildTools = args.build_tools
-
-        # - Documentation
-        self.buildDocs = args.build_docs or args.build_python_docs
-        self.buildHtmlDocs = args.build_docs
-        self.buildPythonDocs = args.build_python_docs
 
         # - Imaging
         self.buildImaging = (args.build_imaging == IMAGING or
@@ -2284,11 +2220,8 @@ class InstallContext:
         self.buildPrman = self.buildImaging and args.build_prman
         self.prmanLocation = (os.path.abspath(args.prman_location)
                                if args.prman_location else None)                               
-        # nv begin #omni-build
-        # self.buildOIIO = args.build_oiio or (self.buildUsdImaging
-        #                                      and self.buildTests)
-        self.buildOIIO = args.build_oiio
-        # nv end
+        self.buildOIIO = args.build_oiio or (self.buildUsdImaging
+                                             and self.buildTests)
         self.buildOCIO = args.build_ocio
 
         # - Alembic Plugin
@@ -2302,6 +2235,9 @@ class InstallContext:
 
         # - MaterialX Plugin
         self.buildMaterialX = args.build_materialx
+
+        # - Python docs
+        self.buildPythonDocs = args.build_python_docs        
 
     def GetBuildArguments(self, dep):
         return self.buildArgs.get(dep.name.lower(), [])
@@ -2339,48 +2275,27 @@ if extraPythonPaths:
 
 # Determine list of dependencies that are required based on options
 # user has selected.
-requiredDependencies = []
-
-# nv begin #deps-locations
-# TODO: support --zlib-location, --boost-location, --tbb-location
-if context.buildMonolithic:
-    requiredDependencies = [ZLIB, BOOST, TBB]
-# nv end
+requiredDependencies = [ZLIB, BOOST, TBB]
 
 if context.buildAlembic:
-    # nv begin #deps-locations
-    # TODO: support --hdf5-location, --alembic-location
     if context.enableHDF5:
-        pass #requiredDependencies += [HDF5]
-    #requiredDependencies += [ALEMBIC]
-    # nv end
+        requiredDependencies += [HDF5]
+    requiredDependencies += [OPENEXR, ALEMBIC]
 
 if context.buildDraco:
-    # nv begin #deps-locations
-    # TODO: support --draco-location
-    requiredDependencies += [] #[DRACO]
-    # nv end
+    requiredDependencies += [DRACO]
 
 if context.buildMaterialX:
-    # nv begin #deps-locations
-    # TODO: support --materialx-location
-    requiredDependencies += [] #[MATERIALX]
-    # nv end
+    requiredDependencies += [MATERIALX]
 
 if context.buildImaging:
     if context.enablePtex:
         requiredDependencies += [PTEX]
 
-    # nv begin #deps-locations
-    # TODO: support --glew-location (not needed after v21.02), --opensubdiv-location
-    #requiredDependencies += [GLEW, OPENSUBDIV]
-    # nv end
+    requiredDependencies += [OPENSUBDIV]
 
-    # nv begin #deps-locations
-    # TODO: support --openvdb-location
-    #if context.enableOpenVDB:
-    #    requiredDependencies += [BLOSC, BOOST, OPENEXR, OPENVDB, TBB]
-    # nv end
+    if context.enableOpenVDB:
+        requiredDependencies += [BLOSC, BOOST, OPENEXR, OPENVDB, TBB]
     
     if context.buildOIIO:
         requiredDependencies += [BOOST, JPEG, TIFF, PNG, OPENEXR, OPENIMAGEIO]
@@ -2399,10 +2314,7 @@ if context.buildUsdview:
 # loads an older version of zlib than the one we'd build and link
 # our libraries against.
 if Linux():
-    # nv begin #deps-locations
-    # TODO: support --zlib-location
-    pass #requiredDependencies.remove(ZLIB)
-    # nv end
+    requiredDependencies.remove(ZLIB)
 
 # Error out if user is building monolithic library on windows with draco plugin
 # enabled. This currently results in missing symbols.
@@ -2444,13 +2356,25 @@ if not isPython64Bit:
     sys.exit(1)
 
 if which("cmake"):
-    # Check cmake requirements
-    if Windows():
-        # Windows build depend on boost 1.70, which is not supported before
-        # cmake version 3.24
+    # Check cmake minimum version requirements
+    pyInfo = GetPythonInfo(context)
+    pyVer = (int(pyInfo[3].split('.')[0]), int(pyInfo[3].split('.')[1]))
+    if context.buildPython and pyVer >= (3, 10):
+        # Python 3.10 is not supported prior to 3.24
         cmake_required_version = (3, 24)
+    elif IsVisualStudio2022OrGreater():
+        # Visual Studio 2022 is not supported prior to 3.24
+        cmake_required_version = (3, 24)
+    elif Windows():
+        # Visual Studio 2017 and 2019 are verified to work correctly with 3.14
+        cmake_required_version = (3, 14)
+    elif MacOS():
+        # Apple Silicon is not supported prior to 3.19
+        cmake_required_version = (3, 19)
     else:
-        cmake_required_version = (3, 24)
+        # Linux, and vfx platform CY2020, are verified to work correctly with 3.14
+        cmake_required_version = (3, 14)
+
     cmake_version = GetCMakeVersion()
     if not cmake_version:
         PrintError("Failed to determine CMake version")
@@ -2472,8 +2396,7 @@ if context.buildDocs:
     if not which("doxygen"):
         PrintError("doxygen not found -- please install it and adjust your PATH")
         sys.exit(1)
-
-if context.buildHtmlDocs:
+        
     if not which("dot"):
         PrintError("dot not found -- please install graphviz and adjust your "
                    "PATH")
@@ -2494,33 +2417,18 @@ if PYSIDE in requiredDependencies:
     usdBuildArgs = context.GetBuildArguments(USD)
     given_pysideUic = 'PYSIDEUICBINARY' in " ".join(usdBuildArgs)
 
-    # The USD build will skip building usdview if pyside2-uic or pyside-uic is
+    # The USD build will skip building usdview if pyside6-uic or pyside2-uic is
     # not found, so check for it here to avoid confusing users. This list of 
     # PySide executable names comes from cmake/modules/FindPySide.cmake
-    pyside6Uic = ["pyside6-uic", "uic"]
+    pyside6Uic = ["pyside6-uic"]
     found_pyside6Uic = any([which(p) for p in pyside6Uic])
-    pyside2Uic = ["pyside2-uic", "python2-pyside2-uic", "pyside2-uic-2.7", "uic"]
+    pyside2Uic = ["pyside2-uic"]
     found_pyside2Uic = any([which(p) for p in pyside2Uic])
-    pysideUic = ["pyside-uic", "python2-pyside-uic", "pyside-uic-2.7"]
-    found_pysideUic = any([which(p) for p in pysideUic])
-    if not given_pysideUic and not found_pyside2Uic and not found_pysideUic and not found_pyside6Uic:
-        if Windows():
-            # Windows does not support PySide2 with Python2.7
-            PrintError("pyside-uic not found -- please install PySide and"
-                       " adjust your PATH. (Note that this program may be named"
-                       " {0} depending on your platform)"
-                   .format(" or ".join(pysideUic)))
-        else:
-            PrintError("uic not found -- please install PySide2 or PySide6 and"
-                       " adjust your PATH. (Note that this program may be"
-                       " named {0} depending on your platform)"
-                       .format(" or ".join(set(pyside2Uic+pyside6Uic))))
-        sys.exit(1)
-
-if JPEG in requiredDependencies:
-    # NASM is required to build libjpeg-turbo
-    if (Windows() and not which("nasm")):
-        PrintError("nasm not found -- please install it and adjust your PATH")
+    if not given_pysideUic and not found_pyside2Uic and not found_pyside6Uic:
+        PrintError("uic not found -- please install PySide2 or PySide6 and"
+                   " adjust your PATH. (Note that this program may be"
+                   " named {0} depending on your platform)"
+                   .format(" or ".join(set(pyside2Uic+pyside6Uic))))
         sys.exit(1)
 
 # Summarize
@@ -2556,7 +2464,6 @@ summaryMsg += """\
       usdview:                  {buildUsdview}
     Python support              {buildPython}
       Python Debug:             {debugPython}
-      Python 3:                 {enablePython3}
       Python docs:              {buildPythonDocs}
     Documentation               {buildDocs}
     Tests                       {buildTests}
@@ -2618,7 +2525,6 @@ summaryMsg = summaryMsg.format(
     buildUsdview=("On" if context.buildUsdview else "Off"),
     buildPython=("On" if context.buildPython else "Off"),
     debugPython=("On" if context.debugPython else "Off"),
-    enablePython3=("On" if Python3() else "Off"),
     buildPythonDocs=("On" if context.buildPythonDocs else "Off"),
     buildDocs=("On" if context.buildDocs else "Off"),
     buildTests=("On" if context.buildTests else "Off"),
