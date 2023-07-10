@@ -766,7 +766,7 @@ class PhysicsVtxVtxAttachment "PhysicsVtxVtxAttachment"
     }
     doc = """Describes a fixed binding attachment between vertices of two
              suitable deformable body simulation meshes. The length of
-             vtxIndices1 should always equal that of vtxIndices2. To express
+             vtxIndices0 should always equal that of vtxIndices1. To express
              multiple connections to the same vertex, use multiple instances
              of PhysicsVtxVtxAttachment."""
     inherits = </Imageable>
@@ -780,7 +780,7 @@ class PhysicsVtxVtxAttachment "PhysicsVtxVtxAttachment"
         doc = """Determines if this PhysicsVtxVtxAttachment is enabled."""
     )
 
-    rel physics:vtxSrc1 (
+    rel physics:vtxSrc0 (
         customData = {
             string apiName = "vtxSrc0"
         }
@@ -789,11 +789,11 @@ class PhysicsVtxVtxAttachment "PhysicsVtxVtxAttachment"
                  belongs to. This should always point to a deformable body's simulation mesh."""
     )
 
-    rel physics:vtxSrc2 (
+    rel physics:vtxSrc1 (
         customData = {
             string apiName = "vtxSrc1"
         }
-        displayName = "Vertex Source2"
+        displayName = "Vertex Source1"
         doc = """Relationship to a single UsdGeomPointBased the vertices
                  belongs to. This should always point to a deformable body's simulation mesh."""
     )
@@ -854,7 +854,7 @@ class PhysicsVtxTriAttachment "PhysicsVtxTriAttachment"
         customData = {
             string apiName = "vtxSrc"
         }
-        displayName = "Vertices Source"
+        displayName = "Vertex Source"
         doc = """Relationship to a single UsdGeomPointBased the vertices
                  belong to. This should always point to a deformable body's simulation mesh."""
     )
@@ -863,7 +863,7 @@ class PhysicsVtxTriAttachment "PhysicsVtxTriAttachment"
         customData = {
             string apiName = "triSrc"
         }
-        displayName = "Triangles Source"
+        displayName = "Triangle Source"
         doc = """Relationship to a single UsdGeomMesh or UsdGeomTetMesh surface the triangle faces
                  belong to. This should always point to a deformable body's simulation mesh"""
     )
@@ -932,7 +932,7 @@ class PhysicsVtxTetAttachment "PhysicsVtxTetAttachment"
         customData = {
             string apiName = "vtxSrc"
         }
-        displayName = "Vertices Source"
+        displayName = "Vertex Source"
         doc = """Relationship to a single UsdGeomPointBased the vertices
                  belongs to. This should always point to a deformable body's simulation mesh."""
     )
@@ -941,7 +941,7 @@ class PhysicsVtxTetAttachment "PhysicsVtxTetAttachment"
         customData = {
             string apiName = "tetSrc"
         }
-        displayName = "Triangles Source"
+        displayName = "Tetrahedron Source"
         doc = """Relationship to a single TetMesh which the tetrahedra belong to. This should always point to a deformable body's simulation mesh."""
     )
 
@@ -951,8 +951,8 @@ class PhysicsVtxTetAttachment "PhysicsVtxTetAttachment"
     )
 
     int[] physics:tetIndices(
-        displayName = "Tetrahedra Indices"
-        doc = """Array of tetrahedra indices from tetSrc. There should be exactly one
+        displayName = "Tetrahedron Indices"
+        doc = """Array of tetrahedron indices from tetSrc. There should be exactly one
         tet index for each vertex index in vtxIndices."""
     )
 
@@ -1009,7 +1009,7 @@ class PhysicsVtxCurveAttachment "PhysicsVtxCurveAttachment"
         customData = {
             string apiName = "vtxSrc"
         }
-        displayName = "Vertices Source"
+        displayName = "Vertex Source"
         doc = """Relationship to a single UsdGeomPointBased the vertices
                  belongs to. This should always point to a deformable body's simulation mesh."""
     )
@@ -1018,7 +1018,7 @@ class PhysicsVtxCurveAttachment "PhysicsVtxCurveAttachment"
         customData = {
             string apiName = "curveSrc"
         }
-        displayName = "Curves Source"
+        displayName = "Curve Source"
         doc = """Relationship to a single UsdGeomBasisCurves or UsdGeomBasisCurvesNetwork the curves belong to. This should always point to a deformable body's simulation mesh."""
     )
 
@@ -1092,7 +1092,7 @@ class PhysicsVtxXformAttachment "PhysicsVtxXformAttachment"
         customData = {
             string apiName = "vtxSrc"
         }
-        displayName = "Vertices Source"
+        displayName = "Vertex Source"
         doc = """Relationship to a single UsdGeomPointBased the vertices
                  belongs to. This should always point to a deformable body's simulation mesh."""
     )
