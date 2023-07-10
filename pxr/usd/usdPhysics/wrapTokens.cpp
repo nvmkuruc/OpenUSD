@@ -171,8 +171,8 @@ void wrapUsdPhysicsTokens()
     _AddToken(cls, "physicsVtxIndices0", UsdPhysicsTokens->physicsVtxIndices0);
     _AddToken(cls, "physicsVtxIndices1", UsdPhysicsTokens->physicsVtxIndices1);
     _AddToken(cls, "physicsVtxSrc", UsdPhysicsTokens->physicsVtxSrc);
+    _AddToken(cls, "physicsVtxSrc0", UsdPhysicsTokens->physicsVtxSrc0);
     _AddToken(cls, "physicsVtxSrc1", UsdPhysicsTokens->physicsVtxSrc1);
-    _AddToken(cls, "physicsVtxSrc2", UsdPhysicsTokens->physicsVtxSrc2);
     _AddToken(cls, "physicsXformSrc", UsdPhysicsTokens->physicsXformSrc);
     _AddToken(cls, "physicsYoungsModulus", UsdPhysicsTokens->physicsYoungsModulus);
     _AddToken(cls, "rotX", UsdPhysicsTokens->rotX);

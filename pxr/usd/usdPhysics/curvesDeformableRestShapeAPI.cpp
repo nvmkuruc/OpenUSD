@@ -21,7 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/usdPhysics/curveDeformableRestShapeAPI.h"
+#include "pxr/usd/usdPhysics/curvesDeformableRestShapeAPI.h"
 #include "pxr/usd/usd/schemaRegistry.h"
 #include "pxr/usd/usd/typed.h"
 #include "pxr/usd/usd/tokens.h"
@@ -34,68 +34,68 @@ PXR_NAMESPACE_OPEN_SCOPE
 // Register the schema with the TfType system.
 TF_REGISTRY_FUNCTION(TfType)
 {
-    TfType::Define<UsdPhysicsCurveDeformableRestShapeAPI,
+    TfType::Define<UsdPhysicsCurvesDeformableRestShapeAPI,
         TfType::Bases< UsdAPISchemaBase > >();
     
 }
 
 TF_DEFINE_PRIVATE_TOKENS(
     _schemaTokens,
-    (PhysicsCurveDeformableRestShapeAPI)
+    (PhysicsCurvesDeformableRestShapeAPI)
 );
 
 /* virtual */
-UsdPhysicsCurveDeformableRestShapeAPI::~UsdPhysicsCurveDeformableRestShapeAPI()
+UsdPhysicsCurvesDeformableRestShapeAPI::~UsdPhysicsCurvesDeformableRestShapeAPI()
 {
 }
 
 /* static */
-UsdPhysicsCurveDeformableRestShapeAPI
-UsdPhysicsCurveDeformableRestShapeAPI::Get(const UsdStagePtr &stage, const SdfPath &path)
+UsdPhysicsCurvesDeformableRestShapeAPI
+UsdPhysicsCurvesDeformableRestShapeAPI::Get(const UsdStagePtr &stage, const SdfPath &path)
 {
     if (!stage) {
         TF_CODING_ERROR("Invalid stage");
-        return UsdPhysicsCurveDeformableRestShapeAPI();
+        return UsdPhysicsCurvesDeformableRestShapeAPI();
     }
-    return UsdPhysicsCurveDeformableRestShapeAPI(stage->GetPrimAtPath(path));
+    return UsdPhysicsCurvesDeformableRestShapeAPI(stage->GetPrimAtPath(path));
 }
 
 
 /* virtual */
-UsdSchemaKind UsdPhysicsCurveDeformableRestShapeAPI::_GetSchemaKind() const
+UsdSchemaKind UsdPhysicsCurvesDeformableRestShapeAPI::_GetSchemaKind() const
 {
-    return UsdPhysicsCurveDeformableRestShapeAPI::schemaKind;
+    return UsdPhysicsCurvesDeformableRestShapeAPI::schemaKind;
 }
 
 /* static */
 bool
-UsdPhysicsCurveDeformableRestShapeAPI::CanApply(
+UsdPhysicsCurvesDeformableRestShapeAPI::CanApply(
     const UsdPrim &prim, std::string *whyNot)
 {
-    return prim.CanApplyAPI<UsdPhysicsCurveDeformableRestShapeAPI>(whyNot);
+    return prim.CanApplyAPI<UsdPhysicsCurvesDeformableRestShapeAPI>(whyNot);
 }
 
 /* static */
-UsdPhysicsCurveDeformableRestShapeAPI
-UsdPhysicsCurveDeformableRestShapeAPI::Apply(const UsdPrim &prim)
+UsdPhysicsCurvesDeformableRestShapeAPI
+UsdPhysicsCurvesDeformableRestShapeAPI::Apply(const UsdPrim &prim)
 {
-    if (prim.ApplyAPI<UsdPhysicsCurveDeformableRestShapeAPI>()) {
-        return UsdPhysicsCurveDeformableRestShapeAPI(prim);
+    if (prim.ApplyAPI<UsdPhysicsCurvesDeformableRestShapeAPI>()) {
+        return UsdPhysicsCurvesDeformableRestShapeAPI(prim);
     }
-    return UsdPhysicsCurveDeformableRestShapeAPI();
+    return UsdPhysicsCurvesDeformableRestShapeAPI();
 }
 
 /* static */
 const TfType &
-UsdPhysicsCurveDeformableRestShapeAPI::_GetStaticTfType()
+UsdPhysicsCurvesDeformableRestShapeAPI::_GetStaticTfType()
 {
-    static TfType tfType = TfType::Find<UsdPhysicsCurveDeformableRestShapeAPI>();
+    static TfType tfType = TfType::Find<UsdPhysicsCurvesDeformableRestShapeAPI>();
     return tfType;
 }
 
 /* static */
 bool 
-UsdPhysicsCurveDeformableRestShapeAPI::_IsTypedSchema()
+UsdPhysicsCurvesDeformableRestShapeAPI::_IsTypedSchema()
 {
     static bool isTyped = _GetStaticTfType().IsA<UsdTyped>();
     return isTyped;
@@ -103,19 +103,19 @@ UsdPhysicsCurveDeformableRestShapeAPI::_IsTypedSchema()
 
 /* virtual */
 const TfType &
-UsdPhysicsCurveDeformableRestShapeAPI::_GetTfType() const
+UsdPhysicsCurvesDeformableRestShapeAPI::_GetTfType() const
 {
     return _GetStaticTfType();
 }
 
 UsdAttribute
-UsdPhysicsCurveDeformableRestShapeAPI::GetPhysicsRestPointsAttr() const
+UsdPhysicsCurvesDeformableRestShapeAPI::GetPhysicsRestPointsAttr() const
 {
     return GetPrim().GetAttribute(UsdPhysicsTokens->physicsRestPoints);
 }
 
 UsdAttribute
-UsdPhysicsCurveDeformableRestShapeAPI::CreatePhysicsRestPointsAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdPhysicsCurvesDeformableRestShapeAPI::CreatePhysicsRestPointsAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
     return UsdSchemaBase::_CreateAttr(UsdPhysicsTokens->physicsRestPoints,
                        SdfValueTypeNames->Point3fArray,
@@ -126,13 +126,13 @@ UsdPhysicsCurveDeformableRestShapeAPI::CreatePhysicsRestPointsAttr(VtValue const
 }
 
 UsdAttribute
-UsdPhysicsCurveDeformableRestShapeAPI::GetPhysicsRestCurveVertexIndicesAttr() const
+UsdPhysicsCurvesDeformableRestShapeAPI::GetPhysicsRestCurveVertexIndicesAttr() const
 {
     return GetPrim().GetAttribute(UsdPhysicsTokens->physicsRestCurveVertexIndices);
 }
 
 UsdAttribute
-UsdPhysicsCurveDeformableRestShapeAPI::CreatePhysicsRestCurveVertexIndicesAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdPhysicsCurvesDeformableRestShapeAPI::CreatePhysicsRestCurveVertexIndicesAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
     return UsdSchemaBase::_CreateAttr(UsdPhysicsTokens->physicsRestCurveVertexIndices,
                        SdfValueTypeNames->IntArray,
@@ -143,13 +143,13 @@ UsdPhysicsCurveDeformableRestShapeAPI::CreatePhysicsRestCurveVertexIndicesAttr(V
 }
 
 UsdAttribute
-UsdPhysicsCurveDeformableRestShapeAPI::GetPhysicsRestNormalsAttr() const
+UsdPhysicsCurvesDeformableRestShapeAPI::GetPhysicsRestNormalsAttr() const
 {
     return GetPrim().GetAttribute(UsdPhysicsTokens->physicsRestNormals);
 }
 
 UsdAttribute
-UsdPhysicsCurveDeformableRestShapeAPI::CreatePhysicsRestNormalsAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdPhysicsCurvesDeformableRestShapeAPI::CreatePhysicsRestNormalsAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
     return UsdSchemaBase::_CreateAttr(UsdPhysicsTokens->physicsRestNormals,
                        SdfValueTypeNames->Normal3fArray,
@@ -173,7 +173,7 @@ _ConcatenateAttributeNames(const TfTokenVector& left,const TfTokenVector& right)
 
 /*static*/
 const TfTokenVector&
-UsdPhysicsCurveDeformableRestShapeAPI::GetSchemaAttributeNames(bool includeInherited)
+UsdPhysicsCurvesDeformableRestShapeAPI::GetSchemaAttributeNames(bool includeInherited)
 {
     static TfTokenVector localNames = {
         UsdPhysicsTokens->physicsRestPoints,

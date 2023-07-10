@@ -52,7 +52,7 @@ class SdfAssetPath;
 
 /// \class UsdPhysicsDeformableBodyAPI
 ///
-/// Applied to either a UsdGeomTetMesh, UsdGeomMesh, UsdGeomBasisCurves/UsdGeomBasisCurveNetwork (a simulation state GPrim with corresponding rest shape API), or to a Scope/XForm - in which case the Scope/XForm needs to be an immediate parent to the simulation state GPrim.  The material properties of such a body are to be governed by the applied materials.
+/// Applied to either a UsdGeomTetMesh, UsdGeomMesh, UsdGeomBasisCurves/UsdGeomBasisCurvesNetwork (a simulation state GPrim with corresponding rest shape API), or to a Scope/XForm - in which case the Scope/XForm needs to be an immediate parent to the simulation state GPrim.  The material properties of such a body are to be governed by the applied materials.
 ///
 class UsdPhysicsDeformableBodyAPI : public UsdAPISchemaBase
 {

@@ -191,26 +191,26 @@ UsdPhysicsVtxVtxAttach::CreateDampingAttr(VtValue const &defaultValue, bool writ
 UsdRelationship
 UsdPhysicsVtxVtxAttach::GetVtxSrc0Rel() const
 {
-    return GetPrim().GetRelationship(UsdPhysicsTokens->physicsVtxSrc1);
+    return GetPrim().GetRelationship(UsdPhysicsTokens->physicsVtxSrc0);
 }
 
 UsdRelationship
 UsdPhysicsVtxVtxAttach::CreateVtxSrc0Rel() const
 {
-    return GetPrim().CreateRelationship(UsdPhysicsTokens->physicsVtxSrc1,
+    return GetPrim().CreateRelationship(UsdPhysicsTokens->physicsVtxSrc0,
                        /* custom = */ false);
 }
 
 UsdRelationship
 UsdPhysicsVtxVtxAttach::GetVtxSrc1Rel() const
 {
-    return GetPrim().GetRelationship(UsdPhysicsTokens->physicsVtxSrc2);
+    return GetPrim().GetRelationship(UsdPhysicsTokens->physicsVtxSrc1);
 }
 
 UsdRelationship
 UsdPhysicsVtxVtxAttach::CreateVtxSrc1Rel() const
 {
-    return GetPrim().CreateRelationship(UsdPhysicsTokens->physicsVtxSrc2,
+    return GetPrim().CreateRelationship(UsdPhysicsTokens->physicsVtxSrc1,
                        /* custom = */ false);
 }
 

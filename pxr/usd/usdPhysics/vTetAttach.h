@@ -197,7 +197,7 @@ public:
     // --------------------------------------------------------------------- //
     // PHYSICSTETINDICES 
     // --------------------------------------------------------------------- //
-    /// Array of tetrahedra indices from tetSrc. There should be exactly one
+    /// Array of tetrahedron indices from tetSrc. There should be exactly one
     /// tet index for each vertex index in vtxIndices.
     ///
     /// | ||

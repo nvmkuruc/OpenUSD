@@ -54,7 +54,7 @@ class SdfAssetPath;
 ///
 /// Describes a fixed binding attachment between vertices of two
 /// suitable deformable body simulation meshes. The length of
-/// vtxIndices1 should always equal that of vtxIndices2. To express
+/// vtxIndices0 should always equal that of vtxIndices1. To express
 /// multiple connections to the same vertex, use multiple instances
 /// of PhysicsVtxVtxAttachment.
 ///

@@ -384,7 +384,7 @@ struct UsdPhysicsTokensType {
     const TfToken physicsPrincipalAxes;
     /// \brief "physics:restCurveVertexIndices"
     /// 
-    /// UsdPhysicsCurveDeformableRestShapeAPI
+    /// UsdPhysicsCurvesDeformableRestShapeAPI
     const TfToken physicsRestCurveVertexIndices;
     /// \brief "physics:restFaceIndices"
     /// 
@@ -396,11 +396,11 @@ struct UsdPhysicsTokensType {
     const TfToken physicsRestitution;
     /// \brief "physics:restNormals"
     /// 
-    /// UsdPhysicsCurveDeformableRestShapeAPI
+    /// UsdPhysicsCurvesDeformableRestShapeAPI
     const TfToken physicsRestNormals;
     /// \brief "physics:restPoints"
     /// 
-    /// UsdPhysicsCurveDeformableRestShapeAPI
+    /// UsdPhysicsCurvesDeformableRestShapeAPI
     const TfToken physicsRestPoints;
     /// \brief "physics:restShapePoints"
     /// 
@@ -490,14 +490,14 @@ struct UsdPhysicsTokensType {
     /// 
     /// UsdPhysicsVXformAttach, UsdPhysicsVCurveAttach, UsdPhysicsVTetAttach, UsdPhysicsVTriAttach
     const TfToken physicsVtxSrc;
+    /// \brief "physics:vtxSrc0"
+    /// 
+    /// UsdPhysicsVtxVtxAttach
+    const TfToken physicsVtxSrc0;
     /// \brief "physics:vtxSrc1"
     /// 
     /// UsdPhysicsVtxVtxAttach
     const TfToken physicsVtxSrc1;
-    /// \brief "physics:vtxSrc2"
-    /// 
-    /// UsdPhysicsVtxVtxAttach
-    const TfToken physicsVtxSrc2;
     /// \brief "physics:xformSrc"
     /// 
     /// UsdPhysicsVXformAttach

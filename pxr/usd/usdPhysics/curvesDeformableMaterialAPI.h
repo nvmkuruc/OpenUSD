@@ -47,7 +47,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 class SdfAssetPath;
 
 // -------------------------------------------------------------------------- //
-// PHYSICSCURVEDEFORMABLEMATERIALAPI                                          //
+// PHYSICSCURVESDEFORMABLEMATERIALAPI                                         //
 // -------------------------------------------------------------------------- //
 
 /// \class UsdPhysicsCurvesDeformableMaterialAPI
@@ -127,7 +127,7 @@ public:
     CanApply(const UsdPrim &prim, std::string *whyNot=nullptr);
 
     /// Applies this <b>single-apply</b> API schema to the given \p prim.
-    /// This information is stored by adding "PhysicsCurveDeformableMaterialAPI" to the 
+    /// This information is stored by adding "PhysicsCurvesDeformableMaterialAPI" to the 
     /// token-valued, listOp metadata \em apiSchemas on the prim.
     /// 
     /// \return A valid UsdPhysicsCurvesDeformableMaterialAPI object is returned upon success. 

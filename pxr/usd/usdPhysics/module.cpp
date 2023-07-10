@@ -63,7 +63,7 @@ TF_WRAP_MODULE
 	TF_WRAP(UsdPhysicsDriveAPI);
 
 	// Deformable
-	TF_WRAP(UsdPhysicsCurveDeformableRestShapeAPI);
+	TF_WRAP(UsdPhysicsCurvesDeformableRestShapeAPI);
 	TF_WRAP(UsdPhysicsCurvesDeformableMaterialAPI);
 	TF_WRAP(UsdPhysicsDeformableMaterialAPI);
 	TF_WRAP(UsdPhysicsDeformableRestShapeAPI);

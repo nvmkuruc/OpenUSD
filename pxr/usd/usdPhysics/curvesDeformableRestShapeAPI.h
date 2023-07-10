@@ -21,10 +21,10 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef USDPHYSICS_GENERATED_CURVEDEFORMABLERESTSHAPEAPI_H
-#define USDPHYSICS_GENERATED_CURVEDEFORMABLERESTSHAPEAPI_H
+#ifndef USDPHYSICS_GENERATED_CURVESDEFORMABLERESTSHAPEAPI_H
+#define USDPHYSICS_GENERATED_CURVESDEFORMABLERESTSHAPEAPI_H
 
-/// \file usdPhysics/curveDeformableRestShapeAPI.h
+/// \file usdPhysics/curvesDeformableRestShapeAPI.h
 
 #include "pxr/pxr.h"
 #include "pxr/usd/usdPhysics/api.h"
@@ -47,14 +47,14 @@ PXR_NAMESPACE_OPEN_SCOPE
 class SdfAssetPath;
 
 // -------------------------------------------------------------------------- //
-// PHYSICSCURVEDEFORMABLERESTSHAPEAPI                                         //
+// PHYSICSCURVESDEFORMABLERESTSHAPEAPI                                        //
 // -------------------------------------------------------------------------- //
 
-/// \class UsdPhysicsCurveDeformableRestShapeAPI
+/// \class UsdPhysicsCurvesDeformableRestShapeAPI
 ///
 /// Defines the rest shape for a UsdGeomBasisCurves or a UsdGeomBasisCurvesNetwork. The curve primitive needs to be composed of linear segments.
 ///
-class UsdPhysicsCurveDeformableRestShapeAPI : public UsdAPISchemaBase
+class UsdPhysicsCurvesDeformableRestShapeAPI : public UsdAPISchemaBase
 {
 public:
     /// Compile time constant representing what kind of schema this class is.
@@ -62,26 +62,26 @@ public:
     /// \sa UsdSchemaKind
     static const UsdSchemaKind schemaKind = UsdSchemaKind::SingleApplyAPI;
 
-    /// Construct a UsdPhysicsCurveDeformableRestShapeAPI on UsdPrim \p prim .
-    /// Equivalent to UsdPhysicsCurveDeformableRestShapeAPI::Get(prim.GetStage(), prim.GetPath())
+    /// Construct a UsdPhysicsCurvesDeformableRestShapeAPI on UsdPrim \p prim .
+    /// Equivalent to UsdPhysicsCurvesDeformableRestShapeAPI::Get(prim.GetStage(), prim.GetPath())
     /// for a \em valid \p prim, but will not immediately throw an error for
     /// an invalid \p prim
-    explicit UsdPhysicsCurveDeformableRestShapeAPI(const UsdPrim& prim=UsdPrim())
+    explicit UsdPhysicsCurvesDeformableRestShapeAPI(const UsdPrim& prim=UsdPrim())
         : UsdAPISchemaBase(prim)
     {
     }
 
-    /// Construct a UsdPhysicsCurveDeformableRestShapeAPI on the prim held by \p schemaObj .
-    /// Should be preferred over UsdPhysicsCurveDeformableRestShapeAPI(schemaObj.GetPrim()),
+    /// Construct a UsdPhysicsCurvesDeformableRestShapeAPI on the prim held by \p schemaObj .
+    /// Should be preferred over UsdPhysicsCurvesDeformableRestShapeAPI(schemaObj.GetPrim()),
     /// as it preserves SchemaBase state.
-    explicit UsdPhysicsCurveDeformableRestShapeAPI(const UsdSchemaBase& schemaObj)
+    explicit UsdPhysicsCurvesDeformableRestShapeAPI(const UsdSchemaBase& schemaObj)
         : UsdAPISchemaBase(schemaObj)
     {
     }
 
     /// Destructor.
     USDPHYSICS_API
-    virtual ~UsdPhysicsCurveDeformableRestShapeAPI();
+    virtual ~UsdPhysicsCurvesDeformableRestShapeAPI();
 
     /// Return a vector of names of all pre-declared attributes for this schema
     /// class and all its ancestor classes.  Does not include attributes that
@@ -90,17 +90,17 @@ public:
     static const TfTokenVector &
     GetSchemaAttributeNames(bool includeInherited=true);
 
-    /// Return a UsdPhysicsCurveDeformableRestShapeAPI holding the prim adhering to this
+    /// Return a UsdPhysicsCurvesDeformableRestShapeAPI holding the prim adhering to this
     /// schema at \p path on \p stage.  If no prim exists at \p path on
     /// \p stage, or if the prim at that path does not adhere to this schema,
     /// return an invalid schema object.  This is shorthand for the following:
     ///
     /// \code
-    /// UsdPhysicsCurveDeformableRestShapeAPI(stage->GetPrimAtPath(path));
+    /// UsdPhysicsCurvesDeformableRestShapeAPI(stage->GetPrimAtPath(path));
     /// \endcode
     ///
     USDPHYSICS_API
-    static UsdPhysicsCurveDeformableRestShapeAPI
+    static UsdPhysicsCurvesDeformableRestShapeAPI
     Get(const UsdStagePtr &stage, const SdfPath &path);
 
 
@@ -125,11 +125,11 @@ public:
     CanApply(const UsdPrim &prim, std::string *whyNot=nullptr);
 
     /// Applies this <b>single-apply</b> API schema to the given \p prim.
-    /// This information is stored by adding "PhysicsCurveDeformableRestShapeAPI" to the 
+    /// This information is stored by adding "PhysicsCurvesDeformableRestShapeAPI" to the 
     /// token-valued, listOp metadata \em apiSchemas on the prim.
     /// 
-    /// \return A valid UsdPhysicsCurveDeformableRestShapeAPI object is returned upon success. 
-    /// An invalid (or empty) UsdPhysicsCurveDeformableRestShapeAPI object is returned upon 
+    /// \return A valid UsdPhysicsCurvesDeformableRestShapeAPI object is returned upon success. 
+    /// An invalid (or empty) UsdPhysicsCurvesDeformableRestShapeAPI object is returned upon 
     /// failure. See \ref UsdPrim::ApplyAPI() for conditions 
     /// resulting in failure. 
     /// 
@@ -140,7 +140,7 @@ public:
     /// \sa UsdPrim::RemoveAPI()
     ///
     USDPHYSICS_API
-    static UsdPhysicsCurveDeformableRestShapeAPI 
+    static UsdPhysicsCurvesDeformableRestShapeAPI 
     Apply(const UsdPrim &prim);
 
 protected:

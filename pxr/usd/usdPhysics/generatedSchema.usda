@@ -74,7 +74,7 @@ class "PhysicsRigidBodyAPI" (
 
 class "PhysicsDeformableBodyAPI" (
     apiSchemas = ["PhysicsBodyAPI"]
-    doc = "Applied to either a UsdGeomTetMesh, UsdGeomMesh, UsdGeomBasisCurves/UsdGeomBasisCurveNetwork (a simulation state GPrim with corresponding rest shape API), or to a Scope/XForm - in which case the Scope/XForm needs to be an immediate parent to the simulation state GPrim.  The material properties of such a body are to be governed by the applied materials."
+    doc = "Applied to either a UsdGeomTetMesh, UsdGeomMesh, UsdGeomBasisCurves/UsdGeomBasisCurvesNetwork (a simulation state GPrim with corresponding rest shape API), or to a Scope/XForm - in which case the Scope/XForm needs to be an immediate parent to the simulation state GPrim.  The material properties of such a body are to be governed by the applied materials."
 )
 {
     float physics:mass = 0 (
@@ -285,7 +285,7 @@ class "PhysicsDeformableMaterialAPI" (
     )
 }
 
-class "PhysicsCurveDeformableMaterialAPI" (
+class "PhysicsCurvesDeformableMaterialAPI" (
     apiSchemas = ["PhysicsDeformableMaterialAPI"]
     doc = """Applied to USD Material in addition to a PhysicsMaterialAPI and
              DeformableMaterialAPI. Defines additional material properties for
@@ -394,7 +394,7 @@ class "PhysicsSurfaceDeformableRestShapeAPI" (
     )
 }
 
-class "PhysicsCurveDeformableRestShapeAPI" (
+class "PhysicsCurvesDeformableRestShapeAPI" (
     doc = "Defines the rest shape for a UsdGeomBasisCurves or a UsdGeomBasisCurvesNetwork. The curve primitive needs to be composed of linear segments."
 )
 {
@@ -422,7 +422,7 @@ class "PhysicsCurveDeformableRestShapeAPI" (
 class PhysicsVtxVtxAttachment "PhysicsVtxVtxAttachment" (
     doc = """Describes a fixed binding attachment between vertices of two
              suitable deformable body simulation meshes. The length of
-             vtxIndices1 should always equal that of vtxIndices2. To express
+             vtxIndices0 should always equal that of vtxIndices1. To express
              multiple connections to the same vertex, use multiple instances
              of PhysicsVtxVtxAttachment."""
 )
@@ -453,13 +453,13 @@ class PhysicsVtxVtxAttachment "PhysicsVtxVtxAttachment" (
         displayName = "Vertex Indices1"
         doc = "Array of vertex indices from vtxSrc1."
     )
-    rel physics:vtxSrc1 (
+    rel physics:vtxSrc0 (
         displayName = "Vertex Source0"
         doc = """Relationship to a single UsdGeomPointBased the vertices
                  belongs to. This should always point to a deformable body's simulation mesh."""
     )
-    rel physics:vtxSrc2 (
-        displayName = "Vertex Source2"
+    rel physics:vtxSrc1 (
+        displayName = "Vertex Source1"
         doc = """Relationship to a single UsdGeomPointBased the vertices
                  belongs to. This should always point to a deformable body's simulation mesh."""
     )
@@ -541,7 +541,7 @@ class PhysicsVtxTriAttachment "PhysicsVtxTriAttachment" (
         face index for each vertex index in vtxIndices."""
     )
     rel physics:triSrc (
-        displayName = "Triangles Source"
+        displayName = "Triangle Source"
         doc = """Relationship to a single UsdGeomMesh or UsdGeomTetMesh surface the triangle faces
                  belong to. This should always point to a deformable body's simulation mesh"""
     )
@@ -550,7 +550,7 @@ class PhysicsVtxTriAttachment "PhysicsVtxTriAttachment" (
         doc = "Array of vertex indices from vtxSrc"
     )
     rel physics:vtxSrc (
-        displayName = "Vertices Source"
+        displayName = "Vertex Source"
         doc = """Relationship to a single UsdGeomPointBased the vertices
                  belong to. This should always point to a deformable body's simulation mesh."""
     )
@@ -626,12 +626,12 @@ class PhysicsVtxTetAttachment "PhysicsVtxTetAttachment" (
             Units: mass/second/second.'''
     )
     int[] physics:tetIndices (
-        displayName = "Tetrahedra Indices"
-        doc = """Array of tetrahedra indices from tetSrc. There should be exactly one
+        displayName = "Tetrahedron Indices"
+        doc = """Array of tetrahedron indices from tetSrc. There should be exactly one
         tet index for each vertex index in vtxIndices."""
     )
     rel physics:tetSrc (
-        displayName = "Triangles Source"
+        displayName = "Tetrahedron Source"
         doc = "Relationship to a single TetMesh which the tetrahedra belong to. This should always point to a deformable body's simulation mesh."
     )
     int[] physics:vtxIndices (
@@ -639,7 +639,7 @@ class PhysicsVtxTetAttachment "PhysicsVtxTetAttachment" (
         doc = "Array of vertex indices from vtxSrc"
     )
     rel physics:vtxSrc (
-        displayName = "Vertices Source"
+        displayName = "Vertex Source"
         doc = """Relationship to a single UsdGeomPointBased the vertices
                  belongs to. This should always point to a deformable body's simulation mesh."""
     )
@@ -708,7 +708,7 @@ class PhysicsVtxCurveAttachment "PhysicsVtxCurveAttachment" (
          segment index identifies the segment within the curve."""
     )
     rel physics:curveSrc (
-        displayName = "Curves Source"
+        displayName = "Curve Source"
         doc = "Relationship to a single UsdGeomBasisCurves or UsdGeomBasisCurvesNetwork the curves belong to. This should always point to a deformable body's simulation mesh."
     )
     float physics:damping = 0 (
@@ -730,7 +730,7 @@ class PhysicsVtxCurveAttachment "PhysicsVtxCurveAttachment" (
         doc = "Array of vertex indices from vtxSrc"
     )
     rel physics:vtxSrc (
-        displayName = "Vertices Source"
+        displayName = "Vertex Source"
         doc = """Relationship to a single UsdGeomPointBased the vertices
                  belongs to. This should always point to a deformable body's simulation mesh."""
     )
@@ -811,7 +811,7 @@ class PhysicsVtxXformAttachment "PhysicsVtxXformAttachment" (
         doc = "Array of vertex indices from vtxSrc"
     )
     rel physics:vtxSrc (
-        displayName = "Vertices Source"
+        displayName = "Vertex Source"
         doc = """Relationship to a single UsdGeomPointBased the vertices
                  belongs to. This should always point to a deformable body's simulation mesh."""
     )

@@ -40,7 +40,7 @@ pxr_library(usdPhysics
         rigidBodyAPI
         bodyAPI
         deformableBodyAPI
-        curveDeformableRestShapeAPI
+        curvesDeformableRestShapeAPI
         curvesDeformableMaterialAPI
         deformableMaterialAPI
         deformableRestShapeAPI
@@ -83,7 +83,7 @@ pxr_library(usdPhysics
         wrapRigidBodyAPI.cpp
         wrapBodyAPI.cpp
         wrapDeformableBodyAPI.cpp
-        wrapCurveDeformableRestShapeAPI.cpp
+        wrapCurvesDeformableRestShapeAPI.cpp
         wrapCurvesDeformableMaterialAPI.cpp
         wrapRigidMaterialAPI.cpp
         wrapDeformableMaterialAPI.cpp
