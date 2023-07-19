@@ -184,7 +184,7 @@ class Writer:
                 pass
             elif (child.name == "programlisting"):
                 nodetext = self.__convertNode(child, sep)
-                tlist.append("::PARA" + nodetext + "NEWLINE")
+                tlist.append("NEWLINENEWLINE.. code-block:: textNEWLINENEWLINEPARA" + nodetext + "NEWLINE")
             elif (child.name == "codeline"):
                 # don't separate entries in the code section with spaces
                 sep = ''
@@ -236,12 +236,22 @@ class Writer:
                 wrapped_lines.append(line)
             else:
                 wrapped_lines.append(textWrapper.fill(line))
+        newlines = wrapped_lines
         lines = []
         inlistitem = False
-        for curline in wrapped_lines:
+        for curline in newlines:
             # the textwrap.fill call adds \n's at line breaks
             for line in curline.split('\n'):
+                if line.startswith("-"):
+                    line = "\\\\" + line # normal text starting with dashes trip sphinx bullet list warning
+                if "*" in line:
+                    line = line.replace("*", "\\*") # bypass inline-emphasis warnings
+                if "..." in line:
+                    line = line.replace("...", ". . .") # bypass erroneous explicit-markup warnings
+                if ".." in line and not line.startswith(".. code-block::"):
+                    line = line.replace("..", ". .") # bypass erroneous explicit-markup warnings
                 if line.startswith("   - "):
+                    lines.append("") # Need an extra line to ensure that unindentations from a previous list are interpreted correctly
                     lines.append(line)
                     inlistitem = True
                 elif line.strip() == "":
