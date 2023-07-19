@@ -349,9 +349,9 @@ class Writer:
                             newDesc = desc[newDescStart+3:newDescEnd]
                             # We want the getter's docstring first, since it lists the type
                             if newDesc.find("type :") != -1:
-                                newDesc = newDesc + "-"*70 + oldDesc
+                                newDesc = newDesc + "-"*70 + "\n\n" + oldDesc
                             else:
-                                newDesc = oldDesc + "-"*70 + newDesc
+                                newDesc = oldDesc + "-"*70 + "\n\n" + newDesc
                             newOutput = oldOutput.replace(oldDesc, newDesc)
                             self.propertyTable[proppypath] = newOutput
                         else:
@@ -618,6 +618,7 @@ class Writer:
                 desc = self.__getFullDoc(pyname, pyobj, doxy)
                 if lines and desc:
                     lines.append('-'*70)
+                    lines.append("")  # a newline is required to avoid being interpreted as a section title
                 if desc:
                     lines += desc    
         docString += '\n'.join(lines)
