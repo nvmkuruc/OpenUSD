@@ -1736,7 +1736,17 @@ def InstallUSD(context, force, buildArgs):
             extraArgs.append('-DPXR_BUILD_DOCUMENTATION=ON')
         else:
             extraArgs.append('-DPXR_BUILD_DOCUMENTATION=OFF')
-    
+
+        if context.buildHtmlDocs:
+            extraArgs.append('-DPXR_BUILD_HTML_DOCUMENTATION=ON')
+        else:
+            extraArgs.append('-DPXR_BUILD_HTML_DOCUMENTATION=OFF')
+
+        if context.buildPythonDocs:
+            extraArgs.append('-DPXR_BUILD_PYTHON_DOCUMENTATION=ON')
+        else:
+            extraArgs.append('-DPXR_BUILD_PYTHON_DOCUMENTATION=OFF')
+
         if context.buildTests:
             extraArgs.append('-DPXR_BUILD_TESTS=ON')
         else:
@@ -1831,11 +1841,6 @@ def InstallUSD(context, force, buildArgs):
             extraArgs.append('-DPXR_ENABLE_MATERIALX_SUPPORT=ON')
         else:
             extraArgs.append('-DPXR_ENABLE_MATERIALX_SUPPORT=OFF')
-
-        if context.buildPythonDocs:
-            extraArgs.append('-DPXR_BUILD_PYTHON_DOCUMENTATION=ON')
-        else:
-            extraArgs.append('-DPXR_BUILD_PYTHON_DOCUMENTATION=OFF')
 
         if Windows():
             # Increase the precompiled header buffer limit.
@@ -2025,9 +2030,9 @@ subgroup.add_argument("--no-tools", dest="build_tools", action="store_false",
                       help="Do not build USD tools")
 subgroup = group.add_mutually_exclusive_group()
 subgroup.add_argument("--docs", dest="build_docs", action="store_true",
-                      default=False, help="Build documentation")
+                      default=False, help="Build overview and C++ documentation")
 subgroup.add_argument("--no-docs", dest="build_docs", action="store_false",
-                      help="Do not build documentation (default)")
+                      help="Do not build overview and C++ documentation (default)")
 subgroup = group.add_mutually_exclusive_group()
 subgroup.add_argument("--python-docs", dest="build_python_docs", action="store_true",
                       default=False, help="Build Python docs")
@@ -2250,11 +2255,15 @@ class InstallContext:
 
         # Optional components
         self.buildTests = args.build_tests
-        self.buildDocs = args.build_docs
         self.buildPython = args.build_python
         self.buildExamples = args.build_examples
         self.buildTutorials = args.build_tutorials
         self.buildTools = args.build_tools
+
+        # - Documentation
+        self.buildDocs = args.build_docs or args.build_python_docs
+        self.buildHtmlDocs = args.build_docs
+        self.buildPythonDocs = args.build_python_docs
 
         # - Imaging
         self.buildImaging = (args.build_imaging == IMAGING or
@@ -2293,9 +2302,6 @@ class InstallContext:
 
         # - MaterialX Plugin
         self.buildMaterialX = args.build_materialx
-
-        # - Python docs
-        self.buildPythonDocs = args.build_python_docs        
 
     def GetBuildArguments(self, dep):
         return self.buildArgs.get(dep.name.lower(), [])
@@ -2466,7 +2472,8 @@ if context.buildDocs:
     if not which("doxygen"):
         PrintError("doxygen not found -- please install it and adjust your PATH")
         sys.exit(1)
-        
+
+if context.buildHtmlDocs:
     if not which("dot"):
         PrintError("dot not found -- please install graphviz and adjust your "
                    "PATH")
