@@ -526,11 +526,15 @@ class Writer:
         if doxy.isFunction():
             cnt = 0
             lines = []
+            if doxy.params:
+                lines.append("Parameters")
+                lines.append("----------")
             for ptype, pname in doxy.params:
                 cnt += 1
                 if not len(pname):
                     pname = 'arg%s' % cnt
-                lines.append(' : '.join((pname, self.__convertTypeName(ptype))))
+                lines.append(f"{pname} : {self.__convertTypeName(ptype)}")
+                lines.append("")
             return lines
         return None
 
@@ -570,12 +574,17 @@ class Writer:
         # make the doxy element static if it is tagged as such
         if ATTR_STATIC_METHOD in doxy.doc['tags']:
             doxy.static = 'yes'
-        
+
         lines = self.__getShortDescription(pyname, pyobj, doxy)
+        lines += self.__getDocumentation(pyname, pyobj, doxy)
         if doxy.isFunction() and type(pyobj) != property:
+            lines.append('')
+            # Note that we add the signatureDescription - which defines
+            # parameter types - AFTER the function body. This if because the
+            # first line of a python docstring is considered it's brief
+            # description, which we don't want to be "Parameters"
             lines += self.__getSignatureDescription(pyname, pyobj, doxy)
             lines.append('')
-        lines += self.__getDocumentation(pyname, pyobj, doxy)
         lines.append('')
         return lines
 
