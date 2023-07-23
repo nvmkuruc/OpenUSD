@@ -24,6 +24,14 @@
 include(Private)
 
 function(pxr_build_documentation)
+    # Cmake booleans are often, ie, "OFF", while Doxyfile requires booleans
+    # to be "YES" or "NO"
+    if(PXR_BUILD_HTML_DOCUMENTATION)
+        set(DOXYGEN_GENERATE_HTML "YES")
+    else()
+        set(DOXYGEN_GENERATE_HTML "NO")
+    endif()
+
     configure_file(${CMAKE_SOURCE_DIR}/docs/doxygen/Doxyfile.in
                    ${CMAKE_BINARY_DIR}/Doxyfile)
 
@@ -55,11 +63,13 @@ function(pxr_build_documentation)
         DESTINATION ${INST_DOCS_ROOT}
     )
 
-    set(BUILT_HTML_DOCS "${CMAKE_BINARY_DIR}/docs/doxy_html")
-    install(
-        DIRECTORY ${BUILT_HTML_DOCS}
-        DESTINATION ${INST_DOCS_ROOT}
-    )
+    if(PXR_BUILD_HTML_DOCUMENTATION)
+        set(BUILT_HTML_DOCS "${CMAKE_BINARY_DIR}/docs/doxy_html")
+        install(
+            DIRECTORY ${BUILT_HTML_DOCS}
+            DESTINATION ${INST_DOCS_ROOT}
+        )
+    endif()
 
     set(BUILT_XML_DOCS "${CMAKE_BINARY_DIR}/docs/doxy_xml")
     install(
@@ -1260,3 +1270,32 @@ function(pxr_tests_prologue)
         COMMENT "Copying CTestCustom.cmake"
     )
 endfunction() # pxr_tests_prologue
+
+function(pxr_build_python_documentation)
+    set(BUILT_XML_DOCS "${PROJECT_BINARY_DIR}/docs/doxy_xml")
+    set(CONVERT_DOXYGEN_TO_PYTHON_DOCS_SCRIPT 
+       "${PROJECT_SOURCE_DIR}/docs/python/convertDoxygen.py")
+    set(INSTALL_PYTHON_PXR_ROOT "${CMAKE_INSTALL_PREFIX}/lib/python/pxr")
+
+    # Get the list of pxr python modules and run a install command for each
+    get_property(pxrPythonModules GLOBAL PROPERTY PXR_PYTHON_MODULES)
+    # Create string of module names, joined with ","
+    string(REPLACE ";" "," pxrPythonModulesStr "${pxrPythonModules}")
+    # Run convertDoxygen on the module list, setting PYTHONPATH 
+    # to the install path for the USD Python modules
+    install(CODE "\
+        execute_process(\
+            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/cmake \
+            RESULT_VARIABLE convert_doxygen_return_code
+            COMMAND ${PYTHON_EXECUTABLE} ${CONVERT_DOXYGEN_TO_PYTHON_DOCS_SCRIPT} \
+                --package pxr --module ${pxrPythonModulesStr} \
+                --inputIndex ${BUILT_XML_DOCS}/index.xml \
+                --pythonPath ${CMAKE_INSTALL_PREFIX}/lib/python \
+                --libPath \"${CMAKE_INSTALL_PREFIX}/lib;${CMAKE_INSTALL_PREFIX}/bin;${CMAKE_INSTALL_PREFIX}/plugin/usd;${CMAKE_INSTALL_PREFIX}/share/usd/examples/plugin\"
+                --output ${INSTALL_PYTHON_PXR_ROOT})
+        if (NOT \${convert_doxygen_return_code} EQUAL \"0\")
+            message( FATAL_ERROR \"Error generating python docstrings - ${CONVERT_DOXYGEN_TO_PYTHON_DOCS_SCRIPT} return code: \${convert_doxygen_return_code} \")
+        endif()
+    ")
+
+endfunction() # pxr_build_python_documentation

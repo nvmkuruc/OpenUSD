@@ -136,12 +136,12 @@ def GetCodeLocation(framesUp):
     """Returns a tuple (moduleName, functionName, fileName, lineNo).
 
     To trace the current location of python execution, use GetCodeLocation().
-    By default, the information is returned at the current stack-frame; thus
+    By default, the information is returned at the current stack-frame; thus::
 
         info = GetCodeLocation()
 
     will return information about the line that GetCodeLocation() was called 
-    from. One can write:
+    from. One can write: ::
 
         def genericDebugFacility():
             info = GetCodeLocation(1)
