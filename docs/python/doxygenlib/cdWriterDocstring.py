@@ -242,10 +242,12 @@ class Writer:
                     tlist.append("*" + nodetext + "*")
             elif (child.name == "bold"):
                 nodetext = self.__convertNode(child, sep)
-                tlist.append("B{" + nodetext + "}")
+                # tlist.append("B{" + nodetext + "}")
+                tlist.append("**" + nodetext + "**")
             elif (child.name == "computeroutput"):
                 nodetext = self.__convertNode(child, sep)
-                tlist.append("C{" + nodetext + "}")
+                # tlist.append("C{" + nodetext + "}")
+                tlist.append("``" + nodetext + "``")
             elif (child.name == "heading"):
                 nodetext = self.__convertNode(child, sep)
                 tlist.append(nodetext + "NEWLINE" + "=" * len(nodetext))
