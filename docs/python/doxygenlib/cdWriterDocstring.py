@@ -35,10 +35,11 @@
 #      This is called once the entire file has been traversed.
 #
 
+import os
+import re
 import sys
 import textwrap
 import types
-import re
 
 from .cdUtils import *
 
@@ -77,9 +78,18 @@ class Writer:
     # a list of modules
     def __init__(self, packageName, moduleName):
 
-        # Import the python module 
-        if not Import("from " +packageName+ " import " +moduleName+ " as " +moduleName):
-            Error("Could not import %s" % (moduleName))
+        # Import the python module... but if we've already built the __DOC.py
+        # modules before, don't use them
+        oldVal = os.environ.get("PXR_DISABLE_EXTERNAL_PY_DOCSTRINGS")
+        os.environ["PXR_DISABLE_EXTERNAL_PY_DOCSTRINGS"] = "1"
+        try:
+            if not Import("from " +packageName+ " import " +moduleName+ " as " +moduleName):
+                Error("Could not import %s" % (moduleName))
+        finally:
+            if oldVal is None:
+                del os.environ["PXR_DISABLE_EXTERNAL_PY_DOCSTRINGS"]
+            else:
+                os.environ["PXR_DISABLE_EXTERNAL_PY_DOCSTRINGS"] = oldVal
 
         self.module = eval(moduleName)
         self.prefix = self.module.__name__.split('.')[-1]
