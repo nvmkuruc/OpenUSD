@@ -123,6 +123,18 @@ PXR_MODULES_OR_JOINED = "|".join(re.escape(m) for m in reversed(pxrModules))
 PXR_MODULE_PREFIX = re.compile(rf"^\s*(?P<module>{PXR_MODULES_OR_JOINED})(?P<suffix>[A-Za-z0-9_]+)")
 
 
+def escapeRstTextLiteral(rawText):
+    newText = rawText
+    # note - we use double \\ because these strings are going to be inserted
+    # inside a python string literal - ie, we eventually do:
+    #     '"""%s"""' % docstring
+    # ...so docstring has to have it's own python-string escaping
+    newText = newText.replace("*", r"\\*") # bypass inline-emphasis warnings
+    newText = newText.replace("...", r"\\.\\.\\.") # bypass erroneous explicit-markup warnings
+    newText = newText.replace("..", r"\\.\\.") # bypass erroneous explicit-markup warnings
+    return newText
+
+
 class Writer:
     """
     Manage the formatting of Python docstrings and output file generation.
@@ -193,7 +205,7 @@ class Writer:
             Debug("Returning docstring: %s..." % summary)
 
         return docstring
-    
+
     def getDocTags(self, node):
         """
         Public API to retrieve tags from within an XML node's assorted docstrings.
@@ -212,7 +224,7 @@ class Writer:
         # representation for the python docstring
         for child in node.childNodes:
             if child.isText():
-                tlist.append(child.text)
+                tlist.append(escapeRstTextLiteral(child.text))
             elif (child.name == "para"):
                 tlist.append("PARA")
                 tlist.append(self.__convertNode(child,sep))
@@ -326,13 +338,11 @@ class Writer:
             # the textwrap.fill call adds \n's at line breaks
             for line in curline.split('\n'):
                 if line.startswith("-"):
-                    line = "\\\\" + line # normal text starting with dashes trip sphinx bullet list warning
-                if "*" in line:
-                    line = line.replace("*", "\\*") # bypass inline-emphasis warnings
-                if "..." in line:
-                    line = line.replace("...", ". . .") # bypass erroneous explicit-markup warnings
-                if ".." in line and not line.startswith(".. code-block::"):
-                    line = line.replace("..", ". .") # bypass erroneous explicit-markup warnings
+                    # note - we use double \\ because these strings are going to be inserted
+                    # inside a python string literal - ie, we eventually do:
+                    #     '"""%s"""' % docstring
+                    # ...so docstring has to have it's own python-string escaping
+                    line = r"\\" + line # normal text starting with dashes trip sphinx bullet list warning
                 if line.startswith("   - "):
                     lines.append("") # Need an extra line to ensure that unindentations from a previous list are interpreted correctly
                     lines.append(line)
