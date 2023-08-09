@@ -1355,7 +1355,7 @@ namespace {
     // #nv begin #omni-hydra
     static void
     _DoSyncRprims(HdSceneDelegate* sceneDelegate, 
-        WorkDispatcher& dispatcher,
+        WorkArenaDispatcher& dispatcher,
         _SyncRPrims& workerState,
         _RprimSyncRequestVector& r)
     {
@@ -1840,7 +1840,6 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
     // XXX:aluk
     // TODO: Port this to WorkWithScopedParallelism (USD 21.08)
     // https://github.com/PixarAnimationStudios/USD/commit/5fedc80f816947bbc442c0af220087304e680196
-    WorkDispatcher dispatcher;
 
     // sync sprims for post sync requests (Materials - cannot be multi-threaded)
     TF_FOR_ALL(dlgIt, _postSyncMap) {
