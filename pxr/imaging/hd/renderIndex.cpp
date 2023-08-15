@@ -1842,43 +1842,41 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
         }
     });
 
-    // XXX:aluk
-    // TODO: Port this to WorkWithScopedParallelism (USD 21.08)
-    // https://github.com/PixarAnimationStudios/USD/commit/5fedc80f816947bbc442c0af220087304e680196
-    WorkDispatcher dispatcher;
+    WorkWithScopedParallelism([&]() {
+        WorkDispatcher dispatcher;
 
-    // sync sprims for post sync requests (Materials - cannot be multi-threaded)
-    TF_FOR_ALL(dlgIt, _postSyncMap) {
-        HdSceneDelegate* sceneDelegate = dlgIt->first;
-        _SprimIndex::PostSyncRequestVector& sprimRequestVector = dlgIt->second.sprimMaterialRequestVector;
-        _sprimIndex.SyncPrims(sceneDelegate, sprimRequestVector, renderParam);
-    }
-
-    // sync sprims for non material post sync requests (can be multi-threaded)
-    if(_IsEnabledMultithreadedNonMaterialSprimSync()) {
-        WorkParallelForEach(_postSyncMap.begin(), _postSyncMap.end(), [&](auto& dlgIt) {
-            HdSceneDelegate* sceneDelegate = dlgIt.first;
-            _SprimIndex::PostSyncRequestVector& sprimRequestVector = dlgIt.second.sprimNonMaterialRequestVector;
-            _sprimIndex.SyncPrims(sceneDelegate, sprimRequestVector, renderParam, true);
-        });
-    }
-    else {
+        // sync sprims for post sync requests (Materials - cannot be multi-threaded)
         TF_FOR_ALL(dlgIt, _postSyncMap) {
             HdSceneDelegate* sceneDelegate = dlgIt->first;
-            _SprimIndex::PostSyncRequestVector& sprimRequestVector = dlgIt->second.sprimNonMaterialRequestVector;
+            _SprimIndex::PostSyncRequestVector& sprimRequestVector = dlgIt->second.sprimMaterialRequestVector;
             _sprimIndex.SyncPrims(sceneDelegate, sprimRequestVector, renderParam);
         }
-    }
 
-    // sync rprim for postSync delegates
-    TF_FOR_ALL(dlgIt, _postSyncMap) {
-        HdSceneDelegate* sceneDelegate = dlgIt->first;
+        // sync sprims for non material post sync requests (can be multi-threaded)
+        if(_IsEnabledMultithreadedNonMaterialSprimSync()) {
+            WorkParallelForEach(_postSyncMap.begin(), _postSyncMap.end(), [&](auto& dlgIt) {
+                HdSceneDelegate* sceneDelegate = dlgIt.first;
+                _SprimIndex::PostSyncRequestVector& sprimRequestVector = dlgIt.second.sprimNonMaterialRequestVector;
+                _sprimIndex.SyncPrims(sceneDelegate, sprimRequestVector, renderParam, true);
+            });
+        }
+        else {
+            TF_FOR_ALL(dlgIt, _postSyncMap) {
+                HdSceneDelegate* sceneDelegate = dlgIt->first;
+                _SprimIndex::PostSyncRequestVector& sprimRequestVector = dlgIt->second.sprimNonMaterialRequestVector;
+                _sprimIndex.SyncPrims(sceneDelegate, sprimRequestVector, renderParam);
+            }
+        }
 
-        _RprimSyncRequestVector& r = reinterpret_cast<_RprimSyncRequestVector&>(dlgIt->second.rprimRequestVector);
-        _SyncRPrims workerState(sceneDelegate, r, reprSpecs, _tracker, renderParam, true);
-        _DoSyncRprims(sceneDelegate, dispatcher, workerState, r);
-    }
-    dispatcher.Wait();
+        // sync rprim for postSync delegates
+        TF_FOR_ALL(dlgIt, _postSyncMap) {
+            HdSceneDelegate* sceneDelegate = dlgIt->first;
+
+            _RprimSyncRequestVector& r = reinterpret_cast<_RprimSyncRequestVector&>(dlgIt->second.rprimRequestVector);
+            _SyncRPrims workerState(sceneDelegate, r, reprSpecs, _tracker, renderParam, true);
+            _DoSyncRprims(sceneDelegate, dispatcher, workerState, r);
+        }
+    });
 
     // nv end
 
