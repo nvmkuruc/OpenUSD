@@ -73,6 +73,7 @@ def PreparePythonModule(moduleName=None):
     upon loading a boost python module (generally '_libName.so')."""
     import importlib
     import inspect
+    import os
     frame = inspect.currentframe().f_back
     try:
         f_locals = frame.f_locals
@@ -94,15 +95,16 @@ def PreparePythonModule(moduleName=None):
         except KeyError:
             pass
 
-        try:
-            module = importlib.import_module(".__DOC", f_locals["__name__"])
-            module.Execute(f_locals)
+        if not os.environ.get("PXR_DISABLE_EXTERNAL_PY_DOCSTRINGS"):
             try:
-                del f_locals["__DOC"]
-            except KeyError:
+                module = importlib.import_module(".__DOC", f_locals["__name__"])
+                module.Execute(f_locals)
+                try:
+                    del f_locals["__DOC"]
+                except KeyError:
+                    pass
+            except Exception:
                 pass
-        except Exception:
-            pass
 
     finally:
         del frame
@@ -136,12 +138,12 @@ def GetCodeLocation(framesUp):
     """Returns a tuple (moduleName, functionName, fileName, lineNo).
 
     To trace the current location of python execution, use GetCodeLocation().
-    By default, the information is returned at the current stack-frame; thus
+    By default, the information is returned at the current stack-frame; thus::
 
         info = GetCodeLocation()
 
     will return information about the line that GetCodeLocation() was called 
-    from. One can write:
+    from. One can write: ::
 
         def genericDebugFacility():
             info = GetCodeLocation(1)
