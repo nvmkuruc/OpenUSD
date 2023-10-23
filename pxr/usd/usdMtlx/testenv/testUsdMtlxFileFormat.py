@@ -123,7 +123,7 @@ class TestFileFormat(unittest.TestCase):
         """
 
         stage = UsdMtlx._TestFile('MultiBindInputs.mtlx')
-        
+
         # Get the node graph and make sure there are exactly 3 inputs
         nodeGraph = UsdShade.NodeGraph.Get(stage,
                         Sdf.Path('/MaterialX/Materials/layered/ND_layerShader'))
@@ -163,22 +163,22 @@ class TestFileFormat(unittest.TestCase):
             conn = node.GetInput('in').GetConnectedSources()[0][0]
             self.assertEqual(conn.source.GetPath().name, connNodeName)
             self.assertEqual(conn.sourceName, connectionName)
-        
+
     def test_nodesWithoutNodegraphs(self):
         """
         Test MaterialX material with nodes not contained in a nodegraph and no
         explicit outputs
         """
-    
+
         stage = UsdMtlx._TestFile('GraphlessNodes.mtlx')
         stage.GetRootLayer().Export('GraphlessNodes.usda')
 
     def test_NodegraphsWithInputs(self):
         """
-        Test that inputs on nodegraphs are found and connected when used 
+        Test that inputs on nodegraphs are found and connected when used
         inside that nodegraph
         """
-    
+
         stage = UsdMtlx._TestFile('NodeGraphInputs.mtlx')
 
         path = '/MaterialX/Materials/test_material/test_nodegraph/mult1'
@@ -186,7 +186,7 @@ class TestFileFormat(unittest.TestCase):
         conn = node.GetInput('in2').GetConnectedSources()[0][0]
         self.assertEqual(conn.source.GetPath().name, 'test_nodegraph')
         self.assertEqual(conn.sourceName, 'scale')
-        
+
 
     def test_Looks(self):
         """
@@ -210,10 +210,10 @@ class TestFileFormat(unittest.TestCase):
         input = material.GetInput("specularColor")
         self.assertTrue(input)
         self.assertEqual(input.GetFullName(),"inputs:specularColor")
-    
+
     def test_customNodeDefs(self):
         """
-        Test that custom nodedefs are flattend out and replaced with 
+        Test that custom nodedefs are flattend out and replaced with
         their associated nodegraph
         """
         stage = UsdMtlx._TestFile('CustomNodeDef.mtlx')
@@ -242,6 +242,27 @@ class TestFileFormat(unittest.TestCase):
         stage = UsdMtlx._TestFile(
             'usd_preview_surface_gold.usdz[usd_preview_surface_gold.mtlx]')
         stage.GetRootLayer().Export('usd_preview_surface_gold.usda')
+
+    def test_ExpandFilePrefix(self):
+        """
+        Test active file prefix defined by the fileprefix attribute
+        in a parent tag.
+        """
+        stage = UsdMtlx._TestFile('ExpandFilePrefix.mtlx')
+
+        for nodeName, expectedResult in [
+            ('image_base', 'outer_scope/textures/base.tif'),
+            ('image_spec', 'inner_scope/textures/spec.tif')
+        ]:
+            primPath = f'/MaterialX/Materials/test_material/test_nodegraph/{nodeName}'
+            shader = UsdShade.Shader.Get(stage, primPath)
+            self.assertTrue(shader)
+
+            fileInput = shader.GetInput('file')
+            self.assertTrue(fileInput)
+
+            actualResult = fileInput.Get().path
+            self.assertEqual(actualResult, expectedResult)
 
 if __name__ == '__main__':
     unittest.main()
