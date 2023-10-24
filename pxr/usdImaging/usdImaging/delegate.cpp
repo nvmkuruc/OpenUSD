@@ -65,6 +65,7 @@
 #include "pxr/usd/usdSkel/animation.h"
 #include "pxr/usd/usdSkel/skeleton.h"
 #include "pxr/usd/usdSkel/tokens.h"
+#include "pxr/usdImaging/usdImaging/cameraAdapter.h"  // OM-111171
 //-NV_CHANGE BRONG
 
 #include "pxr/base/work/loops.h"
@@ -1592,6 +1593,10 @@ UsdImagingDelegate::_ResyncUsdPrim(SdfPath const& usdPath,
                     // prims below it.
                     primInfo->adapter->ProcessPrimResync(cachePath, proxy);
                     foundPruningPrim = true;
+                    // #nv begin
+                    // OM-111171: Always traverse camera childen after _GatherDependencies loop below so camera-as-usd mesh will be removed
+                    foundPruningPrim = !dynamic_cast<UsdImagingCameraAdapter*>(primInfo->adapter.get());
+                    // nv end
                 }
             }
 
