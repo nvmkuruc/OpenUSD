@@ -675,7 +675,7 @@ class "PhysicsDeformableRestShapeAPI"
     )
 
     int4[] physics:restTetIndices (
-        doc = """Per tetrahedral element indices into restTetIndices to describe
+        doc = """Per tetrahedral element indices into restShapePoints to describe
         the rest shape of each tetrahedron. This allows for restTetIndices to
         have length up to 4*len(restShapePoints) to allow for disjoint per-element rest shape description, or a more compact array when all tetrahedra share
         conincident points to describe the rest shape of the PhysicsDeformable tetmesh."""
@@ -692,7 +692,7 @@ class "PhysicsSurfaceDeformableRestShapeAPI"
     inherits = </APISchemaBase>
 )
 {
-    # Planar shape of faces
+    # Planar shape of triangles
     point3f[] physics:restShapePoints (
         doc = """Describes per triangle planar shape in (local) space for a
                  SurfaceDeformable. While panel based cloth systems may only
@@ -703,17 +703,17 @@ class "PhysicsSurfaceDeformableRestShapeAPI"
                  wasted space."""
     )
 
-    int3[] physics:restFaceIndices (
+    int3[] physics:restTriIndices (
         doc = """Per triangle element indices into restShapePoints to describe
                  the rest shape of each triangle face. This allows for
-                 restFaceIndices to have length up to 4*len(restShapePoints) to
+                 restTriIndices to have length up to 3*len(restShapePoints) to
                  allow for a disjoint per-element rest shape description, or a
-                 more compact array when all tetrahedra share conincident points
-                 to describe the rest shape of the PhysicsDeformable tetmesh."""
+                 more compact array when all triangles share conincident points
+                 to describe the rest shape of the PhysicsDeformable triangle mesh."""
     )
 
     # For dihedral bending, it is assumed that rest shape is flat with a value
-    # of zero degrees unless specified by edgeVPairs and edgeVertPairs.
+    # of zero degrees unless specified by edgeVertPairs and edgeBendAngles.
     int2[] physics:edgeVertPairs (
         doc = """Pairs of vertex indices used to identify specific edges in
                  a triangle mesh to set using edgeBendAngles."""
@@ -759,10 +759,30 @@ class "PhysicsCurvesDeformableRestShapeAPI"
     )
 }
 
+class "PhysicsDeformableBindPoseAPI"
+(
+    customData = {
+        string className = "DeformableBindPoseAPI"
+    }
+
+    doc = """Defines the pose in which graphical UsdGeomPointBased and deformable simulation
+             meshes are bound to each other. This API is specified on both graphical and
+             simulation meshes."""
+
+    inherits = </APISchemaBase>
+)
+{
+    point3f[] physics:bindPoints(
+        displayName = "Bind Pose Points"
+        doc = """The points defining the bind pose of a mesh. The number of points needs
+                 to match the number of points in the mesh."""
+    )
+}
+
 class PhysicsVtxVtxAttachment "PhysicsVtxVtxAttachment"
 (
     customData = {
-        string className = "VtxVtxAttach"
+        string className = "VtxVtxAttachment"
     }
     doc = """Describes a fixed binding attachment between vertices of two
              suitable deformable body simulation meshes. The length of
@@ -834,7 +854,7 @@ class PhysicsVtxVtxAttachment "PhysicsVtxVtxAttachment"
 class PhysicsVtxTriAttachment "PhysicsVtxTriAttachment"
 (
     customData = {
-        string className = "VTriAttach"
+        string className = "VtxTriAttachment"
     }
     doc = """Describes a fixed binding attachment between vertices and triangle
     faces of two suitable deformable body simulation meshes."""
@@ -875,16 +895,16 @@ class PhysicsVtxTriAttachment "PhysicsVtxTriAttachment"
 
     int[] physics:triIndices(
         displayName = "Triangle Indices"
-        doc = """Array of face indices from triSrc. There should be exactly one
-        face index for each vertex index in vtxIndices."""
+        doc = """Array of triangle indices from triSrc. There should be exactly one
+        triangle index for each vertex index in vtxIndices."""
     )
 
-    vector3f[] physics:faceCoords(
-        displayName = "Face Coordinates"
-        doc = """Face relative coordinates of the form U,V portion of
+    vector3f[] physics:triCoords(
+        displayName = "Triangle Coordinates"
+        doc = """Triangle relative coordinates of the form U,V portion of
                  barycentric UVW coordinates and a normal offset from the
-                 triangle. There should be exactly one set of face coordinates
-                 corresponding to each vertex index and face index."""
+                 triangle. There should be exactly one set of triangle coordinates
+                 corresponding to each vertex index and triangle index."""
     )
 
     float physics:stiffness = inf (
@@ -913,7 +933,7 @@ class PhysicsVtxTriAttachment "PhysicsVtxTriAttachment"
 class PhysicsVtxTetAttachment "PhysicsVtxTetAttachment"
 (
     customData = {
-        string className = "VTetAttach"
+        string className = "VtxTetAttachment"
     }
     doc = """Describes a fixed binding attachment between vertices and tetrahedra
     of two suitable deformable body simulation meshes."""
@@ -956,11 +976,11 @@ class PhysicsVtxTetAttachment "PhysicsVtxTetAttachment"
         tet index for each vertex index in vtxIndices."""
     )
 
-    vector3f[] physics:baryCoords(
-        displayName = "Barycenrtic Coordinates"
+    vector3f[] physics:tetCoords(
+        displayName = "Tetrahedra Coordinates"
         doc = """Barycentric coordinates of the form U,V,W of the point wrt.
                  the points of the tetrahedra. There should be exactly one
-                 set of face coordinates corresponding to each vertex index and tet index."""
+                 set of tetrahedra coordinates corresponding to each vertex index and tet index."""
     )
 
     float physics:stiffness = inf (
@@ -986,10 +1006,10 @@ class PhysicsVtxTetAttachment "PhysicsVtxTetAttachment"
     )
 }
 
-class PhysicsVtxCurveAttachment "PhysicsVtxCurveAttachment"
+class PhysicsVtxCrvAttachment "PhysicsVtxCrvAttachment"
 (
     customData = {
-        string className = "VCurveAttach"
+        string className = "VtxCrvAttachment"
     }
     doc = """Describes a fixed binding attachment between vertices and curves
     of two suitable deformable body simulation meshes."""
@@ -1014,9 +1034,9 @@ class PhysicsVtxCurveAttachment "PhysicsVtxCurveAttachment"
                  belongs to. This should always point to a deformable body's simulation mesh."""
     )
 
-    rel physics:curveSrc (
+    rel physics:crvSrc (
         customData = {
-            string apiName = "curveSrc"
+            string apiName = "crvSrc"
         }
         displayName = "Curve Source"
         doc = """Relationship to a single UsdGeomBasisCurves or UsdGeomBasisCurvesNetwork the curves belong to. This should always point to a deformable body's simulation mesh."""
@@ -1027,19 +1047,22 @@ class PhysicsVtxCurveAttachment "PhysicsVtxCurveAttachment"
         doc = """Array of vertex indices from vtxSrc"""
     )
 
-    int2[] physics:curveSegmentIndices(
+    int2[] physics:crvSegIndices(
         displayName = "Curve Segment Indices"
-        doc = """Array of (curve index, segment index) pairs from curveSrc.
+        doc = """Array of (curve index, segment index) pairs from crvSrc.
          There should be exactly one pair for each vertex index in vtxIndices.
-         The curve index specifies the index of the curve from curveSrc, and the
+         The curve index specifies the index of the curve from crvSrc, and the
          segment index identifies the segment within the curve."""
     )
 
-    float[] physics:curveSegmentCoords(
+    vector3f[] physics:crvSegCoords(
         displayName = "Curve Segment Coordinates"
-        doc = """U coordinate specifying the interpolated position within the
-                 curve segment. There should be exactly one coordinate for each
-                 curve segment in curveSegmentIndices."""
+        doc = """Segment relative coordinates of the form U (parametric coordinate 
+                 along the segment), VW (offset vector defined in the coordinate frame
+                 spanned by {N, NxT}, where N is the interpolated unit curve normal
+                 and T is the unit vector tangential to the segment). 
+                 There should be exactly one coordinate set for each
+                 curve segment in crvSegIndices."""
     )
 
     float physics:stiffness = inf (
@@ -1065,11 +1088,10 @@ class PhysicsVtxCurveAttachment "PhysicsVtxCurveAttachment"
     )
 }
 
-
 class PhysicsVtxXformAttachment "PhysicsVtxXformAttachment"
 (
     customData = {
-        string className = "VXformAttach"
+        string className = "VtxXformAttachment"
     }
     doc = """Describes a fixed binding attachment between vertices and an xformable
     coordinate frame. The vertices must always be from a deformable
@@ -1138,13 +1160,100 @@ class PhysicsVtxXformAttachment "PhysicsVtxXformAttachment"
     )
 }
 
+class PhysicsTriTriAttachment "PhysicsTriTriAttachment"
+(
+    customData = {
+        string className = "TriTriAttachment"
+    }
+    doc = """Describes a fixed binding attachment between a point on a triangle face and
+    a point on another triangle face of two suitable deformable body simulation meshes."""
+
+    inherits = </Imageable>
+)
+{
+    bool physics:attachmentEnabled = true (
+        customData = {
+            string apiName = "attachmentEnabled"
+        }
+        displayName = "Attachment Enabled"
+        doc = """Determines if this PhysicsTriTriAttachment is enabled."""
+    )
+
+    rel physics:triSrc0 (
+        customData = {
+            string apiName = "triSrc0"
+        }
+        displayName = "Triangle Source0"
+        doc = """Relationship to a single UsdGeomMesh or UsdGeomTetMesh surface the triangle faces
+                 belong to. This should always point to a deformable body's simulation mesh"""
+    )
+
+    rel physics:triSrc1 (
+        customData = {
+            string apiName = "triSrc1"
+        }
+        displayName = "Triangle Source1"
+        doc = """Relationship to a single UsdGeomMesh or UsdGeomTetMesh surface the triangle faces
+                 belong to. This should always point to a deformable body's simulation mesh"""
+    )
+
+    int[] physics:triIndices0(
+        displayName = "Triangle Indices0"
+        doc = """Array of triangle indices from triSrc0"""
+    )
+
+    int[] physics:triIndices1(
+        displayName = "Triangle Indices1"
+        doc = """Array of triangle indices from triSrc1. There should be exactly one
+        triangle index for each triangle index in triIndices0."""
+    )
+
+    vector3f[] physics:triCoords0(
+        displayName = "Triangle Coordinates0"
+        doc = """Triangle relative coordinates of the form U,V portion of
+                 barycentric UVW coordinates and a normal offset from the
+                 triangle. There should be exactly one set of triangle coordinates
+                 corresponding to each entry in triIndices0."""
+    )
+
+    vector3f[] physics:triCoords1(
+        displayName = "Triangle Coordinates1"
+        doc = """Triangle relative coordinates of the form U,V portion of
+                 barycentric UVW coordinates and a normal offset from the
+                 triangle. There should be exactly one set of triangle coordinates
+                 corresponding to each entry in triIndices1."""
+    )
+
+    float physics:stiffness = inf (
+        customData = {
+            string apiName = "stiffness"
+        }
+        displayName = "Stiffness"
+        doc = """Distance proportional factor for the attachment.
+            "inf" implies a hard constraint when the simulator can support it.
+            Range: [0, inf)
+            Units: mass/second/second."""
+    )
+
+    float physics:damping = 0.0 (
+        customData = {
+            string apiName = "damping"
+        }
+        displayName = "Damping"
+        doc = """Proportional factor of the force acting against the direction
+                 of relative motion.
+            Range: [0, inf)
+            Units: mass/second"""
+    )
+}
+
 
 class PhysicsElementCollisionFilter "PhysicsElementCollisionFilter"
 (
     customData = {
         string className = "ElementCollisionFilter"
     }
-    doc = """Describes a collision filter based on vertices, segments or edges and faces
+    doc = """Describes a collision filter based on vertices, segments or edges and triangles
     for two suitable GPrims which are the source of the elements. At least one source primitive needs to be a deformable body's simulation mesh, and one can be either a rigid body or collider.
     """
 

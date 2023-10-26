@@ -103,7 +103,7 @@ To simulate a deformable object we must first define its rest shape. If we were 
 
 In addition to the current rest shape, the current dynamic state of a deformable is required to restart simulations. UsdGeomPointBased has support for position state through its "points" attributes and velocity through its "velocities" attribute. These attributes can be time-varying and as such if the previous velocity or previous position states are required to support higher order integration schemes, they can be obtained at a prior time sample.
 
-We would like to recognize that often it is possible and desirable to simulate deformation at a lower discretization than we use for rendering. For example, we might have a very detailed surface GeomMesh of a car tyre to capture all the geometric details of the threads carved into the running surface, made up of tens of thousands of triangles, but an approximate simulation of the stiff rubber material can be done using a volumetric mesh of less than a thousand elements.  The simulation operates by deforming the volumetric mesh in response to gravity and collisions, and then deforming the surface mesh my maintaining its embedding in the simulation mesh.
+We would like to recognize that often it is possible and desirable to simulate deformation at a lower discretization than we use for rendering. For example, we might have a very detailed surface GeomMesh of a car tyre to capture all the geometric details of the threads carved into the running surface, made up of tens of thousands of triangles, but an approximate simulation of the stiff rubber material can be done using a volumetric mesh of less than a thousand elements.  The simulation operates by deforming the volumetric mesh in response to gravity and collisions, and then deforming the surface mesh by maintaining its embedding in the simulation mesh.
 
 For volume deformables, we use the above TetMesh class to encode simulation meshes.  Even though some implementations might use other discretizations, e.g. hexahedral meshes, it should always be possible to convert these to a tetrahedral mesh.  Because we would like to benefit from USD's basic feature of Xform inheritance and automatic rendering of GPrims parented in the scene graph, we elect to store the TetMeshes as children of the prim that has the PhysicsDeformableBodyAPI.  Because GeomMesh objects with children are not legal, we have to allow the placement of the PhysicsDeformableBodyAPI on a parent of the GeomMesh, such as a Scope or an Xform. Our tire example would look something like this:
 
@@ -120,8 +120,8 @@ For surface deformables, the simulation mesh is of type GeomMesh as well, but ca
 For curve deformables, we again follow a similar pattern::
 
 	Xform or Scope deformable with PhysicsDeformableBodyAPI and material assignment with PhysicsCurvesDeformableMaterialAPI
-		UsdGeomCurves renderGeom
-		UsdGeomBasisCurves or UsdGeomBasisCurvesNetwork (proposed) simGeom with PhysicsCurvesDeformableRestShapeAPI
+		GeomCurves renderGeom
+		GeomBasisCurves or GeomBasisCurvesNetwork (proposed) simGeom with PhysicsCurvesDeformableRestShapeAPI
 
 It is also permissible to have the simulation material assignment on the renderGeom.
 
@@ -162,6 +162,14 @@ Alternatively, when UsdGeomSubsets supports elemType supports per-element materi
 Despite this flexibility, we decided that it is not legal to add PhysicsDeformableBodyAPI to a subtree already marked with PhysicsRigidBodyAPI, or vice versa.  A subtree is to be either deformable or rigid but not both.
 
 
+Embedding Graphics into Simulation Meshes
+-----------------------------------------------
+
+Embedding a graphics mesh into a simulation tetrahedral mesh is relatively straight forward by using barycentric coordinates. However, for animating detailed hair or clothing, usually extrapolation is required since the graphics mesh points generally lie outside of the piece wise linear simulation mesh. How this extrapolation is defined can vary greatly. The physics schema therefore leaves the embedding representation up to the implementation.
+
+The embedding can be defined based on the default poses of both simulation mesh and graphics mesh. When evolving the simulation, the embedding representation typically remains constant, but reconstructing the representation at any given time might come at a loss of accuracy. A specific binding pose can be defined for simulation and graphics meshes by applying the PhysicsDeformableBindPoseAPI.
+
+
 Rest Shape API Design
 -----------------------------
 
@@ -169,7 +177,7 @@ Rest shape is a fundamental concept for simulating deformable objects. A simulat
 
 In the case of PhysicsDeformableRestShapeAPI which is intended for tetmeshes, we specify restShapePoints and restTetIndices. If all adjacent tetrahedral elements of the tetmesh share the same restShapePoints, then restTetIndices would be identitical to the tetVertexIndices attribute of the tetmesh. We aren't limited to this though. Each element can have its rest shape defined by a spatially disjoint set of restShapePoints to allow for the rest shape of different portions of the tetmesh to change independently.
 
-This capability is more important for PhysicsSurfaceDeformableRestShapeAPI which is meant to be applied to surface meshes for shells and cloth. In modeling cloth it is very common to define the planar rest shape of sections of the 3D mesh in a disjoint fashion in a 2D material "panel space." The restShapePoints attribute of PhysicsSurfaceDeformableRestShapeAPI has 3D points, but disjoint sets (w.r.t restFaceIndices) of these points can be coplanar to
+This capability is more important for PhysicsSurfaceDeformableRestShapeAPI which is meant to be applied to surface meshes for shells and cloth. In modeling cloth it is very common to define the planar rest shape of sections of the 3D mesh in a disjoint fashion in a 2D material "panel space." The restShapePoints attribute of PhysicsSurfaceDeformableRestShapeAPI has 3D points, but disjoint sets (w.r.t restTriIndices) of these points can be coplanar to
 support planar rest shape descriptions from panel based creation tools like Marvelous Designer. Furthermore, this representation allows the description of the planar rest shape that should be compatible with models for 3D shells.
 Cloth/Shells based on triangular meshes also require the definition of the rest dihedral angle for the interior edges of the mesh. Using mesh of cloth pants as an example, we might want to describe a pleat along a consecutive edge run down the front of each leg. Besides increasing the bendStiffness for these edges, the edgeBendAngles for these edges could be set to something like 75 degrees. The assignment of edgeBendAngles is specified via edgeVertPairs. We are adopting the convention that if edgeBendAngles and edgeVertPairs are empty, that the default rest angle for interior edges is zero degrees. To describe the dihedral rest angles for a 3D shell, edgeBendAngles and edgeVertPairs would be the number of interior mesh edges. This format is explicit and more compact than having a separate restShapePoints array and restBendIndices array.
 
@@ -191,13 +199,15 @@ Self attachment is also allowed, provided the supplied indices are suitably disj
 PhysicsVtxVtxAttachment provides a simple attachment mechanism between two corresponding sets of vertices of the same length. This can be used to support the common case of stitching together panels of cloth to create garments. If multiple vertices
 are to be attached/merged together, this can be achieved by employing multiple instances of PhysicsVtxVtxAttachment.
 
-PhysicsVtxTriAttachment attaches the vertices of one deformable to the faces of another. Each vertex index in the vtxIndices array must have a corresponding triangle face index in triIndices. The array faceCoords is used to describe the vertex-face binding. The first two entries of the vector3f are the U&V barycentric coordinates wrt. the triangle. The third coordinate is the normal offset.
+PhysicsVtxTriAttachment attaches the vertices of one deformable to the triangular faces of another. Each vertex index in the vtxIndices array must have a corresponding triangle face index in triIndices. The array triCoords is used to describe the vertex-triangle binding. The first two entries of the vector3f are the U&V barycentric coordinates wrt. the triangle. The third coordinate is the normal offset.
 
-PhysicsVtxTetAttachment is similar, but is meant to attach vertices to tetrahedra of deformables. Instead of faceCoords, it has baryCoords which is simply the three barycentric coordinates of the vertex wrt. the tetrahedra. The fourth coordinate can be determined by the three provided. We don't make any restriction to the vertex location wrt. a tetrahedra. It can be inside or outside.
+PhysicsVtxTetAttachment is similar, but is meant to attach vertices to tetrahedra of deformables. Instead of triCoords, it has tetCoords which is simply the three barycentric coordinates of the vertex wrt. the tetrahedra. The fourth coordinate can be determined by the three provided. We don't make any restriction to the vertex location wrt. a tetrahedra. It can be inside or outside.
 
-PhysicsVtxCurveAttachment provides a mechanism to attach vertices to curves which may be deformable or kinematic. For each vertex specified in vtxIndices, there is a corresponding entry in curveSegmentIndices and curveSegmentCoords. curveSegmentIndices indentifies the segment within the curve and curveSegmentCoords describes the parametric value of the attachment point for the curve segment.
+PhysicsVtxCrvAttachment provides a mechanism to attach vertices to curves which may be deformable or kinematic. For each vertex specified in vtxIndices, there is a corresponding entry in crvSegIndices and crvSegCoords. crvSegIndices indentifies the curve and segment, and crvSegCoords describes the attachment point location relative to the curve segment. The crvSegCoords are represented by three coordinates each, U is the parametric coordinate along the segment, while V,W is the two-dimentional offset vector defined in the coordinate frame spanned by {N, NxT}, where N is the interpolated unit curve normal and T is the unit vector tangential to the segment.
 
 PhysicsVtxXformAttachment attaches the vertices of one deformable to an arbitrary xformable coordinate frame with support for spatial offsets defined within the referenced coordinate frame. If the referenced xformable is a rigid body or a prim in the subtree of a rigid body, then the attachment is expected to be treated by the solver as a two way constraint.
+
+PhysicsTriTriAttachment provides a way to attach an arbitrary point within a triangle to another triangle, similarly to how PhysicsVtxTriAttachment defines an attachment of a vertex to a triangle.
 
 
 Element Collision Filtering
