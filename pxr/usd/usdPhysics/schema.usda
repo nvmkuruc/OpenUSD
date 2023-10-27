@@ -765,17 +765,17 @@ class "PhysicsDeformableBindPoseAPI"
         string className = "DeformableBindPoseAPI"
     }
 
-    doc = """Defines the pose in which graphical UsdGeomPointBased and deformable simulation
-             meshes are bound to each other. This API is specified on both graphical and
-             simulation meshes."""
+    doc = """Defines the pose in which graphical UsdGeomPointBased and
+             deformable simulation meshes are bound to each other. This API is
+             specified on both graphical and simulation meshes."""
 
     inherits = </APISchemaBase>
 )
 {
     point3f[] physics:bindPoints(
         displayName = "Bind Pose Points"
-        doc = """The points defining the bind pose of a mesh. The number of points needs
-                 to match the number of points in the mesh."""
+        doc = """The points defining the bind pose of a mesh. The number of
+                 points needs to match the number of points in the mesh."""
     )
 }
 
