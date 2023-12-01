@@ -679,7 +679,7 @@ ZLIB = Dependency("zlib", InstallZlib, "include/zlib.h")
 # boost
 
 if Windows():
-    BOOST_VERSION_FILE = "include/boost-1_78/boost/version.hpp"
+    BOOST_VERSION_FILE = "include/boost-1_74/boost/version.hpp"
 else:
     BOOST_VERSION_FILE = "include/boost/version.hpp"
 
@@ -696,13 +696,13 @@ def InstallBoost_Helper(context, force, buildArgs):
     pyInfo = GetPythonInfo(context)
     pyVer = (int(pyInfo[3].split('.')[0]), int(pyInfo[3].split('.')[1]))
     if context.buildPython and pyVer >= (3, 10):
-        BOOST_URL = "https://boostorg.jfrog.io/artifactory/main/release/1.78.0/source/boost_1_78_0.zip"
+        BOOST_URL = "https://boostorg.jfrog.io/artifactory/main/release/1.74.0/source/boost_1_74_0.zip"
     elif IsVisualStudio2022OrGreater():
-        BOOST_URL = "https://boostorg.jfrog.io/artifactory/main/release/1.78.0/source/boost_1_78_0.zip"
+        BOOST_URL = "https://boostorg.jfrog.io/artifactory/main/release/1.74.0/source/boost_1_74_0.zip"
     elif MacOS():
-        BOOST_URL = "https://boostorg.jfrog.io/artifactory/main/release/1.78.0/source/boost_1_78_0.zip"
+        BOOST_URL = "https://boostorg.jfrog.io/artifactory/main/release/1.74.0/source/boost_1_74_0.zip"
     else:
-        BOOST_URL = "https://boostorg.jfrog.io/artifactory/main/release/1.70.0/source/boost_1_70_0.zip"
+        BOOST_URL = "https://boostorg.jfrog.io/artifactory/main/release/1.74.0/source/boost_1_74_0.zip"
 
     # Documentation files in the boost archive can have exceptionally
     # long paths. This can lead to errors when extracting boost on Windows,
