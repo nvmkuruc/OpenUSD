@@ -40,11 +40,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-// #nv begin #kit-gizmos
-TF_DEFINE_ENV_SETTING(USDIMAGING_DISABLE_CAMERA_ADAPTER, 0,
-    "Disable UsdImaging support for camera information.")
-// nv end
-
 TF_REGISTRY_FUNCTION(TfType)
 {
     using Adapter = UsdImagingCameraAdapter;
@@ -99,10 +94,7 @@ UsdImagingCameraAdapter::InvalidateImagingSubprim(
 bool
 UsdImagingCameraAdapter::IsSupported(UsdImagingIndexProxy const* index) const
 {
-    // #nv begin #kit-gizmos
-    static bool disabled = TfGetEnvSetting(USDIMAGING_DISABLE_CAMERA_ADAPTER) == 1;
-    return !disabled && index->IsSprimTypeSupported(HdPrimTypeTokens->camera);
-    // nv end
+    return index->IsSprimTypeSupported(HdPrimTypeTokens->camera);
 }
 
 SdfPath
@@ -292,13 +284,6 @@ UsdImagingCameraAdapter::ProcessPropertyChange(UsdPrim const& prim,
                                       SdfPath const& cachePath, 
                                       TfToken const& propertyName)
 {
-    // #nv begin #kit-gizmos
-    static bool disabled = TfGetEnvSetting(USDIMAGING_DISABLE_CAMERA_ADAPTER) == 1;
-    if (disabled) {
-        // Kit is not yet using Hydra cameras, which overinvalidate Camera gizmos.
-        return HdCamera::Clean;
-    }
-
     if (UsdGeomXformable::IsTransformationAffectedByAttrNamed(propertyName))
 
         return HdCamera::DirtyTransform;
