@@ -70,7 +70,7 @@ PTR_NAME_SUFFIXES_REPLACE = ""
 SMART_PTR_TEMPLATE_RE = re.compile(r"(?:shared|unique)_ptr\s*<(.*)>")
 SMART_PTR_TEMPLATE_REPLACE = r"\1"
 
-VECTOR_SUFFIX_RE = re.compile(r"^(\w+)Vector$")
+VECTOR_SUFFIX_RE = re.compile(r"\b(\w+)Vector\b")
 VECTOR_SUFFIX_REPLACE = r"list[\1]"
 
 
@@ -589,7 +589,7 @@ class Writer:
         # get rid of const, volatile, &, *.
         ret = cppName.strip()
 
-        # replacements that neeed multiple tokens
+        # replacements that need multiple tokens, or that would change tokenization
         ret = ret.replace('std::', '')
         ret = ret.replace('boost::', '')
         ret = ret.replace('unsigned char', 'int')
@@ -598,6 +598,7 @@ class Writer:
 
         ret = SMART_PTR_TEMPLATE_RE.sub(SMART_PTR_TEMPLATE_REPLACE, ret)
         ret = CHAR_STAR_RE.sub(CHAR_STAR_REPLACE, ret)
+        ret = VECTOR_SUFFIX_RE.sub(VECTOR_SUFFIX_REPLACE, ret)
 
         tokens = [self.__convertTypeNameToken(x) for x in WORDBREAK_RE.split(ret) if x]
         ret = ''.join(tokens).strip()
@@ -635,7 +636,6 @@ class Writer:
         if replacement is not None:
             return replacement
 
-        ret = VECTOR_SUFFIX_RE.sub(VECTOR_SUFFIX_REPLACE, ret)
         ret = PTR_NAME_SUFFIXES_RE.sub(PTR_NAME_SUFFIXES_REPLACE, ret)
         ret = API_RE_FIND.sub(API_RE_REPLACE, ret)
 
