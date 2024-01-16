@@ -26,6 +26,8 @@
 
 #include "pxr/pxr.h"
 
+#include "pxr/usd/usd/api.h"
+
 #include "pxr/usd/sdf/assetPath.h"
 #include "pxr/usd/sdf/path.h"
 #include "pxr/base/vt/array.h"
@@ -126,7 +128,7 @@ public:
 /// them in \p clipSetDefinitions. The clip sets in this vector are sorted in
 /// strength order. If \p clipSetNames is provided it will contain the name
 /// for each clip set in the corresponding position in \p clipSetDefinitions.
-void
+USD_API void
 Usd_ComputeClipSetDefinitionsForPrimIndex(
     const PcpPrimIndex& primIndex,
     std::vector<Usd_ClipSetDefinition>* clipSetDefinitions,

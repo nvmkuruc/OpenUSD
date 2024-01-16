@@ -31,6 +31,7 @@ pxr_library(pcp
         errors
         instanceKey
         iterator
+        instancing
         layerPrefetchRequest
         layerStack
         layerStackIdentifier
@@ -38,8 +39,10 @@ pxr_library(pcp
         mapFunction
         namespaceEdits
         node
+        node_Iterator
         pathTranslation
         primIndex
+        primIndex_Graph
         propertyIndex
         site
         strengthOrdering
@@ -53,10 +56,7 @@ pxr_library(pcp
         debugCodes
         dependencies
         diagnostic
-        instancing
         layerStackRegistry
-        node_Iterator
-        primIndex_Graph
         primIndex_StackFrame
         statistics
         utils

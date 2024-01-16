@@ -25,6 +25,7 @@ pxr_library(usd
         attribute
         clipsAPI
         attributeQuery
+        clipSetDefinition
         collectionAPI
         collectionMembershipQuery
         common
@@ -80,7 +81,6 @@ pxr_library(usd
         clip
         clipCache
         clipSet
-        clipSetDefinition
         crateData
         crateFile
         instanceCache
