@@ -37,7 +37,6 @@
 #include "pxr/base/tf/spinMutex.h"
 #include "pxr/base/tf/type.h"
 
-#include <tbb/enumerable_thread_specific.h>
 #include <atomic>
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -241,7 +240,7 @@ private:
     bool _doProbing;
 
     std::atomic<size_t> _globalBlockCount;
-    tbb::enumerable_thread_specific<size_t> _perThreadBlockCount;
+    static thread_local size_t _perThreadBlockCount;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

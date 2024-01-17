@@ -41,10 +41,9 @@
 #include "pxr/base/tf/api.h"
 
 #include "pxr/base/arch/inttypes.h"
+#include "pxr/base/arch/align.h"
 #include "pxr/base/arch/attributes.h"
 #include "pxr/base/arch/functionLite.h"
-
-#include <tbb/enumerable_thread_specific.h>
 
 #include <atomic>
 #include <cstdarg>
@@ -179,10 +178,10 @@ public:
     void SetQuiet(bool quiet) { _quiet = quiet; }
     
     /// Return an iterator to the beginning of this thread's error list.
-    ErrorIterator GetErrorBegin() { return _errorList.local().begin(); }
+    ErrorIterator GetErrorBegin() { return _errorList.begin(); }
 
     /// Return an iterator to the end of this thread's error list.
-    ErrorIterator GetErrorEnd() { return _errorList.local().end(); }
+    ErrorIterator GetErrorEnd() { return _errorList.end(); }
 
     /// Remove error specified by iterator \p i.
     /// \deprecated Use TfErrorMark instead.
@@ -264,7 +263,7 @@ public:
 
     /// Return true if an instance of TfErrorMark exists in the current thread
     /// of execution, false otherwise.
-    bool HasActiveErrorMark() { return _errorMarkCounts.local() > 0; }
+    bool HasActiveErrorMark() { return _errorMarkCounts.val > 0; }
 
 #if !defined(doxygen)
     //
@@ -401,10 +400,10 @@ private:
     ErrorIterator _GetErrorMarkBegin(size_t mark, size_t *nErrors);
 
     // Invoked by ErrorMark ctor.
-    inline void _CreateErrorMark() { ++_errorMarkCounts.local(); }
+    inline void _CreateErrorMark() { ++_errorMarkCounts.val; }
 
     // Invoked by ErrorMark dtor.
-    inline bool _DestroyErrorMark() { return --_errorMarkCounts.local() == 0; }
+    inline bool _DestroyErrorMark() { return --_errorMarkCounts.val == 0; }
 
     // Report an error, either via delegate or print to stderr, and issue a
     // notice if this thread of execution is the main thread.
@@ -427,7 +426,7 @@ private:
 
     // A guard used to protect reentrency when adding/removing
     // delegates as well as posting errors/warnings/statuses
-    mutable tbb::enumerable_thread_specific<bool> _reentrantGuard;
+    static thread_local bool _reentrantGuard;
 
     // The registered delegates.
     std::vector<Delegate*> _delegates;
@@ -438,7 +437,7 @@ private:
     std::atomic<size_t> _nextSerial;
 
     // Thread-specific error list.
-    tbb::enumerable_thread_specific<ErrorList> _errorList;
+    static thread_local ErrorList _errorList;
 
     // Thread-specific diagnostic log text for pending errors.
     struct _LogText {
@@ -452,13 +451,14 @@ private:
         void _AppendAndPublishImpl(bool clear,
                                    ErrorIterator i, ErrorIterator end);
     };
-    tbb::enumerable_thread_specific<_LogText> _logText;
+    static thread_local _LogText _logText;
 
-    // Thread-specific error mark counts.  Use a native key for best performance
-    // here.
-    tbb::enumerable_thread_specific<
-        size_t, tbb::cache_aligned_allocator<size_t>,
-        tbb::ets_key_per_instance> _errorMarkCounts;
+    // Thread-specific error mark counts.
+    struct alignas(ARCH_CACHE_LINE_SIZE)
+    _CacheAlignedSizeT {
+        size_t val;
+    };
+    static thread_local _CacheAlignedSizeT _errorMarkCounts;
 
     bool _quiet;
 

@@ -129,8 +129,6 @@
 #include "pxr/base/arch/demangle.h"
 #include "pxr/base/arch/symbols.h"
 
-#include <tbb/enumerable_thread_specific.h>
-
 #include <cstdlib>
 #include <list>
 #include <map>
@@ -281,15 +279,19 @@ private:
 
     // Registration state.
     _RegistrationValueList _registrationWorklist;
-    tbb::enumerable_thread_specific<_UnloadFunctionList*> _currentUnloadList;
+    static thread_local _UnloadFunctionList* _currentUnloadList;
 
     // Active library registration state.
-    tbb::enumerable_thread_specific<_ActiveLibraryState> _active;
+    static thread_local _ActiveLibraryState _active;
 
     friend class TfSingleton<Tf_RegistryManagerImpl>;
 };
 
 bool Tf_RegistryManagerImpl::runUnloadersAtExit = false;
+thread_local Tf_RegistryManagerImpl::_UnloadFunctionList*
+    Tf_RegistryManagerImpl::_currentUnloadList = nullptr;
+thread_local Tf_RegistryManagerImpl::_ActiveLibraryState
+    Tf_RegistryManagerImpl::_active;
 
 Tf_RegistryManagerImpl::Tf_RegistryManagerImpl()
 {
@@ -310,7 +312,7 @@ Tf_RegistryManagerImpl::ClearActiveLibrary(const char* libraryName)
     TF_AXIOM(libraryName && libraryName[0]);
 
     // If the name doesn't match then libraryName has already been processed.
-    if (_active.local().name == libraryName) {
+    if (_active.name == libraryName) {
         std::lock_guard<std::recursive_mutex> lock(_mutex);
         _ProcessLibraryNoLock();
     }
@@ -338,29 +340,28 @@ Tf_RegistryManagerImpl::AddRegistrationFunction(
     // then we must have started running constructors for global objects
     // and they're pulling in another library.  Finish up the previous
     // library.
-    _ActiveLibraryState& active = _active.local();
-    if (active.name != libraryName) {
+    if (_active.name != libraryName) {
         std::lock_guard<std::recursive_mutex> lock(_mutex);
         _ProcessLibraryNoLock();
     }
 
-    if (!active.identifier) {
+    if (!_active.identifier) {
         TF_DEBUG(TF_DISCOVERY_TERSE).
             Msg("TfRegistryManager: "
                 "Library %s\n",
                 GetLibraryPath(libraryName, func).c_str());
 
         // Set active.
-        active.name = libraryName;
+        _active.name = libraryName;
 
         // Access shared members.
         std::lock_guard<std::recursive_mutex> lock(_mutex);
-        active.identifier = _RegisterLibraryNoLock(libraryName);
+        _active.identifier = _RegisterLibraryNoLock(libraryName);
     }
-    TF_AXIOM(active.identifier);
+    TF_AXIOM(_active.identifier);
 
-    active.registrationFunctions[typeName].
-        push_back(_RegistrationValue(func, active.identifier));
+    _active.registrationFunctions[typeName].
+        push_back(_RegistrationValue(func, _active.identifier));
 }
 
 bool
@@ -368,8 +369,8 @@ Tf_RegistryManagerImpl::AddFunctionForUnload(const UnloadFunction& func)
 {
     std::lock_guard<std::recursive_mutex> lock(_mutex);
 
-    if (_UnloadFunctionList* unloadList = _currentUnloadList.local()) {
-        unloadList->push_back(func);
+    if (_currentUnloadList) {
+        _currentUnloadList->push_back(func);
         return true;
     }
     else {
@@ -427,7 +428,7 @@ Tf_RegistryManagerImpl::_RegisterLibraryNoLock(const char* libraryName)
 void
 Tf_RegistryManagerImpl::_ProcessLibraryNoLock()
 {
-    if (_active.local().identifier) {
+    if (_active.identifier) {
         // Going inactive.  Move active library state over to global state.
         if (_TransferActiveLibraryNoLock()) {
             // Run subscriptions.
@@ -450,8 +451,7 @@ Tf_RegistryManagerImpl::_TransferActiveLibraryNoLock()
     bool movedAny = false;
 
     // Move active library functions to non-thread local storage type by type.
-    _ActiveLibraryState& active = _active.local();
-    for(auto& v : active.registrationFunctions) {
+    for(auto& v : _active.registrationFunctions) {
         if (!movedAny && !v.second.empty()) {
             movedAny = (_subscriptions.count(v.first) != 0);
         }
@@ -459,9 +459,9 @@ Tf_RegistryManagerImpl::_TransferActiveLibraryNoLock()
     }
 
     // Reset.
-    active.identifier = 0;
-    active.name.clear();
-    active.registrationFunctions.clear();
+    _active.identifier = 0;
+    _active.name.clear();
+    _active.registrationFunctions.clear();
 
     return movedAny;
 }
@@ -497,14 +497,14 @@ Tf_RegistryManagerImpl::_RunRegistrationFunctionsNoLock(const string& typeName)
         _RegistrationValue value = _registrationWorklist.front();
         _registrationWorklist.pop_front();
 
-        _UnloadFunctionList* oldUnloadList = _currentUnloadList.local();
-        _currentUnloadList.local() = &_unloadFunctions[value.unloadKey];
+        _UnloadFunctionList* oldUnloadList = _currentUnloadList;
+        _currentUnloadList = &_unloadFunctions[value.unloadKey];
 
         _mutex.unlock();
         value.function(NULL, NULL);
         _mutex.lock();
 
-        _currentUnloadList.local() = oldUnloadList;
+        _currentUnloadList = oldUnloadList;
     }
 }
 

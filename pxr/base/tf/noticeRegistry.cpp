@@ -40,6 +40,8 @@ using std::type_info;
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+thread_local size_t Tf_NoticeRegistry::_perThreadBlockCount(static_cast<size_t>(0));
+
 TF_INSTANTIATE_SINGLETON(Tf_NoticeRegistry);
 
 Tf_NoticeRegistry::Tf_NoticeRegistry()
@@ -216,7 +218,7 @@ Tf_NoticeRegistry::_Send(const TfNotice &n, const TfType & noticeType,
     // up the thread-specific data in the 99.9% case where a block 
     // is not present.
     if (_globalBlockCount > 0) {
-        if (_perThreadBlockCount.local() > 0) {
+        if (_perThreadBlockCount > 0) {
             return 0;
         }
     }
@@ -359,14 +361,14 @@ void
 Tf_NoticeRegistry::_IncrementBlockCount()
 {
     ++_globalBlockCount;
-    ++_perThreadBlockCount.local();
+    ++_perThreadBlockCount;
 }
 
 void 
 Tf_NoticeRegistry::_DecrementBlockCount()
 {
     --_globalBlockCount;
-    --_perThreadBlockCount.local();
+    --_perThreadBlockCount;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

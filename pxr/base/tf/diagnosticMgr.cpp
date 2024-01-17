@@ -88,6 +88,13 @@ struct _ReentrancyGuard {
 } // end anonymous namespace
 
 
+thread_local bool TfDiagnosticMgr::_reentrantGuard(false);
+thread_local TfDiagnosticMgr::ErrorList TfDiagnosticMgr::_errorList;
+thread_local TfDiagnosticMgr::_LogText TfDiagnosticMgr::_logText;
+thread_local TfDiagnosticMgr::_CacheAlignedSizeT
+    TfDiagnosticMgr::_errorMarkCounts{static_cast<size_t>(0)};
+
+
 // Helper function for printing a diagnostic message when a delegate is not
 // available.
 //
@@ -144,7 +151,6 @@ TfDiagnosticMgr::Delegate::_UnhandledAbort() const
 }
 
 TfDiagnosticMgr::TfDiagnosticMgr() :
-    _errorMarkCounts(static_cast<size_t>(0)),
     _quiet(false)
 {
     _nextSerial = 0;
@@ -186,10 +192,9 @@ TfDiagnosticMgr::AppendError(TfError const &e) {
     if (!HasActiveErrorMark()) {
         _ReportError(e);
     } else {
-        ErrorList &errorList = _errorList.local();
-        errorList.push_back(e);
-        errorList.back()._serial = _nextSerial.fetch_add(1);
-        _AppendErrorsToLogText(std::prev(errorList.end())); 
+        _errorList.push_back(e);
+        _errorList.back()._serial = _nextSerial.fetch_add(1);
+        _AppendErrorsToLogText(std::prev(_errorList.end())); 
     }
 }
 
@@ -208,12 +213,11 @@ TfDiagnosticMgr::_SpliceErrors(ErrorList &src)
             error._serial = serial++;
         }
         // Now splice them into the main list.
-        ErrorList &errorList = _errorList.local();
         // We store the begin iterator from the new list.  This iterator remains
         // valid *after the splice*, and iterates the spliced elements from src
         // in errorList.
         ErrorList::iterator newErrorsBegin = src.begin();
-        errorList.splice(errorList.end(), src);
+        _errorList.splice(_errorList.end(), src);
         _AppendErrorsToLogText(newErrorsBegin);
     }
 }
@@ -258,7 +262,7 @@ TfDiagnosticMgr::PostError(const TfDiagnosticBase& diagnostic)
 void
 TfDiagnosticMgr::_ReportError(const TfError &err)
 {
-    _ReentrancyGuard guard(&_reentrantGuard.local());
+    _ReentrancyGuard guard(&_reentrantGuard);
     if (guard.ScopeWasReentered()) {
         return;
     }
@@ -289,7 +293,7 @@ TfDiagnosticMgr::PostWarning(
     TfCallContext const &context, std::string const &commentary,
     TfDiagnosticInfo info, bool quiet) const
 {
-    _ReentrancyGuard guard(&_reentrantGuard.local());
+    _ReentrancyGuard guard(&_reentrantGuard);
     if (guard.ScopeWasReentered()) {
         return;
     }
@@ -340,7 +344,7 @@ void TfDiagnosticMgr::PostStatus(
     TfCallContext const &context, std::string const &commentary,
     TfDiagnosticInfo info, bool quiet) const
 {
-    _ReentrancyGuard guard(&_reentrantGuard.local());
+    _ReentrancyGuard guard(&_reentrantGuard);
     if (guard.ScopeWasReentered()) {
         return;
     }
@@ -379,7 +383,7 @@ void TfDiagnosticMgr::PostFatal(TfCallContext const &context,
                                 TfEnum statusCode,
                                 std::string const &msg) const
 {
-    _ReentrancyGuard guard(&_reentrantGuard.local());
+    _ReentrancyGuard guard(&_reentrantGuard);
     if (guard.ScopeWasReentered()) {
         TfLogCrash("RECURSIVE FATAL ERROR",
                    msg, std::string() /*additionalInfo*/,
@@ -424,27 +428,23 @@ void TfDiagnosticMgr::PostFatal(TfCallContext const &context,
 TfDiagnosticMgr::ErrorIterator
 TfDiagnosticMgr::EraseError(ErrorIterator i)
 {
-    ErrorList &errorList = _errorList.local();
-
-    return i == errorList.end() ? i : errorList.erase(i);
+    return i == _errorList.end() ? i : _errorList.erase(i);
 }
 
 TfDiagnosticMgr::ErrorIterator
 TfDiagnosticMgr::_GetErrorMarkBegin(size_t mark, size_t *nErrors)
 {
-    ErrorList &errorList = _errorList.local();
-
-    if (mark >= _nextSerial || errorList.empty()) {
+    if (mark >= _nextSerial || _errorList.empty()) {
         if (nErrors)
             *nErrors = 0;
-        return errorList.end();
+        return _errorList.end();
     }
 
     // Search backward to find the the error with the smallest serial number
     // that's greater than or equal to mark.
     size_t count = 0;
 
-    ErrorList::reverse_iterator i = errorList.rbegin(), end = errorList.rend();
+    ErrorList::reverse_iterator i = _errorList.rbegin(), end = _errorList.rend();
     while (i != end && i->_serial >= mark) {
         ++i, ++count;
     }
@@ -460,7 +460,7 @@ TfDiagnosticMgr::EraseRange(ErrorIterator first, ErrorIterator last)
     if (first == last)
         return last;
 
-    ErrorIterator result = _errorList.local().erase(first, last);
+    ErrorIterator result = _errorList.erase(first, last);
     _RebuildErrorLogText();
     return result;
 }
@@ -636,13 +636,13 @@ TfDiagnosticMgr::_LogText::_AppendAndPublishImpl(
 void
 TfDiagnosticMgr::_AppendErrorsToLogText(ErrorIterator i)
 {
-    _logText.local().AppendAndPublish(i, GetErrorEnd());
+    _logText.AppendAndPublish(i, GetErrorEnd());
 }
 
 void
 TfDiagnosticMgr::_RebuildErrorLogText()
 {
-    _logText.local().RebuildAndPublish(GetErrorBegin(), GetErrorEnd());
+    _logText.RebuildAndPublish(GetErrorBegin(), GetErrorEnd());
 }
 
 std::string

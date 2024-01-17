@@ -125,7 +125,7 @@ class TfErrorMark
     /// TransportTo().
     inline TfErrorTransport Transport() const {
         TfDiagnosticMgr &mgr = TfDiagnosticMgr::GetInstance();
-        return TfErrorTransport(mgr._errorList.local(),
+        return TfErrorTransport(mgr._errorList,
                                 GetBegin(), mgr.GetErrorEnd());
     }
 
