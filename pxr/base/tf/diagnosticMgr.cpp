@@ -163,7 +163,7 @@ TfDiagnosticMgr::AddDelegate(Delegate* delegate)
         return; 
     } 
 
-    tbb::spin_rw_mutex::scoped_lock lock(_delegatesMutex, /*writer=*/true);
+    TfSpinRWMutex::ScopedLock lock(_delegatesMutex, /*writer=*/true);
     _delegates.push_back(delegate);
 }
 
@@ -174,7 +174,7 @@ TfDiagnosticMgr::RemoveDelegate(Delegate* delegate)
         return;
     }
 
-    tbb::spin_rw_mutex::scoped_lock lock(_delegatesMutex, /*writer=*/true);
+    TfSpinRWMutex::ScopedLock lock(_delegatesMutex, /*writer=*/true);
     _delegates.erase(std::remove(_delegates.begin(),
                                  _delegates.end(),
                                  delegate),
@@ -265,7 +265,7 @@ TfDiagnosticMgr::_ReportError(const TfError &err)
 
     bool dispatchedToDelegate = false;
     {
-        tbb::spin_rw_mutex::scoped_lock lock(_delegatesMutex, /*writer=*/false);
+        TfSpinRWMutex::ScopedLock lock(_delegatesMutex, /*writer=*/false);
         for (auto const& delegate : _delegates) {
             if (delegate) {
                 delegate->IssueError(err);
@@ -312,7 +312,7 @@ TfDiagnosticMgr::PostWarning(
 
     bool dispatchedToDelegate = false;
     {
-        tbb::spin_rw_mutex::scoped_lock lock(_delegatesMutex, /*writer=*/false);
+        TfSpinRWMutex::ScopedLock lock(_delegatesMutex, /*writer=*/false);
         for (auto const& delegate : _delegates) {
             if (delegate) {
                 delegate->IssueWarning(warning);
@@ -352,7 +352,7 @@ void TfDiagnosticMgr::PostStatus(
 
     bool dispatchedToDelegate = false;
     {
-        tbb::spin_rw_mutex::scoped_lock lock(_delegatesMutex, /*writer=*/false);
+        TfSpinRWMutex::ScopedLock lock(_delegatesMutex, /*writer=*/false);
         for (auto const& delegate : _delegates) {
             if (delegate) {
                 delegate->IssueStatus(status);
@@ -392,7 +392,7 @@ void TfDiagnosticMgr::PostFatal(TfCallContext const &context,
     }
 
     {
-        tbb::spin_rw_mutex::scoped_lock lock(_delegatesMutex, /*writer=*/false);
+        TfSpinRWMutex::ScopedLock lock(_delegatesMutex, /*writer=*/false);
         for (auto const& delegate : _delegates) {
             if (delegate) {
                 delegate->IssueFatalError(context, msg);

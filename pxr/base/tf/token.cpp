@@ -32,12 +32,11 @@
 #include "pxr/base/tf/instantiateSingleton.h"
 #include "pxr/base/tf/iterator.h"
 #include "pxr/base/tf/registryManager.h"
+#include "pxr/base/tf/spinMutex.h"
 #include "pxr/base/tf/stringUtils.h"
 #include "pxr/base/tf/type.h"
 
 #include "pxr/base/arch/align.h"
-
-#include <tbb/spin_mutex.h>
 
 #include <atomic>
 #include <algorithm>
@@ -99,7 +98,7 @@ struct Tf_TokenRegistry
     _Set {
         _RepSet reps;
         unsigned insertsUntilSweepCheck = _MinInsertsUntilSweepCheck;
-        mutable tbb::spin_mutex mutex;
+        mutable TfSpinMutex mutex;
     };
 
     // Data members.
@@ -135,7 +134,7 @@ struct Tf_TokenRegistry
     void _DumpStats() const {
         std::vector<std::pair<size_t, size_t> > sizesWithSet;
         for (size_t i = 0; i != _NumSets; ++i) {
-            tbb::spin_mutex::scoped_lock lock(_sets[i].mutex);
+            TfSpinMutex::ScopedLock lock(_sets[i].mutex);
             sizesWithSet.push_back(std::make_pair(_sets[i].reps.size(), i));
         }
         std::sort(sizesWithSet.begin(), sizesWithSet.end());
@@ -146,7 +145,7 @@ struct Tf_TokenRegistry
 
         // Uncomment to dump every token & refcount.
         // for (size_t i = 0; i != _NumSets; ++i) {
-        //     tbb::spin_mutex::scoped_lock lock(_sets[i].mutex);
+        //     TfSpinMutex::ScopedLock lock(_sets[i].mutex);
         //     for (auto const &rep: _sets[i].reps) {
         //         printf("%d '%s'\n", rep._refCount.load(), rep._str.c_str());
         //     }
@@ -193,7 +192,7 @@ private:
         unsigned setNum = _GetSetNum(_CStr(s));
         _Set &set = _sets[setNum];
 
-        tbb::spin_mutex::scoped_lock lock(set.mutex);
+        TfSpinMutex::ScopedLock lock(set.mutex);
 
         // Insert or lookup an existing.
         _RepSet::iterator iter = set.reps.find(_LookupRep(_CStr(s)));
@@ -281,7 +280,7 @@ private:
         size_t setNum = _GetSetNum(_CStr(s));
         _Set const &set = _sets[setNum];
 
-        tbb::spin_mutex::scoped_lock lock(set.mutex);
+        TfSpinMutex::ScopedLock lock(set.mutex);
 
         _RepSet::const_iterator iter = set.reps.find(_LookupRep(_CStr(s)));
         if (iter == set.reps.end()) {

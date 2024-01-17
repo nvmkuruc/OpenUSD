@@ -34,10 +34,10 @@
 #include "pxr/base/tf/hashset.h"
 #include "pxr/base/tf/notice.h"
 #include "pxr/base/tf/singleton.h"
+#include "pxr/base/tf/spinMutex.h"
 #include "pxr/base/tf/type.h"
 
 #include <tbb/enumerable_thread_specific.h>
-#include <tbb/spin_mutex.h>
 #include <atomic>
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -119,8 +119,8 @@ private:
     typedef std::pair<_DelivererList*, _DelivererList::iterator>
         _DelivererListEntry;
 
-    typedef tbb::spin_mutex _Mutex;
-    typedef tbb::spin_mutex::scoped_lock _Lock;
+    typedef TfSpinMutex _Mutex;
+    typedef TfSpinMutex::ScopedLock _Lock;
 
     void _BeginSend(const TfNotice &notice,
                     const TfWeakBase *sender,

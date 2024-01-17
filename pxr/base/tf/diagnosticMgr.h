@@ -32,6 +32,7 @@
 #include "pxr/base/tf/diagnosticLite.h"
 #include "pxr/base/tf/error.h"
 #include "pxr/base/tf/singleton.h"
+#include "pxr/base/tf/spinRWMutex.h"
 #include "pxr/base/tf/status.h"
 #include "pxr/base/tf/stringUtils.h"
 #include "pxr/base/tf/warning.h"
@@ -44,7 +45,6 @@
 #include "pxr/base/arch/functionLite.h"
 
 #include <tbb/enumerable_thread_specific.h>
-#include <tbb/spin_rw_mutex.h>
 
 #include <atomic>
 #include <cstdarg>
@@ -432,7 +432,7 @@ private:
     // The registered delegates.
     std::vector<Delegate*> _delegates;
 
-    mutable tbb::spin_rw_mutex _delegatesMutex;
+    mutable TfSpinRWMutex _delegatesMutex;
 
     // Global serial number for sorting.
     std::atomic<size_t> _nextSerial;

@@ -29,11 +29,10 @@
 #ifdef PXR_PYTHON_SUPPORT_ENABLED
 #include "pxr/base/tf/pyInterpreter.h"
 #include "pxr/base/tf/pyUtils.h"
+#include "pxr/base/tf/spinMutex.h"
 #include "pxr/base/tf/staticData.h"
 
 #include <memory>
-
-#include <tbb/spin_mutex.h>
 
 // These are from python, needed for PyFrameObject.
 #include <frameobject.h>
@@ -50,7 +49,7 @@ typedef list<std::weak_ptr<TfPyTraceFn> > TraceFnList;
 
 static TfStaticData<TraceFnList> _traceFns;
 static bool _traceFnInstalled;
-static tbb::spin_mutex _traceFnMutex;
+static TfSpinMutex _traceFnMutex;
 
 
 static void _SetTraceFnEnabled(bool enable);
@@ -59,13 +58,13 @@ static void _InvokeTraceFns(TfPyTraceInfo const &info)
 {
     // Take the lock, and swap out the list of trace fns for an empty list.  We
     // do this so we don't hold the lock and call unknown code.  If functions
-    // expire while we're executing, that's fine since we .lock() each one to
+    // expire while we're executing, that's fine since we .Acquire() each one to
     // get a dereferenceable shared_ptr, and if new functions are added, that's
     // okay too since we splice the copy back into the official list when we're
     // done.
     TraceFnList local;
     {
-        tbb::spin_mutex::scoped_lock lock(_traceFnMutex);
+        TfSpinMutex::ScopedLock lock(_traceFnMutex);
         local.splice(local.end(), *_traceFns);
     }
 
@@ -82,7 +81,7 @@ static void _InvokeTraceFns(TfPyTraceInfo const &info)
 
     // Now splice the local back into the real list.
     {
-        tbb::spin_mutex::scoped_lock lock(_traceFnMutex);
+        TfSpinMutex::ScopedLock lock(_traceFnMutex);
         _traceFns->splice(_traceFns->end(), local);
         // If the list is empty, uninstall the trace fn.
         if (_traceFns->empty())
@@ -148,7 +147,7 @@ void Tf_PyFabricateTraceEvent(TfPyTraceInfo const &info)
 
 TfPyTraceFnId TfPyRegisterTraceFn(TfPyTraceFn const &f)
 {
-    tbb::spin_mutex::scoped_lock lock(_traceFnMutex);
+    TfSpinMutex::ScopedLock lock(_traceFnMutex);
     TfPyTraceFnId ret(new TfPyTraceFn(f));
     _traceFns->push_back(ret);
     _SetTraceFnEnabled(true);
@@ -161,7 +160,7 @@ void Tf_PyTracingPythonInitialized()
     static std::once_flag once;
     std::call_once(once, [](){
             TF_AXIOM(Py_IsInitialized());
-            tbb::spin_mutex::scoped_lock lock(_traceFnMutex);
+            TfSpinMutex::ScopedLock lock(_traceFnMutex);
             if (!_traceFns->empty())
                 _SetTraceFnEnabled(true);
         });

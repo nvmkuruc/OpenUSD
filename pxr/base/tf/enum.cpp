@@ -32,14 +32,13 @@
 #include "pxr/base/tf/mallocTag.h"
 #include "pxr/base/tf/registryManager.h"
 #include "pxr/base/tf/safeTypeCompare.h"
+#include "pxr/base/tf/spinMutex.h"
 #include "pxr/base/tf/stringUtils.h"
 #include "pxr/base/tf/type.h"
 
 #include "pxr/base/arch/demangle.h"
 
 #include "pxr/base/tf/hashmap.h"
-
-#include <tbb/spin_mutex.h>
 
 #include <iostream>
 #include <set>
@@ -79,7 +78,7 @@ private:
     }
 
     void _Remove(TfEnum val) {
-        tbb::spin_mutex::scoped_lock lock(_tableLock);
+        TfSpinMutex::ScopedLock lock(_tableLock);
 
         _typeNameToType.erase(ArchGetDemangled(val.GetType()));
 
@@ -98,7 +97,7 @@ private:
         _enumToDisplayName.erase(val);
     }   
 
-    tbb::spin_mutex            _tableLock;
+    TfSpinMutex                _tableLock;
     _EnumToNameTableType       _enumToName;
     _EnumToNameTableType       _enumToFullName;
     _EnumToNameTableType       _enumToDisplayName;
@@ -129,7 +128,7 @@ TfEnum::_AddName(TfEnum val, const string &valName, const string &displayName)
         return;
 
     Tf_EnumRegistry& r = Tf_EnumRegistry::_GetInstance();
-    tbb::spin_mutex::scoped_lock lock(r._tableLock);
+    TfSpinMutex::ScopedLock lock(r._tableLock);
 
     string fullName = typeName + "::" + shortName;
 
@@ -151,7 +150,7 @@ TfEnum::GetName(TfEnum val)
         return TfIntToString(val.GetValueAsInt());
 
     Tf_EnumRegistry& r = Tf_EnumRegistry::_GetInstance();
-    tbb::spin_mutex::scoped_lock lock(r._tableLock);
+    TfSpinMutex::ScopedLock lock(r._tableLock);
 
     _EnumToNameTableType::iterator i = r._enumToName.find(val);
     return (i != r._enumToName.end() ? i->second : "");
@@ -164,7 +163,7 @@ TfEnum::GetFullName(TfEnum val)
         return TfStringPrintf("int::%d", val.GetValueAsInt());
     
     Tf_EnumRegistry& r = Tf_EnumRegistry::_GetInstance();
-    tbb::spin_mutex::scoped_lock lock(r._tableLock);
+    TfSpinMutex::ScopedLock lock(r._tableLock);
 
     _EnumToNameTableType::iterator i = r._enumToFullName.find(val);
     return (i != r._enumToFullName.end() ? i->second : "");
@@ -177,7 +176,7 @@ TfEnum::GetDisplayName(TfEnum val)
         return TfIntToString(val.GetValueAsInt());
 
     Tf_EnumRegistry& r = Tf_EnumRegistry::_GetInstance();
-    tbb::spin_mutex::scoped_lock lock(r._tableLock);
+    TfSpinMutex::ScopedLock lock(r._tableLock);
 
     _EnumToNameTableType::iterator i = r._enumToDisplayName.find(val);
     return (i != r._enumToDisplayName.end() ? i->second : "");
@@ -190,7 +189,7 @@ TfEnum::GetAllNames(const type_info &ti)
         return vector<string>();
     
     Tf_EnumRegistry& r = Tf_EnumRegistry::_GetInstance();
-    tbb::spin_mutex::scoped_lock lock(r._tableLock);
+    TfSpinMutex::ScopedLock lock(r._tableLock);
 
     _TypeNameToNameVectorTableType::iterator i = r._typeNameToNameVector.find(ti.name());
     return (i != r._typeNameToNameVector.end() ? i->second : vector<string>());
@@ -200,7 +199,7 @@ const type_info *
 TfEnum::GetTypeFromName(const string& typeName)
 {
     Tf_EnumRegistry& r = Tf_EnumRegistry::_GetInstance();
-    tbb::spin_mutex::scoped_lock lock(r._tableLock);
+    TfSpinMutex::ScopedLock lock(r._tableLock);
 
     _TypeNameToTypeTableType::iterator i = r._typeNameToType.find(typeName);
     if (i == r._typeNameToType.end()) return NULL;
@@ -225,7 +224,7 @@ TfEnum
 TfEnum::GetValueFromFullName(const string &fullname, bool *foundIt)
 {
     Tf_EnumRegistry& r = Tf_EnumRegistry::_GetInstance();
-    tbb::spin_mutex::scoped_lock lock(r._tableLock);
+    TfSpinMutex::ScopedLock lock(r._tableLock);
 
     _NameToEnumTableType::iterator i = r._fullNameToEnum.find(fullname);
     if (i != r._fullNameToEnum.end()) {
@@ -258,7 +257,7 @@ bool
 TfEnum::IsKnownEnumType(const std::string& typeName)
 {
     Tf_EnumRegistry& r = Tf_EnumRegistry::_GetInstance();
-    tbb::spin_mutex::scoped_lock lock(r._tableLock);
+    TfSpinMutex::ScopedLock lock(r._tableLock);
 
     _TypeNameToTypeTableType::iterator i = r._typeNameToType.find(typeName);
     if (i == r._typeNameToType.end()) return false;

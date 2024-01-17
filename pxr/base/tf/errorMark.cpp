@@ -28,9 +28,8 @@
 #include "pxr/base/tf/hash.h"
 #include "pxr/base/tf/hashmap.h"
 #include "pxr/base/tf/iterator.h"
+#include "pxr/base/tf/spinMutex.h"
 #include "pxr/base/arch/stackTrace.h"
-
-#include <tbb/spin_mutex.h>
 
 #include <sstream>
 #include <string>
@@ -69,7 +68,7 @@ TfErrorMark_GetActiveMarkStacks()
     static _ActiveMarkStacksMap activeMarkStacks;
     return activeMarkStacks;
 }
-static tbb::spin_mutex _activeMarkStacksLock;
+static TfSpinMutex _activeMarkStacksLock;
 
 
 TfErrorMark::TfErrorMark()
@@ -82,7 +81,7 @@ TfErrorMark::TfErrorMark()
         vector<uintptr_t> trace;
         trace.reserve(64);
         ArchGetStackFrames(trace.capacity(), &trace);
-        tbb::spin_mutex::scoped_lock lock(_activeMarkStacksLock);
+        TfSpinMutex::ScopedLock lock(_activeMarkStacksLock);
         TfErrorMark_GetActiveMarkStacks()[this].swap(trace);
     }
 }
@@ -91,7 +90,7 @@ TfErrorMark::~TfErrorMark()
 {
     if (_enableTfErrorMarkStackTraces &&
         TfDebug::IsEnabled(TF_ERROR_MARK_TRACKING)) {
-        tbb::spin_mutex::scoped_lock lock(_activeMarkStacksLock);
+        TfSpinMutex::ScopedLock lock(_activeMarkStacksLock);
         TfErrorMark_GetActiveMarkStacks().erase(this);
     }
 
@@ -122,7 +121,7 @@ TfReportActiveErrorMarks()
 
     _ActiveMarkStacksMap localStacks;
     {
-        tbb::spin_mutex::scoped_lock lock(_activeMarkStacksLock);
+        TfSpinMutex::ScopedLock lock(_activeMarkStacksLock);
         localStacks = TfErrorMark_GetActiveMarkStacks();
     }
 

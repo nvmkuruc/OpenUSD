@@ -25,9 +25,8 @@
 #include "pxr/pxr.h"
 #include "pxr/base/tf/pyCallContext.h"
 #include "pxr/base/tf/callContext.h"
+#include "pxr/base/tf/spinMutex.h"
 #include "pxr/base/tf/stringUtils.h"
-
-#include <tbb/spin_mutex.h>
 
 #include <set>
 #include <string>
@@ -36,7 +35,7 @@ using namespace std;
 
 namespace {
     struct _Cache {
-        tbb::spin_mutex lock;
+        PXR_NS::TfSpinMutex lock;
         set<string> data;
     };
 }
@@ -58,7 +57,7 @@ Tf_PythonCallContext(char const *fileName,
 
     string const& fullName = TfStringPrintf("%s.%s", moduleName, functionName);
 
-    tbb::spin_mutex::scoped_lock lock(cache.lock);
+    TfSpinMutex::ScopedLock lock(cache.lock);
     char const* prettyFunctionPtr = cache.data.insert(fullName).first->c_str();
     char const* fileNamePtr = cache.data.insert(fileName).first->c_str();
 

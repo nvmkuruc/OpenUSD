@@ -85,7 +85,7 @@ TfTemplateString::SafeSubstitute(const Mapping& mapping) const
 void
 TfTemplateString::_EmitParseErrors() const
 {
-    tbb::spin_mutex::scoped_lock lock(_data->mutex);
+    TfSpinMutex::ScopedLock lock(_data->mutex);
     TF_FOR_ALL(it, _data->parseErrors)
         TF_CODING_ERROR("%s", it->c_str());
 }
@@ -95,7 +95,7 @@ TfTemplateString::GetEmptyMapping() const
 {
     Mapping mapping;
     if (IsValid()) {
-        tbb::spin_mutex::scoped_lock lock(_data->mutex);
+        TfSpinMutex::ScopedLock lock(_data->mutex);
         TF_FOR_ALL(it, _data->placeholders)
             mapping.insert(make_pair(it->name, std::string()));
     }
@@ -106,7 +106,7 @@ bool
 TfTemplateString::IsValid() const
 {
     _ParseTemplate();
-    tbb::spin_mutex::scoped_lock lock(_data->mutex);
+    TfSpinMutex::ScopedLock lock(_data->mutex);
     return _data->template_.empty() || _data->parseErrors.empty();
 }
 
@@ -114,7 +114,7 @@ vector<string>
 TfTemplateString::GetParseErrors() const
 {
     _ParseTemplate();
-    tbb::spin_mutex::scoped_lock lock(_data->mutex);
+    TfSpinMutex::ScopedLock lock(_data->mutex);
     return _data->parseErrors;
 }
 
@@ -188,7 +188,7 @@ _FindNextPlaceHolder(size_t* pos, vector<string>* errors) const
 void
 TfTemplateString::_ParseTemplate() const
 {
-    tbb::spin_mutex::scoped_lock lock(_data->mutex);
+    TfSpinMutex::ScopedLock lock(_data->mutex);
     if (!_data->parsed) {
         size_t pos = 0;
         while (_FindNextPlaceHolder(&pos, &_data->parseErrors));
@@ -203,7 +203,7 @@ _Evaluate(const Mapping& mapping, vector<string>* errors) const
     string result;
     size_t pos = 0;
 
-    tbb::spin_mutex::scoped_lock lock(_data->mutex);
+    TfSpinMutex::ScopedLock lock(_data->mutex);
 
     TF_FOR_ALL(it, _data->placeholders) {
         // Add template content between the end of the last placeholder (or

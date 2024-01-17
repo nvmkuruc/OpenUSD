@@ -29,8 +29,7 @@
 #include "pxr/pxr.h"
 
 #include "pxr/base/tf/api.h"
-
-#include <tbb/spin_mutex.h>
+#include "pxr/base/tf/spinMutex.h"
 
 #include <map>
 #include <memory>
@@ -139,7 +138,7 @@ private:
         mutable std::vector<_PlaceHolder> placeholders;
         mutable bool parsed;
         mutable std::vector<std::string> parseErrors;
-        mutable tbb::spin_mutex mutex;
+        mutable TfSpinMutex mutex;
     };
 
     std::shared_ptr<_Data> _data;
