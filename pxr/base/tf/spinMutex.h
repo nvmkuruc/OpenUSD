@@ -87,7 +87,18 @@ public:
             Release();
             _mutex = &m;
             Acquire();
-        }            
+        }
+
+        /// If the current scoped lock is acquired, Release() it, then associate
+        /// this lock with \p m and acquire a lock if it is not currently held
+        /// by another thread. Return true if the lock was acquired, or false if
+        /// it was not because another thread held the lock.  This thread must
+        /// not already hold a lock on this mutex.
+        bool TryAcquire(TfSpinMutex &m) {
+            Release();
+            _mutex = &m;
+            return TryAcquire();
+        }
 
         /// Release the currently required lock on the associated mutex.  If
         /// this lock is not currently acquired, silently do nothing.
@@ -103,6 +114,18 @@ public:
             TF_DEV_AXIOM(!_acquired);
             _mutex->Acquire();
             _acquired = true;
+        }
+
+        /// Acquire a lock on this lock's associated mutex if it is not
+        /// currently held by another thread. Return true if the lock was
+        /// acquired, or false if it was not because another thread held the
+        /// lock.  This lock must not already be acquired when calling
+        /// \p TryAcquire(). This thread must not already hold a lock on this
+        /// mutex.
+        bool TryAcquire() {
+            TF_DEV_AXIOM(!_acquired);
+            _acquired = _mutex->TryAcquire();
+            return _acquired;
         }
 
     private:
