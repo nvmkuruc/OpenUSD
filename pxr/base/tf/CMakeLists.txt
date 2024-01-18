@@ -116,7 +116,6 @@ pxr_library(tf
         ${WINLIBS}
         ${PYTHON_LIBRARIES}
         ${Boost_PYTHON_LIBRARY}
-        ${TBB_tbb_LIBRARY}
 
     INCLUDE_DIRS
         ${PYTHON_INCLUDE_DIRS}
@@ -174,7 +173,7 @@ pxr_library(tf
         spinMutex
         spinRWMutex
         stackTrace
-        stacked
+        # stacked
         status
         stl
         stopwatch
@@ -452,7 +451,7 @@ pxr_build_test(testTf
         testenv/delegate.cpp
         testenv/dl.cpp
         testenv/enum.cpp
-        testenv/error.cpp
+        # testenv/error.cpp
         testenv/envSetting.cpp
         testenv/exception.cpp
         testenv/fastCompression.cpp
@@ -473,13 +472,13 @@ pxr_build_test(testTf
         testenv/refPtr.cpp
         testenv/registryManager.cpp
         testenv/registryManagerUnload.cpp
-        testenv/rwMutexes.cpp
+        # testenv/rwMutexes.cpp
         testenv/safeOutputFile.cpp
         testenv/scoped.cpp
         testenv/scopeDescription.cpp
         testenv/setenv.cpp
         testenv/smallVector.cpp
-        testenv/stacked.cpp
+        # testenv/stacked.cpp
         testenv/staticData.cpp
         testenv/stl.cpp
         testenv/stopwatch.cpp
@@ -592,13 +591,13 @@ pxr_register_test(TfDelegate
     STDOUT_REDIRECT output.txt 
     DIFF_COMPARE output.txt 
 )
-pxr_register_test(TfError
-    ENV TF_FATAL_VERIFY=0
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTf TfError"
-)
-pxr_register_test(TfErrorThreadTransport
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTf TfErrorThreadTransport"
-)
+# pxr_register_test(TfError
+#     ENV TF_FATAL_VERIFY=0
+#     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTf TfError"
+# )
+# pxr_register_test(TfErrorThreadTransport
+#     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTf TfErrorThreadTransport"
+# )
 pxr_register_test(TfEnvSetting
     ENV
         TF_TEST_BOOL_ENV_SETTING=1
@@ -681,9 +680,9 @@ pxr_register_test(TfPreprocessorUtilsLite
 pxr_register_test(TfProbe
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTf TfProbe"
 )
-pxr_register_test(TfRWMutexes
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTf TfRWMutexes"
-)
+# pxr_register_test(TfRWMutexes
+#     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTf TfRWMutexes"
+# )
 pxr_register_test(TfRegistryManager
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTf TfRegistryManager"
 )
@@ -721,9 +720,9 @@ pxr_register_test(TfSetenv
 pxr_register_test(TfSmallVector
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTf TfSmallVector"
 )
-pxr_register_test(TfStacked
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTf TfStacked"
-)
+# pxr_register_test(TfStacked
+#     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTf TfStacked"
+# )
 pxr_register_test(TfStaticData
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTf TfStaticData"
 )

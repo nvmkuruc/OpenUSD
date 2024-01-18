@@ -2260,7 +2260,8 @@ if extraPythonPaths:
 
 # Determine list of dependencies that are required based on options
 # user has selected.
-requiredDependencies = [ZLIB, BOOST, TBB]
+#requiredDependencies = [ZLIB, BOOST, TBB]
+requiredDependencies = [ZLIB, BOOST]
 
 if context.buildAlembic:
     if context.enableHDF5:

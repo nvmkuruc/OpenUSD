@@ -53,7 +53,7 @@ option(PXR_ENABLE_NAMESPACES "Enable C++ namespaces." ON)
 option(PXR_PREFER_SAFETY_OVER_SPEED
        "Enable certain checks designed to avoid crashes or out-of-bounds memory reads with malformed input files.  These checks may negatively impact performance."
         ON)
-option(PXR_ENABLE_MALLOC_TAG "Enable mallocTag memory usage tracking." ON)
+option(PXR_ENABLE_MALLOC_TAG "Enable mallocTag memory usage tracking." OFF)
 
 # Determine GFX api
 # Metal only valid on Apple platforms
