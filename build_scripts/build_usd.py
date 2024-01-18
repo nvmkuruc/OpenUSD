@@ -811,8 +811,7 @@ def InstallBoost_Helper(context, force, buildArgs):
             'runtime-link=shared',
             'threading=multi', 
             'variant={variant}'.format(variant=boostBuildVariant),
-            '--with-atomic',
-            '--with-regex'
+            '--with-headers',
         ]
 
         if context.buildPython:
@@ -850,6 +849,8 @@ def InstallBoost_Helper(context, force, buildArgs):
 
         if context.enableOpenVDB:
             b2_settings.append("--with-iostreams")
+            # even though iostreams depends on regex, it doesn't automatically build it
+            b2_settings.append("--with-regex")
 
             # b2 with -sNO_COMPRESSION=1 fails with the following error message:
             #     error: at [...]/boost_1_61_0/tools/build/src/kernel/modules.jam:107
