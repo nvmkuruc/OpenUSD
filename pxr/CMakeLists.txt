@@ -1,7 +1,7 @@
 pxr_core_prologue()
 
 add_subdirectory(base)
-add_subdirectory(usd)
+# add_subdirectory(usd)
 
 if (${PXR_BUILD_IMAGING})
     add_subdirectory(imaging)

@@ -2,12 +2,12 @@ set(DIRS
     arch
     tf
     gf
-    js
-    trace
-    work
-    plug
-    vt
-    ts
+    # js
+    # trace
+    # work
+    # plug
+    # vt
+    # ts
 #    bin
 )
 
