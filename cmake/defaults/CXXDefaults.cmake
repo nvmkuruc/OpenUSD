@@ -106,3 +106,11 @@ if (PXR_PREFER_SAFETY_OVER_SPEED)
 else()
    set(PXR_PREFER_SAFETY_OVER_SPEED "0")
 endif()
+
+
+# Set malloc tag support
+if (PXR_ENABLE_MALLOC_TAG)
+    set(PXR_ENABLE_MALLOC_TAG "1")
+else()
+    set(PXR_ENABLE_MALLOC_TAG "0")
+endif()

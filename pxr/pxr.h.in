@@ -69,4 +69,9 @@ namespace PXR_NS {
 #define PXR_PREFER_SAFETY_OVER_SPEED
 #endif
 
+#if @PXR_ENABLE_MALLOC_TAG@
+#define PXR_ENABLE_MALLOC_TAG
+#endif
+
+
 #endif //PXR_H

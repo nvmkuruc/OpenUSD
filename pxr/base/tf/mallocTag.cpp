@@ -25,6 +25,8 @@
 #include "pxr/pxr.h"
 #include "pxr/base/tf/mallocTag.h"
 
+#ifdef PXR_ENABLE_MALLOC_TAG
+
 #include "pxr/base/tf/bigRWMutex.h"
 #include "pxr/base/tf/diagnostic.h"
 #include "pxr/base/tf/getenv.h"
@@ -58,10 +60,15 @@
 using std::map;
 using std::make_pair;
 using std::pair;
+
+#endif
+
 using std::string;
 using std::vector;
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+#ifdef PXR_ENABLE_MALLOC_TAG
 
 // Change the following line and recompile this file to disable decrementing
 // the allocation counts when freeing memory.
@@ -927,29 +934,37 @@ Tf_MallocPathNode::_BuildTree(Tf_PathNodeChildrenTable const &nodeChildren,
     }
 }
 
+#endif
+
 void
 TfMallocTag::SetDebugMatchList(const std::string& matchList)
 {
+#ifdef PXR_ENABLE_MALLOC_TAG
     if (TfMallocTag::IsInitialized()) {
         TfBigRWMutex::ScopedLock lock(_mallocGlobalData->_mutex);
         _mallocGlobalData->_SetDebugNames(matchList);
     }
+#endif
 }
 
 void
 TfMallocTag::SetCapturedMallocStacksMatchList(const std::string& matchList)
 {
+#ifdef PXR_ENABLE_MALLOC_TAG
     if (TfMallocTag::IsInitialized()) {
         TfBigRWMutex::ScopedLock lock(_mallocGlobalData->_mutex);
         _mallocGlobalData->_SetTraceNames(matchList);
     }
+#endif
 }
 
 vector<vector<uintptr_t> >
 TfMallocTag::GetCapturedMallocStacks()
 {
     vector<vector<uintptr_t> > result;
-    
+
+#ifdef PXR_ENABLE_MALLOC_TAG
+
     if (!TfMallocTag::IsInitialized())
         return result;
 
@@ -969,9 +984,12 @@ TfMallocTag::GetCapturedMallocStacks()
     TF_FOR_ALL(i, traces) {
         result.push_back(i->second.stack);
     }
+#endif
 
     return result;
 }
+
+#ifdef PXR_ENABLE_MALLOC_TAG
 
 void*
 TfMallocTag::_MallocWrapper(size_t nBytes, const void*)
@@ -1079,12 +1097,21 @@ TfMallocTag::_FreeWrapper(void* ptr, const void*)
     _mallocHook.Free(ptr);
 }
 
+#endif
+
 bool
 TfMallocTag::Initialize(string* errMsg)
 {
+#ifdef PXR_ENABLE_MALLOC_TAG
     static bool status = _Initialize(errMsg);
     return status;
+#else
+    *errMsg = "Not built with malloc tag support (PXR_ENABLE_MALLOC_TAG undefined or false)";
+    return false;
+#endif
 }
+
+#ifdef PXR_ENABLE_MALLOC_TAG
 
 static void
 _GetCallSites(TfMallocTag::CallTree::PathNode* node,
@@ -1101,9 +1128,12 @@ _GetCallSites(TfMallocTag::CallTree::PathNode* node,
     }
 }
 
+#endif
+
 bool
 TfMallocTag::GetCallTree(CallTree* tree, bool skipRepeated)
 {
+#ifdef PXR_ENABLE_MALLOC_TAG
     tree->callSites.clear();
     tree->root.nBytes = tree->root.nBytesDirect = 0;
     tree->root.nAllocations = 0;
@@ -1141,27 +1171,40 @@ TfMallocTag::GetCallTree(CallTree* tree, bool skipRepeated)
     }
     else
         return false;
+#else
+    return false;
+#endif
 }
 
 size_t
 TfMallocTag::GetTotalBytes()
 {
+#ifdef PXR_ENABLE_MALLOC_TAG
     if (!_mallocGlobalData) {
         return 0;
     }
 
     return _mallocGlobalData->_totalBytes;
+#else
+    return 0;
+#endif
 }
 
 size_t
 TfMallocTag::GetMaxTotalBytes()
 {
+#ifdef PXR_ENABLE_MALLOC_TAG
     if (!_mallocGlobalData) {
         return 0;
     }
 
     return _mallocGlobalData->_maxTotalBytes;
+#else
+    return 0;
+#endif
 }
+
+#ifdef PXR_ENABLE_MALLOC_TAG
 
 bool
 TfMallocTag::_Initialize(std::string* errMsg)
@@ -1525,12 +1568,15 @@ _ReportCapturedMallocStacks(
     }
 }
 
+#endif
 
 string
 TfMallocTag::CallTree::GetPrettyPrintString(PrintSetting setting,
                                             size_t maxPrintedNodes) const
 {
     string rpt;
+
+#ifdef PXR_ENABLE_MALLOC_TAG
 
     _PrintHeader(&rpt);
 
@@ -1555,6 +1601,7 @@ TfMallocTag::CallTree::GetPrettyPrintString(PrintSetting setting,
     if (setting == CALLSITES || setting == BOTH) {
         _PrintMallocCallSites(&rpt, this->callSites, this->root.nBytes);
     }
+#endif
 
     return rpt;
 }
@@ -1563,8 +1610,10 @@ void
 TfMallocTag::CallTree::Report(
     std::ostream &out) const
 {
+#ifdef PXR_ENABLE_MALLOC_TAG
     const std::string emptyRootName;
     Report(out, emptyRootName);
+#endif
 }
 
 void
@@ -1572,6 +1621,7 @@ TfMallocTag::CallTree::Report(
     std::ostream &out,
     const std::string &rootName) const
 {
+#ifdef PXR_ENABLE_MALLOC_TAG
     out << "\nTree view  ==============\n";
     out << "      inclusive       exclusive\n";
 
@@ -1584,6 +1634,7 @@ TfMallocTag::CallTree::Report(
     if (!this->capturedCallStacks.empty()) {
         _ReportCapturedMallocStacks(out, this->capturedCallStacks);
     }
+#endif
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

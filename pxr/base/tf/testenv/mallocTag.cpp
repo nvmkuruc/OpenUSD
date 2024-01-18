@@ -34,6 +34,8 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
+#ifdef PXR_ENABLE_MALLOC_TAG
+
 // The TfMallocTag code depends upon the Linux memory allocator, ptmalloc3.
 // Turning this test off for any other platforms for now.
 #if defined(ARCH_OS_LINUX)
@@ -324,6 +326,16 @@ Test_TfMallocTag()
 
     return true;
 }
+
+#else
+
+static bool
+Test_TfMallocTag()
+{
+    return true;
+}
+
+#endif
 
 TF_ADD_REGTEST(TfMallocTag);
 

@@ -192,7 +192,11 @@ public:
     /// If \c Initialize() has been successfully called, this function returns
     /// \c true.
     static bool IsInitialized() {
+#ifdef PXR_ENABLE_MALLOC_TAG
         return TfMallocTag::_isInitialized;
+#else
+        return false;
+#endif
     }
 
     /// Return total number of allocated bytes.
@@ -223,9 +227,12 @@ public:
     /// details.
     TF_API static bool GetCallTree(CallTree* tree, bool skipRepeated = true);
 
+#ifdef PXR_ENABLE_MALLOC_TAG
 private:
 
     struct _ThreadData;
+
+#endif
 
 public:
 
@@ -259,6 +266,8 @@ public:
 
         Auto(Auto &&) = delete;
         Auto& operator=(Auto &&) = delete;
+
+#ifdef PXR_ENABLE_MALLOC_TAG
 
         /// Push one or more memory tags onto the local-call stack with names \p
         /// name1 ... \p nameN.  The passed names should be either string
@@ -329,6 +338,12 @@ public:
         _ThreadData* _threadData;
         int _nTags;
 
+#else
+        template <class Str, class... Strs>
+        explicit Auto(Str &&name1, Strs &&... nameN)
+        {}
+#endif
+
         friend class TfMallocTag;
     };
 
@@ -347,12 +362,16 @@ public:
     /// Push() and \c Pop() is ill-advised, which is yet another reason to
     /// prefer using \c TfAutoMallocTag whenever possible.
     static void Push(const std::string& name) {
+#ifdef PXR_ENABLE_MALLOC_TAG
         _Push(name.c_str());
+#endif
     }
 
     /// \overload
     static void Push(const char* name) {
+#ifdef PXR_ENABLE_MALLOC_TAG
         _Push(name);
+#endif
     }
 
     /// Manually pop a tag from the stack.
@@ -361,9 +380,11 @@ public:
     /// TfMallocTag::Auto; it must properly nest with a matching call to \c
     /// Push(), of course.
     static void Pop() {
+#ifdef PXR_ENABLE_MALLOC_TAG
         if (TfMallocTag::_isInitialized) {
             _End();
         }
+#endif
     }
 
     /// Sets the tags to trap in the debugger.
@@ -415,6 +436,8 @@ public:
     /// stacks.
     TF_API static std::vector<std::vector<uintptr_t> > GetCapturedMallocStacks();
 
+#ifdef PXR_ENABLE_MALLOC_TAG
+
 private:
     friend struct _TemporaryDisabler;
 
@@ -442,6 +465,9 @@ private:
     class Tls;
     friend class TfMallocTag::Tls;
     TF_API static std::atomic<bool> _isInitialized;
+
+#endif
+
 };
 
 /// Top-down memory tagging system.
@@ -486,6 +512,8 @@ using TfAutoMallocTag2 = TfMallocTag::Auto;
 //
 PXR_NAMESPACE_CLOSE_SCOPE                                                 
 
+#ifdef PXR_ENABLE_MALLOC_TAG
+
 #define TF_MALLOC_TAG_NEW(name1, name2)                                       \
     /* this is for STL purposes */                                            \
     inline void* operator new(::std::size_t, void* ptr) {                     \
@@ -512,5 +540,11 @@ PXR_NAMESPACE_CLOSE_SCOPE
     inline void operator delete[] (void* ptr, size_t) {                       \
         free(ptr);                                                            \
     }                                                                         \
+
+#else
+
+#define TF_MALLOC_TAG_NEW(name1, name2)
+
+#endif
 
 #endif

@@ -636,7 +636,7 @@ pxr_register_test(TfHash
 pxr_register_test(TfIterator
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTf TfIterator"
 )
-if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND PXR_ENABLE_MALLOC_TAG)
     pxr_register_test(TfMallocTag
         ENV GLIBCXX_FORCE_NEW=1
         COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTf TfMallocTag"

@@ -37,6 +37,8 @@ extern void Tf_DebugInitFromEnvironment();
 
 namespace {
 
+#ifdef PXR_ENABLE_MALLOC_TAG
+
 ARCH_CONSTRUCTOR(Tf_InitConfig, 2, void)
 {
     std::string capture = TfGetenv("TF_MALLOC_TAG_CAPTURE");
@@ -60,6 +62,8 @@ ARCH_CONSTRUCTOR(Tf_InitConfig, 2, void)
         }
     }
 }
+
+#endif
 
 // Run this after registry functions execute.  This is only necessary because
 // of the TF_DEBUG="list" feature which prints the registered names and their
