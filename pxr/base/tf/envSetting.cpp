@@ -113,7 +113,7 @@ public:
             fclose(fp);
         }
                     
-        _printAlerts = TfGetenvBool("TF_ENV_SETTING_ALERTS_ENABLED", true);
+        _printAlerts = TfGetenvBool("PXRBASE_STATIC_TF_ENV_SETTING_ALERTS_ENABLED", false);
         TfSingleton<Tf_EnvSettingRegistry>::SetInstanceConstructed(*this);
         TfRegistryManager::GetInstance().SubscribeTo<Tf_EnvSettingRegistry>();
     }
