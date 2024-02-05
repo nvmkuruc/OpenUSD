@@ -759,22 +759,36 @@ class "PhysicsCurvesDeformableRestShapeAPI"
     )
 }
 
-class "PhysicsDeformableBindPoseAPI"
+class "PhysicsDeformablePoseAPI"
 (
     customData = {
-        string className = "DeformableBindPoseAPI"
+        string className = "DeformablePoseAPI"
+        token apiSchemaType = "multipleApply"
+        token propertyNamespacePrefix = "pose"
     }
 
-    doc = """Defines the pose in which graphical UsdGeomPointBased and
-             deformable simulation meshes are bound to each other. This API is
-             specified on both graphical and simulation meshes."""
+    doc = """Defines a deformable mesh pose which can be used for one or multiple 
+             purposes. Multiple pose APIs can be specified for different purposes."""
 
     inherits = </APISchemaBase>
 )
 {
-    point3f[] physics:bindPoints(
-        displayName = "Bind Pose Points"
-        doc = """The points defining the bind pose of a mesh. The number of
+    token[] physics:purposes(
+        displayName = "Purpose tokens"
+        doc = """The set of purposes this pose is used for.
+                 "bindPose": The pose in which graphical UsdGeomPointBased and
+                 deformable simulation meshes are bound to each other. The purpose
+                 and pose needs to be specified on both graphical and simulation 
+                 meshes.
+                 "selfCollisionFilterPose": The pose used for self collision 
+                 filtering. Ovelapping domains of the mesh in this pose are excluded 
+                 from self collision."""
+        allowedTokens = ["bindPose","selfCollisionFilterPose"]
+    )
+
+    point3f[] physics:posePoints(
+        displayName = "Pose Points"
+        doc = """The points defining the pose of a mesh. The number of
                  points needs to match the number of points in the mesh."""
     )
 }
