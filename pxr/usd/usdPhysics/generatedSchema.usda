@@ -355,7 +355,7 @@ class "PhysicsDeformableRestShapeAPI" (
         doc = "Describes shape in (local) space for a PhysicsDeformable."
     )
     int4[] physics:restTetIndices (
-        doc = """Per tetrahedral element indices into restTetIndices to describe
+        doc = """Per tetrahedral element indices into restShapePoints to describe
         the rest shape of each tetrahedron. This allows for restTetIndices to
         have length up to 4*len(restShapePoints) to allow for disjoint per-element rest shape description, or a more compact array when all tetrahedra share
         conincident points to describe the rest shape of the PhysicsDeformable tetmesh."""
@@ -375,14 +375,6 @@ class "PhysicsSurfaceDeformableRestShapeAPI" (
         doc = """Pairs of vertex indices used to identify specific edges in
                  a triangle mesh to set using edgeBendAngles."""
     )
-    int3[] physics:restFaceIndices (
-        doc = """Per triangle element indices into restShapePoints to describe
-                 the rest shape of each triangle face. This allows for
-                 restFaceIndices to have length up to 4*len(restShapePoints) to
-                 allow for a disjoint per-element rest shape description, or a
-                 more compact array when all tetrahedra share conincident points
-                 to describe the rest shape of the PhysicsDeformable tetmesh."""
-    )
     point3f[] physics:restShapePoints (
         doc = """Describes per triangle planar shape in (local) space for a
                  SurfaceDeformable. While panel based cloth systems may only
@@ -391,6 +383,14 @@ class "PhysicsSurfaceDeformableRestShapeAPI" (
                  support non-planar shells with a rest shape described in 3D.
                  One can still use this array for per-face UVs with a little
                  wasted space."""
+    )
+    int3[] physics:restTriIndices (
+        doc = """Per triangle element indices into restShapePoints to describe
+                 the rest shape of each triangle face. This allows for
+                 restTriIndices to have length up to 3*len(restShapePoints) to
+                 allow for a disjoint per-element rest shape description, or a
+                 more compact array when all triangles share conincident points
+                 to describe the rest shape of the PhysicsDeformable triangle mesh."""
     )
 }
 
@@ -416,6 +416,30 @@ class "PhysicsCurvesDeformableRestShapeAPI" (
     )
     point3f[] physics:restPoints (
         doc = "Describes the rest shape in (local) space for a UsdGeomBasisCurves or a UsdGeomBasisCurvesNetwork."
+    )
+}
+
+class "PhysicsDeformablePoseAPI" (
+    doc = """Defines a deformable mesh pose which can be used for one or multiple 
+             purposes. Multiple pose APIs can be specified for different purposes."""
+)
+{
+    point3f[] pose:__INSTANCE_NAME__:physics:posePoints (
+        displayName = "Pose Points"
+        doc = """The points defining the pose of a mesh. The number of
+                 points needs to match the number of points in the mesh."""
+    )
+    token[] pose:__INSTANCE_NAME__:physics:purposes (
+        allowedTokens = ["bindPose", "selfCollisionFilterPose"]
+        displayName = "Purpose tokens"
+        doc = '''The set of purposes this pose is used for.
+                 "bindPose": The pose in which graphical UsdGeomPointBased and
+                 deformable simulation meshes are bound to each other. The purpose
+                 and pose needs to be specified on both graphical and simulation 
+                 meshes.
+                 "selfCollisionFilterPose": The pose used for self collision 
+                 filtering. Ovelapping domains of the mesh in this pose are excluded 
+                 from self collision.'''
     )
 }
 
@@ -521,13 +545,6 @@ class PhysicsVtxTriAttachment "PhysicsVtxTriAttachment" (
             Range: [0, inf)
             Units: mass/second"""
     )
-    vector3f[] physics:faceCoords (
-        displayName = "Face Coordinates"
-        doc = """Face relative coordinates of the form U,V portion of
-                 barycentric UVW coordinates and a normal offset from the
-                 triangle. There should be exactly one set of face coordinates
-                 corresponding to each vertex index and face index."""
-    )
     float physics:stiffness = inf (
         displayName = "Stiffness"
         doc = '''Distance proportional factor for the attachment.
@@ -535,10 +552,17 @@ class PhysicsVtxTriAttachment "PhysicsVtxTriAttachment" (
             Range: [0, inf)
             Units: mass/second/second.'''
     )
+    vector3f[] physics:triCoords (
+        displayName = "Triangle Coordinates"
+        doc = """Triangle relative coordinates of the form U,V portion of
+                 barycentric UVW coordinates and a normal offset from the
+                 triangle. There should be exactly one set of triangle coordinates
+                 corresponding to each vertex index and triangle index."""
+    )
     int[] physics:triIndices (
         displayName = "Triangle Indices"
-        doc = """Array of face indices from triSrc. There should be exactly one
-        face index for each vertex index in vtxIndices."""
+        doc = """Array of triangle indices from triSrc. There should be exactly one
+        triangle index for each vertex index in vtxIndices."""
     )
     rel physics:triSrc (
         displayName = "Triangle Source"
@@ -605,12 +629,6 @@ class PhysicsVtxTetAttachment "PhysicsVtxTetAttachment" (
         displayName = "Attachment Enabled"
         doc = "Determines if this PhysicsVtxTetAttachment is enabled."
     )
-    vector3f[] physics:baryCoords (
-        displayName = "Barycenrtic Coordinates"
-        doc = """Barycentric coordinates of the form U,V,W of the point wrt.
-                 the points of the tetrahedra. There should be exactly one
-                 set of face coordinates corresponding to each vertex index and tet index."""
-    )
     float physics:damping = 0 (
         displayName = "Damping"
         doc = """Proportional factor of the force acting against the direction
@@ -624,6 +642,12 @@ class PhysicsVtxTetAttachment "PhysicsVtxTetAttachment" (
             "inf" implies a hard constraint when the simulator can support it.
             Range: [0, inf)
             Units: mass/second/second.'''
+    )
+    vector3f[] physics:tetCoords (
+        displayName = "Tetrahedra Coordinates"
+        doc = """Barycentric coordinates of the form U,V,W of the point wrt.
+                 the points of the tetrahedra. There should be exactly one
+                 set of tetrahedra coordinates corresponding to each vertex index and tet index."""
     )
     int[] physics:tetIndices (
         displayName = "Tetrahedron Indices"
@@ -685,7 +709,7 @@ class PhysicsVtxTetAttachment "PhysicsVtxTetAttachment" (
     )
 }
 
-class PhysicsVtxCurveAttachment "PhysicsVtxCurveAttachment" (
+class PhysicsVtxCrvAttachment "PhysicsVtxCrvAttachment" (
     doc = """Describes a fixed binding attachment between vertices and curves
     of two suitable deformable body simulation meshes."""
 )
@@ -694,20 +718,23 @@ class PhysicsVtxCurveAttachment "PhysicsVtxCurveAttachment" (
         displayName = "Attachment Enabled"
         doc = "Determines if this PhysicsVtxCurveAttachment is enabled."
     )
-    float[] physics:curveSegmentCoords (
+    vector3f[] physics:crvSegCoords (
         displayName = "Curve Segment Coordinates"
-        doc = """U coordinate specifying the interpolated position within the
-                 curve segment. There should be exactly one coordinate for each
-                 curve segment in curveSegmentIndices."""
+        doc = """Segment relative coordinates of the form U (parametric coordinate 
+                 along the segment), VW (offset vector defined in the coordinate frame
+                 spanned by {N, NxT}, where N is the interpolated unit curve normal
+                 and T is the unit vector tangential to the segment). 
+                 There should be exactly one coordinate set for each
+                 curve segment in crvSegIndices."""
     )
-    int2[] physics:curveSegmentIndices (
+    int2[] physics:crvSegIndices (
         displayName = "Curve Segment Indices"
-        doc = """Array of (curve index, segment index) pairs from curveSrc.
+        doc = """Array of (curve index, segment index) pairs from crvSrc.
          There should be exactly one pair for each vertex index in vtxIndices.
-         The curve index specifies the index of the curve from curveSrc, and the
+         The curve index specifies the index of the curve from crvSrc, and the
          segment index identifies the segment within the curve."""
     )
-    rel physics:curveSrc (
+    rel physics:crvSrc (
         displayName = "Curve Source"
         doc = "Relationship to a single UsdGeomBasisCurves or UsdGeomBasisCurvesNetwork the curves belong to. This should always point to a deformable body's simulation mesh."
     )
@@ -861,8 +888,106 @@ class PhysicsVtxXformAttachment "PhysicsVtxXformAttachment" (
     )
 }
 
+class PhysicsTriTriAttachment "PhysicsTriTriAttachment" (
+    doc = """Describes a fixed binding attachment between a point on a triangle face and
+    a point on another triangle face of two suitable deformable body simulation meshes."""
+)
+{
+    bool physics:attachmentEnabled = 1 (
+        displayName = "Attachment Enabled"
+        doc = "Determines if this PhysicsTriTriAttachment is enabled."
+    )
+    float physics:damping = 0 (
+        displayName = "Damping"
+        doc = """Proportional factor of the force acting against the direction
+                 of relative motion.
+            Range: [0, inf)
+            Units: mass/second"""
+    )
+    float physics:stiffness = inf (
+        displayName = "Stiffness"
+        doc = '''Distance proportional factor for the attachment.
+            "inf" implies a hard constraint when the simulator can support it.
+            Range: [0, inf)
+            Units: mass/second/second.'''
+    )
+    vector3f[] physics:triCoords0 (
+        displayName = "Triangle Coordinates0"
+        doc = """Triangle relative coordinates of the form U,V portion of
+                 barycentric UVW coordinates and a normal offset from the
+                 triangle. There should be exactly one set of triangle coordinates
+                 corresponding to each entry in triIndices0."""
+    )
+    vector3f[] physics:triCoords1 (
+        displayName = "Triangle Coordinates1"
+        doc = """Triangle relative coordinates of the form U,V portion of
+                 barycentric UVW coordinates and a normal offset from the
+                 triangle. There should be exactly one set of triangle coordinates
+                 corresponding to each entry in triIndices1."""
+    )
+    int[] physics:triIndices0 (
+        displayName = "Triangle Indices0"
+        doc = "Array of triangle indices from triSrc0"
+    )
+    int[] physics:triIndices1 (
+        displayName = "Triangle Indices1"
+        doc = """Array of triangle indices from triSrc1. There should be exactly one
+        triangle index for each triangle index in triIndices0."""
+    )
+    rel physics:triSrc0 (
+        displayName = "Triangle Source0"
+        doc = """Relationship to a single UsdGeomMesh or UsdGeomTetMesh surface the triangle faces
+                 belong to. This should always point to a deformable body's simulation mesh"""
+    )
+    rel physics:triSrc1 (
+        displayName = "Triangle Source1"
+        doc = """Relationship to a single UsdGeomMesh or UsdGeomTetMesh surface the triangle faces
+                 belong to. This should always point to a deformable body's simulation mesh"""
+    )
+    rel proxyPrim (
+        doc = '''The proxyPrim relationship allows us to link a
+        prim whose purpose is "render" to its (single target)
+        purpose="proxy" prim.  This is entirely optional, but can be
+        useful in several scenarios:
+
+        - In a pipeline that does pruning (for complexity management)
+        by deactivating prims composed from asset references, when we
+        deactivate a purpose="render" prim, we will be able to discover
+        and additionally deactivate its associated purpose="proxy" prim,
+        so that preview renders reflect the pruning accurately.
+
+        - DCC importers may be able to make more aggressive optimizations
+        for interactive processing and display if they can discover the proxy
+        for a given render prim.
+
+        - With a little more work, a Hydra-based application will be able
+        to map a picked proxy prim back to its render geometry for selection.
+
+        \\note It is only valid to author the proxyPrim relationship on
+        prims whose purpose is "render".'''
+    )
+    uniform token purpose = "default" (
+        allowedTokens = ["default", "render", "proxy", "guide"]
+        doc = """Purpose is a classification of geometry into categories that
+        can each be independently included or excluded from traversals of prims
+        on a stage, such as rendering or bounding-box computation traversals.
+
+        See for more detail about how
+        purpose is computed and used."""
+    )
+    token visibility = "inherited" (
+        allowedTokens = ["inherited", "invisible"]
+        doc = '''Visibility is meant to be the simplest form of "pruning"
+        visibility that is supported by most DCC apps.  Visibility is
+        animatable, allowing a sub-tree of geometry to be present for some
+        segment of a shot, and absent from others; unlike the action of
+        deactivating geometry prims, invisible geometry is still
+        available for inspection, for positioning, for defining volumes, etc.'''
+    )
+}
+
 class PhysicsElementCollisionFilter "PhysicsElementCollisionFilter" (
-    doc = """Describes a collision filter based on vertices, segments or edges and faces
+    doc = """Describes a collision filter based on vertices, segments or edges and triangles
     for two suitable GPrims which are the source of the elements. At least one source primitive needs to be a deformable body's simulation mesh, and one can be either a rigid body or collider.
     """
 )

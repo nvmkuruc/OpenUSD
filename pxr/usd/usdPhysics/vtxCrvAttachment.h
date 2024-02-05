@@ -21,10 +21,10 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef USDPHYSICS_GENERATED_VXFORMATTACH_H
-#define USDPHYSICS_GENERATED_VXFORMATTACH_H
+#ifndef USDPHYSICS_GENERATED_VTXCRVATTACHMENT_H
+#define USDPHYSICS_GENERATED_VTXCRVATTACHMENT_H
 
-/// \file usdPhysics/vXformAttach.h
+/// \file usdPhysics/vtxCrvAttachment.h
 
 #include "pxr/pxr.h"
 #include "pxr/usd/usdPhysics/api.h"
@@ -47,18 +47,15 @@ PXR_NAMESPACE_OPEN_SCOPE
 class SdfAssetPath;
 
 // -------------------------------------------------------------------------- //
-// PHYSICSVTXXFORMATTACHMENT                                                  //
+// PHYSICSVTXCRVATTACHMENT                                                    //
 // -------------------------------------------------------------------------- //
 
-/// \class UsdPhysicsVXformAttach
+/// \class UsdPhysicsVtxCrvAttachment
 ///
-/// Describes a fixed binding attachment between vertices and an xformable
-/// coordinate frame. The vertices must always be from a deformable
-/// body's simulation mesh. If the xformable is a rigid body or a prim of
-/// the subtree of a rigid body the attachment is treated by the solver as
-/// a two way constraint.
+/// Describes a fixed binding attachment between vertices and curves
+/// of two suitable deformable body simulation meshes.
 ///
-class UsdPhysicsVXformAttach : public UsdGeomImageable
+class UsdPhysicsVtxCrvAttachment : public UsdGeomImageable
 {
 public:
     /// Compile time constant representing what kind of schema this class is.
@@ -66,26 +63,26 @@ public:
     /// \sa UsdSchemaKind
     static const UsdSchemaKind schemaKind = UsdSchemaKind::ConcreteTyped;
 
-    /// Construct a UsdPhysicsVXformAttach on UsdPrim \p prim .
-    /// Equivalent to UsdPhysicsVXformAttach::Get(prim.GetStage(), prim.GetPath())
+    /// Construct a UsdPhysicsVtxCrvAttachment on UsdPrim \p prim .
+    /// Equivalent to UsdPhysicsVtxCrvAttachment::Get(prim.GetStage(), prim.GetPath())
     /// for a \em valid \p prim, but will not immediately throw an error for
     /// an invalid \p prim
-    explicit UsdPhysicsVXformAttach(const UsdPrim& prim=UsdPrim())
+    explicit UsdPhysicsVtxCrvAttachment(const UsdPrim& prim=UsdPrim())
         : UsdGeomImageable(prim)
     {
     }
 
-    /// Construct a UsdPhysicsVXformAttach on the prim held by \p schemaObj .
-    /// Should be preferred over UsdPhysicsVXformAttach(schemaObj.GetPrim()),
+    /// Construct a UsdPhysicsVtxCrvAttachment on the prim held by \p schemaObj .
+    /// Should be preferred over UsdPhysicsVtxCrvAttachment(schemaObj.GetPrim()),
     /// as it preserves SchemaBase state.
-    explicit UsdPhysicsVXformAttach(const UsdSchemaBase& schemaObj)
+    explicit UsdPhysicsVtxCrvAttachment(const UsdSchemaBase& schemaObj)
         : UsdGeomImageable(schemaObj)
     {
     }
 
     /// Destructor.
     USDPHYSICS_API
-    virtual ~UsdPhysicsVXformAttach();
+    virtual ~UsdPhysicsVtxCrvAttachment();
 
     /// Return a vector of names of all pre-declared attributes for this schema
     /// class and all its ancestor classes.  Does not include attributes that
@@ -94,17 +91,17 @@ public:
     static const TfTokenVector &
     GetSchemaAttributeNames(bool includeInherited=true);
 
-    /// Return a UsdPhysicsVXformAttach holding the prim adhering to this
+    /// Return a UsdPhysicsVtxCrvAttachment holding the prim adhering to this
     /// schema at \p path on \p stage.  If no prim exists at \p path on
     /// \p stage, or if the prim at that path does not adhere to this schema,
     /// return an invalid schema object.  This is shorthand for the following:
     ///
     /// \code
-    /// UsdPhysicsVXformAttach(stage->GetPrimAtPath(path));
+    /// UsdPhysicsVtxCrvAttachment(stage->GetPrimAtPath(path));
     /// \endcode
     ///
     USDPHYSICS_API
-    static UsdPhysicsVXformAttach
+    static UsdPhysicsVtxCrvAttachment
     Get(const UsdStagePtr &stage, const SdfPath &path);
 
     /// Attempt to ensure a \a UsdPrim adhering to this schema at \p path
@@ -130,7 +127,7 @@ public:
     /// the opinion at the current EditTarget.
     ///
     USDPHYSICS_API
-    static UsdPhysicsVXformAttach
+    static UsdPhysicsVtxCrvAttachment
     Define(const UsdStagePtr &stage, const SdfPath &path);
 
 protected:
@@ -156,7 +153,7 @@ public:
     // --------------------------------------------------------------------- //
     // ATTACHMENTENABLED 
     // --------------------------------------------------------------------- //
-    /// Determines if this PhysicsVtxXformAttachment is enabled.
+    /// Determines if this PhysicsVtxCurveAttachment is enabled.
     ///
     /// | ||
     /// | -- | -- |
@@ -198,25 +195,55 @@ public:
 
 public:
     // --------------------------------------------------------------------- //
-    // PHYSICSLOCALPOSITIONS 
+    // PHYSICSCRVSEGINDICES 
     // --------------------------------------------------------------------- //
-    /// Spatial offsets of the attachment locations in the coordinate frame described by xformSrc.
+    /// Array of (curve index, segment index) pairs from crvSrc.
+    /// There should be exactly one pair for each vertex index in vtxIndices.
+    /// The curve index specifies the index of the curve from crvSrc, and the
+    /// segment index identifies the segment within the curve.
     ///
     /// | ||
     /// | -- | -- |
-    /// | Declaration | `point3f[] physics:localPositions` |
-    /// | C++ Type | VtArray<GfVec3f> |
-    /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Point3fArray |
+    /// | Declaration | `int2[] physics:crvSegIndices` |
+    /// | C++ Type | VtArray<GfVec2i> |
+    /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Int2Array |
     USDPHYSICS_API
-    UsdAttribute GetPhysicsLocalPositionsAttr() const;
+    UsdAttribute GetPhysicsCrvSegIndicesAttr() const;
 
-    /// See GetPhysicsLocalPositionsAttr(), and also 
+    /// See GetPhysicsCrvSegIndicesAttr(), and also 
     /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
     USDPHYSICS_API
-    UsdAttribute CreatePhysicsLocalPositionsAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+    UsdAttribute CreatePhysicsCrvSegIndicesAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+
+public:
+    // --------------------------------------------------------------------- //
+    // PHYSICSCRVSEGCOORDS 
+    // --------------------------------------------------------------------- //
+    /// Segment relative coordinates of the form U (parametric coordinate 
+    /// along the segment), VW (offset vector defined in the coordinate frame
+    /// spanned by {N, NxT}, where N is the interpolated unit curve normal
+    /// and T is the unit vector tangential to the segment). 
+    /// There should be exactly one coordinate set for each
+    /// curve segment in crvSegIndices.
+    ///
+    /// | ||
+    /// | -- | -- |
+    /// | Declaration | `vector3f[] physics:crvSegCoords` |
+    /// | C++ Type | VtArray<GfVec3f> |
+    /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Vector3fArray |
+    USDPHYSICS_API
+    UsdAttribute GetPhysicsCrvSegCoordsAttr() const;
+
+    /// See GetPhysicsCrvSegCoordsAttr(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    USDPHYSICS_API
+    UsdAttribute CreatePhysicsCrvSegCoordsAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
     // --------------------------------------------------------------------- //
@@ -285,17 +312,17 @@ public:
 
 public:
     // --------------------------------------------------------------------- //
-    // XFORMSRC 
+    // CRVSRC 
     // --------------------------------------------------------------------- //
-    /// Relationship to a single UsdGeomXformable.
+    /// Relationship to a single UsdGeomBasisCurves or UsdGeomBasisCurvesNetwork the curves belong to. This should always point to a deformable body's simulation mesh.
     ///
     USDPHYSICS_API
-    UsdRelationship GetXformSrcRel() const;
+    UsdRelationship GetCrvSrcRel() const;
 
-    /// See GetXformSrcRel(), and also 
+    /// See GetCrvSrcRel(), and also 
     /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create
     USDPHYSICS_API
-    UsdRelationship CreateXformSrcRel() const;
+    UsdRelationship CreateCrvSrcRel() const;
 
 public:
     // ===================================================================== //

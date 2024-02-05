@@ -21,10 +21,10 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef USDPHYSICS_GENERATED_VTXVTXATTACH_H
-#define USDPHYSICS_GENERATED_VTXVTXATTACH_H
+#ifndef USDPHYSICS_GENERATED_VTXTETATTACHMENT_H
+#define USDPHYSICS_GENERATED_VTXTETATTACHMENT_H
 
-/// \file usdPhysics/vtxVtxAttach.h
+/// \file usdPhysics/vtxTetAttachment.h
 
 #include "pxr/pxr.h"
 #include "pxr/usd/usdPhysics/api.h"
@@ -47,18 +47,15 @@ PXR_NAMESPACE_OPEN_SCOPE
 class SdfAssetPath;
 
 // -------------------------------------------------------------------------- //
-// PHYSICSVTXVTXATTACHMENT                                                    //
+// PHYSICSVTXTETATTACHMENT                                                    //
 // -------------------------------------------------------------------------- //
 
-/// \class UsdPhysicsVtxVtxAttach
+/// \class UsdPhysicsVtxTetAttachment
 ///
-/// Describes a fixed binding attachment between vertices of two
-/// suitable deformable body simulation meshes. The length of
-/// vtxIndices0 should always equal that of vtxIndices1. To express
-/// multiple connections to the same vertex, use multiple instances
-/// of PhysicsVtxVtxAttachment.
+/// Describes a fixed binding attachment between vertices and tetrahedra
+/// of two suitable deformable body simulation meshes.
 ///
-class UsdPhysicsVtxVtxAttach : public UsdGeomImageable
+class UsdPhysicsVtxTetAttachment : public UsdGeomImageable
 {
 public:
     /// Compile time constant representing what kind of schema this class is.
@@ -66,26 +63,26 @@ public:
     /// \sa UsdSchemaKind
     static const UsdSchemaKind schemaKind = UsdSchemaKind::ConcreteTyped;
 
-    /// Construct a UsdPhysicsVtxVtxAttach on UsdPrim \p prim .
-    /// Equivalent to UsdPhysicsVtxVtxAttach::Get(prim.GetStage(), prim.GetPath())
+    /// Construct a UsdPhysicsVtxTetAttachment on UsdPrim \p prim .
+    /// Equivalent to UsdPhysicsVtxTetAttachment::Get(prim.GetStage(), prim.GetPath())
     /// for a \em valid \p prim, but will not immediately throw an error for
     /// an invalid \p prim
-    explicit UsdPhysicsVtxVtxAttach(const UsdPrim& prim=UsdPrim())
+    explicit UsdPhysicsVtxTetAttachment(const UsdPrim& prim=UsdPrim())
         : UsdGeomImageable(prim)
     {
     }
 
-    /// Construct a UsdPhysicsVtxVtxAttach on the prim held by \p schemaObj .
-    /// Should be preferred over UsdPhysicsVtxVtxAttach(schemaObj.GetPrim()),
+    /// Construct a UsdPhysicsVtxTetAttachment on the prim held by \p schemaObj .
+    /// Should be preferred over UsdPhysicsVtxTetAttachment(schemaObj.GetPrim()),
     /// as it preserves SchemaBase state.
-    explicit UsdPhysicsVtxVtxAttach(const UsdSchemaBase& schemaObj)
+    explicit UsdPhysicsVtxTetAttachment(const UsdSchemaBase& schemaObj)
         : UsdGeomImageable(schemaObj)
     {
     }
 
     /// Destructor.
     USDPHYSICS_API
-    virtual ~UsdPhysicsVtxVtxAttach();
+    virtual ~UsdPhysicsVtxTetAttachment();
 
     /// Return a vector of names of all pre-declared attributes for this schema
     /// class and all its ancestor classes.  Does not include attributes that
@@ -94,17 +91,17 @@ public:
     static const TfTokenVector &
     GetSchemaAttributeNames(bool includeInherited=true);
 
-    /// Return a UsdPhysicsVtxVtxAttach holding the prim adhering to this
+    /// Return a UsdPhysicsVtxTetAttachment holding the prim adhering to this
     /// schema at \p path on \p stage.  If no prim exists at \p path on
     /// \p stage, or if the prim at that path does not adhere to this schema,
     /// return an invalid schema object.  This is shorthand for the following:
     ///
     /// \code
-    /// UsdPhysicsVtxVtxAttach(stage->GetPrimAtPath(path));
+    /// UsdPhysicsVtxTetAttachment(stage->GetPrimAtPath(path));
     /// \endcode
     ///
     USDPHYSICS_API
-    static UsdPhysicsVtxVtxAttach
+    static UsdPhysicsVtxTetAttachment
     Get(const UsdStagePtr &stage, const SdfPath &path);
 
     /// Attempt to ensure a \a UsdPrim adhering to this schema at \p path
@@ -130,7 +127,7 @@ public:
     /// the opinion at the current EditTarget.
     ///
     USDPHYSICS_API
-    static UsdPhysicsVtxVtxAttach
+    static UsdPhysicsVtxTetAttachment
     Define(const UsdStagePtr &stage, const SdfPath &path);
 
 protected:
@@ -156,7 +153,7 @@ public:
     // --------------------------------------------------------------------- //
     // ATTACHMENTENABLED 
     // --------------------------------------------------------------------- //
-    /// Determines if this PhysicsVtxVtxAttachment is enabled.
+    /// Determines if this PhysicsVtxTetAttachment is enabled.
     ///
     /// | ||
     /// | -- | -- |
@@ -176,47 +173,72 @@ public:
 
 public:
     // --------------------------------------------------------------------- //
-    // PHYSICSVTXINDICES0 
+    // PHYSICSVTXINDICES 
     // --------------------------------------------------------------------- //
-    /// Array of vertex indices from vtxSrc0. 
+    /// Array of vertex indices from vtxSrc
     ///
     /// | ||
     /// | -- | -- |
-    /// | Declaration | `int[] physics:vtxIndices0` |
+    /// | Declaration | `int[] physics:vtxIndices` |
     /// | C++ Type | VtArray<int> |
     /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->IntArray |
     USDPHYSICS_API
-    UsdAttribute GetPhysicsVtxIndices0Attr() const;
+    UsdAttribute GetPhysicsVtxIndicesAttr() const;
 
-    /// See GetPhysicsVtxIndices0Attr(), and also 
+    /// See GetPhysicsVtxIndicesAttr(), and also 
     /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
     USDPHYSICS_API
-    UsdAttribute CreatePhysicsVtxIndices0Attr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+    UsdAttribute CreatePhysicsVtxIndicesAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
     // --------------------------------------------------------------------- //
-    // PHYSICSVTXINDICES1 
+    // PHYSICSTETINDICES 
     // --------------------------------------------------------------------- //
-    /// Array of vertex indices from vtxSrc1.
+    /// Array of tetrahedron indices from tetSrc. There should be exactly one
+    /// tet index for each vertex index in vtxIndices.
     ///
     /// | ||
     /// | -- | -- |
-    /// | Declaration | `int[] physics:vtxIndices1` |
+    /// | Declaration | `int[] physics:tetIndices` |
     /// | C++ Type | VtArray<int> |
     /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->IntArray |
     USDPHYSICS_API
-    UsdAttribute GetPhysicsVtxIndices1Attr() const;
+    UsdAttribute GetPhysicsTetIndicesAttr() const;
 
-    /// See GetPhysicsVtxIndices1Attr(), and also 
+    /// See GetPhysicsTetIndicesAttr(), and also 
     /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
     USDPHYSICS_API
-    UsdAttribute CreatePhysicsVtxIndices1Attr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+    UsdAttribute CreatePhysicsTetIndicesAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+
+public:
+    // --------------------------------------------------------------------- //
+    // PHYSICSTETCOORDS 
+    // --------------------------------------------------------------------- //
+    /// Barycentric coordinates of the form U,V,W of the point wrt.
+    /// the points of the tetrahedra. There should be exactly one
+    /// set of tetrahedra coordinates corresponding to each vertex index and tet index.
+    ///
+    /// | ||
+    /// | -- | -- |
+    /// | Declaration | `vector3f[] physics:tetCoords` |
+    /// | C++ Type | VtArray<GfVec3f> |
+    /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Vector3fArray |
+    USDPHYSICS_API
+    UsdAttribute GetPhysicsTetCoordsAttr() const;
+
+    /// See GetPhysicsTetCoordsAttr(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    USDPHYSICS_API
+    UsdAttribute CreatePhysicsTetCoordsAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
     // --------------------------------------------------------------------- //
@@ -270,33 +292,32 @@ public:
 
 public:
     // --------------------------------------------------------------------- //
-    // VTXSRC0 
+    // VTXSRC 
     // --------------------------------------------------------------------- //
     /// Relationship to a single UsdGeomPointBased the vertices
     /// belongs to. This should always point to a deformable body's simulation mesh.
     ///
     USDPHYSICS_API
-    UsdRelationship GetVtxSrc0Rel() const;
+    UsdRelationship GetVtxSrcRel() const;
 
-    /// See GetVtxSrc0Rel(), and also 
+    /// See GetVtxSrcRel(), and also 
     /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create
     USDPHYSICS_API
-    UsdRelationship CreateVtxSrc0Rel() const;
+    UsdRelationship CreateVtxSrcRel() const;
 
 public:
     // --------------------------------------------------------------------- //
-    // VTXSRC1 
+    // TETSRC 
     // --------------------------------------------------------------------- //
-    /// Relationship to a single UsdGeomPointBased the vertices
-    /// belongs to. This should always point to a deformable body's simulation mesh.
+    /// Relationship to a single TetMesh which the tetrahedra belong to. This should always point to a deformable body's simulation mesh.
     ///
     USDPHYSICS_API
-    UsdRelationship GetVtxSrc1Rel() const;
+    UsdRelationship GetTetSrcRel() const;
 
-    /// See GetVtxSrc1Rel(), and also 
+    /// See GetTetSrcRel(), and also 
     /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create
     USDPHYSICS_API
-    UsdRelationship CreateVtxSrc1Rel() const;
+    UsdRelationship CreateTetSrcRel() const;
 
 public:
     // ===================================================================== //

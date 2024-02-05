@@ -21,7 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/usdPhysics/vtxVtxAttach.h"
+#include "pxr/usd/usdPhysics/vtxXformAttachment.h"
 #include "pxr/usd/usd/schemaBase.h"
 
 #include "pxr/usd/sdf/primSpec.h"
@@ -50,57 +50,57 @@ WRAP_CUSTOM;
 
         
 static UsdAttribute
-_CreateAttachmentEnabledAttr(UsdPhysicsVtxVtxAttach &self,
+_CreateAttachmentEnabledAttr(UsdPhysicsVtxXformAttachment &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreateAttachmentEnabledAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Bool), writeSparsely);
 }
         
 static UsdAttribute
-_CreatePhysicsVtxIndices0Attr(UsdPhysicsVtxVtxAttach &self,
+_CreatePhysicsVtxIndicesAttr(UsdPhysicsVtxXformAttachment &self,
                                       object defaultVal, bool writeSparsely) {
-    return self.CreatePhysicsVtxIndices0Attr(
+    return self.CreatePhysicsVtxIndicesAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->IntArray), writeSparsely);
 }
         
 static UsdAttribute
-_CreatePhysicsVtxIndices1Attr(UsdPhysicsVtxVtxAttach &self,
+_CreatePhysicsLocalPositionsAttr(UsdPhysicsVtxXformAttachment &self,
                                       object defaultVal, bool writeSparsely) {
-    return self.CreatePhysicsVtxIndices1Attr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->IntArray), writeSparsely);
+    return self.CreatePhysicsLocalPositionsAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Point3fArray), writeSparsely);
 }
         
 static UsdAttribute
-_CreateStiffnessAttr(UsdPhysicsVtxVtxAttach &self,
+_CreateStiffnessAttr(UsdPhysicsVtxXformAttachment &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreateStiffnessAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float), writeSparsely);
 }
         
 static UsdAttribute
-_CreateDampingAttr(UsdPhysicsVtxVtxAttach &self,
+_CreateDampingAttr(UsdPhysicsVtxXformAttachment &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreateDampingAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float), writeSparsely);
 }
 
 static std::string
-_Repr(const UsdPhysicsVtxVtxAttach &self)
+_Repr(const UsdPhysicsVtxXformAttachment &self)
 {
     std::string primRepr = TfPyRepr(self.GetPrim());
     return TfStringPrintf(
-        "UsdPhysics.VtxVtxAttach(%s)",
+        "UsdPhysics.VtxXformAttachment(%s)",
         primRepr.c_str());
 }
 
 } // anonymous namespace
 
-void wrapUsdPhysicsVtxVtxAttach()
+void wrapUsdPhysicsVtxXformAttachment()
 {
-    typedef UsdPhysicsVtxVtxAttach This;
+    typedef UsdPhysicsVtxXformAttachment This;
 
     class_<This, bases<UsdGeomImageable> >
-        cls("VtxVtxAttach");
+        cls("VtxXformAttachment");
 
     cls
         .def(init<UsdPrim>(arg("prim")))
@@ -133,17 +133,17 @@ void wrapUsdPhysicsVtxVtxAttach()
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
         
-        .def("GetPhysicsVtxIndices0Attr",
-             &This::GetPhysicsVtxIndices0Attr)
-        .def("CreatePhysicsVtxIndices0Attr",
-             &_CreatePhysicsVtxIndices0Attr,
+        .def("GetPhysicsVtxIndicesAttr",
+             &This::GetPhysicsVtxIndicesAttr)
+        .def("CreatePhysicsVtxIndicesAttr",
+             &_CreatePhysicsVtxIndicesAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
         
-        .def("GetPhysicsVtxIndices1Attr",
-             &This::GetPhysicsVtxIndices1Attr)
-        .def("CreatePhysicsVtxIndices1Attr",
-             &_CreatePhysicsVtxIndices1Attr,
+        .def("GetPhysicsLocalPositionsAttr",
+             &This::GetPhysicsLocalPositionsAttr)
+        .def("CreatePhysicsLocalPositionsAttr",
+             &_CreatePhysicsLocalPositionsAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
         
@@ -162,15 +162,15 @@ void wrapUsdPhysicsVtxVtxAttach()
               arg("writeSparsely")=false))
 
         
-        .def("GetVtxSrc0Rel",
-             &This::GetVtxSrc0Rel)
-        .def("CreateVtxSrc0Rel",
-             &This::CreateVtxSrc0Rel)
+        .def("GetVtxSrcRel",
+             &This::GetVtxSrcRel)
+        .def("CreateVtxSrcRel",
+             &This::CreateVtxSrcRel)
         
-        .def("GetVtxSrc1Rel",
-             &This::GetVtxSrc1Rel)
-        .def("CreateVtxSrc1Rel",
-             &This::CreateVtxSrc1Rel)
+        .def("GetXformSrcRel",
+             &This::GetXformSrcRel)
+        .def("CreateXformSrcRel",
+             &This::CreateXformSrcRel)
         .def("__repr__", ::_Repr)
     ;
 

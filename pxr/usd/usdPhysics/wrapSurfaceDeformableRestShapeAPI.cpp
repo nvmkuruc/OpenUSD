@@ -58,9 +58,9 @@ _CreatePhysicsRestShapePointsAttr(UsdPhysicsSurfaceDeformableRestShapeAPI &self,
 }
         
 static UsdAttribute
-_CreatePhysicsRestFaceIndicesAttr(UsdPhysicsSurfaceDeformableRestShapeAPI &self,
+_CreatePhysicsRestTriIndicesAttr(UsdPhysicsSurfaceDeformableRestShapeAPI &self,
                                       object defaultVal, bool writeSparsely) {
-    return self.CreatePhysicsRestFaceIndicesAttr(
+    return self.CreatePhysicsRestTriIndicesAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Int3Array), writeSparsely);
 }
         
@@ -148,10 +148,10 @@ void wrapUsdPhysicsSurfaceDeformableRestShapeAPI()
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
         
-        .def("GetPhysicsRestFaceIndicesAttr",
-             &This::GetPhysicsRestFaceIndicesAttr)
-        .def("CreatePhysicsRestFaceIndicesAttr",
-             &_CreatePhysicsRestFaceIndicesAttr,
+        .def("GetPhysicsRestTriIndicesAttr",
+             &This::GetPhysicsRestTriIndicesAttr)
+        .def("CreatePhysicsRestTriIndicesAttr",
+             &_CreatePhysicsRestTriIndicesAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
         

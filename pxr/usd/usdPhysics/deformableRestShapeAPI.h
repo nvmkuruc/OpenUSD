@@ -188,7 +188,7 @@ public:
     // --------------------------------------------------------------------- //
     // PHYSICSRESTTETINDICES 
     // --------------------------------------------------------------------- //
-    /// Per tetrahedral element indices into restTetIndices to describe
+    /// Per tetrahedral element indices into restShapePoints to describe
     /// the rest shape of each tetrahedron. This allows for restTetIndices to
     /// have length up to 4*len(restShapePoints) to allow for disjoint per-element rest shape description, or a more compact array when all tetrahedra share
     /// conincident points to describe the rest shape of the PhysicsDeformable tetmesh.

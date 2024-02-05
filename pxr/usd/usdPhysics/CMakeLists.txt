@@ -46,11 +46,13 @@ pxr_library(usdPhysics
         deformableRestShapeAPI
         surfaceDeformableMaterialAPI
         surfaceDeformableRestShapeAPI
-        vCurveAttach
-        vTetAttach
-        vTriAttach
-        vtxVtxAttach
-        vXformAttach
+        deformablePoseAPI
+        vtxCrvAttachment
+        vtxTetAttachment
+        vtxTriAttachment
+        vtxVtxAttachment
+        vtxXformAttachment
+        triTriAttachment
         scene
         sphericalJoint
         tokens        
@@ -90,11 +92,13 @@ pxr_library(usdPhysics
         wrapDeformableRestShapeAPI.cpp
         wrapSurfaceDeformableMaterialAPI.cpp
         wrapSurfaceDeformableRestShapeAPI.cpp
-        wrapVCurveAttach.cpp
-        wrapVTetAttach.cpp
-        wrapVTriAttach.cpp
-        wrapVtxVtxAttach.cpp
-        wrapVXformAttach.cpp
+        wrapDeformablePoseAPI.cpp
+        wrapVtxCrvAttachment.cpp
+        wrapVtxTetAttachment.cpp
+        wrapVtxTriAttachment.cpp
+        wrapVtxVtxAttachment.cpp
+        wrapVtxXformAttachment.cpp
+        wrapTriTriAttachment.cpp
         wrapScene.cpp
         wrapSphericalJoint.cpp
         wrapTokens.cpp

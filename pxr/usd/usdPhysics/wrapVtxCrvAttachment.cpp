@@ -21,7 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/usdPhysics/vCurveAttach.h"
+#include "pxr/usd/usdPhysics/vtxCrvAttachment.h"
 #include "pxr/usd/usd/schemaBase.h"
 
 #include "pxr/usd/sdf/primSpec.h"
@@ -50,64 +50,64 @@ WRAP_CUSTOM;
 
         
 static UsdAttribute
-_CreateAttachmentEnabledAttr(UsdPhysicsVCurveAttach &self,
+_CreateAttachmentEnabledAttr(UsdPhysicsVtxCrvAttachment &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreateAttachmentEnabledAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Bool), writeSparsely);
 }
         
 static UsdAttribute
-_CreatePhysicsVtxIndicesAttr(UsdPhysicsVCurveAttach &self,
+_CreatePhysicsVtxIndicesAttr(UsdPhysicsVtxCrvAttachment &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreatePhysicsVtxIndicesAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->IntArray), writeSparsely);
 }
         
 static UsdAttribute
-_CreatePhysicsCurveSegmentIndicesAttr(UsdPhysicsVCurveAttach &self,
+_CreatePhysicsCrvSegIndicesAttr(UsdPhysicsVtxCrvAttachment &self,
                                       object defaultVal, bool writeSparsely) {
-    return self.CreatePhysicsCurveSegmentIndicesAttr(
+    return self.CreatePhysicsCrvSegIndicesAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Int2Array), writeSparsely);
 }
         
 static UsdAttribute
-_CreatePhysicsCurveSegmentCoordsAttr(UsdPhysicsVCurveAttach &self,
+_CreatePhysicsCrvSegCoordsAttr(UsdPhysicsVtxCrvAttachment &self,
                                       object defaultVal, bool writeSparsely) {
-    return self.CreatePhysicsCurveSegmentCoordsAttr(
-        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->FloatArray), writeSparsely);
+    return self.CreatePhysicsCrvSegCoordsAttr(
+        UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Vector3fArray), writeSparsely);
 }
         
 static UsdAttribute
-_CreateStiffnessAttr(UsdPhysicsVCurveAttach &self,
+_CreateStiffnessAttr(UsdPhysicsVtxCrvAttachment &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreateStiffnessAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float), writeSparsely);
 }
         
 static UsdAttribute
-_CreateDampingAttr(UsdPhysicsVCurveAttach &self,
+_CreateDampingAttr(UsdPhysicsVtxCrvAttachment &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreateDampingAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float), writeSparsely);
 }
 
 static std::string
-_Repr(const UsdPhysicsVCurveAttach &self)
+_Repr(const UsdPhysicsVtxCrvAttachment &self)
 {
     std::string primRepr = TfPyRepr(self.GetPrim());
     return TfStringPrintf(
-        "UsdPhysics.VCurveAttach(%s)",
+        "UsdPhysics.VtxCrvAttachment(%s)",
         primRepr.c_str());
 }
 
 } // anonymous namespace
 
-void wrapUsdPhysicsVCurveAttach()
+void wrapUsdPhysicsVtxCrvAttachment()
 {
-    typedef UsdPhysicsVCurveAttach This;
+    typedef UsdPhysicsVtxCrvAttachment This;
 
     class_<This, bases<UsdGeomImageable> >
-        cls("VCurveAttach");
+        cls("VtxCrvAttachment");
 
     cls
         .def(init<UsdPrim>(arg("prim")))
@@ -147,17 +147,17 @@ void wrapUsdPhysicsVCurveAttach()
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
         
-        .def("GetPhysicsCurveSegmentIndicesAttr",
-             &This::GetPhysicsCurveSegmentIndicesAttr)
-        .def("CreatePhysicsCurveSegmentIndicesAttr",
-             &_CreatePhysicsCurveSegmentIndicesAttr,
+        .def("GetPhysicsCrvSegIndicesAttr",
+             &This::GetPhysicsCrvSegIndicesAttr)
+        .def("CreatePhysicsCrvSegIndicesAttr",
+             &_CreatePhysicsCrvSegIndicesAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
         
-        .def("GetPhysicsCurveSegmentCoordsAttr",
-             &This::GetPhysicsCurveSegmentCoordsAttr)
-        .def("CreatePhysicsCurveSegmentCoordsAttr",
-             &_CreatePhysicsCurveSegmentCoordsAttr,
+        .def("GetPhysicsCrvSegCoordsAttr",
+             &This::GetPhysicsCrvSegCoordsAttr)
+        .def("CreatePhysicsCrvSegCoordsAttr",
+             &_CreatePhysicsCrvSegCoordsAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
         
@@ -181,10 +181,10 @@ void wrapUsdPhysicsVCurveAttach()
         .def("CreateVtxSrcRel",
              &This::CreateVtxSrcRel)
         
-        .def("GetCurveSrcRel",
-             &This::GetCurveSrcRel)
-        .def("CreateCurveSrcRel",
-             &This::CreateCurveSrcRel)
+        .def("GetCrvSrcRel",
+             &This::GetCrvSrcRel)
+        .def("CreateCrvSrcRel",
+             &This::CreateCrvSrcRel)
         .def("__repr__", ::_Repr)
     ;
 

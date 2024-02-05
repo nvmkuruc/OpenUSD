@@ -52,7 +52,7 @@ class SdfAssetPath;
 
 /// \class UsdPhysicsElementCollisionFilter
 ///
-/// Describes a collision filter based on vertices, segments or edges and faces
+/// Describes a collision filter based on vertices, segments or edges and triangles
 /// for two suitable GPrims which are the source of the elements. At least one source primitive needs to be a deformable body's simulation mesh, and one can be either a rigid body or collider.
 /// 
 ///

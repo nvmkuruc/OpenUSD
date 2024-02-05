@@ -21,7 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/usdPhysics/vTetAttach.h"
+#include "pxr/usd/usdPhysics/vtxCrvAttachment.h"
 #include "pxr/usd/usd/schemaRegistry.h"
 #include "pxr/usd/usd/typed.h"
 
@@ -33,64 +33,64 @@ PXR_NAMESPACE_OPEN_SCOPE
 // Register the schema with the TfType system.
 TF_REGISTRY_FUNCTION(TfType)
 {
-    TfType::Define<UsdPhysicsVTetAttach,
+    TfType::Define<UsdPhysicsVtxCrvAttachment,
         TfType::Bases< UsdGeomImageable > >();
     
     // Register the usd prim typename as an alias under UsdSchemaBase. This
     // enables one to call
-    // TfType::Find<UsdSchemaBase>().FindDerivedByName("PhysicsVtxTetAttachment")
-    // to find TfType<UsdPhysicsVTetAttach>, which is how IsA queries are
+    // TfType::Find<UsdSchemaBase>().FindDerivedByName("PhysicsVtxCrvAttachment")
+    // to find TfType<UsdPhysicsVtxCrvAttachment>, which is how IsA queries are
     // answered.
-    TfType::AddAlias<UsdSchemaBase, UsdPhysicsVTetAttach>("PhysicsVtxTetAttachment");
+    TfType::AddAlias<UsdSchemaBase, UsdPhysicsVtxCrvAttachment>("PhysicsVtxCrvAttachment");
 }
 
 /* virtual */
-UsdPhysicsVTetAttach::~UsdPhysicsVTetAttach()
+UsdPhysicsVtxCrvAttachment::~UsdPhysicsVtxCrvAttachment()
 {
 }
 
 /* static */
-UsdPhysicsVTetAttach
-UsdPhysicsVTetAttach::Get(const UsdStagePtr &stage, const SdfPath &path)
+UsdPhysicsVtxCrvAttachment
+UsdPhysicsVtxCrvAttachment::Get(const UsdStagePtr &stage, const SdfPath &path)
 {
     if (!stage) {
         TF_CODING_ERROR("Invalid stage");
-        return UsdPhysicsVTetAttach();
+        return UsdPhysicsVtxCrvAttachment();
     }
-    return UsdPhysicsVTetAttach(stage->GetPrimAtPath(path));
+    return UsdPhysicsVtxCrvAttachment(stage->GetPrimAtPath(path));
 }
 
 /* static */
-UsdPhysicsVTetAttach
-UsdPhysicsVTetAttach::Define(
+UsdPhysicsVtxCrvAttachment
+UsdPhysicsVtxCrvAttachment::Define(
     const UsdStagePtr &stage, const SdfPath &path)
 {
-    static TfToken usdPrimTypeName("PhysicsVtxTetAttachment");
+    static TfToken usdPrimTypeName("PhysicsVtxCrvAttachment");
     if (!stage) {
         TF_CODING_ERROR("Invalid stage");
-        return UsdPhysicsVTetAttach();
+        return UsdPhysicsVtxCrvAttachment();
     }
-    return UsdPhysicsVTetAttach(
+    return UsdPhysicsVtxCrvAttachment(
         stage->DefinePrim(path, usdPrimTypeName));
 }
 
 /* virtual */
-UsdSchemaKind UsdPhysicsVTetAttach::_GetSchemaKind() const
+UsdSchemaKind UsdPhysicsVtxCrvAttachment::_GetSchemaKind() const
 {
-    return UsdPhysicsVTetAttach::schemaKind;
+    return UsdPhysicsVtxCrvAttachment::schemaKind;
 }
 
 /* static */
 const TfType &
-UsdPhysicsVTetAttach::_GetStaticTfType()
+UsdPhysicsVtxCrvAttachment::_GetStaticTfType()
 {
-    static TfType tfType = TfType::Find<UsdPhysicsVTetAttach>();
+    static TfType tfType = TfType::Find<UsdPhysicsVtxCrvAttachment>();
     return tfType;
 }
 
 /* static */
 bool 
-UsdPhysicsVTetAttach::_IsTypedSchema()
+UsdPhysicsVtxCrvAttachment::_IsTypedSchema()
 {
     static bool isTyped = _GetStaticTfType().IsA<UsdTyped>();
     return isTyped;
@@ -98,19 +98,19 @@ UsdPhysicsVTetAttach::_IsTypedSchema()
 
 /* virtual */
 const TfType &
-UsdPhysicsVTetAttach::_GetTfType() const
+UsdPhysicsVtxCrvAttachment::_GetTfType() const
 {
     return _GetStaticTfType();
 }
 
 UsdAttribute
-UsdPhysicsVTetAttach::GetAttachmentEnabledAttr() const
+UsdPhysicsVtxCrvAttachment::GetAttachmentEnabledAttr() const
 {
     return GetPrim().GetAttribute(UsdPhysicsTokens->physicsAttachmentEnabled);
 }
 
 UsdAttribute
-UsdPhysicsVTetAttach::CreateAttachmentEnabledAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdPhysicsVtxCrvAttachment::CreateAttachmentEnabledAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
     return UsdSchemaBase::_CreateAttr(UsdPhysicsTokens->physicsAttachmentEnabled,
                        SdfValueTypeNames->Bool,
@@ -121,13 +121,13 @@ UsdPhysicsVTetAttach::CreateAttachmentEnabledAttr(VtValue const &defaultValue, b
 }
 
 UsdAttribute
-UsdPhysicsVTetAttach::GetPhysicsVtxIndicesAttr() const
+UsdPhysicsVtxCrvAttachment::GetPhysicsVtxIndicesAttr() const
 {
     return GetPrim().GetAttribute(UsdPhysicsTokens->physicsVtxIndices);
 }
 
 UsdAttribute
-UsdPhysicsVTetAttach::CreatePhysicsVtxIndicesAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdPhysicsVtxCrvAttachment::CreatePhysicsVtxIndicesAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
     return UsdSchemaBase::_CreateAttr(UsdPhysicsTokens->physicsVtxIndices,
                        SdfValueTypeNames->IntArray,
@@ -138,16 +138,16 @@ UsdPhysicsVTetAttach::CreatePhysicsVtxIndicesAttr(VtValue const &defaultValue, b
 }
 
 UsdAttribute
-UsdPhysicsVTetAttach::GetPhysicsTetIndicesAttr() const
+UsdPhysicsVtxCrvAttachment::GetPhysicsCrvSegIndicesAttr() const
 {
-    return GetPrim().GetAttribute(UsdPhysicsTokens->physicsTetIndices);
+    return GetPrim().GetAttribute(UsdPhysicsTokens->physicsCrvSegIndices);
 }
 
 UsdAttribute
-UsdPhysicsVTetAttach::CreatePhysicsTetIndicesAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdPhysicsVtxCrvAttachment::CreatePhysicsCrvSegIndicesAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdPhysicsTokens->physicsTetIndices,
-                       SdfValueTypeNames->IntArray,
+    return UsdSchemaBase::_CreateAttr(UsdPhysicsTokens->physicsCrvSegIndices,
+                       SdfValueTypeNames->Int2Array,
                        /* custom = */ false,
                        SdfVariabilityVarying,
                        defaultValue,
@@ -155,15 +155,15 @@ UsdPhysicsVTetAttach::CreatePhysicsTetIndicesAttr(VtValue const &defaultValue, b
 }
 
 UsdAttribute
-UsdPhysicsVTetAttach::GetPhysicsBaryCoordsAttr() const
+UsdPhysicsVtxCrvAttachment::GetPhysicsCrvSegCoordsAttr() const
 {
-    return GetPrim().GetAttribute(UsdPhysicsTokens->physicsBaryCoords);
+    return GetPrim().GetAttribute(UsdPhysicsTokens->physicsCrvSegCoords);
 }
 
 UsdAttribute
-UsdPhysicsVTetAttach::CreatePhysicsBaryCoordsAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdPhysicsVtxCrvAttachment::CreatePhysicsCrvSegCoordsAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdPhysicsTokens->physicsBaryCoords,
+    return UsdSchemaBase::_CreateAttr(UsdPhysicsTokens->physicsCrvSegCoords,
                        SdfValueTypeNames->Vector3fArray,
                        /* custom = */ false,
                        SdfVariabilityVarying,
@@ -172,13 +172,13 @@ UsdPhysicsVTetAttach::CreatePhysicsBaryCoordsAttr(VtValue const &defaultValue, b
 }
 
 UsdAttribute
-UsdPhysicsVTetAttach::GetStiffnessAttr() const
+UsdPhysicsVtxCrvAttachment::GetStiffnessAttr() const
 {
     return GetPrim().GetAttribute(UsdPhysicsTokens->physicsStiffness);
 }
 
 UsdAttribute
-UsdPhysicsVTetAttach::CreateStiffnessAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdPhysicsVtxCrvAttachment::CreateStiffnessAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
     return UsdSchemaBase::_CreateAttr(UsdPhysicsTokens->physicsStiffness,
                        SdfValueTypeNames->Float,
@@ -189,13 +189,13 @@ UsdPhysicsVTetAttach::CreateStiffnessAttr(VtValue const &defaultValue, bool writ
 }
 
 UsdAttribute
-UsdPhysicsVTetAttach::GetDampingAttr() const
+UsdPhysicsVtxCrvAttachment::GetDampingAttr() const
 {
     return GetPrim().GetAttribute(UsdPhysicsTokens->physicsDamping);
 }
 
 UsdAttribute
-UsdPhysicsVTetAttach::CreateDampingAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdPhysicsVtxCrvAttachment::CreateDampingAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
     return UsdSchemaBase::_CreateAttr(UsdPhysicsTokens->physicsDamping,
                        SdfValueTypeNames->Float,
@@ -206,28 +206,28 @@ UsdPhysicsVTetAttach::CreateDampingAttr(VtValue const &defaultValue, bool writeS
 }
 
 UsdRelationship
-UsdPhysicsVTetAttach::GetVtxSrcRel() const
+UsdPhysicsVtxCrvAttachment::GetVtxSrcRel() const
 {
     return GetPrim().GetRelationship(UsdPhysicsTokens->physicsVtxSrc);
 }
 
 UsdRelationship
-UsdPhysicsVTetAttach::CreateVtxSrcRel() const
+UsdPhysicsVtxCrvAttachment::CreateVtxSrcRel() const
 {
     return GetPrim().CreateRelationship(UsdPhysicsTokens->physicsVtxSrc,
                        /* custom = */ false);
 }
 
 UsdRelationship
-UsdPhysicsVTetAttach::GetTetSrcRel() const
+UsdPhysicsVtxCrvAttachment::GetCrvSrcRel() const
 {
-    return GetPrim().GetRelationship(UsdPhysicsTokens->physicsTetSrc);
+    return GetPrim().GetRelationship(UsdPhysicsTokens->physicsCrvSrc);
 }
 
 UsdRelationship
-UsdPhysicsVTetAttach::CreateTetSrcRel() const
+UsdPhysicsVtxCrvAttachment::CreateCrvSrcRel() const
 {
-    return GetPrim().CreateRelationship(UsdPhysicsTokens->physicsTetSrc,
+    return GetPrim().CreateRelationship(UsdPhysicsTokens->physicsCrvSrc,
                        /* custom = */ false);
 }
 
@@ -245,13 +245,13 @@ _ConcatenateAttributeNames(const TfTokenVector& left,const TfTokenVector& right)
 
 /*static*/
 const TfTokenVector&
-UsdPhysicsVTetAttach::GetSchemaAttributeNames(bool includeInherited)
+UsdPhysicsVtxCrvAttachment::GetSchemaAttributeNames(bool includeInherited)
 {
     static TfTokenVector localNames = {
         UsdPhysicsTokens->physicsAttachmentEnabled,
         UsdPhysicsTokens->physicsVtxIndices,
-        UsdPhysicsTokens->physicsTetIndices,
-        UsdPhysicsTokens->physicsBaryCoords,
+        UsdPhysicsTokens->physicsCrvSegIndices,
+        UsdPhysicsTokens->physicsCrvSegCoords,
         UsdPhysicsTokens->physicsStiffness,
         UsdPhysicsTokens->physicsDamping,
     };

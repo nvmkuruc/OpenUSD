@@ -192,30 +192,30 @@ public:
 
 public:
     // --------------------------------------------------------------------- //
-    // PHYSICSRESTFACEINDICES 
+    // PHYSICSRESTTRIINDICES 
     // --------------------------------------------------------------------- //
     /// Per triangle element indices into restShapePoints to describe
     /// the rest shape of each triangle face. This allows for
-    /// restFaceIndices to have length up to 4*len(restShapePoints) to
+    /// restTriIndices to have length up to 3*len(restShapePoints) to
     /// allow for a disjoint per-element rest shape description, or a
-    /// more compact array when all tetrahedra share conincident points
-    /// to describe the rest shape of the PhysicsDeformable tetmesh.
+    /// more compact array when all triangles share conincident points
+    /// to describe the rest shape of the PhysicsDeformable triangle mesh.
     ///
     /// | ||
     /// | -- | -- |
-    /// | Declaration | `int3[] physics:restFaceIndices` |
+    /// | Declaration | `int3[] physics:restTriIndices` |
     /// | C++ Type | VtArray<GfVec3i> |
     /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Int3Array |
     USDPHYSICS_API
-    UsdAttribute GetPhysicsRestFaceIndicesAttr() const;
+    UsdAttribute GetPhysicsRestTriIndicesAttr() const;
 
-    /// See GetPhysicsRestFaceIndicesAttr(), and also 
+    /// See GetPhysicsRestTriIndicesAttr(), and also 
     /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
     USDPHYSICS_API
-    UsdAttribute CreatePhysicsRestFaceIndicesAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+    UsdAttribute CreatePhysicsRestTriIndicesAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
     // --------------------------------------------------------------------- //

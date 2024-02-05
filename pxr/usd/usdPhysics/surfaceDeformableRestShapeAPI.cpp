@@ -126,15 +126,15 @@ UsdPhysicsSurfaceDeformableRestShapeAPI::CreatePhysicsRestShapePointsAttr(VtValu
 }
 
 UsdAttribute
-UsdPhysicsSurfaceDeformableRestShapeAPI::GetPhysicsRestFaceIndicesAttr() const
+UsdPhysicsSurfaceDeformableRestShapeAPI::GetPhysicsRestTriIndicesAttr() const
 {
-    return GetPrim().GetAttribute(UsdPhysicsTokens->physicsRestFaceIndices);
+    return GetPrim().GetAttribute(UsdPhysicsTokens->physicsRestTriIndices);
 }
 
 UsdAttribute
-UsdPhysicsSurfaceDeformableRestShapeAPI::CreatePhysicsRestFaceIndicesAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdPhysicsSurfaceDeformableRestShapeAPI::CreatePhysicsRestTriIndicesAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdPhysicsTokens->physicsRestFaceIndices,
+    return UsdSchemaBase::_CreateAttr(UsdPhysicsTokens->physicsRestTriIndices,
                        SdfValueTypeNames->Int3Array,
                        /* custom = */ false,
                        SdfVariabilityVarying,
@@ -194,7 +194,7 @@ UsdPhysicsSurfaceDeformableRestShapeAPI::GetSchemaAttributeNames(bool includeInh
 {
     static TfTokenVector localNames = {
         UsdPhysicsTokens->physicsRestShapePoints,
-        UsdPhysicsTokens->physicsRestFaceIndices,
+        UsdPhysicsTokens->physicsRestTriIndices,
         UsdPhysicsTokens->physicsEdgeVertPairs,
         UsdPhysicsTokens->physicsEdgeBendAngles,
     };

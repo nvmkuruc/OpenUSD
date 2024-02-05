@@ -21,10 +21,10 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef USDPHYSICS_GENERATED_VTRIATTACH_H
-#define USDPHYSICS_GENERATED_VTRIATTACH_H
+#ifndef USDPHYSICS_GENERATED_VTXXFORMATTACHMENT_H
+#define USDPHYSICS_GENERATED_VTXXFORMATTACHMENT_H
 
-/// \file usdPhysics/vTriAttach.h
+/// \file usdPhysics/vtxXformAttachment.h
 
 #include "pxr/pxr.h"
 #include "pxr/usd/usdPhysics/api.h"
@@ -47,15 +47,18 @@ PXR_NAMESPACE_OPEN_SCOPE
 class SdfAssetPath;
 
 // -------------------------------------------------------------------------- //
-// PHYSICSVTXTRIATTACHMENT                                                    //
+// PHYSICSVTXXFORMATTACHMENT                                                  //
 // -------------------------------------------------------------------------- //
 
-/// \class UsdPhysicsVTriAttach
+/// \class UsdPhysicsVtxXformAttachment
 ///
-/// Describes a fixed binding attachment between vertices and triangle
-/// faces of two suitable deformable body simulation meshes.
+/// Describes a fixed binding attachment between vertices and an xformable
+/// coordinate frame. The vertices must always be from a deformable
+/// body's simulation mesh. If the xformable is a rigid body or a prim of
+/// the subtree of a rigid body the attachment is treated by the solver as
+/// a two way constraint.
 ///
-class UsdPhysicsVTriAttach : public UsdGeomImageable
+class UsdPhysicsVtxXformAttachment : public UsdGeomImageable
 {
 public:
     /// Compile time constant representing what kind of schema this class is.
@@ -63,26 +66,26 @@ public:
     /// \sa UsdSchemaKind
     static const UsdSchemaKind schemaKind = UsdSchemaKind::ConcreteTyped;
 
-    /// Construct a UsdPhysicsVTriAttach on UsdPrim \p prim .
-    /// Equivalent to UsdPhysicsVTriAttach::Get(prim.GetStage(), prim.GetPath())
+    /// Construct a UsdPhysicsVtxXformAttachment on UsdPrim \p prim .
+    /// Equivalent to UsdPhysicsVtxXformAttachment::Get(prim.GetStage(), prim.GetPath())
     /// for a \em valid \p prim, but will not immediately throw an error for
     /// an invalid \p prim
-    explicit UsdPhysicsVTriAttach(const UsdPrim& prim=UsdPrim())
+    explicit UsdPhysicsVtxXformAttachment(const UsdPrim& prim=UsdPrim())
         : UsdGeomImageable(prim)
     {
     }
 
-    /// Construct a UsdPhysicsVTriAttach on the prim held by \p schemaObj .
-    /// Should be preferred over UsdPhysicsVTriAttach(schemaObj.GetPrim()),
+    /// Construct a UsdPhysicsVtxXformAttachment on the prim held by \p schemaObj .
+    /// Should be preferred over UsdPhysicsVtxXformAttachment(schemaObj.GetPrim()),
     /// as it preserves SchemaBase state.
-    explicit UsdPhysicsVTriAttach(const UsdSchemaBase& schemaObj)
+    explicit UsdPhysicsVtxXformAttachment(const UsdSchemaBase& schemaObj)
         : UsdGeomImageable(schemaObj)
     {
     }
 
     /// Destructor.
     USDPHYSICS_API
-    virtual ~UsdPhysicsVTriAttach();
+    virtual ~UsdPhysicsVtxXformAttachment();
 
     /// Return a vector of names of all pre-declared attributes for this schema
     /// class and all its ancestor classes.  Does not include attributes that
@@ -91,17 +94,17 @@ public:
     static const TfTokenVector &
     GetSchemaAttributeNames(bool includeInherited=true);
 
-    /// Return a UsdPhysicsVTriAttach holding the prim adhering to this
+    /// Return a UsdPhysicsVtxXformAttachment holding the prim adhering to this
     /// schema at \p path on \p stage.  If no prim exists at \p path on
     /// \p stage, or if the prim at that path does not adhere to this schema,
     /// return an invalid schema object.  This is shorthand for the following:
     ///
     /// \code
-    /// UsdPhysicsVTriAttach(stage->GetPrimAtPath(path));
+    /// UsdPhysicsVtxXformAttachment(stage->GetPrimAtPath(path));
     /// \endcode
     ///
     USDPHYSICS_API
-    static UsdPhysicsVTriAttach
+    static UsdPhysicsVtxXformAttachment
     Get(const UsdStagePtr &stage, const SdfPath &path);
 
     /// Attempt to ensure a \a UsdPrim adhering to this schema at \p path
@@ -127,7 +130,7 @@ public:
     /// the opinion at the current EditTarget.
     ///
     USDPHYSICS_API
-    static UsdPhysicsVTriAttach
+    static UsdPhysicsVtxXformAttachment
     Define(const UsdStagePtr &stage, const SdfPath &path);
 
 protected:
@@ -153,7 +156,7 @@ public:
     // --------------------------------------------------------------------- //
     // ATTACHMENTENABLED 
     // --------------------------------------------------------------------- //
-    /// Determines if this PhysicsVtxTriAttachment is enabled.
+    /// Determines if this PhysicsVtxXformAttachment is enabled.
     ///
     /// | ||
     /// | -- | -- |
@@ -195,51 +198,25 @@ public:
 
 public:
     // --------------------------------------------------------------------- //
-    // PHYSICSTRIINDICES 
+    // PHYSICSLOCALPOSITIONS 
     // --------------------------------------------------------------------- //
-    /// Array of face indices from triSrc. There should be exactly one
-    /// face index for each vertex index in vtxIndices.
+    /// Spatial offsets of the attachment locations in the coordinate frame described by xformSrc.
     ///
     /// | ||
     /// | -- | -- |
-    /// | Declaration | `int[] physics:triIndices` |
-    /// | C++ Type | VtArray<int> |
-    /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->IntArray |
-    USDPHYSICS_API
-    UsdAttribute GetPhysicsTriIndicesAttr() const;
-
-    /// See GetPhysicsTriIndicesAttr(), and also 
-    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
-    /// If specified, author \p defaultValue as the attribute's default,
-    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
-    /// the default for \p writeSparsely is \c false.
-    USDPHYSICS_API
-    UsdAttribute CreatePhysicsTriIndicesAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
-
-public:
-    // --------------------------------------------------------------------- //
-    // PHYSICSFACECOORDS 
-    // --------------------------------------------------------------------- //
-    /// Face relative coordinates of the form U,V portion of
-    /// barycentric UVW coordinates and a normal offset from the
-    /// triangle. There should be exactly one set of face coordinates
-    /// corresponding to each vertex index and face index.
-    ///
-    /// | ||
-    /// | -- | -- |
-    /// | Declaration | `vector3f[] physics:faceCoords` |
+    /// | Declaration | `point3f[] physics:localPositions` |
     /// | C++ Type | VtArray<GfVec3f> |
-    /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Vector3fArray |
+    /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Point3fArray |
     USDPHYSICS_API
-    UsdAttribute GetPhysicsFaceCoordsAttr() const;
+    UsdAttribute GetPhysicsLocalPositionsAttr() const;
 
-    /// See GetPhysicsFaceCoordsAttr(), and also 
+    /// See GetPhysicsLocalPositionsAttr(), and also 
     /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
     USDPHYSICS_API
-    UsdAttribute CreatePhysicsFaceCoordsAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+    UsdAttribute CreatePhysicsLocalPositionsAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
     // --------------------------------------------------------------------- //
@@ -296,7 +273,7 @@ public:
     // VTXSRC 
     // --------------------------------------------------------------------- //
     /// Relationship to a single UsdGeomPointBased the vertices
-    /// belong to. This should always point to a deformable body's simulation mesh.
+    /// belongs to. This should always point to a deformable body's simulation mesh.
     ///
     USDPHYSICS_API
     UsdRelationship GetVtxSrcRel() const;
@@ -308,18 +285,17 @@ public:
 
 public:
     // --------------------------------------------------------------------- //
-    // TRISRC 
+    // XFORMSRC 
     // --------------------------------------------------------------------- //
-    /// Relationship to a single UsdGeomMesh or UsdGeomTetMesh surface the triangle faces
-    /// belong to. This should always point to a deformable body's simulation mesh
+    /// Relationship to a single UsdGeomXformable.
     ///
     USDPHYSICS_API
-    UsdRelationship GetTriSrcRel() const;
+    UsdRelationship GetXformSrcRel() const;
 
-    /// See GetTriSrcRel(), and also 
+    /// See GetXformSrcRel(), and also 
     /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create
     USDPHYSICS_API
-    UsdRelationship CreateTriSrcRel() const;
+    UsdRelationship CreateXformSrcRel() const;
 
 public:
     // ===================================================================== //

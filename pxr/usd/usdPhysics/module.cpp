@@ -69,13 +69,15 @@ TF_WRAP_MODULE
 	TF_WRAP(UsdPhysicsDeformableRestShapeAPI);
 	TF_WRAP(UsdPhysicsSurfaceDeformableMaterialAPI);
 	TF_WRAP(UsdPhysicsSurfaceDeformableRestShapeAPI);
+	TF_WRAP(UsdPhysicsDeformablePoseAPI);
 
-	// Attach
-	TF_WRAP(UsdPhysicsVCurveAttach);
-	TF_WRAP(UsdPhysicsVTetAttach);
-	TF_WRAP(UsdPhysicsVTriAttach);
-	TF_WRAP(UsdPhysicsVtxVtxAttach);
-	TF_WRAP(UsdPhysicsVXformAttach);
+	// Attachment
+	TF_WRAP(UsdPhysicsVtxCrvAttachment);
+	TF_WRAP(UsdPhysicsVtxTetAttachment);
+	TF_WRAP(UsdPhysicsVtxTriAttachment);
+	TF_WRAP(UsdPhysicsVtxVtxAttachment);
+	TF_WRAP(UsdPhysicsVtxXformAttachment);
+	TF_WRAP(UsdPhysicsTriTriAttachment);
 	TF_WRAP(UsdPhysicsElementCollisionFilter);
 
 	// collision group

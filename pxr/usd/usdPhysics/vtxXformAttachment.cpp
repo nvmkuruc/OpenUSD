@@ -21,7 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/usdPhysics/vCurveAttach.h"
+#include "pxr/usd/usdPhysics/vtxXformAttachment.h"
 #include "pxr/usd/usd/schemaRegistry.h"
 #include "pxr/usd/usd/typed.h"
 
@@ -33,64 +33,64 @@ PXR_NAMESPACE_OPEN_SCOPE
 // Register the schema with the TfType system.
 TF_REGISTRY_FUNCTION(TfType)
 {
-    TfType::Define<UsdPhysicsVCurveAttach,
+    TfType::Define<UsdPhysicsVtxXformAttachment,
         TfType::Bases< UsdGeomImageable > >();
     
     // Register the usd prim typename as an alias under UsdSchemaBase. This
     // enables one to call
-    // TfType::Find<UsdSchemaBase>().FindDerivedByName("PhysicsVtxCurveAttachment")
-    // to find TfType<UsdPhysicsVCurveAttach>, which is how IsA queries are
+    // TfType::Find<UsdSchemaBase>().FindDerivedByName("PhysicsVtxXformAttachment")
+    // to find TfType<UsdPhysicsVtxXformAttachment>, which is how IsA queries are
     // answered.
-    TfType::AddAlias<UsdSchemaBase, UsdPhysicsVCurveAttach>("PhysicsVtxCurveAttachment");
+    TfType::AddAlias<UsdSchemaBase, UsdPhysicsVtxXformAttachment>("PhysicsVtxXformAttachment");
 }
 
 /* virtual */
-UsdPhysicsVCurveAttach::~UsdPhysicsVCurveAttach()
+UsdPhysicsVtxXformAttachment::~UsdPhysicsVtxXformAttachment()
 {
 }
 
 /* static */
-UsdPhysicsVCurveAttach
-UsdPhysicsVCurveAttach::Get(const UsdStagePtr &stage, const SdfPath &path)
+UsdPhysicsVtxXformAttachment
+UsdPhysicsVtxXformAttachment::Get(const UsdStagePtr &stage, const SdfPath &path)
 {
     if (!stage) {
         TF_CODING_ERROR("Invalid stage");
-        return UsdPhysicsVCurveAttach();
+        return UsdPhysicsVtxXformAttachment();
     }
-    return UsdPhysicsVCurveAttach(stage->GetPrimAtPath(path));
+    return UsdPhysicsVtxXformAttachment(stage->GetPrimAtPath(path));
 }
 
 /* static */
-UsdPhysicsVCurveAttach
-UsdPhysicsVCurveAttach::Define(
+UsdPhysicsVtxXformAttachment
+UsdPhysicsVtxXformAttachment::Define(
     const UsdStagePtr &stage, const SdfPath &path)
 {
-    static TfToken usdPrimTypeName("PhysicsVtxCurveAttachment");
+    static TfToken usdPrimTypeName("PhysicsVtxXformAttachment");
     if (!stage) {
         TF_CODING_ERROR("Invalid stage");
-        return UsdPhysicsVCurveAttach();
+        return UsdPhysicsVtxXformAttachment();
     }
-    return UsdPhysicsVCurveAttach(
+    return UsdPhysicsVtxXformAttachment(
         stage->DefinePrim(path, usdPrimTypeName));
 }
 
 /* virtual */
-UsdSchemaKind UsdPhysicsVCurveAttach::_GetSchemaKind() const
+UsdSchemaKind UsdPhysicsVtxXformAttachment::_GetSchemaKind() const
 {
-    return UsdPhysicsVCurveAttach::schemaKind;
+    return UsdPhysicsVtxXformAttachment::schemaKind;
 }
 
 /* static */
 const TfType &
-UsdPhysicsVCurveAttach::_GetStaticTfType()
+UsdPhysicsVtxXformAttachment::_GetStaticTfType()
 {
-    static TfType tfType = TfType::Find<UsdPhysicsVCurveAttach>();
+    static TfType tfType = TfType::Find<UsdPhysicsVtxXformAttachment>();
     return tfType;
 }
 
 /* static */
 bool 
-UsdPhysicsVCurveAttach::_IsTypedSchema()
+UsdPhysicsVtxXformAttachment::_IsTypedSchema()
 {
     static bool isTyped = _GetStaticTfType().IsA<UsdTyped>();
     return isTyped;
@@ -98,19 +98,19 @@ UsdPhysicsVCurveAttach::_IsTypedSchema()
 
 /* virtual */
 const TfType &
-UsdPhysicsVCurveAttach::_GetTfType() const
+UsdPhysicsVtxXformAttachment::_GetTfType() const
 {
     return _GetStaticTfType();
 }
 
 UsdAttribute
-UsdPhysicsVCurveAttach::GetAttachmentEnabledAttr() const
+UsdPhysicsVtxXformAttachment::GetAttachmentEnabledAttr() const
 {
     return GetPrim().GetAttribute(UsdPhysicsTokens->physicsAttachmentEnabled);
 }
 
 UsdAttribute
-UsdPhysicsVCurveAttach::CreateAttachmentEnabledAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdPhysicsVtxXformAttachment::CreateAttachmentEnabledAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
     return UsdSchemaBase::_CreateAttr(UsdPhysicsTokens->physicsAttachmentEnabled,
                        SdfValueTypeNames->Bool,
@@ -121,13 +121,13 @@ UsdPhysicsVCurveAttach::CreateAttachmentEnabledAttr(VtValue const &defaultValue,
 }
 
 UsdAttribute
-UsdPhysicsVCurveAttach::GetPhysicsVtxIndicesAttr() const
+UsdPhysicsVtxXformAttachment::GetPhysicsVtxIndicesAttr() const
 {
     return GetPrim().GetAttribute(UsdPhysicsTokens->physicsVtxIndices);
 }
 
 UsdAttribute
-UsdPhysicsVCurveAttach::CreatePhysicsVtxIndicesAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdPhysicsVtxXformAttachment::CreatePhysicsVtxIndicesAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
     return UsdSchemaBase::_CreateAttr(UsdPhysicsTokens->physicsVtxIndices,
                        SdfValueTypeNames->IntArray,
@@ -138,16 +138,16 @@ UsdPhysicsVCurveAttach::CreatePhysicsVtxIndicesAttr(VtValue const &defaultValue,
 }
 
 UsdAttribute
-UsdPhysicsVCurveAttach::GetPhysicsCurveSegmentIndicesAttr() const
+UsdPhysicsVtxXformAttachment::GetPhysicsLocalPositionsAttr() const
 {
-    return GetPrim().GetAttribute(UsdPhysicsTokens->physicsCurveSegmentIndices);
+    return GetPrim().GetAttribute(UsdPhysicsTokens->physicsLocalPositions);
 }
 
 UsdAttribute
-UsdPhysicsVCurveAttach::CreatePhysicsCurveSegmentIndicesAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdPhysicsVtxXformAttachment::CreatePhysicsLocalPositionsAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
-    return UsdSchemaBase::_CreateAttr(UsdPhysicsTokens->physicsCurveSegmentIndices,
-                       SdfValueTypeNames->Int2Array,
+    return UsdSchemaBase::_CreateAttr(UsdPhysicsTokens->physicsLocalPositions,
+                       SdfValueTypeNames->Point3fArray,
                        /* custom = */ false,
                        SdfVariabilityVarying,
                        defaultValue,
@@ -155,30 +155,13 @@ UsdPhysicsVCurveAttach::CreatePhysicsCurveSegmentIndicesAttr(VtValue const &defa
 }
 
 UsdAttribute
-UsdPhysicsVCurveAttach::GetPhysicsCurveSegmentCoordsAttr() const
-{
-    return GetPrim().GetAttribute(UsdPhysicsTokens->physicsCurveSegmentCoords);
-}
-
-UsdAttribute
-UsdPhysicsVCurveAttach::CreatePhysicsCurveSegmentCoordsAttr(VtValue const &defaultValue, bool writeSparsely) const
-{
-    return UsdSchemaBase::_CreateAttr(UsdPhysicsTokens->physicsCurveSegmentCoords,
-                       SdfValueTypeNames->FloatArray,
-                       /* custom = */ false,
-                       SdfVariabilityVarying,
-                       defaultValue,
-                       writeSparsely);
-}
-
-UsdAttribute
-UsdPhysicsVCurveAttach::GetStiffnessAttr() const
+UsdPhysicsVtxXformAttachment::GetStiffnessAttr() const
 {
     return GetPrim().GetAttribute(UsdPhysicsTokens->physicsStiffness);
 }
 
 UsdAttribute
-UsdPhysicsVCurveAttach::CreateStiffnessAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdPhysicsVtxXformAttachment::CreateStiffnessAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
     return UsdSchemaBase::_CreateAttr(UsdPhysicsTokens->physicsStiffness,
                        SdfValueTypeNames->Float,
@@ -189,13 +172,13 @@ UsdPhysicsVCurveAttach::CreateStiffnessAttr(VtValue const &defaultValue, bool wr
 }
 
 UsdAttribute
-UsdPhysicsVCurveAttach::GetDampingAttr() const
+UsdPhysicsVtxXformAttachment::GetDampingAttr() const
 {
     return GetPrim().GetAttribute(UsdPhysicsTokens->physicsDamping);
 }
 
 UsdAttribute
-UsdPhysicsVCurveAttach::CreateDampingAttr(VtValue const &defaultValue, bool writeSparsely) const
+UsdPhysicsVtxXformAttachment::CreateDampingAttr(VtValue const &defaultValue, bool writeSparsely) const
 {
     return UsdSchemaBase::_CreateAttr(UsdPhysicsTokens->physicsDamping,
                        SdfValueTypeNames->Float,
@@ -206,28 +189,28 @@ UsdPhysicsVCurveAttach::CreateDampingAttr(VtValue const &defaultValue, bool writ
 }
 
 UsdRelationship
-UsdPhysicsVCurveAttach::GetVtxSrcRel() const
+UsdPhysicsVtxXformAttachment::GetVtxSrcRel() const
 {
     return GetPrim().GetRelationship(UsdPhysicsTokens->physicsVtxSrc);
 }
 
 UsdRelationship
-UsdPhysicsVCurveAttach::CreateVtxSrcRel() const
+UsdPhysicsVtxXformAttachment::CreateVtxSrcRel() const
 {
     return GetPrim().CreateRelationship(UsdPhysicsTokens->physicsVtxSrc,
                        /* custom = */ false);
 }
 
 UsdRelationship
-UsdPhysicsVCurveAttach::GetCurveSrcRel() const
+UsdPhysicsVtxXformAttachment::GetXformSrcRel() const
 {
-    return GetPrim().GetRelationship(UsdPhysicsTokens->physicsCurveSrc);
+    return GetPrim().GetRelationship(UsdPhysicsTokens->physicsXformSrc);
 }
 
 UsdRelationship
-UsdPhysicsVCurveAttach::CreateCurveSrcRel() const
+UsdPhysicsVtxXformAttachment::CreateXformSrcRel() const
 {
-    return GetPrim().CreateRelationship(UsdPhysicsTokens->physicsCurveSrc,
+    return GetPrim().CreateRelationship(UsdPhysicsTokens->physicsXformSrc,
                        /* custom = */ false);
 }
 
@@ -245,13 +228,12 @@ _ConcatenateAttributeNames(const TfTokenVector& left,const TfTokenVector& right)
 
 /*static*/
 const TfTokenVector&
-UsdPhysicsVCurveAttach::GetSchemaAttributeNames(bool includeInherited)
+UsdPhysicsVtxXformAttachment::GetSchemaAttributeNames(bool includeInherited)
 {
     static TfTokenVector localNames = {
         UsdPhysicsTokens->physicsAttachmentEnabled,
         UsdPhysicsTokens->physicsVtxIndices,
-        UsdPhysicsTokens->physicsCurveSegmentIndices,
-        UsdPhysicsTokens->physicsCurveSegmentCoords,
+        UsdPhysicsTokens->physicsLocalPositions,
         UsdPhysicsTokens->physicsStiffness,
         UsdPhysicsTokens->physicsDamping,
     };

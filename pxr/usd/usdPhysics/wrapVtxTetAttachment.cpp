@@ -21,7 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/usdPhysics/vTetAttach.h"
+#include "pxr/usd/usdPhysics/vtxTetAttachment.h"
 #include "pxr/usd/usd/schemaBase.h"
 
 #include "pxr/usd/sdf/primSpec.h"
@@ -50,64 +50,64 @@ WRAP_CUSTOM;
 
         
 static UsdAttribute
-_CreateAttachmentEnabledAttr(UsdPhysicsVTetAttach &self,
+_CreateAttachmentEnabledAttr(UsdPhysicsVtxTetAttachment &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreateAttachmentEnabledAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Bool), writeSparsely);
 }
         
 static UsdAttribute
-_CreatePhysicsVtxIndicesAttr(UsdPhysicsVTetAttach &self,
+_CreatePhysicsVtxIndicesAttr(UsdPhysicsVtxTetAttachment &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreatePhysicsVtxIndicesAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->IntArray), writeSparsely);
 }
         
 static UsdAttribute
-_CreatePhysicsTetIndicesAttr(UsdPhysicsVTetAttach &self,
+_CreatePhysicsTetIndicesAttr(UsdPhysicsVtxTetAttachment &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreatePhysicsTetIndicesAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->IntArray), writeSparsely);
 }
         
 static UsdAttribute
-_CreatePhysicsBaryCoordsAttr(UsdPhysicsVTetAttach &self,
+_CreatePhysicsTetCoordsAttr(UsdPhysicsVtxTetAttachment &self,
                                       object defaultVal, bool writeSparsely) {
-    return self.CreatePhysicsBaryCoordsAttr(
+    return self.CreatePhysicsTetCoordsAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Vector3fArray), writeSparsely);
 }
         
 static UsdAttribute
-_CreateStiffnessAttr(UsdPhysicsVTetAttach &self,
+_CreateStiffnessAttr(UsdPhysicsVtxTetAttachment &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreateStiffnessAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float), writeSparsely);
 }
         
 static UsdAttribute
-_CreateDampingAttr(UsdPhysicsVTetAttach &self,
+_CreateDampingAttr(UsdPhysicsVtxTetAttachment &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreateDampingAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float), writeSparsely);
 }
 
 static std::string
-_Repr(const UsdPhysicsVTetAttach &self)
+_Repr(const UsdPhysicsVtxTetAttachment &self)
 {
     std::string primRepr = TfPyRepr(self.GetPrim());
     return TfStringPrintf(
-        "UsdPhysics.VTetAttach(%s)",
+        "UsdPhysics.VtxTetAttachment(%s)",
         primRepr.c_str());
 }
 
 } // anonymous namespace
 
-void wrapUsdPhysicsVTetAttach()
+void wrapUsdPhysicsVtxTetAttachment()
 {
-    typedef UsdPhysicsVTetAttach This;
+    typedef UsdPhysicsVtxTetAttachment This;
 
     class_<This, bases<UsdGeomImageable> >
-        cls("VTetAttach");
+        cls("VtxTetAttachment");
 
     cls
         .def(init<UsdPrim>(arg("prim")))
@@ -154,10 +154,10 @@ void wrapUsdPhysicsVTetAttach()
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
         
-        .def("GetPhysicsBaryCoordsAttr",
-             &This::GetPhysicsBaryCoordsAttr)
-        .def("CreatePhysicsBaryCoordsAttr",
-             &_CreatePhysicsBaryCoordsAttr,
+        .def("GetPhysicsTetCoordsAttr",
+             &This::GetPhysicsTetCoordsAttr)
+        .def("CreatePhysicsTetCoordsAttr",
+             &_CreatePhysicsTetCoordsAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
         

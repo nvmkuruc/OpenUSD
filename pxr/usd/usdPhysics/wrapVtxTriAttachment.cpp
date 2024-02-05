@@ -21,7 +21,7 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#include "pxr/usd/usdPhysics/vTriAttach.h"
+#include "pxr/usd/usdPhysics/vtxTriAttachment.h"
 #include "pxr/usd/usd/schemaBase.h"
 
 #include "pxr/usd/sdf/primSpec.h"
@@ -50,64 +50,64 @@ WRAP_CUSTOM;
 
         
 static UsdAttribute
-_CreateAttachmentEnabledAttr(UsdPhysicsVTriAttach &self,
+_CreateAttachmentEnabledAttr(UsdPhysicsVtxTriAttachment &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreateAttachmentEnabledAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Bool), writeSparsely);
 }
         
 static UsdAttribute
-_CreatePhysicsVtxIndicesAttr(UsdPhysicsVTriAttach &self,
+_CreatePhysicsVtxIndicesAttr(UsdPhysicsVtxTriAttachment &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreatePhysicsVtxIndicesAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->IntArray), writeSparsely);
 }
         
 static UsdAttribute
-_CreatePhysicsTriIndicesAttr(UsdPhysicsVTriAttach &self,
+_CreatePhysicsTriIndicesAttr(UsdPhysicsVtxTriAttachment &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreatePhysicsTriIndicesAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->IntArray), writeSparsely);
 }
         
 static UsdAttribute
-_CreatePhysicsFaceCoordsAttr(UsdPhysicsVTriAttach &self,
+_CreatePhysicsTriCoordsAttr(UsdPhysicsVtxTriAttachment &self,
                                       object defaultVal, bool writeSparsely) {
-    return self.CreatePhysicsFaceCoordsAttr(
+    return self.CreatePhysicsTriCoordsAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Vector3fArray), writeSparsely);
 }
         
 static UsdAttribute
-_CreateStiffnessAttr(UsdPhysicsVTriAttach &self,
+_CreateStiffnessAttr(UsdPhysicsVtxTriAttachment &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreateStiffnessAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float), writeSparsely);
 }
         
 static UsdAttribute
-_CreateDampingAttr(UsdPhysicsVTriAttach &self,
+_CreateDampingAttr(UsdPhysicsVtxTriAttachment &self,
                                       object defaultVal, bool writeSparsely) {
     return self.CreateDampingAttr(
         UsdPythonToSdfType(defaultVal, SdfValueTypeNames->Float), writeSparsely);
 }
 
 static std::string
-_Repr(const UsdPhysicsVTriAttach &self)
+_Repr(const UsdPhysicsVtxTriAttachment &self)
 {
     std::string primRepr = TfPyRepr(self.GetPrim());
     return TfStringPrintf(
-        "UsdPhysics.VTriAttach(%s)",
+        "UsdPhysics.VtxTriAttachment(%s)",
         primRepr.c_str());
 }
 
 } // anonymous namespace
 
-void wrapUsdPhysicsVTriAttach()
+void wrapUsdPhysicsVtxTriAttachment()
 {
-    typedef UsdPhysicsVTriAttach This;
+    typedef UsdPhysicsVtxTriAttachment This;
 
     class_<This, bases<UsdGeomImageable> >
-        cls("VTriAttach");
+        cls("VtxTriAttachment");
 
     cls
         .def(init<UsdPrim>(arg("prim")))
@@ -154,10 +154,10 @@ void wrapUsdPhysicsVTriAttach()
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
         
-        .def("GetPhysicsFaceCoordsAttr",
-             &This::GetPhysicsFaceCoordsAttr)
-        .def("CreatePhysicsFaceCoordsAttr",
-             &_CreatePhysicsFaceCoordsAttr,
+        .def("GetPhysicsTriCoordsAttr",
+             &This::GetPhysicsTriCoordsAttr)
+        .def("CreatePhysicsTriCoordsAttr",
+             &_CreatePhysicsTriCoordsAttr,
              (arg("defaultValue")=object(),
               arg("writeSparsely")=false))
         

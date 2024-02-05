@@ -21,10 +21,10 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-#ifndef USDPHYSICS_GENERATED_VCURVEATTACH_H
-#define USDPHYSICS_GENERATED_VCURVEATTACH_H
+#ifndef USDPHYSICS_GENERATED_TRITRIATTACHMENT_H
+#define USDPHYSICS_GENERATED_TRITRIATTACHMENT_H
 
-/// \file usdPhysics/vCurveAttach.h
+/// \file usdPhysics/triTriAttachment.h
 
 #include "pxr/pxr.h"
 #include "pxr/usd/usdPhysics/api.h"
@@ -47,15 +47,15 @@ PXR_NAMESPACE_OPEN_SCOPE
 class SdfAssetPath;
 
 // -------------------------------------------------------------------------- //
-// PHYSICSVTXCURVEATTACHMENT                                                  //
+// PHYSICSTRITRIATTACHMENT                                                    //
 // -------------------------------------------------------------------------- //
 
-/// \class UsdPhysicsVCurveAttach
+/// \class UsdPhysicsTriTriAttachment
 ///
-/// Describes a fixed binding attachment between vertices and curves
-/// of two suitable deformable body simulation meshes.
+/// Describes a fixed binding attachment between a point on a triangle face and
+/// a point on another triangle face of two suitable deformable body simulation meshes.
 ///
-class UsdPhysicsVCurveAttach : public UsdGeomImageable
+class UsdPhysicsTriTriAttachment : public UsdGeomImageable
 {
 public:
     /// Compile time constant representing what kind of schema this class is.
@@ -63,26 +63,26 @@ public:
     /// \sa UsdSchemaKind
     static const UsdSchemaKind schemaKind = UsdSchemaKind::ConcreteTyped;
 
-    /// Construct a UsdPhysicsVCurveAttach on UsdPrim \p prim .
-    /// Equivalent to UsdPhysicsVCurveAttach::Get(prim.GetStage(), prim.GetPath())
+    /// Construct a UsdPhysicsTriTriAttachment on UsdPrim \p prim .
+    /// Equivalent to UsdPhysicsTriTriAttachment::Get(prim.GetStage(), prim.GetPath())
     /// for a \em valid \p prim, but will not immediately throw an error for
     /// an invalid \p prim
-    explicit UsdPhysicsVCurveAttach(const UsdPrim& prim=UsdPrim())
+    explicit UsdPhysicsTriTriAttachment(const UsdPrim& prim=UsdPrim())
         : UsdGeomImageable(prim)
     {
     }
 
-    /// Construct a UsdPhysicsVCurveAttach on the prim held by \p schemaObj .
-    /// Should be preferred over UsdPhysicsVCurveAttach(schemaObj.GetPrim()),
+    /// Construct a UsdPhysicsTriTriAttachment on the prim held by \p schemaObj .
+    /// Should be preferred over UsdPhysicsTriTriAttachment(schemaObj.GetPrim()),
     /// as it preserves SchemaBase state.
-    explicit UsdPhysicsVCurveAttach(const UsdSchemaBase& schemaObj)
+    explicit UsdPhysicsTriTriAttachment(const UsdSchemaBase& schemaObj)
         : UsdGeomImageable(schemaObj)
     {
     }
 
     /// Destructor.
     USDPHYSICS_API
-    virtual ~UsdPhysicsVCurveAttach();
+    virtual ~UsdPhysicsTriTriAttachment();
 
     /// Return a vector of names of all pre-declared attributes for this schema
     /// class and all its ancestor classes.  Does not include attributes that
@@ -91,17 +91,17 @@ public:
     static const TfTokenVector &
     GetSchemaAttributeNames(bool includeInherited=true);
 
-    /// Return a UsdPhysicsVCurveAttach holding the prim adhering to this
+    /// Return a UsdPhysicsTriTriAttachment holding the prim adhering to this
     /// schema at \p path on \p stage.  If no prim exists at \p path on
     /// \p stage, or if the prim at that path does not adhere to this schema,
     /// return an invalid schema object.  This is shorthand for the following:
     ///
     /// \code
-    /// UsdPhysicsVCurveAttach(stage->GetPrimAtPath(path));
+    /// UsdPhysicsTriTriAttachment(stage->GetPrimAtPath(path));
     /// \endcode
     ///
     USDPHYSICS_API
-    static UsdPhysicsVCurveAttach
+    static UsdPhysicsTriTriAttachment
     Get(const UsdStagePtr &stage, const SdfPath &path);
 
     /// Attempt to ensure a \a UsdPrim adhering to this schema at \p path
@@ -127,7 +127,7 @@ public:
     /// the opinion at the current EditTarget.
     ///
     USDPHYSICS_API
-    static UsdPhysicsVCurveAttach
+    static UsdPhysicsTriTriAttachment
     Define(const UsdStagePtr &stage, const SdfPath &path);
 
 protected:
@@ -153,7 +153,7 @@ public:
     // --------------------------------------------------------------------- //
     // ATTACHMENTENABLED 
     // --------------------------------------------------------------------- //
-    /// Determines if this PhysicsVtxCurveAttachment is enabled.
+    /// Determines if this PhysicsTriTriAttachment is enabled.
     ///
     /// | ||
     /// | -- | -- |
@@ -173,74 +173,98 @@ public:
 
 public:
     // --------------------------------------------------------------------- //
-    // PHYSICSVTXINDICES 
+    // PHYSICSTRIINDICES0 
     // --------------------------------------------------------------------- //
-    /// Array of vertex indices from vtxSrc
+    /// Array of triangle indices from triSrc0
     ///
     /// | ||
     /// | -- | -- |
-    /// | Declaration | `int[] physics:vtxIndices` |
+    /// | Declaration | `int[] physics:triIndices0` |
     /// | C++ Type | VtArray<int> |
     /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->IntArray |
     USDPHYSICS_API
-    UsdAttribute GetPhysicsVtxIndicesAttr() const;
+    UsdAttribute GetPhysicsTriIndices0Attr() const;
 
-    /// See GetPhysicsVtxIndicesAttr(), and also 
+    /// See GetPhysicsTriIndices0Attr(), and also 
     /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
     USDPHYSICS_API
-    UsdAttribute CreatePhysicsVtxIndicesAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+    UsdAttribute CreatePhysicsTriIndices0Attr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
     // --------------------------------------------------------------------- //
-    // PHYSICSCURVESEGMENTINDICES 
+    // PHYSICSTRIINDICES1 
     // --------------------------------------------------------------------- //
-    /// Array of (curve index, segment index) pairs from curveSrc.
-    /// There should be exactly one pair for each vertex index in vtxIndices.
-    /// The curve index specifies the index of the curve from curveSrc, and the
-    /// segment index identifies the segment within the curve.
+    /// Array of triangle indices from triSrc1. There should be exactly one
+    /// triangle index for each triangle index in triIndices0.
     ///
     /// | ||
     /// | -- | -- |
-    /// | Declaration | `int2[] physics:curveSegmentIndices` |
-    /// | C++ Type | VtArray<GfVec2i> |
-    /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Int2Array |
+    /// | Declaration | `int[] physics:triIndices1` |
+    /// | C++ Type | VtArray<int> |
+    /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->IntArray |
     USDPHYSICS_API
-    UsdAttribute GetPhysicsCurveSegmentIndicesAttr() const;
+    UsdAttribute GetPhysicsTriIndices1Attr() const;
 
-    /// See GetPhysicsCurveSegmentIndicesAttr(), and also 
+    /// See GetPhysicsTriIndices1Attr(), and also 
     /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
     USDPHYSICS_API
-    UsdAttribute CreatePhysicsCurveSegmentIndicesAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+    UsdAttribute CreatePhysicsTriIndices1Attr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
     // --------------------------------------------------------------------- //
-    // PHYSICSCURVESEGMENTCOORDS 
+    // PHYSICSTRICOORDS0 
     // --------------------------------------------------------------------- //
-    /// U coordinate specifying the interpolated position within the
-    /// curve segment. There should be exactly one coordinate for each
-    /// curve segment in curveSegmentIndices.
+    /// Triangle relative coordinates of the form U,V portion of
+    /// barycentric UVW coordinates and a normal offset from the
+    /// triangle. There should be exactly one set of triangle coordinates
+    /// corresponding to each entry in triIndices0.
     ///
     /// | ||
     /// | -- | -- |
-    /// | Declaration | `float[] physics:curveSegmentCoords` |
-    /// | C++ Type | VtArray<float> |
-    /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->FloatArray |
+    /// | Declaration | `vector3f[] physics:triCoords0` |
+    /// | C++ Type | VtArray<GfVec3f> |
+    /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Vector3fArray |
     USDPHYSICS_API
-    UsdAttribute GetPhysicsCurveSegmentCoordsAttr() const;
+    UsdAttribute GetPhysicsTriCoords0Attr() const;
 
-    /// See GetPhysicsCurveSegmentCoordsAttr(), and also 
+    /// See GetPhysicsTriCoords0Attr(), and also 
     /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
     /// If specified, author \p defaultValue as the attribute's default,
     /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
     /// the default for \p writeSparsely is \c false.
     USDPHYSICS_API
-    UsdAttribute CreatePhysicsCurveSegmentCoordsAttr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+    UsdAttribute CreatePhysicsTriCoords0Attr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
+
+public:
+    // --------------------------------------------------------------------- //
+    // PHYSICSTRICOORDS1 
+    // --------------------------------------------------------------------- //
+    /// Triangle relative coordinates of the form U,V portion of
+    /// barycentric UVW coordinates and a normal offset from the
+    /// triangle. There should be exactly one set of triangle coordinates
+    /// corresponding to each entry in triIndices1.
+    ///
+    /// | ||
+    /// | -- | -- |
+    /// | Declaration | `vector3f[] physics:triCoords1` |
+    /// | C++ Type | VtArray<GfVec3f> |
+    /// | \ref Usd_Datatypes "Usd Type" | SdfValueTypeNames->Vector3fArray |
+    USDPHYSICS_API
+    UsdAttribute GetPhysicsTriCoords1Attr() const;
+
+    /// See GetPhysicsTriCoords1Attr(), and also 
+    /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create.
+    /// If specified, author \p defaultValue as the attribute's default,
+    /// sparsely (when it makes sense to do so) if \p writeSparsely is \c true -
+    /// the default for \p writeSparsely is \c false.
+    USDPHYSICS_API
+    UsdAttribute CreatePhysicsTriCoords1Attr(VtValue const &defaultValue = VtValue(), bool writeSparsely=false) const;
 
 public:
     // --------------------------------------------------------------------- //
@@ -294,32 +318,33 @@ public:
 
 public:
     // --------------------------------------------------------------------- //
-    // VTXSRC 
+    // TRISRC0 
     // --------------------------------------------------------------------- //
-    /// Relationship to a single UsdGeomPointBased the vertices
-    /// belongs to. This should always point to a deformable body's simulation mesh.
+    /// Relationship to a single UsdGeomMesh or UsdGeomTetMesh surface the triangle faces
+    /// belong to. This should always point to a deformable body's simulation mesh
     ///
     USDPHYSICS_API
-    UsdRelationship GetVtxSrcRel() const;
+    UsdRelationship GetTriSrc0Rel() const;
 
-    /// See GetVtxSrcRel(), and also 
+    /// See GetTriSrc0Rel(), and also 
     /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create
     USDPHYSICS_API
-    UsdRelationship CreateVtxSrcRel() const;
+    UsdRelationship CreateTriSrc0Rel() const;
 
 public:
     // --------------------------------------------------------------------- //
-    // CURVESRC 
+    // TRISRC1 
     // --------------------------------------------------------------------- //
-    /// Relationship to a single UsdGeomBasisCurves or UsdGeomBasisCurvesNetwork the curves belong to. This should always point to a deformable body's simulation mesh.
+    /// Relationship to a single UsdGeomMesh or UsdGeomTetMesh surface the triangle faces
+    /// belong to. This should always point to a deformable body's simulation mesh
     ///
     USDPHYSICS_API
-    UsdRelationship GetCurveSrcRel() const;
+    UsdRelationship GetTriSrc1Rel() const;
 
-    /// See GetCurveSrcRel(), and also 
+    /// See GetTriSrc1Rel(), and also 
     /// \ref Usd_Create_Or_Get_Property for when to use Get vs Create
     USDPHYSICS_API
-    UsdRelationship CreateCurveSrcRel() const;
+    UsdRelationship CreateTriSrc1Rel() const;
 
 public:
     // ===================================================================== //
