@@ -1625,14 +1625,23 @@ DRACO = Dependency("Draco", InstallDraco, "include/draco/compression/decode.h")
 ############################################################
 # MaterialX
 
-MATERIALX_URL = "https://github.com/materialx/MaterialX/archive/v1.38.4.zip"
+MATERIALX_URL = "https://github.com/materialx/MaterialX/archive/v1.38.7.zip"
 
 def InstallMaterialX(context, force, buildArgs):
     with CurrentWorkingDirectory(DownloadURL(MATERIALX_URL, context, force)):
-        cmakeOptions = ['-DMATERIALX_BUILD_SHARED_LIBS=ON']
-
-        cmakeOptions += buildArgs;
-
+        # MaterialX 1.38.7 fails to build on windows using VS2017 because of a
+        # missing header include, following patch fixes the same. This patch
+        # should be removed when underlying issue is resolved.
+        # https://github.com/AcademySoftwareFoundation/MaterialX/issues/1401
+        if IsVisualStudio2017OrGreater() and not IsVisualStudio2019OrGreater():
+            PatchFile("source\\MaterialXGenMsl\\MslShaderGenerator.cpp",
+                    [("#include <MaterialXGenMsl/MslShaderGenerator.h>",
+                     "#include <cctype>\n" + 
+                     "#include <MaterialXGenMsl/MslShaderGenerator.h>")])
+        cmakeOptions = ['-DMATERIALX_BUILD_SHARED_LIBS=ON',
+                        '-DMATERIALX_BUILD_TESTS=OFF'
+        ]
+        cmakeOptions += buildArgs
         RunCMake(context, force, cmakeOptions)
 
 MATERIALX = Dependency("MaterialX", InstallMaterialX, "include/MaterialXCore/Library.h")

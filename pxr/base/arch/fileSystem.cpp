@@ -1190,7 +1190,7 @@ int ArchFileAccess(const char* path, int mode)
         return (GetFileAttributesW(wpath.c_str()) != INVALID_FILE_ATTRIBUTES)
                 ? 0 : Arch_FileAccessError();
     }
-    ArchWindowsFileAccess(path, ArchModeToAccess(mode));
+    return ArchWindowsFileAccess(path, ArchModeToAccess(mode));
 }
 
 // https://msdn.microsoft.com/en-us/library/windows/hardware/ff552012.aspx

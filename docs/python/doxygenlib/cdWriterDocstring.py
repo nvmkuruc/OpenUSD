@@ -35,12 +35,105 @@
 #      This is called once the entire file has been traversed.
 #
 
+import importlib
+import os
+import re
 import sys
 import textwrap
 import types
-import re
+
+from typing import Dict
 
 from .cdUtils import *
+
+
+WORDBREAK_RE = re.compile(r"\b")
+
+MULTIPLE_WHITESPACE_RE = re.compile(r'\s+')
+MULTIPLE_WHITESPACE_REPLACE = ' '
+
+API_RE_FIND = re.compile(r"""\b[A-Z]+_API(?:\s+|$)""")
+API_RE_REPLACE = ""
+
+SQUARE_BRACKET_WITH_SPACE_RE = re.compile(r" *(\[|\]) *")
+SQUARE_BRACKET_WITH_SPACE_REPLACE = r"\1"
+
+COMMA_WITH_SPACE_RE = re.compile(r" *, *")
+COMMA_WITH_SPACE_REPLACE = ", "
+
+CHAR_STAR_RE = re.compile(r"\*\s*char|char\s*\*")
+CHAR_STAR_REPLACE = "str"
+
+PTR_NAME_SUFFIXES_RE = re.compile(r"(Handle|ConstPtr|RefPtr|Ptr)$")
+PTR_NAME_SUFFIXES_REPLACE = ""
+
+SMART_PTR_TEMPLATE_RE = re.compile(r"(?:shared|unique)_ptr\s*<(.*)>")
+SMART_PTR_TEMPLATE_REPLACE = r"\1"
+
+VECTOR_SUFFIX_RE = re.compile(r"\b(\w+)Vector\b")
+VECTOR_SUFFIX_REPLACE = r"list[\1]"
+
+
+def importPxrModule(moduleName: str) -> types.ModuleType:
+    """Import a single pxr submodule
+
+    moduleName is the package that follows pxr, ie, pxr.{moduleName}
+    """
+    # if we've already built the __DOC.py modules before, don't use them
+    oldVal = os.environ.get("PXR_DISABLE_EXTERNAL_PY_DOCSTRINGS")
+    os.environ["PXR_DISABLE_EXTERNAL_PY_DOCSTRINGS"] = "1"
+    try:
+        return importlib.import_module(f"pxr.{moduleName}")
+    finally:
+        if oldVal is None:
+            del os.environ["PXR_DISABLE_EXTERNAL_PY_DOCSTRINGS"]
+        else:
+            os.environ["PXR_DISABLE_EXTERNAL_PY_DOCSTRINGS"] = oldVal
+
+def getAllPxrModules() -> Dict[str, types.ModuleType]:
+    """Find and import all pxr.* modules
+
+    Returns a dictionary mapping from submodule name to module object
+    """
+    pxrModule = importlib.import_module("pxr")
+    modules = {}
+
+    for folder in pxrModule.__path__:
+        for entry in os.scandir(folder):
+            pxrModuleName = ""
+            if entry.is_dir():
+                init_file = os.path.join(entry.path, "__init__.py")
+                if os.path.isfile(init_file):
+                    pxrModuleName = entry.name
+            elif entry.is_file():
+                if entry.name.endswith(".py"):
+                    basename = entry.name[:-len(".py")]
+                    if basename != "__init__":
+                        pxrModuleName = basename
+            if pxrModuleName:
+                modules[pxrModuleName] = importPxrModule(pxrModuleName)
+    # return a sorted dict
+    return {k: modules[k] for k in sorted(modules)}
+
+pxrModules = getAllPxrModules()
+
+# we use the reversed sorted order of the module names, because this ensures that longer names (ie, UsdGeom) come
+# before shorter ones (Usd), so the more exact matches are preferred
+PXR_MODULES_OR_JOINED = "|".join(re.escape(m) for m in reversed(pxrModules))
+PXR_MODULE_PREFIX = re.compile(rf"^\s*(?P<module>{PXR_MODULES_OR_JOINED})(?P<suffix>[A-Za-z0-9_]+)")
+
+
+def escapeRstTextLiteral(rawText):
+    newText = rawText
+    # note - we use double \\ because these strings are going to be inserted
+    # inside a python string literal - ie, we eventually do:
+    #     '"""%s"""' % docstring
+    # ...so docstring has to have it's own python-string escaping
+    newText = newText.replace("*", r"\\*") # bypass inline-emphasis warnings
+    newText = newText.replace("...", r"\\.\\.\\.") # bypass erroneous explicit-markup warnings
+    newText = newText.replace("..", r"\\.\\.") # bypass erroneous explicit-markup warnings
+    return newText
+
 
 class Writer:
     """
@@ -77,11 +170,13 @@ class Writer:
     # a list of modules
     def __init__(self, packageName, moduleName):
 
-        # Import the python module 
-        if not Import("from " +packageName+ " import " +moduleName+ " as " +moduleName):
-            Error("Could not import %s" % (moduleName))
-
-        self.module = eval(moduleName)
+        # Import the python module...
+        if packageName == "pxr":
+            self.module = pxrModules[moduleName]
+        else:
+            if not Import("from " +packageName+ " import " +moduleName+ " as " +moduleName):
+                Error("Could not import %s" % (moduleName))
+            self.module = eval(moduleName)
         self.prefix = self.module.__name__.split('.')[-1]
         self.seenPaths = {}
         self.propertyTable = {}
@@ -106,11 +201,11 @@ class Writer:
         docstring = self.__wordWrapDocString(docstring.split('\n'))
 
         if docstring:
-            summary = re.sub(r'\s+', ' ', docstring[:40].strip())
+            summary = MULTIPLE_WHITESPACE_RE.sub(MULTIPLE_WHITESPACE_REPLACE, docstring[:40].strip())
             Debug("Returning docstring: %s..." % summary)
 
         return docstring
-    
+
     def getDocTags(self, node):
         """
         Public API to retrieve tags from within an XML node's assorted docstrings.
@@ -129,7 +224,7 @@ class Writer:
         # representation for the python docstring
         for child in node.childNodes:
             if child.isText():
-                tlist.append(child.text)
+                tlist.append(escapeRstTextLiteral(child.text))
             elif (child.name == "para"):
                 tlist.append("PARA")
                 tlist.append(self.__convertNode(child,sep))
@@ -147,10 +242,12 @@ class Writer:
                     tlist.append("*" + nodetext + "*")
             elif (child.name == "bold"):
                 nodetext = self.__convertNode(child, sep)
-                tlist.append("B{" + nodetext + "}")
+                # tlist.append("B{" + nodetext + "}")
+                tlist.append("**" + nodetext + "**")
             elif (child.name == "computeroutput"):
                 nodetext = self.__convertNode(child, sep)
-                tlist.append("C{" + nodetext + "}")
+                # tlist.append("C{" + nodetext + "}")
+                tlist.append("``" + nodetext + "``")
             elif (child.name == "heading"):
                 nodetext = self.__convertNode(child, sep)
                 tlist.append(nodetext + "NEWLINE" + "=" * len(nodetext))
@@ -243,13 +340,11 @@ class Writer:
             # the textwrap.fill call adds \n's at line breaks
             for line in curline.split('\n'):
                 if line.startswith("-"):
-                    line = "\\\\" + line # normal text starting with dashes trip sphinx bullet list warning
-                if "*" in line:
-                    line = line.replace("*", "\\*") # bypass inline-emphasis warnings
-                if "..." in line:
-                    line = line.replace("...", ". . .") # bypass erroneous explicit-markup warnings
-                if ".." in line and not line.startswith(".. code-block::"):
-                    line = line.replace("..", ". .") # bypass erroneous explicit-markup warnings
+                    # note - we use double \\ because these strings are going to be inserted
+                    # inside a python string literal - ie, we eventually do:
+                    #     '"""%s"""' % docstring
+                    # ...so docstring has to have it's own python-string escaping
+                    line = r"\\" + line # normal text starting with dashes trip sphinx bullet list warning
                 if line.startswith("   - "):
                     lines.append("") # Need an extra line to ensure that unindentations from a previous list are interpreted correctly
                     lines.append(line)
@@ -411,9 +506,11 @@ class Writer:
                         pname2 = name[0].lower() + name[1:]
                         pret2 = ret[:]
                         pret2.append(pname2)
-            
+
             if name.startswith(self.prefix) and name != self.prefix:
-                name = name[len(self.prefix):]
+                shortName = name[len(self.prefix):]
+                if hasattr(self.module, shortName):
+                    name = shortName
             ret.append(name)
 
         return (ret, pret, pret2)
@@ -490,19 +587,76 @@ class Writer:
     def __convertTypeName(self, cppName):
         """Convert a C++ type name into a Python type name."""
         # get rid of const, volatile, &, *.
-        ret = cppName
-        ret = ret.replace('const', '')
-        ret = ret.replace('volatile ', '')
-        ret = ret.replace('&', '')
-        ret = ret.replace('*', '')
+        ret = cppName.strip()
+
+        # replacements that need multiple tokens, or that would change tokenization
         ret = ret.replace('std::', '')
         ret = ret.replace('boost::', '')
-        ret = ret.replace('vector', 'sequence')
+        ret = ret.replace('unsigned char', 'int')
+        ret = ret.replace('unsigned int', 'int')
+        ret = ret.replace('unsigned long', 'int')
+
+        ret = SMART_PTR_TEMPLATE_RE.sub(SMART_PTR_TEMPLATE_REPLACE, ret)
+        ret = CHAR_STAR_RE.sub(CHAR_STAR_REPLACE, ret)
+        ret = VECTOR_SUFFIX_RE.sub(VECTOR_SUFFIX_REPLACE, ret)
+
+        tokens = [self.__convertTypeNameToken(x) for x in WORDBREAK_RE.split(ret) if x]
+        ret = ''.join(tokens).strip()
+
+        # post token conversion cleanup
+
+        # space cleanup
+        ret = SQUARE_BRACKET_WITH_SPACE_RE.sub(SQUARE_BRACKET_WITH_SPACE_REPLACE, ret)
+        ret = COMMA_WITH_SPACE_RE.sub(COMMA_WITH_SPACE_REPLACE, ret)
+        ret = MULTIPLE_WHITESPACE_RE.sub(MULTIPLE_WHITESPACE_REPLACE, ret)
+
+        if ret == 'unsigned':
+            ret = 'int'
+        return ret
+
+    def __convertTypeNameToken(self, cppName):
+        ret = cppName
+
+        # words are guaranteed to come in by themselves
+        if ret in ('const', 'constexpr', 'expr', 'volatile', 'class', 'typename'):
+            return ''
+
+        # word replacements
+        replacement = {
+            'TfToken': 'str',
+            'double': 'float',
+            'int64_t': 'int',
+            'pair': 'tuple',
+            'sequence': 'list',
+            'size_t': 'int',
+            'string': 'str',
+            'vector': 'list',
+            'void': 'None',
+        }.get(ret)
+        if replacement is not None:
+            return replacement
+
+        ret = PTR_NAME_SUFFIXES_RE.sub(PTR_NAME_SUFFIXES_REPLACE, ret)
+        ret = API_RE_FIND.sub(API_RE_REPLACE, ret)
+
+        # see if it's a name that starts with a module, like ArResolver, or UsdPrim...
+        match = PXR_MODULE_PREFIX.match(ret)
+        if match:
+            moduleName = match.group("module")
+            objName = match.group("suffix")
+            module = pxrModules.get(moduleName)
+            if module and hasattr(module, objName):
+                ret = objName
+
+        # non-words may be mixed with other things, need to replace pieces at a time
+        ret = ret.replace('&', '')
+        ret = ret.replace('*', '')
         ret = ret.replace('::', '.')
-        ret = ret.strip()
-        if ret.startswith(self.prefix):
-            ret = ret[len(self.prefix):]
-        return ret.strip()
+
+        ret = ret.replace('<', '[')
+        ret = ret.replace('>', ']')
+
+        return ret
 
     def __convertCppSyntax(self, line):
         """Convert C++ terminology into Python terminology."""

@@ -86,11 +86,11 @@ public:
         AllSceneDirtyBits           = ((1<<23) - 1),
 
         NewRepr                     = 1 << 23,
-
+        
+        CustomBitsBegin             = 1 << 24,
         //+NV_CHANGE FRZHANG
-        NV_DirtySkinningBinding     = 1 << 24,
-        NV_DirtySkelAnimXform       = 1 << 25,
-        CustomBitsBegin             = 1 << 26,
+        NV_DirtySkinningBinding     = 1 << 25,
+        NV_DirtySkelAnimXform       = 1 << 26,
         //-NV_CHANGE FRZHANG
         CustomBitsEnd               = 1 << 30,
         CustomBitsMask              = 0x7f << 24,
