@@ -462,6 +462,18 @@ pxr_build_test(testUsdZipFile_CPP
         testenv/testUsdZipFile.cpp
 )
 
+pxr_build_test(testUsdUsdzBugGHSA01
+    LIBRARIES
+        ar
+        arch
+        tf
+        sdf
+        usd
+    CPPFILES
+        testenv/testUsdUsdzBugGHSA01.cpp
+)
+
+
 pxr_install_test_dir(
     SRC testenv/testUsdAppliedAPISchemas
     DEST testUsdAppliedAPISchemas
@@ -705,6 +717,11 @@ pxr_install_test_dir(
 pxr_install_test_dir(
     SRC testenv/testUsdZipFile.testenv
     DEST testUsdZipFile_CPP
+)
+
+pxr_install_test_dir(
+    SRC testenv/testUsdUsdzBugGHSA01.testenv
+    DEST testUsdUsdzBugGHSA01
 )
 
 pxr_register_test(testUsdAppliedAPISchemas
@@ -1213,5 +1230,10 @@ pxr_register_test(testUsdUsdzResolver
 pxr_register_test(testUsdOpaqueAttributes
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdOpaqueAttributes"
+    EXPECTED_RETURN_CODE 0
+)
+
+pxr_register_test(testUsdUsdzBugGHSA01
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUsdzBugGHSA01"
     EXPECTED_RETURN_CODE 0
 )
