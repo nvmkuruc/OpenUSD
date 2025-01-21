@@ -1134,6 +1134,13 @@ SdfSchemaBase::_CheckAndGetSpecDefinition(SdfSpecType specType) const
     return def;
 }
 
+const SdfSchemaBase::SpecDefinition* 
+SdfSchemaBase::_IssueErrorForInvalidSpecType(SdfSpecType specType) const
+{
+    TF_RUNTIME_ERROR("Invalid spec type %d", static_cast<int>(specType));
+    return nullptr;
+}
+
 bool 
 SdfSchemaBase::IsValidFieldForSpec(const TfToken &fieldKey, 
                                SdfSpecType specType) const
