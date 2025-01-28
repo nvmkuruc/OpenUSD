@@ -129,6 +129,9 @@ public:
     /// HdChangeTracker. Redundantly setting the time to its existing value is a
     /// no-op and will not trigger invalidation.
     USDIMAGING_API
+    //#nv begin #omni-hydra 
+    virtual
+    //#nv end
     void SetTime(UsdTimeCode time);
 
     /// Returns the current time.
@@ -515,8 +518,9 @@ public:
     /// Returns true if \p usdPath is included in invised path list.
     USDIMAGING_API
     bool IsInInvisedPaths(const SdfPath &usdPath) const;
-
-private:
+//#nv begin #omni-hydra   
+protected:
+//#nv end
     // Internal Get and SamplePrimvar
     VtValue _Get(SdfPath const& id, TfToken const& key, VtIntArray *outIndices);
 
@@ -552,9 +556,12 @@ private:
     // ---------------------------------------------------------------------- //
     // Usd Change Processing / Notice Handlers 
     // ---------------------------------------------------------------------- //
+//#nv begin #omni-hydra   
+    virtual
+    USDIMAGING_API
     void _OnUsdObjectsChanged(UsdNotice::ObjectsChanged const&,
                               UsdStageWeakPtr const& sender);
-
+//#nv end
     // Map holding USD subtree path keys mapped to associated hydra prim cache
     // paths. This may be prepopulated and provided to the Refresh and Resync
     // methods below to speed up dependency gathering.
@@ -584,6 +591,11 @@ private:
     // Repopulate() on those prims individually. If repopulateFromRoot is
     // true, Repopulate() will be called on \p rootPath instead. This is slower,
     // but handles changes in tree topology.
+
+    //#nv begin #omni-hydra  
+    USDIMAGING_API
+    virtual
+    //#nv end
     void _ResyncUsdPrim(SdfPath const& usdRootPath,
                         _FlattenedDependenciesCacheMap const &cache,
                         UsdImagingIndexProxy* proxy,
@@ -699,6 +711,9 @@ private:
                                                 TfToken const& adapterKey);
 
     // Obtain the prim tracking data for the given cache path.
+    //#nv begin #omni-hydra
+    USDIMAGING_API
+    //#nv end       
     _HdPrimInfo *_GetHdPrimInfo(const SdfPath &cachePath);
 
     Usd_PrimFlagsConjunction _GetDisplayPredicate() const;
