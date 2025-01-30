@@ -45,7 +45,7 @@ TestUsdzFile()
         return TfStringStartsWith(e.GetCommentary(), "Corrupt asset <") && 
                TfStringEndsWith(e.GetCommentary(),
                                 "root.usdz[scene.usdc]>: "
-                                "exception thrown unpacking a value, "
+                                "exception raised unpacking a value, "
                                 "returning an empty VtValue");
     };
     TF_AXIOM(std::any_of(m.begin(), m.end(), corruptAsset));
