@@ -2390,9 +2390,17 @@ UsdSkelImagingSkeletonAdapter::_IsAffectedByTimeVaryingSkelAnim(
         return false;
     }
 
+    //#nv begin
     // Discover time-varying joint transforms.
-    if (const UsdSkelAnimQuery& animQuery =
-        skelData->skelQuery.GetAnimQuery()) {
+    const UsdSkelAnimQuery& animQuery =
+        skelData->skelQuery.GetAnimQuery();
+
+    if (animQuery 
+        //check if animQuery's prim is still validate. 
+        //This is aming for avoid crash when a group of resync is triggered and during that animquery's prim might already be expired.
+        //animation prim's resync will also trigger this timevarying track, so it will trigger a proper call of this function to correct time.
+        && animQuery.GetPrim()){
+    // #nv end
 
         return (skinnedPrimData->hasJointInfluences &&
                 animQuery.JointTransformsMightBeTimeVarying()) ||
