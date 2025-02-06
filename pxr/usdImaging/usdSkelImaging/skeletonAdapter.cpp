@@ -159,7 +159,7 @@ UsdSkelImagingSkeletonAdapter::Populate(
         _skelDataCache[skelPath] = skelData;
 
 //#nv begin NvUsdSkel_DisableSkeletonSprim
-        if (NvUsdSkel_DisableSkeletonSprim) {
+        if (!NvUsdSkel_DisableSkeletonSprim) {
 //nv end
         // Insert mesh prim to visualize the bone mesh for the skeleton.
         // Note: This uses the "rest" pose of the skeleton.
@@ -210,7 +210,7 @@ UsdSkelImagingSkeletonAdapter::Populate(
                                  query, skelRootPath);
 
 //#nv begin NvUsdSkel_DisableSkeletonSprim
-            if (NvUsdSkel_DisableSkeletonSprim) {
+            if (!NvUsdSkel_DisableSkeletonSprim) {
 //nv end
             // 1. A skinning computation that computes the skinned points, and
             SdfPath compPath = _GetSkinningComputationPath(skinnedPrimPath);
@@ -1045,7 +1045,7 @@ UsdSkelImagingSkeletonAdapter::_RemovePrim(const SdfPath& cachePath,
                 "%s\n", cachePath.GetText());
         
         //#nv begin NvUsdSkel_DisableSkeletonSprim
-        if (NvUsdSkel_DisableSkeletonSprim) {
+        if (!NvUsdSkel_DisableSkeletonSprim) {
         //nv end
         // Remove bone mesh.
         index->RemoveRprim(cachePath);
@@ -2422,7 +2422,7 @@ UsdSkelImagingSkeletonAdapter::_RemoveSkinnedPrimAndComputations(
     // Remove skinned prim.
     index->RemoveRprim(cachePath);
     //#nv begin NvUsdSkel_DisableSkeletonSprim
-    if (NvUsdSkel_DisableSkeletonSprim) {
+    if (!NvUsdSkel_DisableSkeletonSprim) {
     //nv end
     // Remove the computations it participates in.
     SdfPath compPath = _GetSkinningComputationPath(cachePath);
