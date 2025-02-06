@@ -2681,7 +2681,7 @@ UsdSkelImagingSkeletonAdapter::_SkelData::ComputeTopologyAndRestState()
     _numJoints = xforms.size();
 
     //#nv begin NvUsdSkel_DisableSkeletonSprim
-    if (NvUsdSkel_DisableSkeletonSprim) {
+    if (!NvUsdSkel_DisableSkeletonSprim) {
     //nv end
     UsdSkelImagingComputeBonePoints(skelQuery.GetTopology(), xforms,
                                     numPoints, &_boneMeshPoints);
