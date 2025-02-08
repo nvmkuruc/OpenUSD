@@ -55,8 +55,6 @@
 #include "pxr/base/tf/type.h"
 #include "pxr/base/work/loops.h"
 
-constexpr bool NvUsdSkel_DisableSkeletonSprim = true;
-
 PXR_NAMESPACE_OPEN_SCOPE
 
 TF_DEFINE_PRIVATE_TOKENS(
@@ -158,18 +156,12 @@ UsdSkelImagingSkeletonAdapter::Populate(
         skelData->skelQuery = _skelCache.GetSkelQuery(UsdSkelSkeleton(prim));
         _skelDataCache[skelPath] = skelData;
 
-//#nv begin NvUsdSkel_DisableSkeletonSprim
-        if (!NvUsdSkel_DisableSkeletonSprim) {
-//nv end
         // Insert mesh prim to visualize the bone mesh for the skeleton.
         // Note: This uses the "rest" pose of the skeleton.
         // Also, since the bone mesh isn't backed by the UsdStage, we register 
         // the skeleton prim on its behalf.
         index->InsertRprim(HdPrimTypeTokens->mesh, prim.GetPath(),
                            prim, shared_from_this());
-//#nv begin NvUsdSkel_DisableSkeletonSprim
-        }
-//nv end
     }
 
     // Insert computations for each skinned prim targeted by this
@@ -209,9 +201,6 @@ UsdSkelImagingSkeletonAdapter::Populate(
                 _SkinnedPrimData(skelPath, skelData->skelQuery,
                                  query, skelRootPath);
 
-//#nv begin NvUsdSkel_DisableSkeletonSprim
-            if (!NvUsdSkel_DisableSkeletonSprim) {
-//nv end
             // 1. A skinning computation that computes the skinned points, and
             SdfPath compPath = _GetSkinningComputationPath(skinnedPrimPath);
 
@@ -245,9 +234,6 @@ UsdSkelImagingSkeletonAdapter::Populate(
                 aggrCompPath,
                 skinnedPrim,
                 shared_from_this());
-//#nv begin NvUsdSkel_DisableSkeletonSprim
-            }
-//nv end
         }
     } else {
         // Do nothing. This isn't an error. We can have skeletons that
@@ -1044,15 +1030,8 @@ UsdSkelImagingSkeletonAdapter::_RemovePrim(const SdfPath& cachePath,
                 "[SkeletonAdapter::_RemovePrim] Remove skeleton"
                 "%s\n", cachePath.GetText());
         
-        //#nv begin NvUsdSkel_DisableSkeletonSprim
-        if (!NvUsdSkel_DisableSkeletonSprim) {
-        //nv end
         // Remove bone mesh.
         index->RemoveRprim(cachePath);
-
-        //#nv begin NvUsdSkel_DisableSkeletonSprim
-        }
-        //nv end
 
         // Remove all skinned prims that are targered by the skeleton, and their
         // computations.
@@ -1144,11 +1123,6 @@ UsdSkelImagingSkeletonAdapter::_TrackBoneMeshVariability(
     HdDirtyBits* timeVaryingBits,
     const UsdImagingInstancerContext* instancerContext) const
 {
-    //#nv begin NvUsdSkel_DisableSkeletonSprim
-    if (NvUsdSkel_DisableSkeletonSprim) {
-        return;
-    }
-    //nv end
     const _SkelData* skelData = _GetSkelData(cachePath);
     if (!TF_VERIFY(skelData)) {
         return;
@@ -2338,11 +2312,6 @@ UsdSkelImagingSkeletonAdapter::_UpdateBoneMeshForTime(
     HdDirtyBits requestedBits,
     const UsdImagingInstancerContext* instancerContext) const
 {
-    //#nv begin NvUsdSkel_DisableSkeletonSprim
-    if (NvUsdSkel_DisableSkeletonSprim) {
-        return;
-    }
-    //nv end
     _SkelData* skelData = _GetSkelData(cachePath);
     if (!TF_VERIFY(skelData)) {
         return;
@@ -2421,9 +2390,6 @@ UsdSkelImagingSkeletonAdapter::_RemoveSkinnedPrimAndComputations(
     
     // Remove skinned prim.
     index->RemoveRprim(cachePath);
-    //#nv begin NvUsdSkel_DisableSkeletonSprim
-    if (!NvUsdSkel_DisableSkeletonSprim) {
-    //nv end
     // Remove the computations it participates in.
     SdfPath compPath = _GetSkinningComputationPath(cachePath);
     index->RemoveSprim(HdPrimTypeTokens->extComputation, compPath);
@@ -2432,9 +2398,6 @@ UsdSkelImagingSkeletonAdapter::_RemoveSkinnedPrimAndComputations(
         _GetSkinningInputAggregatorComputationPath(cachePath);
     index->RemoveSprim(HdPrimTypeTokens->extComputation, aggrCompPath);
 
-    //#nv begin NvUsdSkel_DisableSkeletonSprim
-    }
-    //nv end
     // Clear cache entry.
     _skinnedPrimDataCache.erase(cachePath);
 }
@@ -2680,9 +2643,6 @@ UsdSkelImagingSkeletonAdapter::_SkelData::ComputeTopologyAndRestState()
 
     _numJoints = xforms.size();
 
-    //#nv begin NvUsdSkel_DisableSkeletonSprim
-    if (!NvUsdSkel_DisableSkeletonSprim) {
-    //nv end
     UsdSkelImagingComputeBonePoints(skelQuery.GetTopology(), xforms,
                                     numPoints, &_boneMeshPoints);
 
@@ -2711,10 +2671,6 @@ UsdSkelImagingSkeletonAdapter::_SkelData::ComputeTopologyAndRestState()
         }
     }
 
-    //#nv begin NvUsdSkel_DisableSkeletonSprim;
-    }
-    //nv end
-
     return meshTopology;
 }
 
@@ -2723,11 +2679,6 @@ VtVec3fArray
 UsdSkelImagingSkeletonAdapter::_SkelData::ComputePoints(
     UsdTimeCode time) const
 {
-    //#nv begin NvUsdSkel_DisableSkeletonSprim
-    if (NvUsdSkel_DisableSkeletonSprim) {
-        return _boneMeshPoints;
-    }
-    //nv end
 
     // Initial bone points were stored pre-transformed by the *inverse* world
     // bind transforms. To correctly position/orient them, we simply need to
