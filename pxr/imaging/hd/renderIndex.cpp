@@ -1189,36 +1189,41 @@ namespace {
                                &dirtyBits,
                                HdReprTokens->refined);
                 }
+                else
+                {
                 // nv end
+                
+                    TfTokenVector reprsSynced;
+                    for (const _CollectionReprSpec& spec : _reprSpecs) {
+                        // The rprim's authored repr selector is
+                        // guaranteed to have been set at this point (via
+                        // InitRepr/DirtyRepr handling during PreSync)
+                        HdReprSelector reprSelector = 
+                            _GetResolvedReprSelector(rprim.GetReprSelector(),
+                                                    spec.reprSelector,
+                                                    spec.useCollectionRepr);
 
-                TfTokenVector reprsSynced;
-                for (const _CollectionReprSpec& spec : _reprSpecs) {
-                    // The rprim's authored repr selector is
-                    // guaranteed to have been set at this point (via
-                    // InitRepr/DirtyRepr handling during PreSync)
-                    HdReprSelector reprSelector = 
-                        _GetResolvedReprSelector(rprim.GetReprSelector(),
-                                                 spec.reprSelector,
-                                                 spec.useCollectionRepr);
+                        for (size_t i = 0;
+                            i < HdReprSelector::MAX_TOPOLOGY_REPRS; ++i) {
 
-                    for (size_t i = 0;
-                         i < HdReprSelector::MAX_TOPOLOGY_REPRS; ++i) {
+                            TfToken const& reprToken = reprSelector[i];
+                            // Sync valid repr tokens once.
+                            if (reprSelector.IsActiveRepr(i) &&
+                                std::find(reprsSynced.begin(), reprsSynced.end(),
+                                        reprToken) == reprsSynced.end()) {
 
-                        TfToken const& reprToken = reprSelector[i];
-                        // Sync valid repr tokens once.
-                        if (reprSelector.IsActiveRepr(i) &&
-                            std::find(reprsSynced.begin(), reprsSynced.end(),
-                                      reprToken) == reprsSynced.end()) {
+                                rprim.Sync(_sceneDelegate,
+                                            _renderParam,
+                                            &dirtyBits,
+                                            reprToken);
 
-                            rprim.Sync(_sceneDelegate,
-                                        _renderParam,
-                                        &dirtyBits,
-                                        reprToken);
-
-                            reprsSynced.push_back(reprToken);
+                                reprsSynced.push_back(reprToken);
+                            }
                         }
                     }
+                // #nv begin #omni-hydra
                 }
+                // nv end
 
                 _tracker.MarkRprimClean(rprim.GetId(), dirtyBits);
             }
