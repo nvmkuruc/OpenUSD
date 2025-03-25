@@ -13,6 +13,8 @@ variables:
   BUILD_LINUX_AARCH64: "true"
   BUILD_USDVIEW: "false"
   PYTHON_DOCS: "false"
+  BUILD_IMAGE_X86: "urm.nvidia.com/ct-omniverse-docker/ci-jammy-x86_64-builder:1.0.6-97c67f00"
+  BUILD_IMAGE_AARCH64: "urm.nvidia.com/ct-omniverse-docker/ci-jammy-aarch64-builder:1.0.6-97c67f00"
 
 workflow:
   rules:
