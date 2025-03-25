@@ -1,6 +1,6 @@
 # ==============================================================================================================
 variables:
-  USD_BRANCH: "post/v24.05.kit"
+  USD_BRANCH: $CI_COMMIT_REF_NAME
   USD_CI_BRANCH: "main"
   NAME: "stock"
   WHEN: "Always"
