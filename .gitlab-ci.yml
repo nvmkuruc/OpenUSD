@@ -7,7 +7,7 @@ variables:
   PYTHON: "3.11"
   PACKAGE_LAYOUT: "stock"
   CONAN_PACKAGE_NAME: "openusd"
-  CONAN_LOCKFILE: "./conan/lockfiles/24.05.lock"
+  CONAN_LOCKFILE: "./conan/lockfiles/24.05-stock-kit-py311.lock"
   CONAN_VERSION_SUFFIX: "-dev"
 
 
