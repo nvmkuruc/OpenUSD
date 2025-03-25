@@ -1,0 +1,48 @@
+# ==============================================================================================================
+variables:
+  USD_BRANCH: "post/v24.05.kit"
+  USD_CI_BRANCH: "main"
+  NAME: "stock"
+  WHEN: "Always"
+  PYTHON: "3.11"
+  PACKAGE_LAYOUT: "stock"
+  CONAN_PACKAGE_NAME: "openusd"
+  CONAN_LOCKFILE: "./conan/lockfiles/24.05.lock"
+  CONAN_VERSION_SUFFIX: "-dev"
+
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      variables:
+        USD_BRANCH: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
+    - if: $CI_PIPELINE_SOURCE == "trigger" || $CI_PIPELINE_SOURCE == "web"
+
+# ==============================================================================================================
+stages:
+  - build
+
+# ==============================================================================================================
+# Default values applied to all jobs
+default:
+  interruptible: true
+
+# ===============================================================================================================
+post-24_05_kit-py311:
+  stage: build
+  variables:
+    CI_BUILD_NUMBER: $CI_PIPELINE_IID
+    USD_REPO: "https://gitlab-master.nvidia.com/omniverse/USD.git"
+    # The usd-ci build scripts aren't present unless it clones them because it's not the original pipeline repo
+    USD_CI_CHECKOUT_BRANCH: main
+    # Don't clone USD, usd-ci will do it
+    GIT_STRATEGY: none
+  trigger:
+    strategy: depend
+    include:
+      - project: "omniverse/usd-ci"
+        ref: $USD_CI_BRANCH
+        file: "/gitlab-ci-modules/usdview-pipeline.yml"
+    forward:
+      pipeline_variables: true
+      yaml_variables: true
