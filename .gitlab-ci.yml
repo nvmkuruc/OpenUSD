@@ -11,6 +11,8 @@ variables:
   CONAN_VERSION_SUFFIX: "-dev"
   USE_CXX11_ABI: "true"
   BUILD_LINUX_AARCH64: "true"
+  BUILD_USDVIEW: "false"
+  PYTHON_DOCS: "false"
 
 workflow:
   rules:
