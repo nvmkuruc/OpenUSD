@@ -42,7 +42,7 @@ post-24_05_kit-py311:
     include:
       - project: "omniverse/usd-ci"
         ref: $USD_CI_BRANCH
-        file: "/gitlab-ci-modules/usdview-pipeline.yml"
+        file: "/gitlab-ci-modules/usd-flavor-pipeline.yml"
     forward:
       pipeline_variables: true
       yaml_variables: true
