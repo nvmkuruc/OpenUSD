@@ -2342,9 +2342,17 @@ UsdSkelImagingSkeletonAdapter::_IsAffectedByTimeVaryingSkelAnim(
         return false;
     }
 
+    //#nv begin
     // Discover time-varying joint transforms.
-    if (const UsdSkelAnimQuery& animQuery =
-        skelData->skelQuery.GetAnimQuery()) {
+    const UsdSkelAnimQuery& animQuery =
+        skelData->skelQuery.GetAnimQuery();
+
+    if (animQuery 
+        //check if animQuery's prim is still validate. 
+        //This is aming for avoid crash when a group of resync is triggered and during that animquery's prim might already be expired.
+        //animation prim's resync will also trigger this timevarying track, so it will trigger a proper call of this function to correct time.
+        && animQuery.GetPrim()){
+    // #nv end
 
         return (skinnedPrimData->hasJointInfluences &&
                 animQuery.JointTransformsMightBeTimeVarying()) ||
@@ -2365,7 +2373,6 @@ UsdSkelImagingSkeletonAdapter::_RemoveSkinnedPrimAndComputations(
     
     // Remove skinned prim.
     index->RemoveRprim(cachePath);
-
     // Remove the computations it participates in.
     SdfPath compPath = _GetSkinningComputationPath(cachePath);
     index->RemoveSprim(HdPrimTypeTokens->extComputation, compPath);
@@ -2550,13 +2557,16 @@ UsdSkelImagingSkeletonAdapter::_UpdateSkinnedPrimForTime(
     TF_DEBUG(USDIMAGING_CHANGES).Msg
         ("[UpdateForTime] Cache path: <%s>\n", cachePath.GetText());
 
+    //#nv begin #gpu_skinning
     // Suppress the dirtybit for points, so we don't publish 'points' as a
     // primvar. Also suppressing normals: normals will instead be computed
     // post-skinning, as if they were unauthored (since GPU normal skinning
     // is not yet supported).
-    requestedBits &= ~(HdChangeTracker::DirtyPoints|
-                       HdChangeTracker::DirtyNormals);
 
+    requestedBits &= ~ HdChangeTracker::DirtyPoints;
+                    //// Don't surpress normals for NV GPU skinning.
+                     //|  HdChangeTracker::DirtyNormals);
+    //#nv end
     // Since The SkeletonAdapter hijacks skinned prims (see SkelRootAdapter),
     // make sure to delegate to the actual adapter registered for the prim.
     UsdImagingPrimAdapterSharedPtr adapter = _GetPrimAdapter(skinnedPrim);
