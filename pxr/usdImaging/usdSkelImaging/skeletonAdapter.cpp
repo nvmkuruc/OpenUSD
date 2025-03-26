@@ -1153,7 +1153,7 @@ UsdSkelImagingSkeletonAdapter::_TrackBoneMeshVariability(
                false);
 
     // Discover time-varying points.
-    //#nv begin
+    // #nv begin
     const UsdSkelAnimQuery& animQuery =
         skelData->skelQuery.GetAnimQuery();
 
@@ -1163,7 +1163,7 @@ UsdSkelImagingSkeletonAdapter::_TrackBoneMeshVariability(
         //animation prim's resync will also trigger this timevarying track, so it will trigger a proper call of this function to correct time.
         && animQuery.GetPrim()
         ) {
-    //#nv end
+    // #nv end
 
         if(animQuery.JointTransformsMightBeTimeVarying()) {
             (*timeVaryingBits) |= HdChangeTracker::DirtyPoints;
@@ -2368,7 +2368,7 @@ UsdSkelImagingSkeletonAdapter::_IsAffectedByTimeVaryingSkelAnim(
         return false;
     }
 
-    //#nv begin
+    // #nv begin
     // Discover time-varying joint transforms.
     const UsdSkelAnimQuery& animQuery =
         skelData->skelQuery.GetAnimQuery();
@@ -2583,7 +2583,7 @@ UsdSkelImagingSkeletonAdapter::_UpdateSkinnedPrimForTime(
     TF_DEBUG(USDIMAGING_CHANGES).Msg
         ("[UpdateForTime] Cache path: <%s>\n", cachePath.GetText());
 
-    //#nv begin #gpu_skinning
+    // #nv begin #gpu-skinning
     UsdImagingPrimAdapterSharedPtr adapter = _GetPrimAdapter(skinnedPrim);
     // Suppress the dirtybit for points, so we don't publish 'points' as a
     // primvar. Also suppressing normals: normals will instead be computed
@@ -2593,7 +2593,7 @@ UsdSkelImagingSkeletonAdapter::_UpdateSkinnedPrimForTime(
     requestedBits &= ~ HdChangeTracker::DirtyPoints;
                     //// Don't surpress normals for NV GPU skinning.
                      //|  HdChangeTracker::DirtyNormals);
-    //#nv end
+    // #nv end
     // Since The SkeletonAdapter hijacks skinned prims (see SkelRootAdapter),
     // make sure to delegate to the actual adapter registered for the prim.
 

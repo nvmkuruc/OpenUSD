@@ -927,7 +927,7 @@ public:
     HD_API
     virtual HdDirtyBits GetInstancerDirtyBits(const SdfPath& instancerId);
 
-    // nv end
+    // #nv end
 
 private:
     HdRenderIndex *_index;
