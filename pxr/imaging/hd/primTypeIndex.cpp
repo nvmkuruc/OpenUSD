@@ -546,7 +546,7 @@ Hd_PrimTypeIndex<PrimType>::GetPrim(const SdfPath &primId) const
 
     return nullptr;
 }
-// nv end
+// #nv end
 
 template <class PrimType>
 const HdSceneDelegatePtrVector&

@@ -32,7 +32,7 @@
 #include "pxr/usdImaging/usdImaging/primAdapter.h"
 #include "pxr/usdImaging/usdImaging/tokens.h"
 
-// #nv begin omni-hydra camera gizmo
+// #nv begin #omni-hydra-camera-gizmo
 #include "pxr/usdImaging/usdImaging/cameraAdapter.h"  // OM-111171
 // #nv end
 
@@ -1411,10 +1411,10 @@ UsdImagingDelegate::_ResyncUsdPrim(
                     // or material prims below it.
                     primInfo->adapter->ProcessPrimResync(cachePath, proxy);
                     foundPruningPrim = true;
-                    // #nv begin omni-hydra camera gizmo
+                    // #nv begin #omni-hydra-camera-gizmo
                     // OM-111171: Always traverse camera childen after _GatherDependencies loop below so camera-as-usd mesh will be removed
                     foundPruningPrim = !dynamic_cast<UsdImagingCameraAdapter*>(primInfo->adapter.get());
-                    // nv end
+                    // #nv end
                 }
             }
         }

@@ -404,7 +404,7 @@ public:
     // the composition order is determined by order the scene delegates were added in this function
     HD_API
     void AddPostSyncDelegate(HdSceneDelegate* sceneDelegate);
-    // nv end
+    // #nv end
 
     /// Returns true if scene index features are available
     /// This is true by default but can be controlled via an
@@ -631,7 +631,7 @@ private:
         PostSyncRequestVector, TfHash> _PostSyncRequestMap;
     _PostSyncRequestMap _postSyncMap;
 
-// nv end
+// #nv end
 
 };
 

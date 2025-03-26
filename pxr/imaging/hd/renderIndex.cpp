@@ -93,7 +93,7 @@ TF_DEFINE_PRIVATE_TOKENS(
     _omniHydraRenderSettingsTokens,
     (staticMaterialNetworkTopology)
 );
-//# nv end
+// #nv end
 
 bool
 HdRenderIndex::IsSceneIndexEmulationEnabled()
@@ -1091,7 +1091,7 @@ namespace {
             request.IDs.reserve(newSize);
             request.dirtyBits.reserve(newSize);
         }
-       ///#nv end
+       // #nv end
 
         std::vector<HdRprim *> rprims;
         HdSyncRequestVector request;
@@ -1151,7 +1151,7 @@ namespace {
         HdRenderParam *_renderParam;
         // #nv begin #omni-hydra
         bool _useDefaultRepr;
-        // nv end
+        // #nv end
     public:
         _SyncRPrims( HdSceneDelegate *sceneDelegate,
                      _RprimSyncRequestVector& r,
@@ -1160,15 +1160,15 @@ namespace {
                      HdRenderParam *renderParam,
                      // #nv begin #omni-hydra
                      bool useDefaultRepr = false)
-                     // nv end
+                     // #nv end
          : _sceneDelegate(sceneDelegate)
          , _r(r)
          , _reprSpecs(reprSpecs)
          , _tracker(tracker)
          , _renderParam(renderParam)
-        // nv begin #omni-hydra
+        // #nv begin #omni-hydra
          , _useDefaultRepr(useDefaultRepr)
-        // nv end
+        // #nv end
         {
         }
 
@@ -1191,7 +1191,7 @@ namespace {
                 }
                 else
                 {
-                // nv end
+                // #nv end
                 
                     TfTokenVector reprsSynced;
                     for (const _CollectionReprSpec& spec : _reprSpecs) {
@@ -1223,7 +1223,7 @@ namespace {
                     }
                 // #nv begin #omni-hydra
                 }
-                // nv end
+                // #nv end
 
                 _tracker.MarkRprimClean(rprim.GetId(), dirtyBits);
             }
@@ -1390,7 +1390,7 @@ namespace {
             workerState.Sync(0, r.rprims.size());
         }
     }
-    //# nv end
+    // #nv end
 
     // Gather the unique set of render tags requested by the tasks.
     static TfTokenVector
@@ -1470,7 +1470,7 @@ void HdRenderIndex::AddPostSyncDelegate(HdSceneDelegate* sceneDelegate)
     r.sprimMaterialRequestVector = _SprimIndex::PostSyncRequestVector();
     r.sprimNonMaterialRequestVector = _SprimIndex::PostSyncRequestVector();
 }
-//#nv end
+// #nv end
 
 void
 HdRenderIndex::EnqueueCollectionToSync(HdRprimCollection const &col)
@@ -1831,6 +1831,7 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
             }
         }
     }
+    // #nv end
 
     // f. Rprim Sync
     WorkWithScopedParallelism([&]() {
@@ -1867,7 +1868,7 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
         }
     });
 
-    //# nv begin
+    // #nv begin
     WorkWithScopedParallelism([&]() {
         WorkDispatcher dispatcher;
 
@@ -1904,7 +1905,7 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
         }
     });
 
-    // nv end
+    // #nv end
 
     {
         HF_TRACE_FUNCTION_SCOPE("Clean Up");
@@ -1920,7 +1921,7 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
             HdSceneDelegate *delegate = entry.first;
             delegate->PostSyncCleanup();
         }
-        // nv end
+        // #nv end
 
         const HdSceneDelegatePtrVector& sprimDelegates =
             _sprimIndex.GetSceneDelegatesForDirtyPrims();

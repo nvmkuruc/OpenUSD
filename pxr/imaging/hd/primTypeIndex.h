@@ -176,7 +176,7 @@ public:
 
     /// Obtains a modifiable pointer the prim with the given type and id.
     PrimType *GetPrim(const SdfPath &primId) const;
-    // nv end
+    // #nv end
     
     /// Returns a vector of unique scene delegates corresponding to the dirty
     /// prims that were sync'd in SyncPrims.
