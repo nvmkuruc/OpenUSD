@@ -1084,15 +1084,6 @@ namespace {
             request.dirtyBits.push_back(dirtyBits);
         }
 
-        // #nv begin #omni-hydra
-        void Reserve(size_t newSize)
-        {
-            rprims.reserve(newSize);
-            request.IDs.reserve(newSize);
-            request.dirtyBits.reserve(newSize);
-        }
-       // #nv end
-
         std::vector<HdRprim *> rprims;
         HdSyncRequestVector request;
 
