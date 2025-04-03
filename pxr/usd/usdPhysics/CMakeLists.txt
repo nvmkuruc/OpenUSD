@@ -39,14 +39,18 @@ pxr_library(usdPhysics
         scene
         sphericalJoint
         tokens        
+        parseUtils        
         
     PUBLIC_HEADERS
         api.h
         massProperties.h
+        parseUtils.h
+        parseDesc.h   
+
 
     PYTHON_CPPFILES
         moduleDeps.cpp
-
+        
     PYMODULE_CPPFILES
         module.cpp
         wrapArticulationRootAPI.cpp
@@ -68,6 +72,7 @@ pxr_library(usdPhysics
         wrapScene.cpp
         wrapSphericalJoint.cpp
         wrapTokens.cpp
+        wrapParseUtils.cpp
 
     PYMODULE_FILES
         __init__.py
@@ -78,7 +83,8 @@ pxr_library(usdPhysics
         schema.usda:usdPhysics/schema.usda
 
     DOXYGEN_FILES
-        overview.dox        
+        overview.dox
+        parsingUtils.dox        
         examples/usdPhysicsBoxOnBox.usda
         examples/usdPhysicsBoxOnQuad.usda
         examples/usdPhysicsDistanceJoint.usda
@@ -92,6 +98,7 @@ pxr_test_scripts(
     testenv/testUsdPhysicsMetrics.py
     testenv/testUsdPhysicsRigidBodyAPI.py
     testenv/testUsdPhysicsCollisionGroupAPI.py
+    testenv/testUsdPhysicsParsing.py
 )
 
 pxr_register_test(testUsdPhysicsMetrics
@@ -109,5 +116,11 @@ pxr_register_test(testUsdPhysicsRigidBodyAPI
 pxr_register_test(testUsdPhysicsCollisionGroupAPI
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdPhysicsCollisionGroupAPI"
+    EXPECTED_RETURN_CODE 0
+)
+
+pxr_register_test(testUsdPhysicsParsing
+    PYTHON
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdPhysicsParsing"
     EXPECTED_RETURN_CODE 0
 )
