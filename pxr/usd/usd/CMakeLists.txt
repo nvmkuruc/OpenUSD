@@ -525,6 +525,16 @@ pxr_build_test(testUsdUsdzBugGHSA01
         testenv/testUsdUsdzBugGHSA01.cpp
 )
 
+pxr_build_test(testUsdUsdcBugGHSA02
+    LIBRARIES
+        ar
+        arch
+        tf
+        sdf
+        usd
+    CPPFILES
+    testenv/testUsdUsdcBugGHSA02.cpp
+)
 
 pxr_install_test_dir(
     SRC testenv/testUsdAppliedAPISchemas
@@ -806,9 +816,15 @@ pxr_install_test_dir(
     DEST testUsdUsdzBugGHSA01
 )
 
+<<<<<<< HEAD
 pxr_register_test(testUsdCoreValidators
         COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdCoreValidators"
         EXPECTED_RETURN_CODE 0
+=======
+pxr_install_test_dir(
+    SRC testenv/testUsdUsdcBugGHSA02.testenv
+    DEST testUsdUsdcBugGHSA02
+>>>>>>> 0d74f31fe (usd: Fix a bug where corrupt .usdc files could cause a data race opening a)
 )
 
 pxr_register_test(testUsdAppliedAPISchemas
@@ -1399,3 +1415,9 @@ pxr_register_test(testUsdUsdzBugGHSA01
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUsdzBugGHSA01"
     EXPECTED_RETURN_CODE 0
 )
+
+pxr_register_test(testUsdUsdcBugGHSA02
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUsdcBugGHSA02"
+    EXPECTED_RETURN_CODE 0
+)
+  
