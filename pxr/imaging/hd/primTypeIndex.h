@@ -142,10 +142,6 @@ public:
                    HdRenderDelegate *renderDelegate);
 
     // #nv begin #omni-hydra
-    void SyncPrims(HdChangeTracker &tracker,
-                   HdRenderParam *renderParam,
-                   const bool multithreaded=false);
-
     struct PostSyncRequestVector
     {
         std::vector<PrimType*> prims;

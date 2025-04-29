@@ -79,11 +79,6 @@ _IsEnabledMultithreadedNonMaterialSprimSync()
         (TfGetEnvSetting(HD_ENABLE_MULTITHREADED_NON_MATERIAL_SPRIM_SYNC) == 1);
     return enabled;
 }
-
-TF_DEFINE_PRIVATE_TOKENS(
-    _omniHydraRenderSettingsTokens,
-    (staticMaterialNetworkTopology)
-);
 //# nv end
 
 // -------------------------------------------------------------------------- //
@@ -1586,10 +1581,9 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
     _bprimIndex.SyncPrims(_tracker, _renderDelegate->GetRenderParam(),
                           _renderDelegate);
 
-// #nv begin #parallel-syncprims
-    const bool multithreadedUpdate = _renderDelegate->GetRenderSetting(_omniHydraRenderSettingsTokens->staticMaterialNetworkTopology, false);
-    _sprimIndex.SyncPrims(_tracker, _renderDelegate->GetRenderParam(), multithreadedUpdate);
-// #nv end
+    _sprimIndex.SyncPrims(_tracker, _renderDelegate->GetRenderParam(),
+                          _renderDelegate);
+
 
     ////////////////////////////////////////////////////////////////////////////
     //

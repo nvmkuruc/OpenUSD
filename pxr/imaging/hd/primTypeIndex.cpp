@@ -431,62 +431,6 @@ Hd_PrimTypeIndex<PrimType>::SyncPrims(HdChangeTracker  &tracker,
     }
 }
 
-// #nv begin #parallel-syncprims
-template <class PrimType>
-void
-Hd_PrimTypeIndex<PrimType>::SyncPrims(HdChangeTracker  &tracker,
-                                      HdRenderParam *renderParam,
-                                      const bool multithreaded)
-{
-    size_t numTypes = _entries.size();
-
-    _dirtyPrimDelegates.clear();
-    HdSceneDelegate *prevDelegate = nullptr;
-
-    std::vector<std::pair<SdfPath, std::pair<_PrimInfo, HdDirtyBits>>> toSyncInParallel;
-    for (size_t typeIdx = 0; typeIdx < numTypes; ++typeIdx) {
-        _PrimTypeEntry &typeEntry = _entries[typeIdx];
-
-        for (typename _PrimMap::iterator primIt = typeEntry.primMap.begin();
-                                         primIt != typeEntry.primMap.end();
-                                         ++primIt) {
-            const SdfPath &primPath = primIt->first;
-
-            HdDirtyBits dirtyBits = _TrackerGetPrimDirtyBits(tracker, primPath);
-
-            if (dirtyBits != HdChangeTracker::Clean) {
-
-                _PrimInfo &primInfo = primIt->second;
-                if (multithreaded) {
-                    // To be synced in parallel later
-                    toSyncInParallel.push_back(std::make_pair(primPath, std::make_pair(primInfo, dirtyBits)));
-                }
-                else {
-                    primInfo.prim->Sync(primInfo.sceneDelegate,
-                                        renderParam,
-                                        &dirtyBits);
-                    _TrackerMarkPrimClean(tracker, primPath, dirtyBits);
-                }
-                if (prevDelegate != primInfo.sceneDelegate) {
-                    _dirtyPrimDelegates.push_back(primInfo.sceneDelegate);
-                    prevDelegate = primInfo.sceneDelegate;
-                }
-            }
-        }
-    }
-
-    if (multithreaded) {
-        WorkParallelForEach(toSyncInParallel.begin(), toSyncInParallel.end(), [&](auto& primInfoAndDirtyBits) {
-            primInfoAndDirtyBits.second.first.prim->Sync(primInfoAndDirtyBits.second.first.sceneDelegate,
-                                                renderParam,
-                                                &primInfoAndDirtyBits.second.second);
-            // Marking prim clean in change tracker seems thread-safe as all the entries already exist
-            _TrackerMarkPrimClean(tracker, primInfoAndDirtyBits.first, primInfoAndDirtyBits.second.second);
-        });
-    }
-}
-// #nv end
-
 // #nv begin #omni-hydra
 template <class PrimType>
 void
