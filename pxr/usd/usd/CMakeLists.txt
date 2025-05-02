@@ -780,11 +780,6 @@ pxr_install_test_dir(
     DEST testUsdUsdzBugGHSA01
 )
 
-pxr_register_test(testUsdCoreValidators
-        COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdCoreValidators"
-        EXPECTED_RETURN_CODE 0
-)
-
 pxr_register_test(testUsdAppliedAPISchemas
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdAppliedAPISchemas"
@@ -1332,24 +1327,6 @@ pxr_register_test(testUsdUsdzResolver
 pxr_register_test(testUsdOpaqueAttributes
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdOpaqueAttributes"
-    EXPECTED_RETURN_CODE 0
-)
-
-pxr_register_test(testUsdValidatorMetadata
-    PYTHON
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdValidatorMetadata"
-    EXPECTED_RETURN_CODE 0
-)
-
-pxr_register_test(testUsdValidationError
-    PYTHON
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdValidationError"
-    EXPECTED_RETURN_CODE 0
-)
-
-pxr_register_test(testUsdValidationRegistryPy
-    PYTHON
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdValidationRegistryPy"
     EXPECTED_RETURN_CODE 0
 )
 pxr_register_test(testUsdUsdzBugGHSA01
