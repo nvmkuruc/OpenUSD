@@ -821,6 +821,11 @@ pxr_install_test_dir(
     DEST testUsdUsdcBugGHSA02
 )
 
+pxr_register_test(testUsdCoreValidators
+        COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdCoreValidators"
+        EXPECTED_RETURN_CODE 0
+)
+
 pxr_register_test(testUsdAppliedAPISchemas
     PYTHON
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdAppliedAPISchemas"
