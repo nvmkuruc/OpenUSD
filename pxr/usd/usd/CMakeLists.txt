@@ -1303,14 +1303,9 @@ pxr_register_test(testUsdOpaqueAttributes
 pxr_register_test(testUsdUsdzBugGHSA01
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUsdzBugGHSA01"
     EXPECTED_RETURN_CODE 0
-<<<<<<< HEAD
-)
-=======
 )
 
 pxr_register_test(testUsdUsdcBugGHSA02
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUsdcBugGHSA02"
     EXPECTED_RETURN_CODE 0
 )
-  
->>>>>>> 0d74f31fe (usd: Fix a bug where corrupt .usdc files could cause a data race opening a)
