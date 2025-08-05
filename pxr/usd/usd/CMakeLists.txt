@@ -481,6 +481,16 @@ pxr_build_test(testUsdUsdzBugGHSA01
         testenv/testUsdUsdzBugGHSA01.cpp
 )
 
+pxr_build_test(testUsdUsdcBugGHSA02
+    LIBRARIES
+        ar
+        arch
+        tf
+        sdf
+        usd
+    CPPFILES
+    testenv/testUsdUsdcBugGHSA02.cpp
+)
 
 pxr_install_test_dir(
     SRC testenv/testUsdAppliedAPISchemas
@@ -760,6 +770,11 @@ pxr_install_test_dir(
 pxr_install_test_dir(
     SRC testenv/testUsdUsdzBugGHSA01.testenv
     DEST testUsdUsdzBugGHSA01
+)
+
+pxr_install_test_dir(
+    SRC testenv/testUsdUsdcBugGHSA02.testenv
+    DEST testUsdUsdcBugGHSA02
 )
 
 pxr_register_test(testUsdAppliedAPISchemas
@@ -1349,3 +1364,9 @@ pxr_register_test(testUsdUsdzBugGHSA01
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUsdzBugGHSA01"
     EXPECTED_RETURN_CODE 0
 )
+
+pxr_register_test(testUsdUsdcBugGHSA02
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUsdcBugGHSA02"
+    EXPECTED_RETURN_CODE 0
+)
+  
