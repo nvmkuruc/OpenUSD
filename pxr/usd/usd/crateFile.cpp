@@ -694,7 +694,15 @@ struct _PreadStream {
         , _cur(0)
         , _file(fr.file) {}
     inline void Read(void *dest, size_t nBytes) {
-        _cur += ArchPRead(_file, dest, nBytes, _start + _cur);
+        int64_t nRead = ArchPRead(_file, dest, nBytes, _start + _cur);
+#ifdef PXR_PREFER_SAFETY_OVER_SPEED
+            if (ARCH_UNLIKELY(nRead != static_cast<int64_t>(nBytes))) {
+                TF_THROW(UsdReadOutOfBoundsError, TfStringPrintf(
+                             "Failed reading %zu bytes at offset %" PRId64,
+                             nBytes, _start + _cur));
+            }
+#endif
+        _cur += nRead;
     }
     inline int64_t Tell() const { return _cur; }
     inline void Seek(int64_t offset) { _cur = offset; }
@@ -716,7 +724,15 @@ struct _AssetStream {
         : _asset(asset)
         , _cur(0) {}
     inline void Read(void *dest, size_t nBytes) {
-        _cur += _asset->Read(dest, nBytes, _cur);
+        size_t nRead = _asset->Read(dest, nBytes, _cur);
+#ifdef PXR_PREFER_SAFETY_OVER_SPEED
+            if (nRead != nBytes) {
+                TF_THROW(UsdReadOutOfBoundsError, TfStringPrintf(
+                             "Failed reading %zu bytes at offset %zu",
+                             nBytes, _cur));
+            }
+#endif
+        _cur += nRead;
     }
     inline int64_t Tell() const { return _cur; }
     inline void Seek(int64_t offset) { _cur = offset; }
