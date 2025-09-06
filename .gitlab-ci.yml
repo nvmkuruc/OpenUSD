@@ -1,41 +1,15 @@
 # ==============================================================================================================
+include:
+  # external
+  - project: "omniverse/usd-ci"
+    file: "gitlab-ci-modules/remote-pipeline-generation.yml"
+    ref: main
+
+# ==============================================================================================================
 variables:
   # Branches
   USD_BRANCH: $CI_COMMIT_REF_NAME
   USD_CI_BRANCH: "main"
-
-  # Package
-  NAME: "stock"
-  PACKAGE_LAYOUT: "stock"
-
-  WHEN: "Always"
-
-  # Python
-  PYTHON: "3.11"
-  PYTHON_DOCS: "false"
-
-  # USD Features
-  BUILD_USDVIEW: "false"
-
-  # Windows Platform
-  BUILD_WINDOWS: "true"
-
-  # Linux Platform
-  USE_CXX11_ABI: "true"
-
-  # Linux x86
-  BUILD_LINUX_x86: "true"
-  BUILD_IMAGE_X86: "urm.nvidia.com/ct-omniverse-docker/ci-jammy-x86_64-builder:1.0.6-97c67f00"
-
-  # Linux aarch64
-  BUILD_LINUX_AARCH64: "false"
-  BUILD_IMAGE_AARCH64: "urm.nvidia.com/ct-omniverse-docker/ci-jammy-aarch64-builder:1.0.6-97c67f00"
-
-  # Conan
-  CONAN_PACKAGE_NAME: "openusd"
-  CONAN_LOCKFILE: "./conan/lockfiles/25.02-stock-kit-py311.lock"
-  CONAN_VERSION_SUFFIX: "-dev"
-
 
 workflow:
   rules:
@@ -46,6 +20,7 @@ workflow:
 
 # ==============================================================================================================
 stages:
+  - generate
   - build
 
 # ==============================================================================================================
@@ -53,22 +28,23 @@ stages:
 default:
   interruptible: true
 
-# ===============================================================================================================
-post-25_02-py311:
+# ==============================================================================================================
+# Branch post/v25.02.kit builds the kit-25_02 version group
+kit-25_02-run-all:
   stage: build
   variables:
     CI_BUILD_NUMBER: $CI_PIPELINE_IID
-    USD_REPO: "https://gitlab-master.nvidia.com/omniverse/USD.git"
-    # The usd-ci build scripts aren't present unless it clones them because it's not the original pipeline repo
-    USD_CI_CHECKOUT_BRANCH: main
-    # Don't clone USD, usd-ci will do it
+    USD_REPO: $CI_PROJECT_URL
+    USD_CI_USD_COMMIT: $USD_BRANCH
+    USD_CI_CHECKOUT_BRANCH: $USD_CI_BRANCH
+    # usd-ci clones USD itself; avoid extra checkout
     GIT_STRATEGY: none
   trigger:
-    strategy: depend
     include:
-      - project: "omniverse/usd-ci"
-        ref: $USD_CI_BRANCH
-        file: "/gitlab-ci-modules/usd-flavor-pipeline.yml"
+    # Run tools/packman/python.sh ./usd-ci/python/scripts/generate_ci_jobs.py in usd-ci to see available pipelines
+      - artifact: gitlab-ci-modules/pipelines/kit-25_02-dev.yml
+        job: generate-usd-ci-pipelines
+    strategy: depend
     forward:
       pipeline_variables: true
       yaml_variables: true
