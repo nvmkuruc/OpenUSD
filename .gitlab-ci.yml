@@ -29,8 +29,8 @@ default:
   interruptible: true
 
 # ==============================================================================================================
-# Branch post/v25.02.kit builds the kit-25_02 version group
-kit-25_02-run-all:
+# Branch post/v25.11.kit builds the kit-25_11 version group
+kit-25_11-run-all:
   stage: build
   variables:
     CI_BUILD_NUMBER: $CI_PIPELINE_IID
@@ -42,7 +42,7 @@ kit-25_02-run-all:
   trigger:
     include:
     # Run tools/packman/python.sh ./usd-ci/python/scripts/generate_ci_jobs.py in usd-ci to see available pipelines
-      - artifact: gitlab-ci-modules/pipelines/kit-25_02-dev.yml
+      - artifact: gitlab-ci-modules/pipelines/kit-25_11-dev.yml
         job: generate-usd-ci-pipelines
     strategy: depend
     forward:
