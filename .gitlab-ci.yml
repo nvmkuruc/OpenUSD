@@ -1,0 +1,50 @@
+# ==============================================================================================================
+include:
+  # external
+  - project: "omniverse/usd-ci"
+    file: "gitlab-ci-modules/remote-pipeline-generation.yml"
+    ref: main
+
+# ==============================================================================================================
+variables:
+  # Branches
+  USD_BRANCH: $CI_COMMIT_REF_NAME
+  USD_CI_BRANCH: "main"
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      variables:
+        USD_BRANCH: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
+    - if: $CI_PIPELINE_SOURCE == "trigger" || $CI_PIPELINE_SOURCE == "web"
+
+# ==============================================================================================================
+stages:
+  - generate
+  - build
+
+# ==============================================================================================================
+# Default values applied to all jobs
+default:
+  interruptible: true
+
+# ==============================================================================================================
+# Branch post/v25.02.kit builds the kit-25_02 version group
+kit-25_02-run-all:
+  stage: build
+  variables:
+    CI_BUILD_NUMBER: $CI_PIPELINE_IID
+    USD_REPO: $CI_PROJECT_URL
+    USD_CI_USD_COMMIT: $USD_BRANCH
+    USD_CI_CHECKOUT_BRANCH: $USD_CI_BRANCH
+    # usd-ci clones USD itself; avoid extra checkout
+    GIT_STRATEGY: none
+  trigger:
+    include:
+    # Run tools/packman/python.sh ./usd-ci/python/scripts/generate_ci_jobs.py in usd-ci to see available pipelines
+      - artifact: gitlab-ci-modules/pipelines/kit-25_02-dev.yml
+        job: generate-usd-ci-pipelines
+    strategy: depend
+    forward:
+      pipeline_variables: true
+      yaml_variables: true
