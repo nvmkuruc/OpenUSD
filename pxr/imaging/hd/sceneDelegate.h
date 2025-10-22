@@ -993,6 +993,28 @@ public:
     HD_API
     virtual TfTokenVector GetTaskRenderTags(SdfPath const& taskId);
 
+    // #nv begin #omni-hydra
+    /// Opportunity for the delegate to add additional dirty bit after sync is done.
+    /// This allows scene delegate derived from other scene delegate perform necessary modification to sync request,
+    /// without affecting performance of render index.
+    HD_API
+    virtual void UpdatePostSyncRequestVector(HdSyncRequestVector* request);
+
+    /// Returns whether update from this scene delegate is property changes only
+    /// This will help render index to cache and reuse some intermediate sync maps
+    HD_API
+    virtual bool NeedsPostSyncUpdate() const;
+
+    /// Returns true if scene graph instancing is enabled by omni hydra
+    HD_API
+    virtual bool NeedsPostSyncInstancerUpdate() const { return true; }
+
+    // allows scene delegate returns instancer dirty bit instead of change tracker
+    HD_API
+    virtual HdDirtyBits GetInstancerDirtyBits(const SdfPath& instancerId);
+
+    // nv end
+
 private:
     HdRenderIndex *_index;
     SdfPath _delegateID;

@@ -82,6 +82,19 @@ _IsEnabledTerminalCachingSceneIndex()
     return enabled;
 }
 
+//# nv begin
+TF_DEFINE_ENV_SETTING(HD_ENABLE_MULTITHREADED_NON_MATERIAL_SPRIM_SYNC, 0,
+                      "Enable multithreaded Hydra Sync for SPrims other than materials");
+
+static bool
+_IsEnabledMultithreadedNonMaterialSprimSync()
+{
+    static bool enabled =
+        (TfGetEnvSetting(HD_ENABLE_MULTITHREADED_NON_MATERIAL_SPRIM_SYNC) == 1);
+    return enabled;
+}
+//# nv end
+
 // -------------------------------------------------------------------------- //
 
 /// Object that manages a notice batching scene index with support for nested
@@ -1279,17 +1292,26 @@ namespace {
         _CollectionReprSpecVector const &_reprSpecs;
         HdChangeTracker &_tracker;
         HdRenderParam *_renderParam;
+        // #nv begin #omni-hydra
+        bool _useDefaultRepr;
+        // nv end
     public:
         _SyncRPrims( HdSceneDelegate *sceneDelegate,
                      _RprimSyncRequestVector& r,
                      _CollectionReprSpecVector const &reprSpecs,
                      HdChangeTracker &tracker,
-                     HdRenderParam *renderParam)
+                     HdRenderParam *renderParam,
+                     // #nv begin #omni-hydra
+                     bool useDefaultRepr = false)
+                     // nv end
          : _sceneDelegate(sceneDelegate)
          , _r(r)
          , _reprSpecs(reprSpecs)
          , _tracker(tracker)
          , _renderParam(renderParam)
+        // nv begin #omni-hydra
+         , _useDefaultRepr(useDefaultRepr)
+        // nv end
         {
         }
 
@@ -1301,34 +1323,50 @@ namespace {
 
                 HdDirtyBits dirtyBits = _r.request.dirtyBits[i];
 
-                TfTokenVector reprsSynced;
-                for (const _CollectionReprSpec& spec : _reprSpecs) {
-                    // The rprim's authored repr selector is
-                    // guaranteed to have been set at this point (via
-                    // InitRepr/DirtyRepr handling during PreSync)
-                    HdReprSelector reprSelector =
-                        _GetResolvedReprSelector(rprim.GetReprSelector(),
-                                                 spec.reprSelector,
-                                                 spec.useCollectionRepr);
+                // #nv begin #omni-hydra
+                if (_useDefaultRepr)
+                {
+                    // Note - we only use refined repr for post sync for now
+                    rprim.Sync(_sceneDelegate,
+                               _renderParam,
+                               &dirtyBits,
+                               HdReprTokens->refined);
+                }
+                else
+                {
+                // nv end
+                
+                    TfTokenVector reprsSynced;
+                    for (const _CollectionReprSpec& spec : _reprSpecs) {
+                        // The rprim's authored repr selector is
+                        // guaranteed to have been set at this point (via
+                        // InitRepr/DirtyRepr handling during PreSync)
+                        HdReprSelector reprSelector = 
+                            _GetResolvedReprSelector(rprim.GetReprSelector(),
+                                                    spec.reprSelector,
+                                                    spec.useCollectionRepr);
 
-                    for (size_t i = 0;
-                         i < HdReprSelector::MAX_TOPOLOGY_REPRS; ++i) {
+                        for (size_t i = 0;
+                            i < HdReprSelector::MAX_TOPOLOGY_REPRS; ++i) {
 
-                        TfToken const& reprToken = reprSelector[i];
-                        // Sync valid repr tokens once.
-                        if (reprSelector.IsActiveRepr(i) &&
-                            std::find(reprsSynced.begin(), reprsSynced.end(),
-                                      reprToken) == reprsSynced.end()) {
+                            TfToken const& reprToken = reprSelector[i];
+                            // Sync valid repr tokens once.
+                            if (reprSelector.IsActiveRepr(i) &&
+                                std::find(reprsSynced.begin(), reprsSynced.end(),
+                                        reprToken) == reprsSynced.end()) {
 
-                            rprim.Sync(_sceneDelegate,
-                                        _renderParam,
-                                        &dirtyBits,
-                                        reprToken);
+                                rprim.Sync(_sceneDelegate,
+                                            _renderParam,
+                                            &dirtyBits,
+                                            reprToken);
 
-                            reprsSynced.push_back(reprToken);
+                                reprsSynced.push_back(reprToken);
+                            }
                         }
                     }
+                // #nv begin #omni-hydra
                 }
+                // nv end
 
                 _tracker.MarkRprimClean(rprim.GetId(), dirtyBits);
             }
@@ -1467,6 +1505,36 @@ namespace {
         }
     }
 
+    // #nv begin #omni-hydra
+    static void
+    _DoSyncRprims(HdSceneDelegate* sceneDelegate,
+        WorkDispatcher& dispatcher,
+        _SyncRPrims& workerState,
+        _RprimSyncRequestVector& r)
+    {
+        if (!TfDebug::IsEnabled(HD_DISABLE_MULTITHREADED_RPRIM_SYNC) &&
+            sceneDelegate->IsEnabled(HdOptionTokens->parallelRprimSync)) {
+            TRACE_SCOPE("Parallel Rprim Sync");
+            // In the lambda below, we capture workerState by value and
+            // incur a copy in the std::bind because the lambda execution
+            // may be delayed (until we call Wait), resulting in
+            // workerState going out of scope.
+            dispatcher.Run([&r, workerState]() {
+                WorkParallelForN(r.rprims.size(),
+                    std::bind(&_SyncRPrims::Sync, workerState,
+                        std::placeholders::_1,
+                        std::placeholders::_2));
+            });
+        }
+        else
+        {
+            TRACE_SCOPE("Serial Rprim Sync");
+            // Single-threaded version: Call worker directly
+            workerState.Sync(0, r.rprims.size());
+        }
+    }
+    //# nv end
+
     // Gather the unique set of render tags requested by the tasks.
     static TfTokenVector
     _GatherRenderTags(const HdTaskSharedPtrVector *tasks)
@@ -1536,6 +1604,17 @@ namespace {
     }
 };
 
+// #nv begin #omni-hydra
+void HdRenderIndex::AddPostSyncDelegate(HdSceneDelegate* sceneDelegate)
+{
+    // add sync request vector for this scene delegate
+    auto& r = _postSyncMap[sceneDelegate];
+    r.rprimRequestVector = _RprimPostSyncRequestVector();
+    r.sprimMaterialRequestVector = _SprimIndex::PostSyncRequestVector();
+    r.sprimNonMaterialRequestVector = _SprimIndex::PostSyncRequestVector();
+}
+//#nv end
+
 void
 HdRenderIndex::EnqueueCollectionToSync(HdRprimCollection const &col)
 {
@@ -1569,6 +1648,7 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
 
     _sprimIndex.SyncPrims(_tracker, _renderDelegate->GetRenderParam(),
                           _renderDelegate);
+
 
     ////////////////////////////////////////////////////////////////////////////
     //
@@ -1781,6 +1861,119 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
                                    std::placeholders::_2));
     }
 
+    // #nv begin #omni-hydra
+
+    // sync each post scene delegate
+    for (auto &entry : _postSyncMap) {
+        HdSceneDelegate* sceneDelegate = entry.first;
+        sceneDelegate->Sync(nullptr); // this step does not require sync request vector
+    }
+
+    // for each scene delegate, check if they need to update post sync requests
+    for (auto &entry : _postSyncMap) {
+        HdSceneDelegate* sceneDelegate = entry.first;
+        bool needsResync = sceneDelegate->NeedsPostSyncUpdate();
+        if (!needsResync)
+            continue;
+
+        HdSyncRequestVector postSyncRequestVector;
+        {
+            HF_TRACE_FUNCTION_SCOPE("Delegate UpdatePostSyncRequestVector");
+
+            // ask delegate to populate postSyncPropertyChanges
+            sceneDelegate->UpdatePostSyncRequestVector(&postSyncRequestVector);
+            if (!TF_VERIFY(postSyncRequestVector.IDs.size() == postSyncRequestVector.dirtyBits.size())) {
+                TF_CODING_ERROR("Number of IDs and dirtyBits does not match");
+                continue;
+            }
+        }
+
+        size_t numPostSyncRequests = postSyncRequestVector.dirtyBits.size();
+        {
+            HF_TRACE_FUNCTION_SCOPE("Process postSyncRequestVector");
+            _RprimPostSyncRequestVector& rprimRequestVector = entry.second.rprimRequestVector;
+            HdSyncRequestVector& r = reinterpret_cast<HdSyncRequestVector&>(rprimRequestVector.r);
+
+            r.IDs.clear();
+            r.dirtyBits.clear();
+            rprimRequestVector.rprims.clear();
+
+            _SprimIndex::PostSyncRequestVector& sprimMaterialRequestVector = entry.second.sprimMaterialRequestVector;
+            sprimMaterialRequestVector.prims.clear();
+            sprimMaterialRequestVector.dirtyBits.clear();
+            _SprimIndex::PostSyncRequestVector& sprimNonMaterialRequestVector = entry.second.sprimNonMaterialRequestVector;
+            sprimNonMaterialRequestVector.prims.clear();
+            sprimNonMaterialRequestVector.dirtyBits.clear();
+
+            // merge current sync requests
+            for (size_t i = 0; i < numPostSyncRequests; i++)
+            {
+                const auto& id = postSyncRequestVector.IDs[i];
+                const auto dirtyBits = postSyncRequestVector.dirtyBits[i];
+
+                // add new entry to the combined request vector
+                auto iter = _rprimMap.find(id);
+                if (iter != _rprimMap.end())
+                {
+                    size_t reprMask = 1 << 0; // FIXME - this is a hack, we need to read proper reprMask.
+                    r.IDs.push_back(id);
+                    r.dirtyBits.push_back(dirtyBits);
+                    rprimRequestVector.rprims.push_back(iter->second.rprim);
+                }
+                else
+                {
+                    auto sprimMat = _sprimIndex.GetPrim(HdPrimTypeTokens->material, id);
+                    if (sprimMat)
+                    {
+                        sprimMaterialRequestVector.prims.push_back(sprimMat);
+                        sprimMaterialRequestVector.dirtyBits.push_back(dirtyBits);
+                    }
+                    else
+                    {
+                        auto sprimOther = _sprimIndex.GetPrim(id);
+                        if (sprimOther)
+                        {
+                            sprimNonMaterialRequestVector.prims.push_back(sprimOther);
+                            sprimNonMaterialRequestVector.dirtyBits.push_back(dirtyBits);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // sync instancers for regular syncMap (uses change tracker)
+    for (auto &entry : sdRprimSyncMap) {
+        HdSceneDelegate* sceneDelegate = entry.first;
+
+        // sync primvars for instancers
+        for (auto iter : _instancerMap)
+        {
+            const SdfPath& instanceId = iter.first;
+            HdInstancer* instancer = iter.second;
+            HdDirtyBits dirtyBits = _tracker.GetInstancerDirtyBits(instanceId);
+            instancer->Sync(sceneDelegate, renderParam, &dirtyBits);
+        }
+    }
+
+    // sync instancers for postSync delegates (uses direct query into scene delegate)
+    for (auto &entry : _postSyncMap) {
+        HdSceneDelegate* sceneDelegate = entry.first;
+
+        bool needsUpdate = sceneDelegate->NeedsPostSyncInstancerUpdate();
+        if (needsUpdate)
+        {
+            // sync primvars for instancers
+            for (auto iter : _instancerMap)
+            {
+                const SdfPath& instanceId = iter.first;
+                HdInstancer* instancer = iter.second;
+                HdDirtyBits dirtyBits = sceneDelegate->GetInstancerDirtyBits(instanceId);
+                instancer->Sync(sceneDelegate, renderParam, &dirtyBits);
+            }
+        }
+    }
+
     // f. Rprim Sync
     WorkWithScopedParallelism([&]() {
         WorkDispatcher dispatcher;
@@ -1816,6 +2009,45 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
         }
     });
 
+    //# nv begin
+    WorkWithScopedParallelism([&]() {
+        WorkDispatcher dispatcher;
+
+        // sync sprims for post sync requests (Materials - cannot be multi-threaded)
+        for (auto &entry : _postSyncMap) {
+            HdSceneDelegate* sceneDelegate = entry.first;
+            _SprimIndex::PostSyncRequestVector& sprimRequestVector = entry.second.sprimMaterialRequestVector;
+            _sprimIndex.SyncPrims(sceneDelegate, sprimRequestVector, renderParam);
+        }
+
+        // sync sprims for non material post sync requests (can be multi-threaded)
+        if(_IsEnabledMultithreadedNonMaterialSprimSync()) {
+            WorkParallelForEach(_postSyncMap.begin(), _postSyncMap.end(), [&](auto& dlgIt) {
+                HdSceneDelegate* sceneDelegate = dlgIt.first;
+                _SprimIndex::PostSyncRequestVector& sprimRequestVector = dlgIt.second.sprimNonMaterialRequestVector;
+                _sprimIndex.SyncPrims(sceneDelegate, sprimRequestVector, renderParam, true);
+            });
+        }
+        else {
+            for (auto &entry : _postSyncMap) {
+                HdSceneDelegate* sceneDelegate = entry.first;
+                _SprimIndex::PostSyncRequestVector& sprimRequestVector = entry.second.sprimNonMaterialRequestVector;
+                _sprimIndex.SyncPrims(sceneDelegate, sprimRequestVector, renderParam);
+            }
+        }
+
+        // sync rprim for postSync delegates
+        for (auto &entry : _postSyncMap) {
+            HdSceneDelegate* sceneDelegate = entry.first;
+
+            _RprimSyncRequestVector& r = reinterpret_cast<_RprimSyncRequestVector&>(entry.second.rprimRequestVector);
+            _SyncRPrims workerState(sceneDelegate, r, reprSpecs, _tracker, renderParam, true);
+            _DoSyncRprims(sceneDelegate, dispatcher, workerState, r);
+        }
+    });
+
+    // nv end
+
     {
         HF_TRACE_FUNCTION_SCOPE("Clean Up");
         // Give scene delegates a chance to do any post-sync work,
@@ -1824,6 +2056,14 @@ HdRenderIndex::SyncAll(HdTaskSharedPtrVector *tasks,
             HdSceneDelegate *delegate = entry.first;
             delegate->PostSyncCleanup();
         }
+
+        // #nv begin #omni-hydra
+        for (auto &entry : _postSyncMap) {
+            HdSceneDelegate *delegate = entry.first;
+            delegate->PostSyncCleanup();
+        }
+        // nv end
+
         const HdSceneDelegatePtrVector& sprimDelegates =
             _sprimIndex.GetSceneDelegatesForDirtyPrims();
         for (HdSceneDelegate* delegate : sprimDelegates) {
