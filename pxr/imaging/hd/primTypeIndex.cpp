@@ -431,50 +431,6 @@ Hd_PrimTypeIndex<PrimType>::SyncPrims(HdChangeTracker  &tracker,
     }
 }
 
-// #nv begin #omni-hydra
-template <class PrimType>
-void
-Hd_PrimTypeIndex<PrimType>::SyncPrims(HdSceneDelegate* sceneDelegate,
-                                      PostSyncRequestVector& syncRequestVector,
-                                      HdRenderParam *renderParam,
-                                      const bool multithreaded)
-{
-    auto syncPrims = [&](size_t begin, size_t end) {
-        for (size_t i = begin; i < end; ++i) {
-            auto& prim = syncRequestVector.prims[i];
-            HdDirtyBits dirtyBits = syncRequestVector.dirtyBits[i];
-            prim->Sync(sceneDelegate, renderParam, &dirtyBits);
-        }
-    };
-    if (multithreaded) {
-        WorkParallelForN(syncRequestVector.prims.size(), syncPrims);
-    }
-    else {
-        syncPrims(0, syncRequestVector.prims.size());
-    }
-}
-
-template <class PrimType>
-PrimType*
-Hd_PrimTypeIndex<PrimType>::GetPrim(const SdfPath &primId) const
-{
-    HD_TRACE_FUNCTION();
-
-    typename _TypeIndex::const_iterator typeIt;
-    for (auto& typeIt : _index)
-    {
-        const _PrimTypeEntry &typeEntry = _entries[typeIt.second];
-
-        typename _PrimMap::const_iterator it = typeEntry.primMap.find(primId);
-        if (it != typeEntry.primMap.end()) {
-            return it->second.prim;
-        }
-    }
-
-    return nullptr;
-}
-// nv end
-
 template <class PrimType>
 const HdSceneDelegatePtrVector&
 Hd_PrimTypeIndex<PrimType>::GetSceneDelegatesForDirtyPrims()

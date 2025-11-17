@@ -18,12 +18,6 @@
 
 #include "pxr/base/tf/token.h"
 
-//#nv begin #omni-hydra 
-namespace omni::usd::hydra
-{
-    class OmniImagingDelegate;
-}
-//#nv end
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -191,10 +185,6 @@ public:
 
 private:
     friend class UsdImagingDelegate;
-    //#nv begin #omni-hydra
-    friend class omni::usd::hydra::OmniImagingDelegate;
-    USDIMAGING_API
-    //#nv end
     UsdImagingIndexProxy(UsdImagingDelegate* delegate,
                             UsdImagingDelegate::_Worker* worker) 
         : _delegate(delegate)
