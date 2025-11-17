@@ -2288,6 +2288,7 @@ UsdSkelImagingSkeletonAdapter::_RemoveSkinnedPrimAndComputations(
     
     // Remove skinned prim.
     index->RemoveRprim(cachePath);
+
     // Remove the computations it participates in.
     SdfPath compPath = _GetSkinningComputationPath(cachePath);
     index->RemoveSprim(HdPrimTypeTokens->extComputation, compPath);
@@ -2481,11 +2482,11 @@ UsdSkelImagingSkeletonAdapter::_UpdateSkinnedPrimForTime(
     // primvar. Also suppressing normals: normals will instead be computed
     // post-skinning, as if they were unauthored (since GPU normal skinning
     // is not yet supported).
-
     requestedBits &= ~ HdChangeTracker::DirtyPoints;
                     //// Don't surpress normals for NV GPU skinning.
                      //|  HdChangeTracker::DirtyNormals);
     //#nv end
+
     // Since The SkeletonAdapter hijacks skinned prims (see SkelRootAdapter),
     // make sure to delegate to the actual adapter registered for the prim.
     UsdImagingPrimAdapterSharedPtr adapter = _GetPrimAdapter(skinnedPrim);
