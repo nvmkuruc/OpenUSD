@@ -3654,10 +3654,30 @@ CrateFile::_ReadPathsImpl(Reader reader,
     bool hasChild = false, hasSibling = false;
     do {
         auto h = reader.template Read<Header>();
+
+        // Bounds-check path index values in safety-over-speed mode.
+#ifdef PXR_PREFER_SAFETY_OVER_SPEED
+        if (h.index.value >= _paths.size()) {
+            TF_RUNTIME_ERROR("Corrupt path index in crate file (%u > %zu)",
+                             h.index.value, _paths.size());
+            return;
+        }
+#endif // PXR_PREFER_SAFETY_OVER_SPEED
+        
         if (parentPath.IsEmpty()) {
             parentPath = SdfPath::AbsoluteRootPath();
             _paths[h.index.value] = parentPath;
         } else {
+            // Bounds-check token index values in safety-over-speed mode.
+#ifdef PXR_PREFER_SAFETY_OVER_SPEED
+            if (h.elementTokenIndex.value >= _tokens.size()) {
+                TF_RUNTIME_ERROR("Corrupt element token index in crate "
+                    "file (%u > %zu)",
+                    h.elementTokenIndex.value, _tokens.size());
+                return;
+            }
+#endif // PXR_PREFER_SAFETY_OVER_SPEED
+
             auto const &elemToken = _tokens[h.elementTokenIndex.value];
             _paths[h.index.value] =
                 h.bits & _PathItemHeader::IsPrimPropertyPathBit ?
