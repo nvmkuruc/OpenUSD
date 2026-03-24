@@ -43,7 +43,7 @@ private:
     // Otherwise there will be stack corruption when loading plug-ins
     // built between the two.
     //
-#if PXR_PYTHON_SUPPORT_ENABLED
+#ifdef PXR_PYTHON_SUPPORT_ENABLED
     std::unique_ptr<class TfPyLock> _pyLock;
     static_assert(sizeof(std::unique_ptr<class TfPyLock>) == sizeof(std::unique_ptr<void*>));
 #else
