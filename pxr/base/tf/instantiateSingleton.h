@@ -39,9 +39,16 @@ struct Tf_SingletonPyGILDropper
     TF_API
     ~Tf_SingletonPyGILDropper();
 private:
-#ifdef PXR_PYTHON_SUPPORT_ENABLED
+    // Keep class ABI compatible between PXR_PYTHON_SUPPORT_ENABLED
+    // Otherwise there will be stack corruption when loading plug-ins
+    // built between the two.
+    //
+#if PXR_PYTHON_SUPPORT_ENABLED
     std::unique_ptr<class TfPyLock> _pyLock;
-#endif // PXR_PYTHON_SUPPORT_ENABLED
+    static_assert(sizeof(std::unique_ptr<class TfPyLock>) == sizeof(std::unique_ptr<void*>));
+#else
+    std::unique_ptr<void*> _unused;
+#endif
 };
 
 template <class T> std::atomic<T *> TfSingleton<T>::_instance;
@@ -66,9 +73,11 @@ TfSingleton<T>::_CreateInstance(std::atomic<T *> &instance)
     TfAutoMallocTag2 tag("Tf", "TfSingleton::_CreateInstance",
                          "Create Singleton " + ArchGetDemangled<T>());
 
+#if PXR_PYTHON_SUPPORT_ENABLED
     // Drop the GIL if we have it, before possibly locking to create the
-    // singleton instance.
+    // singleton instance.  For non Python builds the GIL would not be held.
     Tf_SingletonPyGILDropper dropGIL;
+#endif
 
     // Try to take isInitializing false -> true.  If we do it, then check to see
     // if we don't yet have an instance.  If we don't, then we get to create it.
