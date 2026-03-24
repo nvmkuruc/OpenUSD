@@ -34,9 +34,24 @@
 #include "pxr/external/boost/python/type_id.hpp"
 #include "pxr/external/boost/python/str.hpp"
 
+// Add a pre-processor trick that uses PXR_NS to understand if this is a monolithic build or not.
+// When PXR_NS=ov then we currently know the build is monolithic.
+//
+#define OV_MONOLITHIC_BUILD_INNER(x) OV_MONOLITHIC_BUILD_##x
+#define OV_MONOLITHIC_BUILD(x)       OV_MONOLITHIC_BUILD_INNER(x)
+#define OV_MONOLITHIC_BUILD_ov       1
+#define OV_MONOLITHIC_BUILD_pxr      0
+
+#if OV_MONOLITHIC_BUILD(PXR_NS)
+    #include "pxr/usd/sdf/assetPath.h"
+    #include "pxr/usd/sdf/path.h"
+    #include "pxr/usd/sdf/pathExpression.h"
+#endif
+
 #include <iostream>
 #include <limits>
 #include <map>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -55,11 +70,67 @@ TF_REGISTRY_FUNCTION(VtValue)
     VtRegisterValueCastsFromPythonSequencesToArray<TfToken>();
 }
 
+#if OV_MONOLITHIC_BUILD(PXR_NS)
+
+static std::optional<VtValue>
+_RebindForPython(VtValue const& self) {
+    switch (self.GetKnownValueTypeIndex()) {
+
+#define REBIND_FOR_EACH_VALUE_TYPE(_macro)                               \
+        TF_PP_SEQ_FOR_EACH(_macro, ~, VT_VALUE_TYPES_1)                  \
+        TF_PP_SEQ_FOR_EACH(_macro, ~, VT_VALUE_TYPES_2)
+
+#define REBIND_CASE(unused, elem)                                        \
+            case VtGetKnownValueTypeIndex<VT_TYPE(elem)>(): {            \
+                return VtValue(VT_TYPE(elem){});                         \
+            }
+        REBIND_FOR_EACH_VALUE_TYPE(REBIND_CASE)
+
+#undef REBIND_CASE
+#undef REBIND_FOR_EACH_VALUE_TYPE
+
+        default: break;
+    }
+
+    // These may only work in a monlithic build otherwise _vt.pyd needs to link to sdf
+    if (self.IsHolding<PXR_NS::SdfAssetPath>()) {
+        return VtValue(PXR_NS::SdfAssetPath{});
+    }
+    if (self.IsHolding<PXR_NS::SdfPath>()) {
+        return VtValue(PXR_NS::SdfPath{});
+    }
+    if (self.IsHolding<PXR_NS::SdfPathExpression>()) {
+        return VtValue(PXR_NS::SdfPathExpression{});
+    }
+
+    return {};
+}
+
+TfPyObjWrapper
+Vt_GetPythonObjectFromHeldValue(VtValue const &self)
+{
+    if (!self.IsEmpty()) {
+        if (self._HasPyConversion()) {
+            return self._GetPythonObject();
+        }
+
+        std::optional<VtValue> rebound = _RebindForPython(self);
+        if (rebound && rebound.value()._HasPyConversion()) {
+            return rebound.value()._info->GetPyObj(self._storage);
+        }
+    }
+    return TfPyObjWrapper();
+}
+
+#else
+
 TfPyObjWrapper
 Vt_GetPythonObjectFromHeldValue(VtValue const &self)
 {
     return self._GetPythonObject();
 }
+
+#endif
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
@@ -109,7 +180,11 @@ struct Vt_ValueWrapper {
 
 struct Vt_ValueToPython {
     static PyObject *convert(VtValue const &val) {
-        return incref(Vt_GetPythonObjectFromHeldValue(val).ptr());
+        TfPyObjWrapper obj = Vt_GetPythonObjectFromHeldValue(val);
+        if (PyObject* pyObj = obj.ptr()) {
+            return incref(pyObj);
+        }
+        Py_RETURN_NONE;
     }
 };
 
