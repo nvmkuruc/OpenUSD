@@ -73,7 +73,7 @@ TfSingleton<T>::_CreateInstance(std::atomic<T *> &instance)
     TfAutoMallocTag2 tag("Tf", "TfSingleton::_CreateInstance",
                          "Create Singleton " + ArchGetDemangled<T>());
 
-#if PXR_PYTHON_SUPPORT_ENABLED
+#ifdef PXR_PYTHON_SUPPORT_ENABLED
     // Drop the GIL if we have it, before possibly locking to create the
     // singleton instance.  For non Python builds the GIL would not be held.
     Tf_SingletonPyGILDropper dropGIL;
