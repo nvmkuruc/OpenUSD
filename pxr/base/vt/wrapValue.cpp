@@ -76,18 +76,15 @@ static std::optional<VtValue>
 _RebindForPython(VtValue const& self) {
     switch (self.GetKnownValueTypeIndex()) {
 
-#define REBIND_FOR_EACH_VALUE_TYPE(_macro)                               \
-        TF_PP_SEQ_FOR_EACH(_macro, ~, VT_VALUE_TYPES_1)                  \
-        TF_PP_SEQ_FOR_EACH(_macro, ~, VT_VALUE_TYPES_2)
-
 #define REBIND_CASE(unused, elem)                                        \
             case VtGetKnownValueTypeIndex<VT_TYPE(elem)>(): {            \
-                return VtValue(VT_TYPE(elem){});                         \
+                using _RebindT = VT_TYPE(elem);                          \
+                return VtValue(_RebindT{});                              \
             }
-        REBIND_FOR_EACH_VALUE_TYPE(REBIND_CASE)
+
+        VT_FOR_EACH_VALUE_TYPE(REBIND_CASE)
 
 #undef REBIND_CASE
-#undef REBIND_FOR_EACH_VALUE_TYPE
 
         default: break;
     }
