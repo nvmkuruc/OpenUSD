@@ -89,14 +89,25 @@ _RebindForPython(VtValue const& self) {
         default: break;
     }
 
-    // These may only work in a monlithic build otherwise _vt.pyd needs to link to sdf
-    if (self.IsHolding<PXR_NS::SdfAssetPath>()) {
+    // These may only work in a monolithic build otherwise _vt.pyd needs to link to sdf
+    if (self.IsArrayValued()) {
+        if (self.IsHolding<VtArray<PXR_NS::SdfAssetPath>>()) {
+            return VtValue(VtArray<PXR_NS::SdfAssetPath>{});
+        }
+        else if (self.IsHolding<VtArray<PXR_NS::SdfPath>>()) {
+            return VtValue(VtArray<PXR_NS::SdfPath>{});
+        }
+        else if (self.IsHolding<VtArray<PXR_NS::SdfPathExpression>>()) {
+            return VtValue(VtArray<PXR_NS::SdfPathExpression>{});
+        }
+    }
+    else if (self.IsHolding<PXR_NS::SdfAssetPath>()) {
         return VtValue(PXR_NS::SdfAssetPath{});
     }
-    if (self.IsHolding<PXR_NS::SdfPath>()) {
+    else if (self.IsHolding<PXR_NS::SdfPath>()) {
         return VtValue(PXR_NS::SdfPath{});
     }
-    if (self.IsHolding<PXR_NS::SdfPathExpression>()) {
+    else if (self.IsHolding<PXR_NS::SdfPathExpression>()) {
         return VtValue(PXR_NS::SdfPathExpression{});
     }
 
