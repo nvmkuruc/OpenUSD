@@ -80,8 +80,8 @@ public:
             if (pyWrapper.ptr()) {
                 l.append(pyWrapper.Get());
             }
-            else {
-                l.append(p::object());
+            else {                
+                l.append(pxr_boost::python::object());
             }
         }
         return l;
