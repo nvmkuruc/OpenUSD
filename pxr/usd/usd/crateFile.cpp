@@ -3638,6 +3638,16 @@ CrateFile::_ReadPathsImpl(Reader reader,
     bool hasChild = false, hasSibling = false;
     do {
         auto h = reader.template Read<Header>();
+
+        // Bounds-check path index values in safety-over-speed mode.
+#ifdef PXR_PREFER_SAFETY_OVER_SPEED
+        if (h.index.value >= _paths.size()) {
+            TF_RUNTIME_ERROR("Corrupt path index in crate file (%u > %zu)",
+                             h.index.value, _paths.size());
+            return;
+        }
+#endif // PXR_PREFER_SAFETY_OVER_SPEED
+
         if (parentPath.IsEmpty()) {
             parentPath = SdfPath::AbsoluteRootPath();
             _paths[h.index.value] = parentPath;
