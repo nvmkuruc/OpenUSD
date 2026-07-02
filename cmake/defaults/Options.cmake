@@ -228,13 +228,6 @@ if (${PXR_BUILD_PRMAN_PLUGIN})
     endif()
 endif()
 
-# Error out if user is building monolithic library on windows with draco plugin
-# enabled. This currently results in missing symbols.
-if (${PXR_BUILD_DRACO_PLUGIN} AND ${PXR_BUILD_MONOLITHIC} AND WIN32)
-    message(FATAL_ERROR 
-        "Draco plugin can not be enabled for monolithic builds on Windows")
-endif()
-
 # Make sure PXR_BUILD_DOCUMENTATION and PXR_ENABLE_PYTHON_SUPPORT are enabled 
 # if PXR_BUILD_PYTHON_DOCUMENTATION is enabled
 if (${PXR_BUILD_PYTHON_DOCUMENTATION})
