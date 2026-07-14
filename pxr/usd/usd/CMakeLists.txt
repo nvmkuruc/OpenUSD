@@ -492,6 +492,17 @@ pxr_build_test(testUsdUsdcBugGHSA02
     testenv/testUsdUsdcBugGHSA02.cpp
 )
 
+pxr_build_test(testUsdUsdcMalformed
+    LIBRARIES
+        ar
+        arch
+        tf
+        sdf
+        usd
+    CPPFILES
+        testenv/testUsdUsdcMalformed.cpp
+)
+
 pxr_install_test_dir(
     SRC testenv/testUsdAppliedAPISchemas
     DEST testUsdAppliedAPISchemas
@@ -1368,5 +1379,25 @@ pxr_register_test(testUsdUsdzBugGHSA01
 pxr_register_test(testUsdUsdcBugGHSA02
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUsdcBugGHSA02"
     EXPECTED_RETURN_CODE 0
+)
+
+pxr_register_test(testUsdUsdcMalformed
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUsdcMalformed"
+    TESTENV testenv/testUsdUsdcMalformed
+    EXPECTED_RETURN_CODE 0
+)
+pxr_register_test(testUsdUsdcMalformed_PREAD
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUsdcMalformed"
+    TESTENV testenv/testUsdUsdcMalformed
+    EXPECTED_RETURN_CODE 0
+    ENV
+        USDC_USE_PREAD=1
+)
+pxr_register_test(testUsdUsdcMalformed_ASSET
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testUsdUsdcMalformed"
+    TESTENV testenv/testUsdUsdcMalformed
+    EXPECTED_RETURN_CODE 0
+    ENV
+        USDC_USE_ASSET=1
 )
   
