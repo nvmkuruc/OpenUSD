@@ -461,6 +461,19 @@ pxr_build_test(testSdfUsdcInvalidPrimChildren
         testenv/testSdfUsdcInvalidPrimChildren.cpp
 )
 
+pxr_build_test(testSdfUsdcMalformed
+    LIBRARIES
+        tf
+        sdf
+    CPPFILES
+        testenv/testSdfUsdcMalformed.cpp
+)
+
+pxr_install_test_dir(
+    SRC testenv/testSdfUsdcMalformed
+    DEST testSdfUsdcMalformed
+)
+
 pxr_install_test_dir(
     SRC testenv/testSdfBatchNamespaceEdit.testenv
     DEST testSdfBatchNamespaceEdit/testSdfBatchNamespaceEdit.testenv
@@ -779,4 +792,23 @@ pxr_register_test(testSdfVariants
 pxr_register_test(testSdfUsdcInvalidPrimChildren
     COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testSdfUsdcInvalidPrimChildren"
     EXPECTED_RETURN_CODE 0
+)
+pxr_register_test(testSdfUsdcMalformed
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testSdfUsdcMalformed"
+    TESTENV testSdfUsdcMalformed
+    EXPECTED_RETURN_CODE 0
+)
+pxr_register_test(testSdfUsdcMalformed_PREAD
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testSdfUsdcMalformed"
+    TESTENV testSdfUsdcMalformed
+    EXPECTED_RETURN_CODE 0
+    ENV
+        USDC_USE_PREAD=1
+)
+pxr_register_test(testSdfUsdcMalformed_ASSET
+    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testSdfUsdcMalformed"
+    TESTENV testSdfUsdcMalformed
+    EXPECTED_RETURN_CODE 0
+    ENV
+        USDC_USE_ASSET=1
 )
